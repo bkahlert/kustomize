@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    // @formatter:off
+    function md5(r){function i(r,n){return r<<n|r>>>32-n}function g(r,n){var t=2147483648&r,e=2147483648&n,o=1073741824&r,u=1073741824&n,a=(1073741823&r)+(1073741823&n);return o&u?2147483648^a^t^e:o|u?1073741824&a?3221225472^a^t^e:1073741824^a^t^e:a^t^e}function n(r,n,t,e,o,u,a){var f;return r=g(r,g(g((f=n)&t|~f&e,o),a)),g(i(r,u),n)}function t(r,n,t,e,o,u,a){var f;return r=g(r,g(g(n&(f=e)|t&~f,o),a)),g(i(r,u),n)}function e(r,n,t,e,o,u,a){return r=g(r,g(g(n^t^e,o),a)),g(i(r,u),n)}function o(r,n,t,e,o,u,a){return r=g(r,g(g(t^(n|~e),o),a)),g(i(r,u),n)}function u(r){for(var n="",t="",e=0;e<=3;e++)n+=(t="0"+(r>>>8*e&255).toString(16)).substr(t.length-2,2);return n}for(var a,f,c,C,h,l=1732584193,d=4023233417,v=2562383102,s=271733878,m=(a=function(r){for(var n,t=r.length,e=t+8,o=16*(1+(e-e%64)/64),u=new Array(o-1),a=0,f=0;f<t;)a=f%4*8,u[n=(f-f%4)/4]=u[n]|r.charCodeAt(f)<<a,f++;return a=f%4*8,u[n=(f-f%4)/4]=u[n]|128<<a,u[o-2]=t<<3,u[o-1]=t>>>29,u}(r=function(r){for(var n,t="",e=n=0,o=(r=(r+"").replace(/\r\n/g,"\n").replace(/\r/g,"\n")).length,u=0;u<o;u++){var a=r.charCodeAt(u),f=null;a<128?n++:f=127<a&&a<2048?String.fromCharCode(a>>6|192)+String.fromCharCode(63&a|128):String.fromCharCode(a>>12|224)+String.fromCharCode(a>>6&63|128)+String.fromCharCode(63&a|128),null!=f&&(e<n&&(t+=r.substring(e,n)),t+=f,e=n=u+1)}return e<n&&(t+=r.substring(e,r.length)),t}(r))).length,S=0;S<m;S+=16)d=o(d=o(d=o(d=o(d=e(d=e(d=e(d=e(d=t(d=t(d=t(d=t(d=n(d=n(d=n(d=n(c=d,v=n(C=v,s=n(h=s,l=n(f=l,d,v,s,a[S+0],7,3614090360),d,v,a[S+1],12,3905402710),l,d,a[S+2],17,606105819),s,l,a[S+3],22,3250441966),v=n(v,s=n(s,l=n(l,d,v,s,a[S+4],7,4118548399),d,v,a[S+5],12,1200080426),l,d,a[S+6],17,2821735955),s,l,a[S+7],22,4249261313),v=n(v,s=n(s,l=n(l,d,v,s,a[S+8],7,1770035416),d,v,a[S+9],12,2336552879),l,d,a[S+10],17,4294925233),s,l,a[S+11],22,2304563134),v=n(v,s=n(s,l=n(l,d,v,s,a[S+12],7,1804603682),d,v,a[S+13],12,4254626195),l,d,a[S+14],17,2792965006),s,l,a[S+15],22,1236535329),v=t(v,s=t(s,l=t(l,d,v,s,a[S+1],5,4129170786),d,v,a[S+6],9,3225465664),l,d,a[S+11],14,643717713),s,l,a[S+0],20,3921069994),v=t(v,s=t(s,l=t(l,d,v,s,a[S+5],5,3593408605),d,v,a[S+10],9,38016083),l,d,a[S+15],14,3634488961),s,l,a[S+4],20,3889429448),v=t(v,s=t(s,l=t(l,d,v,s,a[S+9],5,568446438),d,v,a[S+14],9,3275163606),l,d,a[S+3],14,4107603335),s,l,a[S+8],20,1163531501),v=t(v,s=t(s,l=t(l,d,v,s,a[S+13],5,2850285829),d,v,a[S+2],9,4243563512),l,d,a[S+7],14,1735328473),s,l,a[S+12],20,2368359562),v=e(v,s=e(s,l=e(l,d,v,s,a[S+5],4,4294588738),d,v,a[S+8],11,2272392833),l,d,a[S+11],16,1839030562),s,l,a[S+14],23,4259657740),v=e(v,s=e(s,l=e(l,d,v,s,a[S+1],4,2763975236),d,v,a[S+4],11,1272893353),l,d,a[S+7],16,4139469664),s,l,a[S+10],23,3200236656),v=e(v,s=e(s,l=e(l,d,v,s,a[S+13],4,681279174),d,v,a[S+0],11,3936430074),l,d,a[S+3],16,3572445317),s,l,a[S+6],23,76029189),v=e(v,s=e(s,l=e(l,d,v,s,a[S+9],4,3654602809),d,v,a[S+12],11,3873151461),l,d,a[S+15],16,530742520),s,l,a[S+2],23,3299628645),v=o(v,s=o(s,l=o(l,d,v,s,a[S+0],6,4096336452),d,v,a[S+7],10,1126891415),l,d,a[S+14],15,2878612391),s,l,a[S+5],21,4237533241),v=o(v,s=o(s,l=o(l,d,v,s,a[S+12],6,1700485571),d,v,a[S+3],10,2399980690),l,d,a[S+10],15,4293915773),s,l,a[S+1],21,2240044497),v=o(v,s=o(s,l=o(l,d,v,s,a[S+8],6,1873313359),d,v,a[S+15],10,4264355552),l,d,a[S+6],15,2734768916),s,l,a[S+13],21,1309151649),v=o(v,s=o(s,l=o(l,d,v,s,a[S+4],6,4149444226),d,v,a[S+11],10,3174756917),l,d,a[S+2],15,718787259),s,l,a[S+9],21,3951481745),l=g(l,f),d=g(d,c),v=g(v,C),s=g(s,h);return(u(l)+u(d)+u(v)+u(s)).toLowerCase()}
+    !function(e,r){"function"==typeof define&&define.amd?define([],r):"object"==typeof module&&module.exports?module.exports=r():(e.nezasa||(e.nezasa={}),e.nezasa.iso8601||(e.nezasa.iso8601=r()))}(this,function(){var e={Period:{}};function d(e,r){var o,n=r||!1,t=[2,3,4,5,7,8,9],i=[0,0,0,0,0,0,0],a=[0,12,4,7,24,60,60];if(!(e=e.toUpperCase()))return i;if("string"!=typeof e)throw new Error("Invalid iso8601 period string '"+e+"'");if(!(o=/^P((\d+Y)?(\d+M)?(\d+W)?(\d+D)?)?(T(\d+H)?(\d+M)?(\d+S)?)?$/.exec(e)))throw new Error("String '"+e+"' is not a valid ISO8601 period.");for(var d=0;d<t.length;d++){var s=t[d];i[d]=o[s]?+o[s].replace(/[A-Za-z]+/g,""):0}if(n)for(d=i.length-1;0<d;d--)i[d]>=a[d]&&(i[d-1]=i[d-1]+Math.floor(i[d]/a[d]),i[d]=i[d]%a[d]);return i}return e.version="0.2",e.Period.parse=d,e.Period.parseToTotalSeconds=function(e){for(var r=[31104e3,2592e3,604800,86400,3600,60,1],o=d(e),n=0,t=0;t<o.length;t++)n+=o[t]*r[t];return n},e.Period.isValid=function(e){try{return d(e),!0}catch(e){return!1}},e.Period.parseToString=function(e,r,o,n){var t=["","","","","","",""],i=d(e,n);r=r||["year","month","week","day","hour","minute","second"],o=o||["years","months","weeks","days","hours","minutes","seconds"];for(var a=0;a<i.length;a++)0<i[a]&&(1==i[a]?t[a]=i[a]+" "+r[a]:t[a]=i[a]+" "+o[a]);return t.join(" ").trim().replace(/[ ]{2,}/g," ")},e});
+    // @formatter:on
+
+    function gravatarImageUrl(email, size = 64) {
+      if (!email) return null;
+      const hash = md5(email.trim().toLowerCase());
+      return `https://www.gravatar.com/avatar/${hash}?s=${size}`;
+    }
+
+    function toSeconds(value) {
+      return value && value.startsWith("P") ? nezasa.iso8601.Period.parseToTotalSeconds(value) : 0;
+    }
+
+    function toWords(seconds) {
+      var hours = Math.floor(seconds / 3600);
+      var minutes = Math.floor((seconds - (hours * 3600)) / 60);
+      var seconds = seconds - (hours * 3600) - (minutes * 60);
+
+      hours = hours === 0 ? null : hours + " hours";
+      minutes = minutes === 0 ? null : minutes + " minutes";
+      seconds = seconds === 0 ? null : seconds + " seconds";
+      return [hours, minutes, seconds].filter(value => value !== null).join(" ");
+    }
+
+    window.HACK = {};
+    window.HACK["gravatar-image-url"] = gravatarImageUrl("", 16) || "data:image/gif;base64,R0lGODlhEAAQAKIHAPDw8OtPIh/gPi3iSuvr6yQkJCvlSv///yH/C1hNUCBEYXRhWE1QPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNi4wLWMwMDIgNzkuMTY0NDYwLCAyMDIwLzA1LzEyLTE2OjA0OjE3ICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtbG5zOnhtcD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLyIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ4bXAuZGlkOjkyN2Y4YWI0LWQxNzgtNDVhNy1iMGMwLTc3MTZlNzY2NDBmYSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDoyN0Y0MTdGRUNENDQxMUVBQTUxMkM0MTFENkZCQjUzNCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDoyN0Y0MTdGRENENDQxMUVBQTUxMkM0MTFENkZCQjUzNCIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgMjEuMiAoTWFjaW50b3NoKSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjkyN2Y4YWI0LWQxNzgtNDVhNy1iMGMwLTc3MTZlNzY2NDBmYSIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDo5MjdmOGFiNC1kMTc4LTQ1YTctYjBjMC03NzE2ZTc2NjQwZmEiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz4B//79/Pv6+fj39vX08/Lx8O/u7ezr6uno5+bl5OPi4eDf3t3c29rZ2NfW1dTT0tHQz87NzMvKycjHxsXEw8LBwL++vby7urm4t7a1tLOysbCvrq2sq6qpqKempaSjoqGgn56dnJuamZiXlpWUk5KRkI+OjYyLiomIh4aFhIOCgYB/fn18e3p5eHd2dXRzcnFwb25tbGtqaWhnZmVkY2JhYF9eXVxbWllYV1ZVVFNSUVBPTk1MS0pJSEdGRURDQkFAPz49PDs6OTg3NjU0MzIxMC8uLSwrKikoJyYlJCMiISAfHh0cGxoZGBcWFRQTEhEQDw4NDAsKCQgHBgUEAwIBAAAh+QQBAAAHACwAAAAAEAAQAAADSHi6B2IsjnkKGXGNIqal2SCMZBeEJaGakjiq6nC2AwATc6YMcJDrjtGvFRQAfAcIY+J6AQbKSJFUA06rusPECABkF76hLjxMAAA7";
+    window.HACK["initial-time"] = toSeconds("") || toSeconds("PT125M") + toSeconds("");
+    window.HACK["remaining-time"] = toSeconds("PT125M") || toSeconds("") - toSeconds("");
+    window.HACK["passed-time"] = toSeconds("") || toSeconds("") - toSeconds("PT125M");
+    ["initial-time", "remaining-time", "passed-time"].forEach(key => {
+      window.HACK[`${key}--words`] = toWords(window.HACK[key]);
+    });
+    console.warn(window.HACK);
+  </script>
+  <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet"/>
+  <link href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" rel="stylesheet"/>
+  <title>Currently being </title>
+  <style>
+    .nes-icon.coin.is-small:not(:empty) {
+      margin-right: 1px;
+      color: transparent;
+    }
+
+    .nes-icon.coin.is-small:not(:empty):before {
+      top: 2px;
+    }
+
+    .nes-octocat.is-small {
+      transform: scale(0.2);
+      transform-origin: bottom left;
+    }
+
+    .nes-avatar {
+      -webkit-mask: url(data:image/gif;base64,R0lGODlhQABAAIAAAAAAAP///yH/C05FVFNDQVBFMi4wAwEAAAAh+QQFAAABACwAAAAAQABAAAACaIxvoMvtD+NCtAaJs1a23w2GnFeJpkYm5xp27Ita8By59M0g+M73/g8MCofEovGITCqXzKbzCY1Kp9Sq9YrNarfcrvcLDovH5LL5jE6r1+y2+w2Pr3RWW9VOxU9Tnyaf7venEij41FEAADs=);
+      -webkit-mask-size: 100%;
+    }
+
+    .nes-avatar.is-large {
+      position: relative;
+      display: inline-block;
+      width: 80px;
+      height: 80px;
+    }
+  </style>
+</head>
+<body>
+<div class="nes-container with-title is-centered">
+  <p class="title">Status</p>
+  <h1><span class="nes-text is-error"></span> <small>right now</small></h1>
+  <progress class="nes-progress is-success" data-replace="value=passed-time,max=initial-time" max="" value="0"></progress>
+  <small><span data-replace="text=remaining-time--words"></span> remaining</small>
+</div>
+
+<p></p>
+
+<section class="nes-container">
+  <section class="message-list">
+    <section class="message-right">
+      <div class="nes-balloon from-right">
+        <small>Just in case you want to know,</small><br/>
+        I'm <span class="nes-text is-error"></span> right now.
+      </div>
+      <img class="nes-bcrikko nes-avatar is-large" data-replace="src=gravatar-image-url" src="https://www.gravatar.com/avatar?s=16"
+           style="image-rendering: pixelated;"/>
+    </section>
+  </section>
+</section>
+
+<p></p>
+
+<div class="container">
+  <a class="nes-badge is-splited" href="#">
+    <span class="is-dark">bthr</span>
+    <span class="is-primary">0.1.0</span>
+  </a>
+  <a class="nes-badge is-splited" href="#">
+    <span class="is-dark">test</span>
+    <span class="is-success">100%</span>
+  </a>
+</div>
+
+<section class="icon-list">
+  <!-- heart -->
+  <i class="nes-icon is-large heart"></i>
+  <i class="nes-icon is-large is-half heart"></i>
+  <i class="nes-icon is-large is-transparent heart"></i>
+  <i class="nes-icon is-large heart is-empty"></i>
+
+  <!-- star -->
+  <i class="nes-icon is-large star"></i>
+  <i class="nes-icon is-large star is-half"></i>
+  <i class="nes-icon is-large star is-transparent"></i>
+  <i class="nes-icon is-large star is-empty"></i>
+
+  <!-- like -->
+  <i class="nes-icon is-large like"></i>
+  <i class="nes-icon is-large like is-empty"></i>
+</section>
+<section class="icon-list">
+  <!-- twitter -->
+  <i class="nes-icon twitter is-large"></i>
+
+  <!-- facebook -->
+  <i class="nes-icon facebook is-large"></i>
+
+  <!-- instagram -->
+  <i class="nes-icon instagram is-large"></i>
+
+  <!-- github -->
+  <i class="nes-icon github is-large"></i>
+
+  <!-- google -->
+  <i class="nes-icon google is-large"></i>
+
+  <!-- gmail -->
+  <i class="nes-icon gmail is-large"></i>
+
+  <!-- medium -->
+  <i class="nes-icon medium is-large"></i>
+
+  <!-- linkedin -->
+  <i class="nes-icon linkedin is-large"></i>
+
+  <!-- twitch -->
+  <i class="nes-icon twitch is-large"></i>
+
+  <!-- youtube -->
+  <i class="nes-icon youtube is-large"></i>
+
+  <!-- reddit -->
+  <i class="nes-icon reddit is-large"></i>
+
+  <!-- whatsapp -->
+  <i class="nes-icon whatsapp is-large"></i>
+</section>
+<section class="icon-list">
+  <!-- close -->
+  <i class="nes-icon close is-large"></i>
+
+  <!-- trophy -->
+  <i class="nes-icon trophy is-large"></i>
+
+  <!-- coin -->
+  <i class="nes-icon coin is-large"></i>
+</section>
+<section class="icon-list">
+  <!-- controllers -->
+  <i class="nes-logo"></i>
+  <i class="nes-jp-logo"></i>
+  <i class="snes-logo"></i>
+  <i class="snes-jp-logo"></i>
+
+  <!-- octocat -->
+  <i class="nes-octocat animate"></i>
+
+  <!-- phone -->
+  <i class="nes-smartphone"></i>
+  <i class="nes-phone"></i>
+</section>
+<section class="icon-list">
+  <!-- Copyright Nintendo -->
+  <i class="nes-mario"></i>
+  <i class="nes-ash"></i>
+  <i class="nes-pokeball"></i>
+  <i class="nes-bulbasaur"></i>
+  <i class="nes-charmander"></i>
+  <i class="nes-squirtle"></i>
+  <i class="nes-kirby"></i>
+</section>
+<footer>
+  <span>© 2020</span> <a href="https://github.com/bother-you/" rel="noopener">Bj<i class="nes-icon coin is-small">ö</i>rn Kahlert
+  <i class="nes-octocat animate is-small"></i></a>
+</footer>
+<script>
+  document.querySelectorAll("[data-replace]")
+    .forEach(element => element.getAttribute("data-replace").split(",")
+      .forEach(replacement => {
+        let attributeName = replacement.split('=')[0].trim();
+        let hackKey = replacement.split('=')[1].trim();
+        let hackValue = window.HACK[hackKey];
+        console.debug("Replacing", attributeName, hackKey, hackValue);
+        attributeName === 'text'
+          ? element.innerHTML = hackValue
+          : element[attributeName] = hackValue;
+      })
+    );
+</script>
+</body>
+</html>
+
