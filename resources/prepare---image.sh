@@ -74,21 +74,8 @@ prepare_partition() {
     SRC=$2
     DIR=${3:-$LOCATION/mnt/$PARTITION}
 
-    if [ ! -d "$DIR" ]; then mkdir -p "$DIR"; fi
-    linux_partitions=$(diskutil info "$SRC" | grep -cie "type.*linux")
-    if [ "$linux_partitions" = 1 ]; then
-        _p "Mounting Linux partition using fuse-ext2... "
-        cmd=$(sudo fuse-ext2 "$SRC" "$DIR" -o rw+ -o allow_other 2>&1)
-        rt=$?
-    else
-        _p "Mounting Windows partition using diskutil... "
-        cmd=$(sudo diskutil mount -mountPoint "$DIR" "$SRC" 2>&1)
-        rt=$?
-    fi
-    _p $cmd
-    [ $rt -gt 0 ] && {
-        _die "Could not mount $DIR"
-    }
+    if [ -e "$DIR" ]; then _umount "$DIR"; fi
+    _mount "$SRC" "$DIR" || _die "Could not mount $SRC"
     (cd "${DIR}" && "${SCRIPT}" .)
 
     _p
@@ -104,19 +91,25 @@ prepare_partition() {
         _prompt "Ready? Press any key to continue..."
         ;;
     *) ;;
+
     esac
+    _umount "$DIR"
 }
 
 cleanup() {
     _p
     _p "Cleaning up..."
     for vol in "$@"; do
-        sleep 5
-        sudo umount "$vol"
+        if grep -qs '/mnt/foo ' /proc/mounts; then
+            sleep 5
+            sudo umount "$vol"
+        else
+            _p "$vol"" is not mounted. Skipping."
+        fi
     done
     for last; do true; done
-    sudo hdiutil detach -quiet "$last" || sudo hdiutil detach -force "$last"
-    #    rm -rf "${LOCATION:?}/mnt/*"
+    cmd=$(sudo hdiutil detach -quiet "$last" 2>&1 || sudo hdiutil detach -force "$last" 2>&1)
+    _p "$cmd"
 }
 
 flash() {
@@ -124,7 +117,8 @@ flash() {
     IMG=$1
     TARGET=$(diskutil list | grep 'external' | grep 'physical' | tr -s ' ' | cut -d ' ' -f 1 | grep -m 1 '')
     if [ "$TARGET" = "" ]; then
-        _p "⚡️🚫 No flashable medium found. You'll have to flash a memory card yourself."
+        _p "⚡️🚫 No flashable medium found."
+        _p "You'll have to flash a memory card yourself."
         return 1
     fi
     INFO=$(diskutil info "$TARGET" | grep -ie "media name\|disk size" | tr -s ' ' | cut -d ':' -f2 | perl -pe 's/\n+/ /g')
@@ -141,28 +135,28 @@ flash() {
         eject "$TARGET"
         ;;
     *)
-        _p "No. Skipping."
+        _p "Skipping."
         ;;
     esac
 }
 
 eject() {
+    local answer=${2:-}
     _p
-    _prompt "Eject $1?"
+    if [ "${answer}" = "" ]; then _prompt "Eject $1?"; else REPLY=$answer; fi
     case $REPLY in
     n) ;;
     *)
-        _p
-        _p "Ejecting..."
-        retry55 sudo diskutil unmountDisk "$1"
-        retry55 sudo hdiutil detach "$1"
-        retry55 sudo hdiutil -force detach "$1"
-        _p "$1 successfully ejected."
-        _p
+        unmount_disk_output="$(retry55 sudo diskutil unmountDisk "$1")"
+        detach_disk_output="$(retry55 sudo diskutil unmountDisk "$1")"
+        rt=$?
+        _p "Ejecting... ""$(_h "${unmount_disk_output}"...)""$(_h "${detach_disk_output}")"
+        if [ $rt ]; then _p "$1 successfully ejected."; else _warn "$1 could not be ejected"; fi
         ;;
     esac
 }
 
+cursor_up
 download_image "$WORKING_COPY"
 DISK=$(hdiutil attach -imagekey diskimage-class=CRawDiskImage -nomount "$WORKING_COPY" | grep -m 1 "" | tr -s ' ' | cut -d ' ' -f 1)
 BOOT=$(hdiutil attach -imagekey diskimage-class=CRawDiskImage -nomount "$WORKING_COPY" | grep -m 1 "Windows" | tr -s ' ' | cut -d ' ' -f 1)
@@ -170,8 +164,11 @@ DATA=$(hdiutil attach -imagekey diskimage-class=CRawDiskImage -nomount "$WORKING
 
 (prepare_partition "raspios-boot" "$BOOT")
 (prepare_partition "raspios-data" "$DATA")
-(cleanup "$DATA" "$BOOT" "$DISK")
-flash "$WORKING_COPY"
+eject "${DISK}" y
+flash "${WORKING_COPY}"
 
-_p "$txBold""Patching completed.""$txReset"
-_p "You can find the patched image at ""$WORKING_COPY"
+_p
+# shellcheck disable=SC2154
+_p "${txBold}""Preparation completed.""${txReset}"
+_p
+_p "You can find the patched image at" "${WORKING_COPY}"

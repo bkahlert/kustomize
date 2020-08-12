@@ -17,3 +17,7 @@ env CUSTOM_RASPIOS_BOOT='oldname="$(cat etc/hostname)" && for i in etc/host*; do
 - Blueooth
   - As Internetconnection through host
   - As hotstop for host
+- Locale (e.g. de_DE.UTF-8)
+- Splash screen
+- write CLI in Kotlin
+  https://github.com/deepakshrma/kotlin-demos/tree/master/scripts  

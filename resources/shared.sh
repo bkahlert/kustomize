@@ -149,7 +149,6 @@ indent() {
     wrap $available_width | pr -to $indent_width
 }
 _printf() { printf "${1:-}"; }
-_pstart() { _printf "$1" | indent; }
 _p() { _printf "$*\n" | indent; }
 _h() {
     _printf "$fgBrightBlack""$*""$txReset"
@@ -195,4 +194,63 @@ retry55() {
         sleep "$wait"
     done
     return $rt
+}
+
+_hasvalue() {
+    local value key
+    value=${1:?}
+    key=${2:-}
+    if [ "$(sed -E "/^(""$key""[^#]*)\s*=\s*(([^,]*,)*)\s*($value)(,.*)*$/!d" | wc -l)" -gt 0 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+_addvalue() {
+    local addvalue value key
+    addvalue=${1:?}
+    value=${2:?}
+    key=${3:-}
+    echo "$addvalue"
+    echo "$value"
+    echo "$key"
+
+    sed -E "s/^(""$key""[^#]*)\s*=\s*(([^,]*,)*)\s*($value)(,.*)*$/\1=\2\4,$addvalue\5/"
+}
+
+_mount() {
+    local device mount_point
+    device=${1:?}
+    mount_point=${2:?}
+
+    if [ ! -e "$mount_point" ]; then mkdir -p "$mount_point"; fi
+    linux_partitions=$(diskutil info "$device" | grep -cie "type.*linux")
+    if [ "$linux_partitions" = 1 ]; then
+        _p "Mounting Linux partition using fuse-ext2... "
+        cmd=$(sudo fuse-ext2 "$device" "$mount_point" -o rw+ -o allow_other 2>&1)
+        rt=$?
+    else
+        _p "Mounting Windows partition using diskutil... "
+        cmd=$(diskutil mount -mountPoint "$mount_point" "$device" 2>&1)
+        rt=$?
+    fi
+    _p "$cmd"
+    return $rt
+}
+
+_umount() {
+    local mount_point try max_tries
+    mount_point=${1:?}
+    try=0
+    max_tries=20
+
+    if [ -e "$mount_point" ]; then
+        until [ "$try" -ge "$max_tries" ]; do
+            mount | grep -a " $mount_point " 1>/dev/null || break
+            sudo umount $mount_point
+            try=$((try + 1))
+        done
+        if [ -e "$DIR" ]; then sudo rm -rf "$DIR" 2>/dev/null 1>/dev/null; fi
+    fi
 }
