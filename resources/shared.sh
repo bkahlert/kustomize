@@ -171,10 +171,16 @@ _run() { BASEDIR=$(dirname "$0") && SCRIPT="${BASEDIR}/$1.sh" && if [ ! -x "${SC
 _prompt() {
     local text hint
     text=${1:?} && shift
+    options=${1:-"Y n"} && shift
     hint=${1:-} && shift
     REPLY=${1:-""} && shift
 
-    _p "$text" "[""y""$fgBrightBlack""/n""$txReset""]" "$(_h $hint)"
+    formatted_options=$(printf "${options}" |
+        tr -s ' ' |
+        tr "[:space:]" "/" |
+        perl -pe "s/^(.*?)([A-Z]+)(.*?)$/${fgBrightBlack}\1${txReset}\2${fgBrightBlack}\3${txReset}/" |
+        tr "[:upper:]" "[:lower:]")
+    _p "$text" "[""${formatted_options}""]" "$(_h "${hint}")"
     cursor_hide
     readsingle
     printf "%s %s" ">" "$txBold""${REPLY:-ENTER}""$txReset" | indent

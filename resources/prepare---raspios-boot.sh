@@ -20,7 +20,7 @@ fi
 _p
 if [ ! -b ./config.txt ] || [ -w ./config.txt ]; then
     if [ ! -b ./cmdline.txt ] || [ -w ./cmdline.txt ]; then
-        _prompt "Activate USB OTG?" "USB On-The-Go (provides ethernet, webcam, etc. via single USB port)"
+        _prompt "Activate USB OTG?" "Y n" "USB On-The-Go (provides ethernet, webcam, etc. via single USB port)"
         case $REPLY in
         n)
             _p "Skipping."
@@ -32,7 +32,7 @@ if [ ! -b ./config.txt ] || [ -w ./config.txt ]; then
             _p "Activated USB OTG successfully."
 
             _p
-            _prompt "Activate virtual ethernet?" "g_ether"
+            _prompt "Activate virtual ethernet?" "Y n" "g_ether"
             case $REPLY in
             n)
                 _p "Skipping."
@@ -45,7 +45,7 @@ if [ ! -b ./config.txt ] || [ -w ./config.txt ]; then
             esac
 
             _p
-            _prompt "Activate virtual webcam? [y/N]" "g_webcam"
+            _prompt "Activate virtual webcam?" "y N" "g_webcam"
             case $REPLY in
             y)
                 _p "Activating virtual webcamt... "

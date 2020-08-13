@@ -81,7 +81,7 @@ prepare_partition() {
     _p
     _p "Preparation of $PARTITION finished."
     _p
-    _prompt "Do you want to continue?" "Otherwise allows for manual changes, too."
+    _prompt "Would you like to verifiy ${PARTITION} to verify changed or adding manual ones?" "y N"
     case $REPLY in
     n)
         _p
@@ -124,12 +124,12 @@ flash() {
     INFO=$(diskutil info "$TARGET" | grep -ie "media name\|disk size" | tr -s ' ' | cut -d ':' -f2 | perl -pe 's/\n+/ /g')
     INFO=$(_grey "$INFO")
     _p "Found possible USB to flash: $TARGET $INFO"
-    _prompt "Do you want to ⚡️ flash $TARGET now? [y/N] "
+    _prompt "Do you want to ⚡️ flash $TARGET now?" "y N"
     case $REPLY in
     y)
         _p
         _p "Writing $IMG to $TARGET..."
-        _p "$(sudo dd if="$IMG" of="$TARGET" bs=4m)"
+        _p "$(sudo dd if="$IMG" of="$TARGET" bs=4m oflag=dsync)"
         _p "Finished writing."
         _p
         eject "$TARGET"

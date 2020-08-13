@@ -12,7 +12,7 @@ _option 9 "Mac OS X$macosPrepared" "Installs the required packages OSX Fuse / Fu
 _option ESC "Quit"
 _p
 
-_prompt "So?" "Press ESC or any other key to quit."
+_prompt "What would you like to do?" "1 9 ESC" "Press ESC or any other key to quit."
 
 _p
 case $REPLY in

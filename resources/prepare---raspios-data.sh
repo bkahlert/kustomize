@@ -10,7 +10,7 @@ _p
 password_file="$BASEDIR/custom---raspios-data/password"
 if [ -r "${password_file}" ]; then
     if [ -r etc ] && [ -w etc/shadow ]; then
-        _prompt "Change password according to custom password file?" "custom---raspios-data/password"
+        _prompt "Change password according to custom password file?" "Y n" "custom---raspios-data/password"
         case $REPLY in
         n)
             _p "Skipping."
@@ -18,7 +18,8 @@ if [ -r "${password_file}" ]; then
         *)
             _p "Changing password... "
             password_hash=$(openssl passwd -1 -in "$password_file")
-            sed -i.bak -E "s/^(pi:)([^:]*)(:.*)$/\1""${password_hash}""\3/" etc/shadow
+            password_hash_escaped=$(echo "${password_hash}" | sed -e 's/[&\\/]/\\&/g; s/$/\\/' -e '$s/\\$//')
+            sed -i.bak -E "s/^(pi:)([^:]*)(:.*)$/\1""${password_hash_escaped}""\3/" etc/shadow
             _p "Changed password successfully"
             ;;
         esac
@@ -34,7 +35,7 @@ username_file="$BASEDIR/custom---raspios-data/username"
 if [ -r "${username_file}" ]; then
     if [ -r etc ] && [ -w etc/shadow ]; then
         username=$(cat "$username_file")
-        _prompt "Change username pi to $username?" "custom---raspios-data/username"
+        _prompt "Change username pi to $username?" "Y n" "custom---raspios-data/username"
         case $REPLY in
         n)
             _p "Skipping."
@@ -78,7 +79,7 @@ if [ -r "${HOSTNAME}" ]; then
             OLD_HOSTNAME=$(cat etc/hostname)
             echo "${HOSTNAME}" >etc/hostname
             sed -i -- "s'$OLD_HOSTNAME'$HOSTNAME'g" etc/host*
-            NEW_HOSTNAME=$(cat etc/hostname | tr -s ' ')
+            NEW_HOSTNAME=$(cat etc/hostname)
             _p "Changed old hostname $OLD_HOSTNAME successfully to $NEW_HOSTNAME"
             ;;
         esac
@@ -114,7 +115,7 @@ _p
 WPA_SUPPLICANT_FILE="$BASEDIR/custom---raspios-data/wpa_supplicant.conf"
 if [ -r "${WPA_SUPPLICANT_FILE}" ]; then
     if [ ! -b ./etc/wpa_supplicant/wpa_supplicant.conf ] || [ -w ./etc/wpa_supplicant/wpa_supplicant.conf ]; then
-        _prompt "Copy wifi settings?" "custom/wpa_supplicant.conf ➜ /etc/wpa_supplicant/wpa_supplicant.conf"
+        _prompt "Copy wifi settings?" "Y n" "custom/wpa_supplicant.conf ➜ /etc/wpa_supplicant/wpa_supplicant.conf"
         case $REPLY in
         n)
             _p "Skipping."
