@@ -188,3 +188,48 @@ EOF
 else
     _warn "Cannot write to etc/dhcpcd.conf. Skipping OTG for usb0/dhcpcd.conf."
 fi
+
+_p
+crontab_file="$BASEDIR/custom---raspios-data/crontab"
+if [ -r "${crontab_file}" ]; then
+    if [ -r etc ] && [ -w etc/crontab ]; then
+        _prompt "Configure crontab?" "Y n" "custom---raspios-data/crontab"
+        case $REPLY in
+        n)
+            _p "Skipping."
+            ;;
+        *)
+            _p "Configuring crontab... "
+            cat "${crontab_file}" >>etc/crontab
+            _p "Configured crontab successfully"
+            ;;
+        esac
+    else
+        _warn "Cannot write to etc/crontab. Skipping crontab configuration."
+    fi
+else
+    _p "No $crontab_file found. Skipping crontab configuration."
+fi
+
+_p
+initd_dir="$BASEDIR/custom---raspios-data/init.d"
+if [ -r "${initd_dir}" ]; then
+    if [ -r etc ] && [ -w etc/init.d ]; then
+        _prompt "Configure init.d?" "Y n" "custom---raspios-data/init.d"
+        case $REPLY in
+        n)
+            _p "Skipping."
+            ;;
+        *)
+            _p "Configuring init.d... "
+            cp "${initd_dir}/*" etc/init.d/
+            chmod +x etc/init.d/*
+            _p "Configured init.d successfully"
+            ;;
+        esac
+    else
+        _warn "Cannot write to etc/init.d. Skipping init.d configuration."
+    fi
+else
+    _p "No $initd_dir found. Skipping init.d configuration."
+fi

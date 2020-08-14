@@ -141,15 +141,17 @@ _headline() {
     _p
 }
 wrap() {
-    fold -w ${1:-$(tput cols)} -s
+    fold -w "${1:-$(tput cols)}" -s
 }
 
 indent() {
-    local terminal_width available_width
+    local rt terminal_width available_width
+    rt=$?
     terminal_width=$(tput cols)
     available_width=$((terminal_width - indent_width))
     #    wrap $available_width | paste /dev/null - | expand -$indent_width
     wrap $available_width | pr -to $indent_width
+    return $rt
 }
 _printf() { printf "${1:-}"; }
 _p() { _printf "$*\n" | indent; }
@@ -163,14 +165,14 @@ _option() {
     description=${3:-}
     _p
     _p "${fgGreen}""[""${short_label}""]""${txReset}""\r""$(cursor_right 10)""${fgCyan}""${long_label}""${txReset}"
-    if [ ! -z ${3+x} ]; then _p "$(cursor_right 6)""$description"; fi
+    if [ -n "${3+x}" ]; then _p "$(cursor_right 6)""$description"; fi
 }
-_warn() { echo >&2 $bgBlack$fgYellow"  ! $* "$txReset; }
+_warn() { echo >&2 "$bgBlack$fgYellow""  ! $* ""$txReset"; }
 _die() {
-    echo >&2 $bgBlack$fgRed" !! $* "$txReset
+    echo >&2 "$bgBlack$fgRed"" !! $* ""$txReset"
     exit 1
 }
-_run() { BASEDIR=$(dirname "$0") && SCRIPT="${BASEDIR}/$1.sh" && if [ ! -x "${SCRIPT}" ]; then chmod +x ${SCRIPT}; fi && "${SCRIPT}"; }
+_run() { BASEDIR=$(dirname "$0") && SCRIPT="${BASEDIR}/$1.sh" && if [ ! -x "${SCRIPT}" ]; then chmod +x "${SCRIPT}"; fi && "${SCRIPT}"; }
 _prompt() {
     local text hint
     text=${1:?} && shift
@@ -178,7 +180,7 @@ _prompt() {
     hint=${1:-} && shift
     REPLY=${1:-""} && shift
 
-    formatted_options=$(printf "${options}" |
+    formatted_options=$(printf "%s" "${options}" |
         tr -s ' ' |
         tr "[:space:]" "/" |
         perl -pe "s/^(.*?)([A-Z]+)(.*?)$/${fgBrightBlack}\1${txReset}\2${fgBrightBlack}\3${txReset}/" |
@@ -256,10 +258,72 @@ _umount() {
 
     if [ -e "$mount_point" ]; then
         until [ "$try" -ge "$max_tries" ]; do
-            mount | grep -a " $mount_point " 1>/dev/null || break
-            sudo umount $mount_point
+            mount | grep -a "[^\s]$mount_point " 1>/dev/null || break
+            sudo umount "$mount_point" || sudo diskutil unmount "$mount_point"
             try=$((try + 1))
         done
-        if [ -e "$DIR" ]; then sudo rm -rf "$DIR" 2>/dev/null 1>/dev/null; fi
+        if [ -e "$mount_point" ]; then sudo rm -rf "$mount_point" 2>/dev/null 1>/dev/null; fi
     fi
+}
+
+_debug() {
+    if [ -e "$1" ]; then echo "if [ -e \"$1\" ]; then echo \"file exists\"; fi"; fi
+    if [ -r "$1" ]; then echo "if [ -r \"$1\" ]; then echo \"file is regular\"; fi"; fi
+    if [ -s "$1" ]; then echo "if [ -s \"$1\" ]; then echo \"file is not zero size\"; fi"; fi
+    if [ -d "$1" ]; then echo "if [ -d \"$1\" ]; then echo \"file is a directory\"; fi"; fi
+    if [ -b "$1" ]; then echo "if [ -b \"$1\" ]; then echo \"file is a block device\"; fi"; fi
+    if [ -c "$1" ]; then echo "if [ -c \"$1\" ]; then echo \"file is a character device\"; fi"; fi
+    if [ -p "$1" ]; then echo "if [ -p \"$1\" ]; then echo \"file is a pipe\"; fi"; fi
+    if [ -h "$1" ]; then echo "if [ -h \"$1\" ]; then echo \"file is a symbolic link\"; fi"; fi
+    if [ -L "$1" ]; then echo "if [ -L \"$1\" ]; then echo \"file is a symbolic link\"; fi"; fi
+    if [ -S "$1" ]; then echo "if [ -S \"$1\" ]; then echo \"file is a socket\"; fi"; fi
+    if [ -t "$1" ]; then echo "if [ -t \"$1\" ]; then echo \"file descriptor is associated with a terminal device\"; fi"; fi
+    if [ -r "$1" ]; then echo "if [ -r \"$1\" ]; then echo \"file has read permissions\"; fi"; fi
+    if [ -w "$1" ]; then echo "if [ -w \"$1\" ]; then echo \"file has write permissions\"; fi"; fi
+    if [ -x "$1" ]; then echo "if [ -x \"$1\" ]; then echo \"file has execute permissions\"; fi"; fi
+    if [ -g "$1" ]; then echo "if [ -g \"$1\" ]; then echo \"file has set 'set-group-id' flag\"; fi"; fi
+    if [ -u "$1" ]; then echo "if [ -u \"$1\" ]; then echo \"file has set 'set-user-id' flag\"; fi"; fi
+    if [ -k "$1" ]; then echo "if [ -k \"$1\" ]; then echo \"file has set 'sticky-bit' flag\"; fi"; fi
+    if [ -O "$1" ]; then echo "if [ -O \"$1\" ]; then echo \"file has same owner-id as you\"; fi"; fi
+    if [ -G "$1" ]; then echo "if [ -G \"$1\" ]; then echo \"file has same group-id as you\"; fi"; fi
+    if [ -N "$1" ]; then echo "if [ -N \"$1\" ]; then echo \"file was modified since it was last read\"; fi"; fi
+}
+
+_pv_dd() {
+    local filesize
+    if [ "${1:-}" == "" ]; then _die "Input file parameter missing"; fi
+    filesize="$(wc -c "$1" | awk '{print $1}')"
+    _dd "$1" "$2" " | sudo pv -s ${filesize} | sudo dd "
+}
+
+_dd() {
+    local cmd
+    if [ "${1:-}" == "" ]; then _die "Input file parameter missing"; fi
+    if [ "${2:-}" == "" ]; then _die "Output file parameter missing"; fi
+    if [ ! -e "$1" ]; then _die "Cannot dd since $1 does not exist."; fi
+    if [ ! -r "$1" ]; then _die "Cannot dd since $1 is not reable."; fi
+    if [ ! -e "$2" ]; then _die "Cannot dd since $2 does not exist."; fi
+    if [ ! -b "$2" ]; then _die "Cannot dd since $2 is no block device."; fi
+
+    _umount "$1"
+    cmd=$(printf "sudo dd if=\"%s\"%s of=\"%s\" bs=4m" "$1" "${3:-}" "$2")
+    eval "$cmd"
+}
+
+_flash() {
+    local source destination
+    source=${1:?}
+    destination=${2:?}
+
+    _p "Writing ${source} to ${destination}..."
+    if command -v pv &>/dev/null; then
+        _pv_dd "${source}" "${destination}"
+    else
+        if brew install pv; then
+            _pv_dd "${source}" "${destination}"
+        else
+            _dd "${source}" "${destination}"
+        fi
+    fi
+    _p "Finished writing."
 }
