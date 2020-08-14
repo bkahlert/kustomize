@@ -11,7 +11,7 @@ WORKING_COPY_BASE="${LOCATION}/raspios---"
 WORKING_COPY="${WORKING_COPY_BASE}${TIMESTAMP}.img"
 
 # delete old images if there's too many
-(cd "${LOCATION}" && ls -tp | grep -v '/$' | grep -e '---' | tail -n +6 | xargs -I {} rm -- {})
+(cd "${LOCATION}" && ls -tp | grep -v '/$' | grep -e '---' | tail -n +5 | xargs -I {} rm -- {})
 
 download_image() {
     _p
@@ -81,7 +81,7 @@ prepare_partition() {
     _p
     _p "Preparation of $PARTITION finished."
     _p
-    _prompt "Would you like to verifiy ${PARTITION} to verify changed or adding manual ones?" "y N"
+    _prompt "Would you like to open ${PARTITION} to verify changes or adding manual ones?" "y N"
     case $REPLY in
     n)
         _p
@@ -128,9 +128,7 @@ flash() {
     case $REPLY in
     y)
         _p
-        _p "Writing $IMG to $TARGET..."
-        _p "$(sudo dd if="$IMG" of="$TARGET" bs=4m oflag=dsync)"
-        _p "Finished writing."
+        _flash "${IMG}" "${TARGET}"
         _p
         eject "$TARGET"
         ;;
@@ -148,7 +146,7 @@ eject() {
     n) ;;
     *)
         unmount_disk_output="$(retry55 sudo diskutil unmountDisk "$1")"
-        detach_disk_output="$(retry55 sudo diskutil unmountDisk "$1")"
+        detach_disk_output="$(retry55 sudo hdiutil detach "$1")"
         rt=$?
         _p "Ejecting... ""$(_h "${unmount_disk_output}"...)""$(_h "${detach_disk_output}")"
         if [ $rt ]; then _p "$1 successfully ejected."; else _warn "$1 could not be ejected"; fi

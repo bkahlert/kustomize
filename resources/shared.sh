@@ -1,3 +1,7 @@
+export bgBlack bgRed bgGreen bgYellow bgBlue bgMagenta bgCyan bgWhite bgBrightBlack bgBrightRed bgBrightGreen bgBrightYellow bgBrightBlue bgBrightMagenta \
+    bgBrightCyan bgBrightWhite fgBlack fgRed fgGreen fgYellow fgBlue fgMagenta fgCyan fgWhite fgBrightBlack fgBrightRed fgBrightGreen fgBrightYellow \
+    fgBrightBlue fgBrightMagenta fgBrightCyan fgBrightWhite txBold txHalf txUnderline txEndUnder txReverse txStandout txEndStand txReset
+
 indent_width=4
 _times() {
     local i count
@@ -62,38 +66,37 @@ cursor_load() { tput rc; }                                # load cursor position
 cursor_hide() { tput civis; }                             # hide cursor
 cursor_show() { tput cnorm; }                             # show cursor
 cursor_restore() { tput sc; }                             # load cursor position
-cursor_left() { tput cub ${1:-1}; }                       # move cursor $1 times left
-cursor_right() { tput cuf ${1:-1}; }                      # move cursor $1 times right
-cursor_up() { tput cuu ${1:-1}; }                         # move cursor $1 times up
-cursor_down() { tput cud ${1:-1}; }                       # move cursor $1 times down
+cursor_left() { tput cub "${1:-1}"; }                     # move cursor $1 times left
+cursor_right() { tput cuf "${1:-1}"; }                    # move cursor $1 times right
+cursor_up() { tput cuu "${1:-1}"; }                       # move cursor $1 times up
+cursor_down() { tput cud "${1:-1}"; }                     # move cursor $1 times down
 cursor_line_start() { tput cr; }                          # move cursor to start of line
 cursor_line_end() { tput hpa "$(tput cols)"; }            # move cursor to end of line
 cursor_home() { tput home; }                              # move cursor to top left
 cursor_end() { tput cup "$(tput lines)" "$(tput cols)"; } # move cursor to bottom right
 
 # clear commands
-clear_clear() { tput clear; }            # clear screen and home cursor
-clear_to_line_start() { tput el1; }      # clear to beginning of line
-clear_to_line_end() { tput el; }         # clear to end of line
-clear_to_end() { tput ed; }              #clear to end of screen
+clear_clear() { tput clear; }              # clear screen and home cursor
+clear_to_line_start() { tput el1; }        # clear to beginning of line
+clear_to_line_end() { tput el; }           # clear to end of line
+clear_to_end() { tput ed; }                #clear to end of screen
 
 # insert commands
-edit_delete() { tput ech ${1:-1}; }      # deletes $1 characters
-edit_insert() { tput ich ${1:-1}; }      # insert $1 characters (moves rest of line forward!)
-edit_insert_lines() { tput il ${1:-1}; } # insert $1 lines
+edit_delete() { tput ech "${1:-1}"; }      # deletes $1 characters
+edit_insert() { tput ich "${1:-1}"; }      # insert $1 characters (moves rest of line forward!)
+edit_insert_lines() { tput il "${1:-1}"; } # insert $1 lines
 
 # miscelaneous  commands
 beep() { printf "\a"; } # make a beep
 
 readsingle() {
-    local remainder_of_escape_sequence
     ESC=$(printf "\033")
 
     read -r -s -n1
-    if [ "${REPLY:-}" = $ESC ]; then
-        while read -r -s -n 1 -t 1 remainder_of_escape_sequence; do
+    if [ "${REPLY:-}" = "${ESC}" ]; then
+        while read -r -s -n 1 -t 1; do
             beep
-            : # swallowing $remainder_of_escape_sequence"
+            : # swallowing remainder of escape sequence
         done
         readsingle
     fi

@@ -186,5 +186,5 @@ EOF
         ;;
     esac
 else
-    _warn "Cannot write to etc/dhcpcd.conf. Skipping OTG for usb0/dhcpcd.d."
+    _warn "Cannot write to etc/dhcpcd.conf. Skipping OTG for usb0/dhcpcd.conf."
 fi
