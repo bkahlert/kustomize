@@ -1,0 +1,55 @@
+# User-specific stuff
+/workspace.xml
+/tasks.xml
+/usage.statistics.xml
+/dictionaries
+/shelf
+/inspectionProfiles
+/validation.xml
+/vcs.xml
+
+# Plugins
+/sonarlint/
+/sonarIssues.xml
+/codeStyles
+/markdown-navigator.xml
+/markdown-navigator-enh.xml
+/misc.xml
+/PipelineViewerConfig.xml
+/saveactions_settings.xml
+
+# Generated files
+/contentModel.xml
+
+# Sensitive or high-churn files
+/dataSources/
+/dataSources.ids
+/dataSources.local.xml
+/sqlDataSources.xml
+/dynamic.xml
+/uiDesigner.xml
+/dbnavigator.xml
+
+# Gradle
+/gradle.xml
+/libraries
+
+# Gradle and Maven with auto-import
+/artifacts
+/compiler.xml
+/jarRepositories.xml
+/modules.xml
+/*.iml
+/modules
+
+# Mongo Explorer plugin
+/mongoSettings.xml
+
+# Cursive Clojure plugin
+/replstate.xml
+
+# Editor-based Rest Client
+/httpRequests
+
+# Android studio 3.1+ serialized cache file
+/caches/build_file_checksums.ser
