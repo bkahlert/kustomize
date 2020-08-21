@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="clean run native" type="BashProRunConfiguration">
+    <scriptContent>bin/imgcstmzr drivers</scriptContent>
+    <option name="sourceType" value="snippet" />
+    <option name="workingDirectory" value="$PROJECT_DIR$" />
+    <RunnerSettings bashdbVersion="Automatic" bashPathMapper="Automatic" RunnerId="pro.bashsupport.shDebugRunner" />
+    <method v="2">
+      <option name="RunConfigurationTask" enabled="true" run_configuration_name="clean nativeImage" run_configuration_type="GradleRunConfiguration" />
+    </method>
+  </configuration>
+</component>

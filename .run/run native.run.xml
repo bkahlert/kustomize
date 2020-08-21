@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="run native" type="BashProRunConfiguration">
+    <scriptContent>[ ! -x bin/imgcstmzr ] &amp;&amp; ./gradlw nativeImage; bin/imgcstmzr drivers</scriptContent>
+    <option name="sourceType" value="snippet" />
+    <option name="workingDirectory" value="$PROJECT_DIR$" />
+    <RunnerSettings bashdbVersion="Automatic" bashPathMapper="Automatic" RunnerId="pro.bashsupport.shDebugRunner" />
+    <method v="2" />
+  </configuration>
+</component>
