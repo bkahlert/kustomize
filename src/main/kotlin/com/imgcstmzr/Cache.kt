@@ -9,7 +9,8 @@ import java.time.format.DateTimeFormatter
 
 class Cache(dir: File = DEFAULT) : ManagedDirectory(dir) {
 
-    fun provideCopy(name: String, provider: () -> File): File = ProjectDirectory(dir, name).require(provider)
+    fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> File): File =
+        ProjectDirectory(dir, name, reuseLastWorkingCopy).require(provider)
 
     companion object {
         val USER_HOME: File = File(System.getProperty("user.home"))
@@ -36,7 +37,7 @@ open class ManagedDirectory(val dir: File) {
 }
 
 
-private class ProjectDirectory(parentDir: File, dirName: String) : ManagedDirectory(parentDir, dirName) {
+private class ProjectDirectory(parentDir: File, dirName: String, val reuseLastWorkingCopy: Boolean) : ManagedDirectory(parentDir, dirName) {
 
     private val downloadDir = SingleFileDirectory(dir, "download")
     private val rawDir = SingleFileDirectory(dir, "raw")
@@ -69,6 +70,15 @@ private class ProjectDirectory(parentDir: File, dirName: String) : ManagedDirect
             Unarchiver().unarchive(downloadedFile)
         }
 
+        val workDirs = workDirs()
+        if (reuseLastWorkingCopy) {
+            if (workDirs.isNotEmpty()) {
+                val file = workDirs[0].getFile()
+                echo("Re-use last working copy $file")
+                return file
+            }
+            echo("No working copy exists that could be re-used. Creating a new one.")
+        }
         return WorkDirectory.from(dir, img).getFile()
     }
 

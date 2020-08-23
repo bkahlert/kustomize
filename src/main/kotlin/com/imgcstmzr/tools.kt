@@ -5,10 +5,12 @@ import org.slf4j.Logger
 import org.slf4j.Marker
 import org.slf4j.helpers.SubstituteLogger
 import java.io.BufferedReader
+import java.io.BufferedWriter
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.io.OutputStreamWriter
 import java.io.UncheckedIOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -16,15 +18,56 @@ import java.text.MessageFormat
 import java.util.Locale
 import java.util.Objects
 import java.util.concurrent.CompletableFuture
-import java.util.function.BiConsumer
+import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 import java.util.regex.Pattern
+import kotlin.text.contains as originalContains
+
+fun stripOffAnsi(string: CharSequence): CharSequence {
+    val pattern = Pattern.compile("(\\x9B|\\x1B\\[)[0-?]*[ -\\/]*[@-~]")
+    val replaceAll = pattern.matcher(string).replaceAll("")
+    return replaceAll
+}
+
+/**
+ * Returns `true` if this char sequence contains the specified [other] sequence of characters as a substring.
+ *
+ * @param ignoreCase `true` to ignore character case when comparing strings. By default `false`.
+ * @param ignoreAnsiFormatting ANSI formatting / escapes are ignored by default. Use `false` consider escape codes as well
+ */
+@Suppress("INAPPLICABLE_OPERATOR_MODIFIER")
+operator fun CharSequence.contains(
+    other: CharSequence,
+    ignoreCase: Boolean = false,
+    ignoreAnsiFormatting: Boolean = true
+): Boolean =
+    if (ignoreAnsiFormatting)
+        stripOffAnsi(this).originalContains(stripOffAnsi(other), ignoreCase)
+    else
+        originalContains(other, ignoreCase)
+
+fun runProcess(vararg args: String): Int? {
+    val cmd: String = args.joinToString(" ")
+
+    return CommandLineRunner().startProcessAndWaitForCompletion(
+        File("/bin").toPath(), "sh -c '$cmd'", { str -> TermUi.echo(str) }
+    ).get() ?: throw IllegalStateException("This should never happen")
+}
+
+fun Process.fakeInput(vararg input: String) {
+    val stdin = BufferedWriter(OutputStreamWriter(this.outputStream))
+    input.forEach {
+        TimeUnit.MILLISECONDS.sleep(1500)
+        stdin.write(it)
+        stdin.flush()
+    }
+}
 
 class Downloader {
     fun download(url: String): File {
         val temp = Files.createTempDirectory("imgcstmzr")
 
-        val cmd = listOf(
+        runProcess(
             "wget",
             "--tries=10",
             "--timeout=15",
@@ -37,13 +80,7 @@ class Downloader {
             "--adjust-extension",
             "--directory-prefix=\"$temp\"",
             "\"$url\""
-        ).joinToString(" ")
-
-        CommandLineRunner().startProcessAndWaitForCompletion(
-            File("/bin").toPath(), "sh -c '$cmd'"
-        ) { str ->
-            TermUi.echo(str)
-        }.get()
+        )
 
         return temp.toFile()?.listFiles()?.first()
             ?: throw IllegalStateException("An unknown error occurred while downloading. $temp was supposed to contain the downloaded file but was empty.")
@@ -53,19 +90,7 @@ class Downloader {
 class Unarchiver {
     fun unarchive(archive: File): File {
         val temp = Files.createTempDirectory("imgcstmzr")
-        val cmd = listOf(
-            "tar",
-            "-xvf",
-            "\"$archive\"",
-            "-C",
-            "\"$temp\""
-        ).joinToString(" ")
-
-        CommandLineRunner().startProcessAndWaitForCompletion(
-            File("/bin").toPath(), "sh -c '$cmd'"
-        ) { str ->
-            TermUi.echo(str)
-        }.get()
+        runProcess("tar", "-xvf", "\"$archive\"", "-C", "\"$temp\"")
 
         return temp.toFile()?.listFiles()?.first()
             ?: throw IllegalStateException("An unknown error occurred while unarchiving. $temp was supposed to contain the unarchived file but was empty.")
@@ -78,7 +103,7 @@ class Unarchiver {
  *
  * @author Björn Kahlert
  */
-private class CommandLineRunner {
+class CommandLineRunner {
     private var log: Logger? = null
 
     /**
@@ -87,7 +112,7 @@ private class CommandLineRunner {
      *
      *  1. Status messages triggered by command line runner
      *  1. Output of the running process
-     *  1. Errros of the running process
+     *  1. Errors of the running process
      *
      *
      * @param directory the path where the script resides
@@ -96,10 +121,15 @@ private class CommandLineRunner {
      *
      * @return completed future that blocks on access in case the process has not terminated execution yet
      */
-    fun startProcessAndWaitForCompletion(directory: Path, shellScript: String, allInOneConsumer: Consumer<String?>): CompletableFuture<Int> {
+    fun startProcessAndWaitForCompletion(
+        directory: Path,
+        shellScript: String,
+        allInOneConsumer: (String) -> Unit,
+        processConsumer: (Process) -> Unit = { provider -> run {} }
+    ): CompletableFuture<Int> {
         return startProcessAndWaitForCompletion(
             directory, shellScript
-        ) { origin: Origin?, line: String? -> allInOneConsumer.accept(line) }
+        ) { process: Process, origin: Origin, line: String -> allInOneConsumer.invoke(line) }
     }
 
     /**
@@ -108,32 +138,35 @@ private class CommandLineRunner {
      *
      *  1. Status messages triggered by command line runner
      *  1. Output of the running process
-     *  1. Errros of the running process
-     *
+     *  1. Errors of the running process
      *
      * @param directory the path where the script resides
      * @param shellScript the file name of the script
-     * @param originConsumer consumer to which all generated output will be distinguishably forwarded
+     * @param outputConsumer consumer to which all generated output will be distinguishably forwarded
      *
      * @return completed future that blocks on access in case the process has not terminated execution yet
      */
-    fun startProcessAndWaitForCompletion(directory: Path, shellScript: String, originConsumer: BiConsumer<Origin?, String?>): CompletableFuture<Int> {
+    fun startProcessAndWaitForCompletion(
+        directory: Path,
+        shellScript: String,
+        outputConsumer: (Process, Origin, String) -> Unit,
+    ): CompletableFuture<Int> {
         val loggerName = CommandLineRunner::class.java.simpleName + "(" + shellScript.split(" ").toTypedArray()[0] + ")"
-        log = InfoConsumingLogger(loggerName) { line -> originConsumer.accept(Origin.STATUS, line) }
         val process = startProcess(directory, shellScript, ProcessBuilder.Redirect.PIPE, ProcessBuilder.Redirect.PIPE)
-        Thread(StreamGobbler(
-            process.inputStream
-        ) { line: String? -> originConsumer.accept(Origin.OUT, line) }).start()
-        Thread(StreamGobbler(
-            process.errorStream
-        ) { line: String? -> originConsumer.accept(Origin.ERR, line) }).start()
+        log = InfoConsumingLogger(loggerName) { line -> outputConsumer.invoke(process, Origin.STATUS, line) }
+        Thread(StreamGobbler(process.inputStream) { line: String ->
+            outputConsumer.invoke(process, Origin.OUT, line)
+        }).start()
+        Thread(StreamGobbler(process.errorStream) { line: String ->
+            outputConsumer.invoke(process, Origin.ERR, line)
+        }).start()
         return waitForProcessAsync(process)
     }
 
     private fun startProcess(directory: Path, shellScript: String, outputRedirect: ProcessBuilder.Redirect, errorRedirect: ProcessBuilder.Redirect): Process {
         val absoluteShellScript = directory.resolve(shellScript)
         return try {
-            log!!.info("Starting {}...", absoluteShellScript)
+            log?.info("Starting {}...", absoluteShellScript)
             val process = ProcessBuilder()
                 .command(SHELL_CMD, SHELL_CMD_ARGS, absoluteShellScript.toAbsolutePath().toString())
                 .directory(directory.toAbsolutePath().toFile())
@@ -141,32 +174,30 @@ private class CommandLineRunner {
                 .redirectOutput(outputRedirect)
                 .redirectError(errorRedirect)
                 .start()
-            log!!.info("Process {} successfully started", process)
+            log?.info("Process {} successfully started", process)
             process
         } catch (e: IOException) {
             throw UncheckedIOException(e)
         }
     }
 
-    private fun waitForProcessAsync(process: Process): CompletableFuture<Int> {
-        return CompletableFuture.supplyAsync { waitForProcess(process) }
-    }
+    private fun waitForProcessAsync(process: Process): CompletableFuture<Int> = CompletableFuture.supplyAsync { waitForProcess(process) }
 
     private fun waitForProcess(process: Process): Int {
         try {
-            log!!.info("Waiting for process {} to complete...", process)
+            log?.info("Waiting for process {} to complete...", process)
             val exitCode = process.waitFor()
-            log!!.info("{} exited with code {}", process, exitCode)
+            log?.info("{} exited with code {}", process, exitCode)
             return exitCode
         } catch (ie: InterruptedException) {
-            log!!.info("Waiting for process completion was interrupted. Destroying {}...", process)
+            log?.info("Waiting for process completion was interrupted. Destroying {}...", process)
             process.destroyForcibly()
             Thread.currentThread().interrupt()
             while (true) {
                 try {
-                    log!!.info("Waiting for process destruction to finish...", process)
+                    log?.info("Waiting for process destruction to finish...", process)
                     val exitCode = process.waitFor()
-                    log!!.info("Process successfully destructed with code {}", process, exitCode)
+                    log?.info("Process successfully destructed with code {}", process, exitCode)
                     return exitCode
                 } catch (e: InterruptedException) {
                     Thread.currentThread().interrupt()
@@ -192,7 +223,7 @@ private class CommandLineRunner {
         ERR
     }
 
-    private class StreamGobbler(private val inputStream: InputStream, private val inputLineConsumer: Consumer<String?>) : Runnable {
+    private class StreamGobbler(private val inputStream: InputStream, private val inputLineConsumer: Consumer<String>) : Runnable {
         override fun run() {
             BufferedReader(InputStreamReader(inputStream)).lines().forEach(inputLineConsumer)
         }
@@ -211,34 +242,32 @@ private class CommandLineRunner {
  *
  * @author Björn Kahlert
  */
-private class InfoConsumingLogger(name: String?, private val consumer: Consumer<String>) : SubstituteLogger(name, null, true) {
+private class InfoConsumingLogger(name: String, private val consumer: (String) -> Unit) : SubstituteLogger(name, null, true) {
     override fun isInfoEnabled(): Boolean {
         return true
     }
 
     override fun info(msg: String) {
-        consumer.accept(msg)
+        consumer.invoke(msg)
     }
 
     override fun info(format: String, arg: Any) {
-        consumer.accept(StructuredLogging.formatForException(format, arg))
+        consumer.invoke(StructuredLogging.formatForException(format, arg))
     }
 
     override fun info(format: String, arg1: Any, arg2: Any) {
-        consumer.accept(StructuredLogging.formatForException(format, arg1, arg2))
+        consumer.invoke(StructuredLogging.formatForException(format, arg1, arg2))
     }
 
     override fun info(format: String, vararg arguments: Any) {
-        consumer.accept(StructuredLogging.formatForException(format, arguments))
+        consumer.invoke(StructuredLogging.formatForException(format, arguments))
     }
 
     override fun info(msg: String, t: Throwable) {
-        consumer.accept(StructuredLogging.formatForException(msg, t))
+        consumer.invoke(StructuredLogging.formatForException(msg, t))
     }
 
-    override fun isInfoEnabled(marker: Marker): Boolean {
-        return true
-    }
+    override fun isInfoEnabled(marker: Marker): Boolean = true
 }
 
 private class StructuredLogging {

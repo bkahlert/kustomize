@@ -10,6 +10,8 @@ import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.clikt.parameters.groups.OptionGroup
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.defaultLazy
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.prompt
 import com.github.ajalt.clikt.parameters.types.file
@@ -17,11 +19,14 @@ import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.github.ajalt.clikt.sources.PropertiesValueSource
 import com.github.ajalt.mordant.TermColors
+import com.imgcstmzr.ArmRuntime
 import com.imgcstmzr.Cache
 import com.imgcstmzr.ConfigValueSource
 import com.imgcstmzr.DelegatingValueSource
 import com.imgcstmzr.Downloader
+import java.io.File
 import java.time.LocalDate
+import kotlin.reflect.KClass
 
 class UserOptions : OptionGroup(
     name = "User Options",
@@ -59,42 +64,56 @@ class CliCommand :
         }
     }
 
-    val config by option("--config", "--config-file", help = "(partial) configuration to be used for image customization")
+    val config: String? by option("--config", "--config-file", help = "(partial) configuration to be used for image customization")
         .file(mustExist = true, canBeDir = false, mustBeReadable = true)
         .convert {
             val value = it.readText()
             valueSourceDelegator.delegate = ConfigValueSource.parse(value)
             value
         }
+    val name: String? by option().prompt(default = "my-img")
 
     val cache: Cache by option("--cache-dir", help = "temporary directory that holds intermediary states to improve performance")
         .file(canBeFile = false, mustBeWritable = true)
         .convert { Cache(it) }
         .default(Cache())
 
-    val shared by findOrSetObject { cache }
+    val shared by findOrSetObject { mutableMapOf<KClass<*>, Any>() }
 
     override fun run() {
-        echo("Using ${shared.dir} as cache directory")
+        shared[Cache::class] = cache
+        config?.also { echo("Using config (name: $name, size: ${it.length})") }
+        echo("Using cache (path: ${cache.dir})")
     }
 }
 
 class ImgCommand : CliktCommand() {
-
     val name by option().prompt(default = "my-img")
     val url by option().default("downloads.raspberrypi.org/raspios_lite_armhf_latest")
-
-    val cache by requireObject<Cache>()
+    val reuseLastWorkingCopy by option().flag(default = false)
+    val shared by requireObject<MutableMap<KClass<*>, Any>>()
 
     override fun run() {
-        cache.provideCopy(name) {
+        val cache: Cache = shared[Cache::class] as Cache
+
+        shared[File::class] = cache.provideCopy(name, reuseLastWorkingCopy) {
             Downloader().download(url).also { TermUi.echo("Downloaded $url to $it") }
         }
     }
 }
 
-class F1 : CliktCommand() {
-    override fun run() = Unit
+class CstmzCommand : CliktCommand() {
+    val name by option().prompt(default = "my-img")
+    val shared by requireObject<MutableMap<KClass<*>, Any>>()
+
+    val img by option()
+        .file(canBeDir = false, mustBeReadable = true)
+        .defaultLazy { shared[File::class] as File }
+
+    override fun run() {
+        val system = ArmRuntime(name, img)
+        echo(system)
+    }
 }
 
 @OptIn(ExperimentalValueSourceApi::class)
@@ -138,7 +157,12 @@ class CircuitCommands : CliktCommand(name = "circuits") {
 
 
 fun main() {
-    CliCommand().subcommands(XyzCommands(), ImgCommand()).main(listOf("--config", "bother-you.conf", "img"))
+    CliCommand().subcommands(ImgCommand(), CstmzCommand()).main(
+        listOf(
+            "--config", "bother-you.conf", "img",
+            "--reuse-last-working-copy", "cstmz"
+        )
+    )
 //    CliCommand().subcommands(XyzCommands(), ImgCommand()).main(listOf("img", "--name", "name-by-cmdline"))
 //    CliCommand().subcommands(XyzCommands(), ImgCommand()).main(listOf("img"))
 //    F1().subcommands(DriverCommands(), CircuitCommands()).main(args)

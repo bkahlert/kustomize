@@ -57,7 +57,7 @@ internal class CacheTest {
         }
 
         val copies = (0..2).map {
-            cache.provideCopy("my-copy", provider)
+            cache.provideCopy("my-copy", false, provider)
         }
 
         expectThat(providerCalls).isEqualTo(1)

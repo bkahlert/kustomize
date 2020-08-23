@@ -7,7 +7,6 @@ import com.github.ajalt.clikt.sources.ValueSource
 
 @OptIn(ExperimentalValueSourceApi::class)
 class DelegatingValueSource<T : ValueSource>(var delegate: T? = null) : ValueSource {
-    override fun getValues(context: Context, option: Option): List<ValueSource.Invocation> {
-        return delegate?.getValues(context, option) ?: emptyList()
-    }
+    override fun getValues(context: Context, option: Option): List<ValueSource.Invocation> =
+        delegate?.getValues(context, option) ?: emptyList()
 }
