@@ -26,7 +26,7 @@ Alternatively run `--config=bother-you.json
 
 ## Technologies Used
 - [Kotlin](https://kotlinlang.org/) as the programming language
-- [Config4k](https://github.com/config4k/config4k) to process configuration files of various formats
+- [Config4k](https://github.com/config4k/config4k) to process HOCON configuration files
 - [Gradle]() as the build tool
 - [Gradle Use Latest Versions Plugin](https://github.com/patrikerdes/gradle-use-latest-versions-plugin) and [Gradle Versions Plugin](https://github.com/ben-manes/gradle-versions-plugin) to easily update all used version
 - [JUnit 5](https://junit.org/junit5/) for testing

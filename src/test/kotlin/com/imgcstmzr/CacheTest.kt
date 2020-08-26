@@ -1,5 +1,6 @@
 package com.imgcstmzr
 
+import com.imgcstmzr.cli.Cache
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode

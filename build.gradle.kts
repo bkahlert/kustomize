@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+@Suppress("SpellCheckingInspection")
 plugins {
     kotlin("jvm") version "1.4.0"
     id("se.patrikerdes.use-latest-versions") version "0.2.14"
@@ -18,21 +19,26 @@ repositories {
 }
 dependencies {
     implementation("org.slf4j:slf4j-simple:2.0.0-alpha1")
+    @Suppress("SpellCheckingInspection")
     implementation("com.github.ajalt:clikt:2.8.0")
+    @Suppress("SpellCheckingInspection")
     implementation("com.github.ajalt:mordant:1.2.1")
     implementation("io.github.config4k:config4k:0.4.2")
     testImplementation(kotlin("test-junit5"))
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.3.2")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.3.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.3.2")
-    
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
+
     testImplementation("io.strikt:strikt-core:0.27.0")
     testImplementation("io.strikt:strikt-mockk:0.27.0")
 }
-tasks.withType<KotlinCompile> {
+
+tasks.withType<KotlinCompile>().all {
     kotlinOptions.jvmTarget = "1.8"
     kotlinOptions.useIR = true
+    @Suppress("SpellCheckingInspection")
+    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
 }
 application {
     mainClassName = "MainKt"
