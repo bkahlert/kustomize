@@ -218,15 +218,11 @@ _hasvalue() {
     fi
 }
 
-_addvalue() {
+_addvalue() { # not working
     local addvalue value key
     addvalue=${1:?}
     value=${2:?}
     key=${3:-}
-    echo "$addvalue"
-    echo "$value"
-    echo "$key"
-
     sed -E "s/^(""$key""[^#]*)\s*=\s*(([^,]*,)*)\s*($value)(,.*)*$/\1=\2\4,$addvalue\5/"
 }
 
@@ -262,7 +258,7 @@ _umount() {
             sudo umount "$mount_point" || sudo diskutil unmount "$mount_point"
             try=$((try + 1))
         done
-        if [ -e "$mount_point" ]; then sudo rm -rf "$mount_point" 2>/dev/null 1>/dev/null; fi
+        if [ -e "$mount_point" ] && [ -d "$mount_point" ]; then sudo rm -rf "$mount_point" 2>/dev/null 1>/dev/null; fi
     fi
 }
 
@@ -293,7 +289,9 @@ _pv_dd() {
     local filesize
     if [ "${1:-}" == "" ]; then _die "Input file parameter missing"; fi
     filesize="$(wc -c "$1" | awk '{print $1}')"
-    _dd "$1" "$2" " | sudo pv -s ${filesize} | sudo dd "
+
+    diskutil unmountDisk "$2"
+    dd if="$1" | pv -s ${filesize} | dd of="$2" bs=4m
 }
 
 _dd() {
@@ -305,9 +303,8 @@ _dd() {
     if [ ! -e "$2" ]; then _die "Cannot dd since $2 does not exist."; fi
     if [ ! -b "$2" ]; then _die "Cannot dd since $2 is no block device."; fi
 
-    _umount "$1"
-    cmd=$(printf "sudo dd if=\"%s\"%s of=\"%s\" bs=4m" "$1" "${3:-}" "$2")
-    eval "$cmd"
+    diskutil unmountDisk "$2"
+    dd if="$1" of="$2" bs=4m
 }
 
 _flash() {
@@ -315,7 +312,7 @@ _flash() {
     source=${1:?}
     destination=${2:?}
 
-    _p "Writing ${source} to ${destination}..."
+    _p "Flashing ${source} to ${destination}..."
     if command -v pv &>/dev/null; then
         _pv_dd "${source}" "${destination}"
     else
@@ -325,5 +322,5 @@ _flash() {
             _dd "${source}" "${destination}"
         fi
     fi
-    _p "Finished writing."
+    if [ $? ]; then _p "Finished flashing."; else _warn "Writing failed."; fi
 }

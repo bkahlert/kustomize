@@ -83,7 +83,7 @@ prepare_partition() {
     _p
     _prompt "Would you like to open ${PARTITION} to verify changes or adding manual ones?" "y N"
     case $REPLY in
-    n)
+    y)
         _p
         _p "Opening $DIR..."
         (open "$DIR")
@@ -100,6 +100,14 @@ cleanup() {
     _p
     _p "Cleaning up..."
     for vol in "$@"; do
+        echo grep -qs '/mnt/foo '
+        echo grep -qs '/mnt/foo '
+        echo grep -qs '/mnt/foo '
+        echo grep -qs '/mnt/foo '
+        echo grep -qs '/mnt/foo '
+        echo grep -qs '/mnt/foo '
+        echo grep -qs '/mnt/foo '
+        echo grep -qs '/mnt/foo '
         if grep -qs '/mnt/foo ' /proc/mounts; then
             sleep 5
             sudo umount "$vol"
@@ -170,3 +178,4 @@ _p
 _p "${txBold}""Preparation completed.""${txReset}"
 _p
 _p "You can find the patched image at" "${WORKING_COPY}"
+_p "Depending on your setup you might be able to connect to your Raspberry Pi using http://find.remote.it (remoteit) and/or http://reflector:1880 (Node RED)."

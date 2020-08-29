@@ -28,7 +28,7 @@ if [ ! -b ./config.txt ] || [ -w ./config.txt ]; then
         *)
             _p "Activating USB OTG... "
             _hasvalue "dwc2" "dtoverlay" <./config.txt || echo "dtoverlay=dwc2" >>./config.txt
-            _hasvalue "dwc2" "modules-load" <./cmdline.txt || echo "modules-load=dwc2" >>./cmdline.txt
+            _hasvalue "dwc2" "modules-load" <./cmdline.txt || old="$(cat ./cmdline.txt)" && echo -n $old" modules-load=dwc2" >./cmdline.txt
             _p "Activated USB OTG successfully."
 
             _p
@@ -39,7 +39,7 @@ if [ ! -b ./config.txt ] || [ -w ./config.txt ]; then
                 ;;
             *)
                 _p "Activating virtual ethernet... "
-                _hasvalue "g_ether" "modules-load" <./cmdline.txt || cat ./cmdline.txt | _addvalue "g_ether" "dwc2" "modules-load" >./cmdline.txt
+                _hasvalue "g_ether" "modules-load" <./cmdline.txt || echo -n "$(cat ./cmdline.txt)"",g_ether" >./cmdline.txt
                 _p "Activated virtual ethernet successfully."
                 ;;
             esac
@@ -48,8 +48,8 @@ if [ ! -b ./config.txt ] || [ -w ./config.txt ]; then
             _prompt "Activate virtual webcam?" "y N" "g_webcam"
             case $REPLY in
             y)
-                _p "Activating virtual webcamt... "
-                _hasvalue "g_webcam" "modules-load" <./cmdline.txt || cat ./cmdline.txt | _addvalue "g_webcam" "dwc2" "modules-load" >./cmdline.txt
+                _p "Activating virtual webcam... "
+                _hasvalue "g_webcam" "modules-load" <./cmdline.txt || echo -n "$(cat ./cmdline.txt)"",g_webcam" >./cmdline.txt
                 _p "Activated virtual ethernet successfully."
                 ;;
             *)

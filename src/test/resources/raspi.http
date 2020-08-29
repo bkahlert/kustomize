@@ -12,7 +12,7 @@ client.test("Request executed successfully", function() {
 %}
 
 ### Send POST request with body as parameters
-PUT http://192.168.16.45:1880/status
+PUT http://192.168.168.192:1880/status
 Content-Type: application/json
 
 {
