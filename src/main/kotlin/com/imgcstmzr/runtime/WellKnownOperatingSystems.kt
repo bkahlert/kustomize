@@ -67,7 +67,7 @@ enum class WellKnownOperatingSystems : OS {
         private fun stateName(index: Int, commands: Array<out String>): String {
             val commandLine = commands[index]
             val command = commandLine.split(' ').first()
-            return "${index + 1}: $command"
+            return "${index + 1}/${commands.size}: $command"
         }
 
         override fun sequence(purpose: String, vararg commands: String): Workflow = Workflow(

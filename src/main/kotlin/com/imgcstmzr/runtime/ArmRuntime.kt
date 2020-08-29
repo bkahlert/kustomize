@@ -19,13 +19,14 @@ class ArmRuntime(
     private val os: OS,
     private val name: String,
     val img: File,
+    private val autoShutdown: Boolean = true,
 ) {
 
     /**
      * Boots the machine, runs all provided [Workflow] instances
      * and shuts down. Returns the machine's exit code.
      */
-    fun bootAndRun(caption: String, vararg workflows: Workflow, autoShutdown: Boolean = true): Int {
+    fun bootAndRun(caption: String, vararg workflows: Workflow): Int {
         val watchdog = Watchdog(Duration.ofSeconds(15)) {
             echo(tc.red("The console seems to have halted... ◔̯◔"))
             echo(tc.cyan("To help debugging, you can open a separate console and connect using:"))
@@ -60,10 +61,20 @@ class ArmRuntime(
 
     private fun echoOutput(origin: Origin, output: String, workflows: List<Workflow>) {
         if (output.stripOffAnsi().isBlank()) return
+        val offset = if (autoShutdown) 1 else 0
 
         val fill = statusPadding(output)
         val prefix = if (borderedOutput) "│   " else ""
-        val status = if (workflows.isEmpty()) noRunningWorkflowsIndicator else workflows.joinToString(" ")
+        val status = when (workflows.size) {
+            0 -> noRunningWorkflowsIndicator
+            1, 1 + offset, 2 + offset, 3 + offset -> workflows.joinToString(" ")
+            else -> {
+                val firstWorkflows = workflows.subList(0, 2).joinToString(" ")
+                val hiddenWorkflows = Workflow("…", { _, _ -> "" }).toString()
+                val lastWorkflows = workflows.subList(workflows.size - 1 - offset, workflows.size).joinToString(" ")
+                listOf(firstWorkflows, hiddenWorkflows, lastWorkflows).joinToString(" ")
+            }
+        }
         echo(when (origin) {
             Origin.OUT -> {
                 "$prefix$output$fill$status"
