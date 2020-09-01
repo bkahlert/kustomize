@@ -26,7 +26,7 @@ internal class Config4kValueSourceTest {
     @ExperimentalValueSourceApi
     @Test
     internal fun `should load complex property`() {
-        val values = config4kValueSource.getValues(TestCli.ctx, TestCli.cmd.commands_)
+        val values = config4kValueSource.getValues(TestCli.ctx, TestCli.cmd.scripts_)
         expectThat(values).isEqualTo(listOf(Invocation(listOf("the-basics=\n" + """
             sudo -i
             :

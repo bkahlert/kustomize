@@ -10,19 +10,19 @@ import java.time.Duration
 class FakeProcess(
     val output: OutputStream = ByteArrayOutputStream(),
     val input: InputStream = InputStream.nullInputStream(),
-    var exitValue: Int = 0,
+    var exitValue: Int? = null,
 ) :
     Process() {
     override fun getOutputStream(): OutputStream = output
     override fun getInputStream(): InputStream = input
     override fun getErrorStream(): InputStream = InputStream.nullInputStream()
     override fun waitFor(): Int = 0
-    override fun exitValue(): Int = exitValue
+    override fun exitValue(): Int = exitValue ?: throw IllegalStateException("Process not terminated yet!")
     override fun destroy() {}
-    override fun isAlive(): Boolean = (input as SlowInputStream).unreadCount != 0
+    override fun isAlive(): Boolean = if (input is SlowInputStream) input.unreadCount != 0 else exitValue == null
 
     fun exit(exitValue: Int) {
-        (input as SlowInputStream).terminated = true
+        if (input is SlowInputStream) input.terminated = true
         this.exitValue = exitValue
     }
 

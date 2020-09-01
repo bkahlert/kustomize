@@ -4,13 +4,16 @@ import com.github.ajalt.clikt.output.CliktHelpFormatter
 import com.github.ajalt.clikt.output.HelpFormatter
 import com.github.ajalt.mordant.TermColors
 
-class ColorHelpFormatter : CliktHelpFormatter(showRequiredTag = true, showDefaultValues = true) {
+class ColorHelpFormatter(tc: TermColors) : CliktHelpFormatter(showRequiredTag = true, showDefaultValues = true) {
 
     companion object {
-        val INSTANCE = ColorHelpFormatter()
+        val tc = TermColors()
+        val INSTANCE = ColorHelpFormatter(tc)
+
+        private val SUCCESS = tc.green("0")
+        fun result(code: Int): String = if (code == 0) SUCCESS else tc.red("$code")
     }
 
-    val tc = TermColors()
     val rainbow = listOf(
         tc.black to tc.gray,
         tc.red to tc.brightRed,
@@ -25,8 +28,6 @@ class ColorHelpFormatter : CliktHelpFormatter(showRequiredTag = true, showDefaul
     fun randomColor() = rainbow.map { (normal, _) -> normal }.shuffled()
     fun colorize(string: String) = string.map { randomColor().first()(it.toString()) }.joinToString("")
 
-    val SUCCESS = tc.green("0")
-    fun result(code: Int): String = if (code == 0) SUCCESS else tc.red("$code")
 
     //    override fun renderSectionTitle(title: String) = "$prefix ${tc.bold(title)}"
     override fun renderSectionTitle(title: String) =

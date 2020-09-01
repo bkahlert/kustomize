@@ -37,6 +37,7 @@ dependencies {
 tasks.withType<KotlinCompile>().all {
     kotlinOptions.jvmTarget = "1.8"
     kotlinOptions.useIR = true
+    kotlinOptions.languageVersion = "1.4"
     @Suppress("SpellCheckingInspection")
     kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
 }

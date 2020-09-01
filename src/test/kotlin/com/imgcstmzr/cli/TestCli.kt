@@ -16,8 +16,8 @@ class TestCli {
         }
 
         val os = option("os")
-        val commands_: OptionWithValues<String?, String, String> = option("commands")
-        val commands: Map<String, String> by option().associate()
+        val scripts_: OptionWithValues<String?, String, String> = option("scripts")
+        val scripts: Map<String, String> by option().associate()
     }
 
     companion object {

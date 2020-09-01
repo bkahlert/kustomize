@@ -1,67 +1,75 @@
 package com.imgcstmzr.runtime
 
-import java.io.File
+import com.imgcstmzr.process.Output
+import java.nio.file.Path
+
+enum class SupportedOS : () -> OS<Workflow> {
+    RPI_LITE {
+        override fun invoke(): OS<Workflow> = RaspberryPiOSLite()
+    };
+
+    val downloadUrl: String? = invoke().downloadUrl
+}
+
+interface RunningOS<P : Program<*>> {
+    /**
+     * Forwards the [values] to the OS running process.
+     */
+    fun input(vararg values: String)
+
+    /**
+     * Logs the current execution status given the [output] and [unfinishedPrograms].
+     */
+    fun status(output: Output, unfinishedPrograms: List<P>)
+
+    /**
+     * Initiates the systems immediate shutdown.
+     */
+    fun shutdown(): Unit
+
+    val shuttingDown: Boolean
+}
 
 /**
  * Representation of an operating system that can be customized.
  */
-interface OS {
+interface OS<P : Program<*>> {
+
     /**
      * URL that allows an image of this [OS] to be downloaded.
      */
-    val downloadUrl: String
+    val downloadUrl: String?
+
+    fun increaseDiskSpace(
+        size: Long,
+        img: Path,
+        runtime: Runtime<P>,
+    ): Int;
+
+    fun bootAndRun(
+        scencario: String,
+        img: Path,
+        runtime: Runtime<P>,
+        processor: RunningOS<P>.(Output) -> Unit,
+    ): Int
 
     /**
-     * [Regex] that matches the [OS]'s output that prompts for the user to login.
-     */
-    val loginPattern: Regex
-
-    /**
-     * [Regex] that matches the [OS]'s output that awaits a command.
-     */
-    val readyPattern: Regex
-
-    /**
-     * Returns the command needed to that this [OS].
-     */
-    fun startCommand(name: String, img: File): String
-
-    /**
-     * Returns [Workflow] that performs a login using [username] and [password].
-     */
-    fun login(username: String, password: String): Workflow
-
-    /**
-     * Returns a [Workflow] that accomplishes [purpose] by executing the given [commandBlocks].
+     * Compiles a special script with a [name] that consists itself of multiple scripts
+     * in the form of labeled [commandBlocks].
      *
-     * The passed command blocks are of the form:
+     * A command block starts with a header (e.g. `: label`) followed by a script.
+     *
+     * Example:
      * ```shell script
-     * : no-op using title
-     * command
-     * command
+     * : say "Hello\nWorld""
+     * echo "Hello"
+     * echo "World"
      * ```
-     *
-     * Each block is executed en bloc, that is, all commands are passed in a single called—not line-by-line.
      */
-    fun sequences(purpose: String, commandBlocks: String): Array<Workflow>
+    fun compileSetupScript(name: String, commandBlocks: String): Array<Workflow>
 
     /**
-     * Returns a [Workflow] that accomplishes [purpose] by executing the given [commands].
-     *
-     * The passed commands are executed line by line.
+     * Compiles a script with a [name] consisting of [commands] to be executed.
      */
-    fun sequence(purpose: String, vararg commands: String): Workflow
-
-    /**
-     * Returns a [Workflow] that accomplishes [purpose] by executing the given [commands] using [sudo](https://en.wikipedia.org/wiki/Sudo)
-     *
-     * The passed commands are executed line by line.
-     */
-    fun sudoSequence(purpose: String, vararg commands: String): Workflow
-
-    /**
-     * Returns a [Workflow] that initiates the systems immediate shutdown.
-     */
-    fun shutdown(): Workflow
+    fun compileScript(name: String, vararg commands: String): Workflow
 }
-

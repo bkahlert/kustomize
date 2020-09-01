@@ -1,56 +1,59 @@
 package com.imgcstmzr.cli
 
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.process.Unarchiver
+import com.imgcstmzr.process.unarchive
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Instant.now
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-class Cache(dir: File = DEFAULT) : ManagedDirectory(dir) {
+class Cache(dir: Path = DEFAULT) : ManagedDirectory(dir) {
 
-    fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> File): File =
+    fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> Path): Path =
         ProjectDirectory(dir, name, reuseLastWorkingCopy).require(provider)
 
     companion object {
-        private val USER_HOME: File = File(System.getProperty("user.home"))
-        val DEFAULT: File = File(USER_HOME, ".imgcstmzr")
+        private val USER_HOME: Path = Path.of(System.getProperty("user.home"))
+        val DEFAULT: Path = USER_HOME.resolve(".imgcstmzr")
     }
 }
 
-open class ManagedDirectory(val dir: File) {
-    constructor(parentDir: File, dirName: String) : this(File(parentDir, dirName))
+open class ManagedDirectory(val dir: Path) {
+    constructor(parentDir: Path, dirName: String) : this(parentDir.resolve(dirName))
+
+    protected val file: File = dir.toAbsolutePath().toFile()
 
     init {
-        if (!dir.exists()) {
-            dir.mkdirs()
-            check(dir.exists()) { "$dir does not exist and could not be created." }
+        if (!file.exists()) {
+            file.mkdirs()
+            check(file.exists()) { "$dir does not exist and could not be created." }
         }
-        check(dir.canWrite()) { "Cannot write to $dir" }
+        check(file.canWrite()) { "Cannot write to $dir" }
     }
 
-    val absDir = dir.absolutePath.toString()
+    val absDir = file.toString()
 
     fun delete() {
-        if (dir.exists()) dir.deleteRecursively()
+        if (file.exists()) file.deleteRecursively()
     }
 }
 
 
-private class ProjectDirectory(parentDir: File, dirName: String, val reuseLastWorkingCopy: Boolean) : ManagedDirectory(parentDir, dirName) {
+private class ProjectDirectory(parentDir: Path, dirName: String, val reuseLastWorkingCopy: Boolean) : ManagedDirectory(parentDir, dirName) {
 
     private val downloadDir = SingleFileDirectory(dir, "download")
     private val rawDir = SingleFileDirectory(dir, "raw")
 
     private fun workDirs(): List<WorkDirectory> {
-        val listFiles: Array<File> = dir.listFiles { dir, name ->
+        val listFiles: Array<File> = file.listFiles { dir, name ->
             WorkDirectory.isNameValid(name)
         } ?: return emptyList()
 
         return listFiles
             .sortedByDescending { it.lastModified() }
-            .map { file -> WorkDirectory(file) }
+            .map { file -> WorkDirectory(file.toPath()) }
     }
 
     private fun deleteOldWorkDirs() {
@@ -63,24 +66,22 @@ private class ProjectDirectory(parentDir: File, dirName: String, val reuseLastWo
             }
     }
 
-    fun require(provider: () -> File): File {
+    fun require(provider: () -> Path): Path {
         deleteOldWorkDirs()
 
-        val downloadedFile = downloadDir.requireFile(provider)
-        val img = rawDir.requireFile {
-            Unarchiver().unarchive(downloadedFile)
-        }
+        val downloadedFile = downloadDir.requireSingle(provider)
+        val img = rawDir.requireSingle { unarchive(downloadedFile) }
 
         val workDirs = workDirs()
         if (reuseLastWorkingCopy) {
             if (workDirs.isNotEmpty()) {
-                val file = workDirs[0].getFile()
-                echo("Re-using last working copy $file")
+                val file = workDirs[0].getSingle()
+                echo("Re-using last working copy ${file.fileName}")
                 return file
             }
             echo("No working copy exists that could be re-used. Creating a new one.")
         }
-        return WorkDirectory.from(dir, img).getFile()
+        return WorkDirectory.from(dir, img).getSingle()
     }
 
     companion object {
@@ -88,22 +89,22 @@ private class ProjectDirectory(parentDir: File, dirName: String, val reuseLastWo
     }
 }
 
-private open class SingleFileDirectory(dir: File) : ManagedDirectory(dir) {
-    constructor(parentDir: File, dirName: String) : this(File(parentDir, dirName))
+private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
+    constructor(parentDir: Path, dirName: String) : this(parentDir.resolve(dirName))
 
-    private fun fileCount(): Int = dir.list(DEFAULT_FILTER)?.size ?: 0
+    private fun fileCount(): Int = file.list(DEFAULT_FILTER)?.size ?: 0
 
-    fun fileExists(): Boolean = dir.exists() && dir.isDirectory && fileCount() == 1
+    fun fileExists(): Boolean = file.exists() && file.isDirectory && fileCount() == 1
 
-    fun getFile(): File? =
-        if (fileExists()) dir.listFiles(DEFAULT_FILTER)?.get(0) else null
+    fun getSingle(): Path? =
+        if (fileExists()) file.listFiles(DEFAULT_FILTER)?.get(0)?.toPath() else null
 
-    fun requireFile(provider: () -> File): File {
-        val file = getFile()
+    fun requireSingle(provider: () -> Path): Path {
+        val file = getSingle()
         if (file != null) return file
-        dir.mkdirs()
-        return provider().toPath().let {
-            Files.move(it, dir.toPath().resolve(it.fileName)).toFile()
+        super.file.mkdirs()
+        return provider().let {
+            Files.move(it, dir.resolve(it.fileName))
         }
     }
 
@@ -120,32 +121,32 @@ private open class SingleFileDirectory(dir: File) : ManagedDirectory(dir) {
     }
 }
 
-private class WorkDirectory(dir: File) : ManagedDirectory(dir.parentFile, requireValidName(dir)) {
+private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireValidName(dir)) {
 
-    fun getFile(): File {
-        return dir.listFiles { dir: File, name: String ->
+    fun getSingle(): Path {
+        return file.listFiles { dir: File, name: String ->
             name.endsWith(".img")
-        }?.single() ?: throw NoSuchElementException("$dir does not contain any .img file")
+        }?.single()?.toPath() ?: throw NoSuchElementException("$dir does not contain any .img file")
     }
 
     override fun toString(): String {
-        return "WorkDirectory(${getFile()})"
+        return "WorkDirectory(${getSingle()})"
     }
 
     companion object {
         private val DATE_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss--n").withZone(ZoneId.systemDefault())
 
-        fun requireValidName(dir: File): String {
-            val name = dir.name
+        fun requireValidName(dir: Path): String {
+            val name = dir.fileName.toString()
             return kotlin.runCatching { DATE_FORMATTER.parse(name) }.mapCatching { name }.getOrThrow()
         }
 
         fun isNameValid(name: String) = kotlin.runCatching { DATE_FORMATTER.parse(name) }.isSuccess
 
-        fun from(dir: File, file: File): WorkDirectory {
-            val workDirectory = WorkDirectory(File(dir, DATE_FORMATTER.format(now())))
-            Files.copy(file.toPath(), workDirectory.dir.toPath().resolve(file.toPath().fileName))
+        fun from(dir: Path, file: Path): WorkDirectory {
+            val workDirectory = WorkDirectory(dir.resolve(DATE_FORMATTER.format(now())))
+            Files.copy(file, workDirectory.dir.resolve(file.fileName))
             return workDirectory
         }
     }

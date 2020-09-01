@@ -1,6 +1,10 @@
-package com.imgcstmzr
+package com.imgcstmzr.cli
 
-import com.imgcstmzr.cli.Cache
+import com.imgcstmzr.util.exists
+import com.imgcstmzr.util.hasContent
+import com.imgcstmzr.util.isDirectory
+import com.imgcstmzr.util.isInside
+import com.imgcstmzr.util.isWritable
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
@@ -8,6 +12,7 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
 internal class CacheTest {
@@ -16,7 +21,7 @@ internal class CacheTest {
         val cache = Cache()
 
         expectThat(cache)
-            .get { dir }
+            .get { dir.toFile() }
             .exists()
             .isDirectory()
             .isWritable()
@@ -24,7 +29,7 @@ internal class CacheTest {
 
     @Test
     internal fun `should instantiate in provided directory`() {
-        val tempDir = createTempDir()
+        val tempDir = createTempDir().toPath()
 
         val cache = Cache(tempDir)
 
@@ -33,12 +38,12 @@ internal class CacheTest {
 
     @Test
     internal fun `should provide a retrieved copy`() {
-        val cache = Cache(createTempDir())
-        val file = File.createTempFile("imgcstmzr", ".zip")
-        val bytes = javaClass.getResource("/funny.img.zip").openStream().readAllBytes()
-        Files.write(file.toPath(), bytes)
+        val cache = Cache(createTempDir().toPath())
+        val path = prepareTestImgZip()
 
-        val copy = cache.provideCopy("my-copy") { file }
+        val copy = cache.provideCopy("my-copy") {
+            path
+        }
 
         expectThat(copy)
             .hasContent("funny content")
@@ -47,14 +52,12 @@ internal class CacheTest {
 
     @Test
     internal fun `should only retrieve copy once`() {
-        val cache = Cache(createTempDir())
-        val file = File.createTempFile("imgcstmzr", ".zip")
-        val bytes = javaClass.getResource("/funny.img.zip").openStream().readAllBytes()
-        Files.write(file.toPath(), bytes)
+        val cache = Cache(createTempDir().toPath())
+        val path = prepareTestImgZip()
         var providerCalls = 0
         val provider = {
             providerCalls++
-            file
+            path
         }
 
         val copies = (0..2).map {
@@ -68,5 +71,11 @@ internal class CacheTest {
                 .isInside(cache.dir)
         }
     }
-}
 
+    private fun prepareTestImgZip(): Path {
+        val path = File.createTempFile("imgcstmzr", ".zip").toPath()
+        val bytes = javaClass.getResource("/funny.img.zip").openStream().readAllBytes()
+        Files.write(path, bytes)
+        return path
+    }
+}

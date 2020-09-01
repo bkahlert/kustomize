@@ -1,9 +1,11 @@
 package com.imgcstmzr.runtime
 
-import com.github.ajalt.clikt.output.TermUi
+import com.github.ajalt.clikt.output.TermUi.echo
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.imgcstmzr.cli.TestCli
 import com.imgcstmzr.process.NonBlockingReader
+import com.imgcstmzr.process.Output.Companion.ofType
+import com.imgcstmzr.process.OutputType.OUT
 import org.junit.jupiter.api.Assertions.assertTimeoutPreemptively
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
@@ -19,12 +21,11 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.time.Duration
 
-
 @ExperimentalValueSourceApi
 @Execution(ExecutionMode.CONCURRENT)
-class WellKnownOperatingSystemsTest {
+class RaspberryPiOSLiteTest {
 
-    val os: OS = WellKnownOperatingSystems.RASPBERRY_PI_OS_LITE
+    val os = RaspberryPiOSLite()
 
     @Test
     internal fun `should provide working url`() {
@@ -50,7 +51,7 @@ class WellKnownOperatingSystemsTest {
     ).flatMap { (expected, values) ->
         values.map {
             dynamicTest((if (expected) "✅" else "❌") + " $it") {
-                expectThat(WellKnownOperatingSystems.RASPBERRY_PI_OS_LITE.loginPattern.matches(it)).isEqualTo(expected)
+                expectThat(RaspberryPiOSLite.loginPattern.matches(it)).isEqualTo(expected)
             }
         }
     }
@@ -80,7 +81,7 @@ class WellKnownOperatingSystemsTest {
     ).flatMap { (expected, values) ->
         values.map {
             dynamicTest((if (expected) "✅" else "❌") + " $it") {
-                expectThat(WellKnownOperatingSystems.RASPBERRY_PI_OS_LITE.readyPattern.matches(it)).isEqualTo(expected)
+                expectThat(RaspberryPiOSLite.readyPattern.matches(it)).isEqualTo(expected)
             }
         }
     }
@@ -88,7 +89,7 @@ class WellKnownOperatingSystemsTest {
     @Test
     internal fun `should be provided with programs in correct order`() {
         TestCli.cmd.main(emptyList())
-        val programs = TestCli.cmd.commands
+        val programs = TestCli.cmd.scripts
 
         expectThat(programs.keys).containsExactly(
             "the-basics",
@@ -142,11 +143,12 @@ class WellKnownOperatingSystemsTest {
                     TestCli.cmd.main(emptyList())
                     val workflow = os.login("john", "passwd123").logging()
                     val fakeProcess = FakeProcess.withSlowInput(*input, delay = delay)
+                    val runningOS = WorkflowRunningOS(RenderingLogger.DEFAULT, fakeProcess)
 
                     assertTimeoutPreemptively(Duration.ofSeconds(300), {
                         reader.invoke(fakeProcess) { line ->
-                            TermUi.echo(line)
-                            val finished = !workflow.process(fakeProcess, line)
+                            echo(line)
+                            val finished = !workflow.calc(runningOS, line.ofType(OUT))
                             if (finished) {
                                 fakeProcess.exit(0)
                             }
@@ -167,14 +169,15 @@ class WellKnownOperatingSystemsTest {
     @Test
     internal fun `should finish program`() {
         TestCli.cmd.main(emptyList())
-        val program = TestCli.cmd.commands["the-basics"] ?: throw NoSuchElementException("Could not load program")
-        val workflow = os.sequences("test", program)[1].logging()
+        val program = TestCli.cmd.scripts["the-basics"] ?: throw NoSuchElementException("Could not load program")
+        val workflow = os.compileSetupScript("test", program)[1].logging()
         val fakeProcess = FakeProcess()
+        val runningOS = WorkflowRunningOS(RenderingLogger.DEFAULT, fakeProcess)
 
-        assertTimeoutPreemptively(Duration.ofSeconds(10), {
+        assertTimeoutPreemptively(Duration.ofSeconds(100), {
             var running = true
             while (running) {
-                running = workflow.process(fakeProcess, "pi@raspberrypi:~$ ")
+                running = workflow.calc(runningOS, "pi@raspberrypi:~$ ".ofType(OUT))
             }
         }) { "Output till timeout: ${fakeProcess.output}" }
 

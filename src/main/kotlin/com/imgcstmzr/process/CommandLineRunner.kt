@@ -1,5 +1,9 @@
 package com.imgcstmzr.process
 
+import com.imgcstmzr.process.Output.Companion.ofType
+import com.imgcstmzr.process.OutputType.ERR
+import com.imgcstmzr.process.OutputType.META
+import com.imgcstmzr.process.OutputType.OUT
 import org.slf4j.Logger
 import org.slf4j.Marker
 import org.slf4j.helpers.SubstituteLogger
@@ -17,13 +21,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.regex.Pattern
 
 
-//private val confirmationSequence = "         ✌⊂(✰‿✰)つ✌"
-//private val confirmationSequenceCommand = "\recho '$confirmationSequence'\r"
-//fun Process.fakeInputAndConfirm(vararg input: String) {
-//    fakeInput(*input, confirmationSequenceCommand)
-//}
-
-
 /**
  * Tool that allows to run a shell script without having to hassle with
  * problems concerning output redirection and synchronization.
@@ -39,10 +36,9 @@ class CommandLineRunner(private var blocking: Boolean = true) {
      *  1. Output of the running process
      *  1. Errors of the running process
      *
-     *
      * @param directory the path where the script resides
      * @param shellScript the file name of the script
-     * @param processOutputProcessor consumer to which all generated output will be forwarded
+     * @param processor consumer to which all generated output will be distinguishably forwarded
      *
      * @return completed future that blocks on access in case the process has not terminated execution yet
      */
@@ -52,41 +48,17 @@ class CommandLineRunner(private var blocking: Boolean = true) {
         inputRedirect: Redirect = PIPE,
         outputRedirect: Redirect = INHERIT,
         errorRedirect: Redirect = PIPE,
-        processOutputProcessor: (String) -> Unit,
-    ): CompletableFuture<Int> = startProcessAndWaitForCompletion(directory, shellScript, inputRedirect, outputRedirect, errorRedirect)
-    { process: Process, origin: Origin, line: String -> processOutputProcessor.invoke(line) }
-
-    /**
-     * Starts a process and waits for its return while using the provided Consumer for all three forms
-     * of output:
-     *
-     *  1. Status messages triggered by command line runner
-     *  1. Output of the running process
-     *  1. Errors of the running process
-     *
-     * @param directory the path where the script resides
-     * @param shellScript the file name of the script
-     * @param processOutputProcessor consumer to which all generated output will be distinguishably forwarded
-     *
-     * @return completed future that blocks on access in case the process has not terminated execution yet
-     */
-    fun startProcessAndWaitForCompletion(
-        directory: Path,
-        shellScript: String,
-        inputRedirect: Redirect = PIPE,
-        outputRedirect: Redirect = INHERIT,
-        errorRedirect: Redirect = PIPE,
-        processOutputProcessor: (Process, Origin, String) -> Unit,
-    ): CompletableFuture<Int> {
+        processor: Process.(Output) -> Unit,
+    ): RunningProcess {
         val loggerName = CommandLineRunner::class.java.simpleName + "(" + shellScript.split(" ").toTypedArray()[0] + ")"
         val process = startProcess(directory, shellScript, inputRedirect, outputRedirect, errorRedirect)
-        log = InfoConsumingLogger(loggerName) { line -> processOutputProcessor.invoke(process, Origin.STATUS, line) }
+        log = InfoConsumingLogger(loggerName) { line -> process.processor(line.ofType(META)) }
         if (blocking) {
-            BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line -> processOutputProcessor.invoke(process, Origin.OUT, line) }
-            BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line -> processOutputProcessor.invoke(process, Origin.ERR, line) }
+            BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line -> process.processor(line.ofType(OUT)) }
+            BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line -> process.processor(line.ofType(ERR)) }
         } else {
-            NonBlockingReader(process, { inputStream }).forEachLine { line -> processOutputProcessor.invoke(process, Origin.OUT, line) }
-            NonBlockingReader(process, { errorStream }).forEachLine { line -> processOutputProcessor.invoke(process, Origin.ERR, line) }
+            NonBlockingReader(process, { inputStream }).forEachLine { line -> process.processor(line.ofType(OUT)) }
+            NonBlockingReader(process, { errorStream }).forEachLine { line -> process.processor(line.ofType(ERR)) }
         }
         return waitForProcessAsync(process)
     }
@@ -115,8 +87,7 @@ class CommandLineRunner(private var blocking: Boolean = true) {
         }
     }
 
-    private fun waitForProcessAsync(process: Process): CompletableFuture<Int> = CompletableFuture.supplyAsync { waitForProcess(process) }
-
+    private fun waitForProcessAsync(process: Process): RunningProcess = RunningProcess(process, CompletableFuture.supplyAsync { waitForProcess(process) })
     private fun waitForProcess(process: Process): Int {
         try {
             log?.info("Waiting for process {} to complete...", process)
@@ -138,23 +109,6 @@ class CommandLineRunner(private var blocking: Boolean = true) {
                 }
             }
         }
-    }
-
-    enum class Origin {
-        /**
-         * Status messages from the runner itself
-         */
-        STATUS,
-
-        /**
-         * Redirected standard output of the called process
-         */
-        OUT,
-
-        /**
-         * Redirected error output of the called process
-         */
-        ERR
     }
 
     companion object {
@@ -193,23 +147,23 @@ private class InfoConsumingLogger(name: String, private val consumer: (String) -
     override fun isInfoEnabled(): Boolean = true
 
     override fun info(msg: String) {
-        consumer.invoke(msg)
+        consumer(msg)
     }
 
     override fun info(format: String, arg: Any) {
-        consumer.invoke(slf4jFormat(format, arg))
+        this.consumer(slf4jFormat(format, arg))
     }
 
     override fun info(format: String, arg1: Any, arg2: Any) {
-        consumer.invoke(slf4jFormat(format, arg1, arg2))
+        this.consumer(slf4jFormat(format, arg1, arg2))
     }
 
     override fun info(format: String, vararg arguments: Any) {
-        consumer.invoke(slf4jFormat(format, arguments))
+        this.consumer(slf4jFormat(format, arguments))
     }
 
     override fun info(msg: String, t: Throwable) {
-        consumer.invoke(slf4jFormat(msg, t))
+        this.consumer(slf4jFormat(msg, t))
     }
 
     override fun isInfoEnabled(marker: Marker): Boolean = true

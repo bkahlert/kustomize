@@ -16,15 +16,19 @@ import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.long
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.imgcstmzr.cli.Cache
-import com.imgcstmzr.cli.ColorHelpFormatter
 import com.imgcstmzr.cli.ColorHelpFormatter.Companion.INSTANCE
 import com.imgcstmzr.cli.Config4kValueSource
 import com.imgcstmzr.cli.Config4kValueSource.Companion.update
-import com.imgcstmzr.process.Downloader
-import com.imgcstmzr.runtime.ArmRuntime
-import com.imgcstmzr.runtime.WellKnownOperatingSystems
+import com.imgcstmzr.process.Guestfish
+import com.imgcstmzr.process.download
+import com.imgcstmzr.runtime.OS
+import com.imgcstmzr.runtime.SupportedOS
+import com.imgcstmzr.runtime.Workflow
+import com.imgcstmzr.runtime.WorkflowRuntime
 import java.io.File
+import java.nio.file.Path
 import kotlin.reflect.KClass
+import kotlin.system.exitProcess
 
 @OptIn(ExperimentalValueSourceApi::class)
 class CliCommand : NoOpCliktCommand(
@@ -36,7 +40,7 @@ class CliCommand : NoOpCliktCommand(
 ) {
     init {
         context {
-            helpFormatter = ColorHelpFormatter()
+            helpFormatter = INSTANCE
             valueSource = Config4kValueSource.proxy()
         }
     }
@@ -48,7 +52,7 @@ class CliCommand : NoOpCliktCommand(
 
     private val cacheDir: File by option("--cache-dir", help = "temporary directory that holds intermediary states to improve performance")
         .file(canBeFile = false, mustBeWritable = true)
-        .default(Cache.DEFAULT)
+        .default(Cache.DEFAULT.toFile())
 
     private val shared by findOrSetObject { mutableMapOf<KClass<*>, Any>() }
 
@@ -57,7 +61,7 @@ class CliCommand : NoOpCliktCommand(
             currentContext.valueSource.update(it)
             echo("Using config (file: $it, name: $name, size: ${it.readText().length})")
         }
-        shared[Cache::class] = Cache(cacheDir)
+        shared[Cache::class] = Cache(cacheDir.toPath())
         echo("Using cache (path: $cacheDir)")
     }
 }
@@ -68,15 +72,16 @@ class ImgCommand : CliktCommand(help = "Provides an IMG file containing the spec
     )
 
     private val name by option().default("my-img")
-    private val os: WellKnownOperatingSystems by option().enum<WellKnownOperatingSystems>().default(WellKnownOperatingSystems.RASPBERRY_PI_OS_LITE)
-    private val reuseLastWorkingCopy by option().flag(default = false)
+    private val os by option().enum<SupportedOS>().default(SupportedOS.RPI_LITE)
+    private val reuseLastWorkingCopy: Boolean by option().flag(default = false)
     private val shared by requireObject<MutableMap<KClass<*>, Any>>()
 
     override fun run() {
         val cache: Cache = shared[Cache::class] as Cache
 
-        shared[File::class] = cache.provideCopy(name, reuseLastWorkingCopy) {
-            Downloader().download(os.downloadUrl).also { TermUi.echo("Downloaded $it from ${os.downloadUrl}") }
+        shared[Path::class] = cache.provideCopy(name, reuseLastWorkingCopy) {
+            val downloadUrl: String = os.downloadUrl ?: throw NoSuchElementException("$os has no download URL.")
+            download(downloadUrl).also { TermUi.echo("Downloaded $it from $downloadUrl") }
         }
     }
 }
@@ -88,24 +93,36 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
     )
 
     private val name by option().prompt(default = "my-img")
-    private val os by option().enum<WellKnownOperatingSystems>().default(WellKnownOperatingSystems.RASPBERRY_PI_OS_LITE)
+    private val os by option().enum<SupportedOS>().default(SupportedOS.RPI_LITE)
     private val size by option().long()
-    private val commands: Map<String, String> by option().associate()
+    private val scripts: Map<String, String> by option().associate()
 
     private val shared by requireObject<MutableMap<KClass<*>, Any>>()
 
     val img by option()
         .file(canBeDir = false, mustBeReadable = true)
-        .defaultLazy { shared[File::class] as File }
+        .defaultLazy { (shared[Path::class] as Path).toFile() }
 
     override fun run() {
-        val system = ArmRuntime(os, name, img)
-        size?.let { system.increaseDiskSpace(size!!) }
-        commands.forEach {
-            system.bootAndRun(it.key, os.login("pi", "raspberry"), *os.sequences(it.key, it.value))
+        val cache: Cache = shared[Cache::class] as Cache
+        val os: OS<Workflow> = os.invoke()
+
+        with(img.toPath()) {
+
+            Guestfish("$name-guestfish", this).copyFromGuest(listOf("/etc/hostname", "/boot/cmdline.txt", "/boot/config.txt").map(Path::of))
+                .also { echo("Success $it") }
+
+            exitProcess(0)
+            val runtime = WorkflowRuntime(name)
+            size?.let { os.increaseDiskSpace(size!!, this, runtime) }
+//            runtime.bootAndRun("test", this, os.login("pi", "raspberry"), os.sequence("test", "wget https://bkahlert.com/wp-content/uploads/2019/08/Retrospective-02-Flipchart-Featured-720x405.jpg"))
+            scripts.forEach { (scriptName, script) ->
+                runtime.bootAndRun(scriptName, os, this, *os.compileSetupScript(scriptName, script))
+            }
         }
     }
 }
+
 
 class FlshCommand : CliktCommand(help = "Flashes the given IMG to an SD card") {
     override fun aliases(): Map<String, List<String>> = mapOf(
