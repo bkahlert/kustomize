@@ -3,7 +3,7 @@ package com.imgcstmzr.util
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.Comparator
+import java.util.Comparator.reverseOrder
 
 
 /**
@@ -27,10 +27,10 @@ fun Path.copy(dest: Path, createDirectories: Boolean = true) =
         Files.copy(this, dest)
     }
 
-fun Path.deleteRecursively() {
-    Files.walk(this).use { walk ->
-        walk.sorted(Comparator.reverseOrder())
-            .map { obj: Path -> obj.toFile() }
-            .forEach { obj: File -> obj.delete() }
+fun Path.delete(recursively: Boolean = false) {
+    if (recursively) {
+        Files.walk(this).use { it.sorted(reverseOrder()).map(Path::toFile).forEach(File::delete) }
+    } else {
+        toFile().delete()
     }
 }

@@ -2,9 +2,10 @@ package com.imgcstmzr.runtime
 
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.github.ajalt.mordant.TermColors
-import com.imgcstmzr.runtime.RenderingLogger.Companion.DEFAULT
 import com.imgcstmzr.runtime.Watchdog.Command.RESET
 import com.imgcstmzr.runtime.Watchdog.Command.STOP
+import com.imgcstmzr.runtime.log.RenderingLogger
+import com.imgcstmzr.runtime.log.RenderingLogger.Companion.DEFAULT
 import java.time.Duration
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit

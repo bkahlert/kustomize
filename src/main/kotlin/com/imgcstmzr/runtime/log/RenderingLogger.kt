@@ -1,9 +1,10 @@
-package com.imgcstmzr.runtime
+package com.imgcstmzr.runtime.log
 
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
 import com.imgcstmzr.process.Output
 import com.imgcstmzr.process.OutputType
+import com.imgcstmzr.runtime.Program
 import com.imgcstmzr.util.splitLineBreaks
 
 interface RenderingLogger<in P : Program<*>> {

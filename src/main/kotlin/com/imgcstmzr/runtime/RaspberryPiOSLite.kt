@@ -4,6 +4,7 @@ import com.imgcstmzr.process.CommandLineRunner
 import com.imgcstmzr.process.Output
 import com.imgcstmzr.process.RunningProcess
 import com.imgcstmzr.runtime.Program.Companion.calc
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import java.io.File
 import java.lang.ProcessBuilder.Redirect.PIPE
 import java.nio.file.Files

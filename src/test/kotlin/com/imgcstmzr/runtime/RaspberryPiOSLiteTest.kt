@@ -6,6 +6,7 @@ import com.imgcstmzr.cli.TestCli
 import com.imgcstmzr.process.NonBlockingReader
 import com.imgcstmzr.process.Output.Companion.ofType
 import com.imgcstmzr.process.OutputType.OUT
+import com.imgcstmzr.runtime.log.RenderingLogger
 import org.junit.jupiter.api.Assertions.assertTimeoutPreemptively
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest

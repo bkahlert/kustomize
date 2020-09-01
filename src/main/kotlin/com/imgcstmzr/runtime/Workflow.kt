@@ -6,6 +6,7 @@ import com.imgcstmzr.process.Output
 import com.imgcstmzr.process.alive
 import com.imgcstmzr.process.enter
 import com.imgcstmzr.process.input
+import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.util.replaceNonPrintableCharacters
 import com.imgcstmzr.util.splitLineBreaks
 

@@ -4,9 +4,8 @@ import com.imgcstmzr.process.Output.Companion.ofType
 import com.imgcstmzr.process.OutputType.ERR
 import com.imgcstmzr.process.OutputType.META
 import com.imgcstmzr.process.OutputType.OUT
+import com.imgcstmzr.runtime.log.InfoAdaptingLogger
 import org.slf4j.Logger
-import org.slf4j.Marker
-import org.slf4j.helpers.SubstituteLogger
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
@@ -15,10 +14,8 @@ import java.lang.ProcessBuilder.Redirect
 import java.lang.ProcessBuilder.Redirect.INHERIT
 import java.lang.ProcessBuilder.Redirect.PIPE
 import java.nio.file.Path
-import java.text.MessageFormat
 import java.util.Locale
 import java.util.concurrent.CompletableFuture
-import java.util.regex.Pattern
 
 
 /**
@@ -52,7 +49,7 @@ class CommandLineRunner(private var blocking: Boolean = true) {
     ): RunningProcess {
         val loggerName = CommandLineRunner::class.java.simpleName + "(" + shellScript.split(" ").toTypedArray()[0] + ")"
         val process = startProcess(directory, shellScript, inputRedirect, outputRedirect, errorRedirect)
-        log = InfoConsumingLogger(loggerName) { line -> process.processor(line.ofType(META)) }
+        log = InfoAdaptingLogger(loggerName) { line -> process.processor(line.ofType(META)) }
         if (blocking) {
             BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line -> process.processor(line.ofType(OUT)) }
             BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line -> process.processor(line.ofType(ERR)) }
@@ -116,55 +113,4 @@ class CommandLineRunner(private var blocking: Boolean = true) {
         private val SHELL_CMD = if (IS_WINDOWS) "cmd.exe" else "sh"
         private val SHELL_CMD_ARGS = if (IS_WINDOWS) "/c" else "-c"
     }
-}
-
-
-private const val SLF4J_ANCHOR = "{}"
-private val SLF4J_PATTERN = Pattern.compile(Pattern.quote(SLF4J_ANCHOR))
-private const val MESSAGE_FORMAT_REPLACEMENT = "{%d}"
-
-/**
- * `slf4jFormat("This is a log {} with {} {}", "message", "some", "parameters") == "This is a log message with some parameters"`
- */
-fun slf4jFormat(slf4jLogMessage: String, vararg args: Any): String {
-    var messageFormatPattern = slf4jLogMessage
-    var index = 0
-
-    var matcher = SLF4J_PATTERN.matcher(messageFormatPattern)
-    while (matcher.find()) {
-        messageFormatPattern = matcher.replaceFirst(String.format(MESSAGE_FORMAT_REPLACEMENT, index))
-        matcher = SLF4J_PATTERN.matcher(messageFormatPattern)
-        index++
-    }
-    val messageFormat = MessageFormat(messageFormatPattern)
-    return messageFormat.format(args, StringBuffer(slf4jLogMessage.length shl 1), null).toString()
-}
-
-/**
- * Logger that redirects all INFO logs to the given consumer.
- */
-private class InfoConsumingLogger(name: String, private val consumer: (String) -> Unit) : SubstituteLogger(name, null, true) {
-    override fun isInfoEnabled(): Boolean = true
-
-    override fun info(msg: String) {
-        consumer(msg)
-    }
-
-    override fun info(format: String, arg: Any) {
-        this.consumer(slf4jFormat(format, arg))
-    }
-
-    override fun info(format: String, arg1: Any, arg2: Any) {
-        this.consumer(slf4jFormat(format, arg1, arg2))
-    }
-
-    override fun info(format: String, vararg arguments: Any) {
-        this.consumer(slf4jFormat(format, arguments))
-    }
-
-    override fun info(msg: String, t: Throwable) {
-        this.consumer(slf4jFormat(msg, t))
-    }
-
-    override fun isInfoEnabled(marker: Marker): Boolean = true
 }

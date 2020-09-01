@@ -3,7 +3,7 @@ package com.imgcstmzr.process
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
 import com.imgcstmzr.util.ClassPath
-import com.imgcstmzr.util.deleteRecursively
+import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.hasEqualContent
 import com.imgcstmzr.util.random
 import org.junit.jupiter.api.AfterAll
@@ -13,6 +13,7 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import strikt.api.expectThat
 import java.nio.file.Files
+import java.nio.file.Files.isDirectory
 import java.nio.file.Path
 
 val userTempDir = Path.of(System.getProperty("user.home")).resolve("tmp")
@@ -38,44 +39,44 @@ internal class GuestfishTest {
         ClassPath.of("example.html").copy(exampleHtmlOnHost)
 
         guestfish.copyToGuest(listOf(exampleHtml))
-        exampleHtmlOnHost.deleteRecursively()
+        exampleHtmlOnHost.delete()
 
         val exampleHtmlCopiedBack = guestfish.copyFromGuest(listOf(exampleHtml)).resolve("example.html")
 
         expectThat(exampleHtmlCopiedBack).hasEqualContent(ClassPath.of("/example.html"))
-        img.parent.deleteRecursively()
     }
 
     @Test
     @Disabled
-    internal fun `should xxxcopy file to img`() {
-        val img = prepareImg("cmdline.txt", "config.txt")
+    internal fun `should provide access to filesystem`() {
+        // @see https://medium.com/@kumar_pravin/mount-disk-image-to-host-using-guestfish-d5f33c0297e0
+        val dir = userTempDir.resolve("experiment").toAbsolutePath()
+        // TODO since bootup takes so long, while developing stick to a cached copy of the img to be mounted
+        val img: Path = dir.resolve("experiment.img").takeIf { it.toFile().exists() }
+            ?: prepareImg("cmdline.txt", "config.txt").toFile().copyTo(dir.resolve("experiment.img").toFile()).toPath()
 
-        val hostDir = Path.of(System.getProperty("user.home")).resolve("tmp").resolve("shared").toAbsolutePath()
-
-        val imgName = "guestfish-shared.img"
+        val imgName = "experiment.img"
         Guestfish.execute(
             containerName = imgName,
-            volumes = mapOf(hostDir to Path.of("/root")),
+            volumes = mapOf(dir to Path.of("/root"), img to Path.of("/root").resolve(imgName)),
+            "add /root/$imgName",
             "run",
-            "add /root/${img.fileName}",
-//            "mount /dev/sda2 /",
-//            "mount /dev/sda1 /boot",
-            "",
+            "modprobe fuse",
+            "mount /dev/sda2 /",
+            "mount /dev/sda1 /boot",
+            "mounts",
+//            "!mkdir -p /root/mnt",
+            "mount-local /root readonly:true",
+            "mount-local-run",
         )
-
-//        val dir = guestfish.copyToGuest(listOf(exampleHtml))
-//            .copyFromGuest(listOf(exampleHtml))
-//
-//        expectThat(dir.resolve("example.html")).hasEqualContent(ClassPath.of("/example.html"))
-        img.parent.deleteRecursively()
     }
 
+    @Suppress("unused")
     @AfterAll
     internal fun cleanUp() {
         Files.list(userTempDir)
-            .filter { Files.isDirectory(it) && it.fileName.toString().startsWith("guestfish-test-") }
-            .forEach { it.deleteRecursively() }
+            .filter { isDirectory(it) && it.fileName.toString().startsWith("guestfish-test-") }
+            .forEach { it.delete() }
     }
 }
 

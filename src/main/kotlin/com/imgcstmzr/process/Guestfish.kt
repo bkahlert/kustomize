@@ -166,6 +166,7 @@ class Guestfish(
          */
         fun execute(containerName: String, volumes: Map<Path, Path>, vararg commands: String): Int {
             val cmd = dockerCmd(containerName, volumes, appArguments = arrayOf("--", hereDoc(commands.toList().plus("umount-all").plus("quit"))))
+            echo(tc.yellow(cmd.replaceNonPrintableCharacters()))
             return runProcess(cmd) { if (it.type == ERR) echo(tc.red(it.unformatted)) }.blockExitCode
         }
     }

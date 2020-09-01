@@ -57,7 +57,7 @@ internal class ClassPathTest {
                 },
                 dynamicTest("should $not copy ${path.quote()}") {
                     val dest: Path = File.createTempFile("class-path-copy-dest", "").toPath()
-                    dest.deleteRecursively()
+                    dest.delete()
                     if (spec.exists) expectThat(classPath.copy(dest)).exists()
                     else expectCatching { classPath.copy(dest) }.isFailure().isA<IOException>()
                 },
