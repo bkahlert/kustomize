@@ -1,6 +1,8 @@
 package com.imgcstmzr.process
 
-import com.imgcstmzr.process.Output.Companion.ofType
+import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
+import com.imgcstmzr.process.Output.Type.META
+import com.imgcstmzr.util.stripOffAnsi
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
@@ -14,20 +16,20 @@ import strikt.assertions.isEqualTo
 internal class OutputTest {
 
     @TestFactory
-    internal fun `should with enclosing brackets`() = listOf("someone's output", "")
+    internal fun `should leave content untouched`() = listOf("someone's output", "")
         .flatMap { rawOutput ->
-            OutputType.values().map { type ->
+            Output.Type.values().map { type ->
                 dynamicTest("$rawOutput + $type") {
-                    val string = rawOutput.ofType(type).toString()
-                    expectThat(string).isEqualTo("${type.symbol}⟨$rawOutput⟩")
+                    val string = (type typed rawOutput).toString()
+                    expectThat(string.stripOffAnsi()).isEqualTo(rawOutput)
                 }
             }
         }
 
     @Test
-    internal fun `should use symbol to abbreviate type`() {
-        val string = "raw output".ofType(OutputType.META).toString()
-        expectThat(string).isEqualTo("𝕄⟨raw output⟩")
+    internal fun `should properly format`() {
+        val string = (META typed "raw output").toString()
+        expectThat(string).isEqualTo((tc.gray + tc.italic)("raw output"))
     }
 }
 

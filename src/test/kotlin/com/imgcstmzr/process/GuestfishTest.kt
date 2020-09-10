@@ -1,117 +1,119 @@
 package com.imgcstmzr.process
 
-import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
+import com.imgcstmzr.cli.Cache
+import com.imgcstmzr.process.Guestfish.Companion.changePasswordCommand
+import com.imgcstmzr.process.Guestfish.Companion.copyInCommands
+import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
+import com.imgcstmzr.runtime.DietPi
 import com.imgcstmzr.util.ClassPath
+import com.imgcstmzr.util.FixtureExtension
+import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.delete
+import com.imgcstmzr.util.hasContent
 import com.imgcstmzr.util.hasEqualContent
+import com.imgcstmzr.util.mkdirs
 import com.imgcstmzr.util.random
-import org.junit.jupiter.api.AfterAll
+import com.imgcstmzr.util.withExtension
+import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
+import strikt.api.expectCatching
 import strikt.api.expectThat
-import java.nio.file.Files
-import java.nio.file.Files.isDirectory
+import strikt.assertions.containsExactly
+import strikt.assertions.isSuccess
 import java.nio.file.Path
 
-val userTempDir = Path.of(System.getProperty("user.home")).resolve("tmp")
 
 @Suppress("RedundantInnerClassModifier")
 @Execution(ExecutionMode.CONCURRENT)
+@ExtendWith(FixtureExtension::class)
 internal class GuestfishTest {
+
     @Test
-    internal fun `should copy file from img`() {
-        val img = prepareImg("cmdline.txt", "config.txt")
-
-        val dir = Guestfish(img.fileName.toString(), img).copyFromGuest(listOf(Path.of("/boot/cmdline.txt")))
-
-        expectThat(dir.resolve("boot/cmdline.txt")).hasEqualContent(ClassPath.of("cmdline.txt"))
+    internal fun `copy-in should make paths absolute if relative`() {
+        val commands = copyInCommands(listOf(Path.of("foo/bar"), Path.of("/bar/baz")))
+        expectThat(commands).containsExactly(
+            "copy-in /root/guestfish.shared/foo/bar /foo", "copy-in /root/guestfish.shared/bar/baz /bar",
+        )
     }
 
     @Test
-    internal fun `should copy file to img`() {
-        val img = prepareImg("cmdline.txt", "config.txt")
-        val guestfish = Guestfish(img.fileName.toString(), img)
-        val exampleHtml = Path.of("/example.html")
-        val exampleHtmlOnHost = guestfish.hostPath(exampleHtml)
-        ClassPath.of("example.html").copy(exampleHtmlOnHost)
+    internal fun `copy-out should make paths absolute if relative`() {
+        val commands = copyOutCommands(listOf(Path.of("foo/bar"), Path.of("/bar/baz")))
+        expectThat(commands).containsExactly(
+            "!mkdir -p /root/guestfish.shared/foo", "- copy-out /foo/bar /root/guestfish.shared/foo",
+            "!mkdir -p /root/guestfish.shared/bar", "- copy-out /bar/baz /root/guestfish.shared/bar",
+        )
+    }
 
-        guestfish.copyToGuest(listOf(exampleHtml))
+    @Test
+    internal fun `should copy file from img, skip non-existing and override one`(img: Path) {
+        val guestfish = Guestfish(img)
+        guestfish.run(copyOutCommands(listOf(Path.of("/boot/cmdline.txt"), Path.of("/non/existing.txt"))))
+        val dir = guestfish.guestRootOnHost
+
+        dir.resolve("boot/config.txt").writeText("overwrite me")
+        Guestfish(img, img.fileName.toString()).run(copyOutCommands(listOf(Path.of("/boot/config.txt"))))
+
+        expectThat(dir.resolve("boot/cmdline.txt")).hasEqualContent(ClassPath.of("cmdline.txt"))
+        expectThat(dir.resolve("boot/config.txt")).hasEqualContent(ClassPath.of("config.txt")).not { hasContent("overwrite") }
+    }
+
+    @Test
+    internal fun `should copy new file to img and overwrite a second one`(img: Path) {
+        val guestfish = Guestfish(img)
+        val exampleHtml = Path.of("/example.html")
+        val exampleHtmlOnHost = guestfish.guestRootOnHost.asRootFor(exampleHtml).also { ClassPath.of("example.html").copyTo(it) }
+        val configTxt = Path.of("/boot/config.txt")
+        val configTxtOnHost = guestfish.guestRootOnHost.asRootFor(configTxt).also { it.parent.mkdirs() }.also { it.writeText("overwrite guest") }
+
+        val guestPaths = listOf(exampleHtml, configTxt)
+        check(guestfish.run(copyInCommands(guestPaths)) == 0) { "An error occurred while copying ${guestPaths.size} files to $img" }
         exampleHtmlOnHost.delete()
 
-        val exampleHtmlCopiedBack = guestfish.copyFromGuest(listOf(exampleHtml)).resolve("example.html")
+        guestfish.run(copyOutCommands(listOf(exampleHtml, configTxt)))
 
-        expectThat(exampleHtmlCopiedBack).hasEqualContent(ClassPath.of("/example.html"))
+        expectThat(exampleHtmlOnHost).hasEqualContent(ClassPath.of("/example.html"))
+        expectThat(configTxtOnHost).hasContent("overwrite guest").not { hasEqualContent(ClassPath.of("/config.txt")) }
     }
 
     @Test
     @Disabled
-    internal fun `should provide access to filesystem`() {
+    internal fun `should provide access to filesystem`(img: Path) {
         // @see https://medium.com/@kumar_pravin/mount-disk-image-to-host-using-guestfish-d5f33c0297e0
-        val dir = userTempDir.resolve("experiment").toAbsolutePath()
-        // TODO since bootup takes so long, while developing stick to a cached copy of the img to be mounted
-        val img: Path = dir.resolve("experiment.img").takeIf { it.toFile().exists() }
-            ?: prepareImg("cmdline.txt", "config.txt").toFile().copyTo(dir.resolve("experiment.img").toFile()).toPath()
 
-        val imgName = "experiment.img"
+        val imgName = img.fileName.toString()
         Guestfish.execute(
             containerName = imgName,
-            volumes = mapOf(dir to Path.of("/root"), img to Path.of("/root").resolve(imgName)),
-            "add /root/$imgName",
+            volumes = mapOf(img.parent to Guestfish.DOCKER_MOUNT_ROOT, img to Guestfish.DOCKER_MOUNT_ROOT.resolve(imgName)),
+            "add " + Guestfish.DOCKER_MOUNT_ROOT.resolve(imgName),
             "run",
             "modprobe fuse",
             "mount /dev/sda2 /",
             "mount /dev/sda1 /boot",
             "mounts",
-//            "!mkdir -p /root/mnt",
-            "mount-local /root readonly:true",
+//            "!mkdir -p " + Guestfish.dockerMountRoot.resolve(imgName).resolve("/mnt"),
+            "mount-local ${Guestfish.DOCKER_MOUNT_ROOT} readonly:true",
             "mount-local-run",
         )
     }
 
-    @Suppress("unused")
-    @AfterAll
-    internal fun cleanUp() {
-        Files.list(userTempDir)
-            .filter { isDirectory(it) && it.fileName.toString().startsWith("guestfish-test-") }
-            .forEach { it.delete() }
+    @Test
+    internal fun `should change password`() {
+        val img = Cache(Paths.CACHE.resolve("dietpi")).provideCopy("dietpi", true) { Downloader.download(DietPi().downloadUrl) }
+        val guestfish = Guestfish(img)
+        val shadowPath = Path.of("/etc/shadow")
+        val hostShadow = guestfish.guestRootOnHost.asRootFor(shadowPath)
+
+        expectCatching {
+            check(guestfish.run(changePasswordCommand("root", String.random(), String.random(32))) == 0) { "An error occurred while setting the password" }
+            Unit
+        }.isSuccess()
+
+        expectThat(hostShadow).not { hasEqualContent(hostShadow.withExtension("bak")) }
     }
-}
-
-
-/**
- * Dynamically creates a raw image with two partitions containing the given [files].
- */
-private fun prepareImg(vararg files: String): Path {
-    val randomBasename = "guestfish-test-${String.random()}"
-    echo(tc.gray("Preparing test img with files ${files.joinToString(", ")}. This takes a moment..."))
-    val hostDir = userTempDir.resolve(randomBasename).toAbsolutePath()
-    val copyFileCommands: List<String> = files.map {
-        ClassPath.of(it).copy(hostDir.resolve(it))
-        "copy-in /root/$it /boot"
-    }
-
-
-    val imgName = "$randomBasename.img"
-    Guestfish.execute(
-        containerName = imgName,
-        volumes = mapOf(hostDir to Path.of("/root")),
-        "sparse /root/$imgName 4M", // = 8192 sectors
-        "run",
-        "part-init /dev/sda mbr",
-        "echo \"num sectors:\"",
-        "blockdev-getsz /dev/sda",
-        "part-add /dev/sda p 2048 4095",
-        "part-add /dev/sda p 4096 -2048",
-        "mkfs vfat /dev/sda1",
-        "mkfs ext4 /dev/sda2",
-        "mount /dev/sda2 /",
-        "mkdir /boot",
-        "mount /dev/sda1 /boot",
-        * copyFileCommands.toTypedArray(),
-    )
-    echo(tc.gray("Finish test img creation."))
-    return hostDir.resolve(imgName)
 }

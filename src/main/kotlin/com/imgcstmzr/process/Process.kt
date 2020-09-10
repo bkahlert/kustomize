@@ -1,5 +1,6 @@
 package com.imgcstmzr.process
 
+import com.imgcstmzr.util.hereDoc
 import java.io.BufferedWriter
 import java.io.File
 import java.io.InputStream
@@ -8,6 +9,7 @@ import java.io.OutputStreamWriter
 import java.lang.ProcessBuilder.Redirect
 import java.lang.ProcessBuilder.Redirect.INHERIT
 import java.lang.ProcessBuilder.Redirect.PIPE
+import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
@@ -24,7 +26,7 @@ fun runProcess(
     return CommandLineRunner(blocking)
         .startProcessAndWaitForCompletion(
             File("/bin").toPath(),
-            "sh -c '$cmd'",
+            "sh " + hereDoc(listOf(cmd)),
             inputRedirect,
             outputRedirect,
             errorRedirect,
@@ -32,7 +34,27 @@ fun runProcess(
         )
 }
 
-fun runDockerProcess(
+fun runRawProcess(
+    directory: Path,
+    command: List<String>,
+    blocking: Boolean = true,
+    inputRedirect: Redirect = PIPE,
+    outputRedirect: Redirect = INHERIT,
+    errorRedirect: Redirect = PIPE,
+    processor: Process.(Output) -> Unit,
+): RunningProcess {
+    return CommandLineRunner(blocking)
+        .startRawProcessAndWaitForCompletion(
+            directory,
+            command,
+            inputRedirect,
+            outputRedirect,
+            errorRedirect,
+            processor,
+        )
+}
+
+fun runDocker(
     containerName: String,
     vararg args: String,
     blocking: Boolean = true,
@@ -48,7 +70,7 @@ fun runDockerProcess(
         "--rm",
         *args
     ).joinToString(" ")
-    val cmd = "$(docker rm --force \"$containerName\" 1>/dev/null 2>&1); $dockerRun"
+    val cmd = "docker rm --force \"$containerName\" &> /dev/null ; $dockerRun"
     return runProcess(args = arrayOf(cmd), blocking, inputRedirect, outputRedirect, errorRedirect, processor)
 }
 

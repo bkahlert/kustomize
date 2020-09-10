@@ -34,3 +34,4 @@ Alternatively run `--config=bother-you.json
 
 ## TODO
 - [ ] Replace curl based download with portable implementation
+- [ ] Use docker run --rm -v $(PWD):/work -t cmattoon/guestfish $CMD instead of

@@ -1,0 +1,205 @@
+[
+  {
+    "id": "160680de.88ba5f",
+    "type": "tab",
+    "label": "Flow 1",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "bf6a9fbc.40dcb8",
+    "type": "hue-bridge-node",
+    "z": "160680de.88ba5f",
+    "name": "Bridge",
+    "bridge": "6efd2345.171b3c",
+    "autoupdates": true,
+    "skipglobalevents": false,
+    "x": 340,
+    "y": 240,
+    "wires": [
+      [
+        "f2529ad7.8b6c9"
+      ]
+    ]
+  },
+  {
+    "id": "50f28d06.d8fb2c",
+    "type": "hue-light",
+    "z": "160680de.88ba5f",
+    "name": "Spot 1",
+    "bridge": "6efd2345.171b3c",
+    "lightid": "4",
+    "colornamer": true,
+    "skipevents": false,
+    "x": 680,
+    "y": 420,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "d14437af.71017",
+    "type": "hue-light",
+    "z": "160680de.88ba5f",
+    "name": "Spot 2",
+    "bridge": "6efd2345.171b3c",
+    "lightid": "5",
+    "colornamer": true,
+    "skipevents": false,
+    "x": 580,
+    "y": 580,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "fc97b460.16c0e",
+    "type": "hue-light",
+    "z": "160680de.88ba5f",
+    "name": "Living Room Door",
+    "bridge": "6efd2345.171b3c",
+    "lightid": "8",
+    "colornamer": true,
+    "skipevents": false,
+    "x": 840,
+    "y": 320,
+    "wires": [
+      [
+        "e95f0fd4.4d2b1"
+      ]
+    ]
+  },
+  {
+    "id": "f2529ad7.8b6c9",
+    "type": "hue-scene",
+    "z": "160680de.88ba5f",
+    "name": "Blue rain on 1437224479692",
+    "bridge": "6efd2345.171b3c",
+    "sceneid": "0f2c67d80-on-0",
+    "groupid": "2",
+    "skipevents": false,
+    "x": 360,
+    "y": 440,
+    "wires": [
+      [
+        "fc97b460.16c0e"
+      ]
+    ]
+  },
+  {
+    "id": "328db1bf.60c8f6",
+    "type": "inject",
+    "z": "160680de.88ba5f",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 240,
+    "wires": [
+      [
+        "bf6a9fbc.40dcb8"
+      ]
+    ]
+  },
+  {
+    "id": "e95f0fd4.4d2b1",
+    "type": "debug",
+    "z": "160680de.88ba5f",
+    "name": "",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "false",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1080,
+    "y": 380,
+    "wires": []
+  },
+  {
+    "id": "9ff9cc18.d3c0b8",
+    "type": "text-to-matrix",
+    "z": "160680de.88ba5f",
+    "name": "",
+    "xOffset": 0,
+    "yOffset": 0,
+    "rgb": "0,255,41",
+    "font": "9x18B.bdf",
+    "prefix": "111",
+    "source": "msg.payload",
+    "matrix": "34cc065a.5dd022",
+    "zLevel": "",
+    "x": 380,
+    "y": 800,
+    "wires": []
+  },
+  {
+    "id": "7e6b5f39.26a3a",
+    "type": "inject",
+    "z": "160680de.88ba5f",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 180,
+    "y": 760,
+    "wires": [
+      [
+        "9ff9cc18.d3c0b8"
+      ]
+    ]
+  },
+  {
+    "id": "6efd2345.171b3c",
+    "type": "hue-bridge",
+    "z": "",
+    "name": "Philips hue",
+    "bridge": "192.168.16.249",
+    "key": "nx3MhBbh1PhTg2FMnFeW2O6Usb4SY1OVQkKQenA9",
+    "interval": "3000",
+    "disableupdates": false
+  },
+  {
+    "id": "34cc065a.5dd022",
+    "type": "led-matrix",
+    "z": "",
+    "height": "4",
+    "width": "8",
+    "chained": "2",
+    "parallel": "1",
+    "brightness": "100",
+    "refreshDelay": "500",
+    "mapping": "regular",
+    "rgbSequence": "RGB",
+    "autoRefresh": true,
+    "cmdArgs": ""
+  }
+]

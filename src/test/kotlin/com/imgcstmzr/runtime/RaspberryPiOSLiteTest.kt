@@ -4,8 +4,7 @@ import com.github.ajalt.clikt.output.TermUi.echo
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.imgcstmzr.cli.TestCli
 import com.imgcstmzr.process.NonBlockingReader
-import com.imgcstmzr.process.Output.Companion.ofType
-import com.imgcstmzr.process.OutputType.OUT
+import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.runtime.log.RenderingLogger
 import org.junit.jupiter.api.Assertions.assertTimeoutPreemptively
 import org.junit.jupiter.api.DynamicTest
@@ -20,10 +19,14 @@ import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.time.Duration
+import kotlin.time.ExperimentalTime
+import kotlin.time.milliseconds
+import kotlin.time.seconds
+import kotlin.time.toJavaDuration
 
 @ExperimentalValueSourceApi
 @Execution(ExecutionMode.CONCURRENT)
+@OptIn(ExperimentalTime::class)
 class RaspberryPiOSLiteTest {
 
     val os = RaspberryPiOSLite()
@@ -102,16 +105,16 @@ class RaspberryPiOSLiteTest {
 
     @TestFactory
     internal fun `should perform log in and terminate`(): List<DynamicTest> {
-        val maxWaitPerLine = 100.millis()
+        val maxWaitPerLine = 100.milliseconds.toJavaDuration()
         val prompt = { promptStart: String ->
             arrayOf(
                 "boot\n",
                 "boot\n",
                 "boot\n",
                 "raspberry-pi login: $promptStart",
-                "${maxWaitPerLine.plus(2.seconds())}",
+                "${maxWaitPerLine.plus(2.seconds.toJavaDuration())}",
                 "Password: $promptStart",
-                "${maxWaitPerLine.plus(2.seconds())}",
+                "${maxWaitPerLine.plus(2.seconds.toJavaDuration())}",
                 "lorem ipsum\n",
                 "GNU\n",
                 "...ABSOLUTELY NO WARRANTY...\n",
@@ -139,17 +142,17 @@ class RaspberryPiOSLiteTest {
         ).flatMap { (reader, caseInput: Pair<String, Array<String>>) ->
             val case = caseInput.first
             val input = caseInput.second
-            listOf(50.millis(), 200.millis()).map { delay ->
+            listOf(50.milliseconds, 200.milliseconds).map { delay ->
                 dynamicTest("$reader processing $case with $delay delay per line") {
                     TestCli.cmd.main(emptyList())
                     val workflow = os.login("john", "passwd123").logging()
                     val fakeProcess = FakeProcess.withSlowInput(*input, delay = delay)
                     val runningOS = WorkflowRunningOS(RenderingLogger.DEFAULT, fakeProcess)
 
-                    assertTimeoutPreemptively(Duration.ofSeconds(300), {
+                    assertTimeoutPreemptively(300.seconds.toJavaDuration(), {
                         reader.invoke(fakeProcess) { line ->
                             echo(line)
-                            val finished = !workflow.calc(runningOS, line.ofType(OUT))
+                            val finished = !workflow.calc(runningOS, OUT typed line)
                             if (finished) {
                                 fakeProcess.exit(0)
                             }
@@ -175,10 +178,10 @@ class RaspberryPiOSLiteTest {
         val fakeProcess = FakeProcess()
         val runningOS = WorkflowRunningOS(RenderingLogger.DEFAULT, fakeProcess)
 
-        assertTimeoutPreemptively(Duration.ofSeconds(100), {
+        assertTimeoutPreemptively(100.seconds.toJavaDuration(), {
             var running = true
             while (running) {
-                running = workflow.calc(runningOS, "pi@raspberrypi:~$ ".ofType(OUT))
+                running = workflow.calc(runningOS, OUT typed "pi@raspberrypi:~$ ")
             }
         }) { "Output till timeout: ${fakeProcess.output}" }
 
@@ -198,9 +201,3 @@ ${"\r"}
         toString().toByteArray().joinToString(", ") { it.toString() }
     }
 }
-
-private fun Int.seconds() = Duration.ofSeconds(this.toLong())
-private fun Int.millis() = Duration.ofMillis(this.toLong())
-
-
-

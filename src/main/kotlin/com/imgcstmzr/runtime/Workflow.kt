@@ -135,7 +135,7 @@ class WorkflowRunningOS(
     }
 
     override fun status(output: Output, unfinishedPrograms: List<Workflow>) {
-        renderer.log(output, unfinishedPrograms)
+        renderer.logLine(output, unfinishedPrograms)
     }
 
     override fun shutdown() {

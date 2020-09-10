@@ -4,28 +4,35 @@ import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.cli.ColorHelpFormatter.Companion.result
 import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
 import com.imgcstmzr.process.Output
-import com.imgcstmzr.process.OutputType
+import com.imgcstmzr.runtime.HasStatus
+import com.imgcstmzr.runtime.HasStatus.Companion.status
 import com.imgcstmzr.runtime.Program
-import com.imgcstmzr.runtime.Program.Companion.status
 import com.imgcstmzr.util.stripOffAnsi
 
-class BlockRenderingLogger<in P : Program<*>>(caption: String) : RenderingLogger<P> {
+class BlockRenderingLogger<in HS : HasStatus>(caption: String) : RenderingLogger<HS> {
 
     init {
         if (borderedOutput) echo(tc.bold("\n╭─────╴$caption\n│"))
     }
 
-    override fun log(output: Output, programs: List<P>): RenderingLogger<P> {
+    override fun logLine(output: Output, item: List<HS>, trailingNewline: Boolean): RenderingLogger<HS> {
         if (output.unformatted.isBlank()) return this
 
         val prefix = if (borderedOutput) "│   " else ""
-        RenderingLogger.prepareLines(output).forEachIndexed { index, line ->
-            echo(if (index == 0 && output.type == OutputType.OUT) {
+        output.formattedLines.forEachIndexed { index, line ->
+            echo(if (index == 0 && output.type == Output.Type.OUT) {
                 val fill = statusPadding(line.stripOffAnsi())
-                val status = programs.status()
+                val status = item.status()
                 "$prefix$line$fill$status"
-            } else "$prefix$line")
+            } else "$prefix$line", trailingNewline)
         }
+        return this
+    }
+
+    override fun rawLogStart(string: String): RenderingLogger<HS> = rawLog((if (borderedOutput) "│   " else "") + string)
+
+    override fun rawLog(string: String): RenderingLogger<HS> {
+        echo(string, trailingNewline = false)
         return this
     }
 
@@ -48,6 +55,6 @@ class BlockRenderingLogger<in P : Program<*>>(caption: String) : RenderingLogger
             renderer.endLogging(caption, exitCode)
         }
 
-        fun <PROGRAM : Program<*>> render(caption: String): BlockRenderingLogger<PROGRAM> = BlockRenderingLogger<PROGRAM>(caption)
+        fun <PROGRAM : Program<*>> render(caption: String): BlockRenderingLogger<PROGRAM> = BlockRenderingLogger(caption)
     }
 }

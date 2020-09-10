@@ -1,7 +1,8 @@
 package com.imgcstmzr.cli
 
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.process.unarchive
+import com.imgcstmzr.process.Unarchiver
+import com.imgcstmzr.util.Paths
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -15,8 +16,7 @@ class Cache(dir: Path = DEFAULT) : ManagedDirectory(dir) {
         ProjectDirectory(dir, name, reuseLastWorkingCopy).require(provider)
 
     companion object {
-        private val USER_HOME: Path = Path.of(System.getProperty("user.home"))
-        val DEFAULT: Path = USER_HOME.resolve(".imgcstmzr")
+        val DEFAULT: Path = Paths.USER_HOME.resolve(".imgcstmzr")
     }
 }
 
@@ -33,7 +33,7 @@ open class ManagedDirectory(val dir: Path) {
         check(file.canWrite()) { "Cannot write to $dir" }
     }
 
-    val absDir = file.toString()
+    private val absDir: String = file.toString()
 
     fun delete() {
         if (file.exists()) file.deleteRecursively()
@@ -70,7 +70,7 @@ private class ProjectDirectory(parentDir: Path, dirName: String, val reuseLastWo
         deleteOldWorkDirs()
 
         val downloadedFile = downloadDir.requireSingle(provider)
-        val img = rawDir.requireSingle { unarchive(downloadedFile) }
+        val img = rawDir.requireSingle { Unarchiver.unarchive(downloadedFile) }
 
         val workDirs = workDirs()
         if (reuseLastWorkingCopy) {
@@ -129,9 +129,7 @@ private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireVal
         }?.single()?.toPath() ?: throw NoSuchElementException("$dir does not contain any .img file")
     }
 
-    override fun toString(): String {
-        return "WorkDirectory(${getSingle()})"
-    }
+    override fun toString(): String = "WorkDirectory(${getSingle()})"
 
     companion object {
         private val DATE_FORMATTER =

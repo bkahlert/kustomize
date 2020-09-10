@@ -5,8 +5,11 @@ import com.github.ajalt.mordant.TermColors
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
-import java.time.Duration
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
+import kotlin.time.seconds
 
+@OptIn(ExperimentalTime::class)
 class FakeProcess(
     val output: OutputStream = ByteArrayOutputStream(),
     val input: InputStream = InputStream.nullInputStream(),
@@ -27,10 +30,10 @@ class FakeProcess(
     }
 
     class SlowInputStream(vararg inputs: String, val delay: Duration) : InputStream() {
-        var terminated = false
-        var pretendEmptyTill = System.currentTimeMillis()
-        val unread: MutableList<Pair<MutableList<Byte>?, Duration?>> = inputs.map {
-            kotlin.runCatching { null to Duration.parse(it) }.getOrDefault(it.toByteArray().toMutableList() to null)
+        var terminated: Boolean = false
+        var pretendEmptyTill: Long = System.currentTimeMillis()
+        val unread: MutableList<Pair<MutableList<Byte>?, Long?>> = inputs.map {
+            kotlin.runCatching { null to java.time.Duration.parse(it).toMillis() }.getOrDefault(it.toByteArray().toMutableList() to null)
         }.toMutableList()
         val unreadCount: Int get() = unread.map { it.first?.size ?: 0 }.sum()
 
@@ -40,7 +43,7 @@ class FakeProcess(
             if (unread.firstOrNull()?.second != null) {
                 val duration = unread.firstOrNull()?.second!!
                 echo(TermColors().gray("Sleeping for $duration"))
-                pretendEmptyTill = System.currentTimeMillis() + duration.toMillis()
+                pretendEmptyTill = System.currentTimeMillis() + duration
                 unread.removeFirst()
                 return 0
             }
@@ -66,7 +69,7 @@ class FakeProcess(
             val currentByte = currentWord.removeFirst()
             if (currentWord.isEmpty()) {
                 unread.removeFirst()
-                pretendEmptyTill = System.currentTimeMillis() + delay.toMillis()
+                pretendEmptyTill = System.currentTimeMillis() + delay.toLongMilliseconds()
             }
             return currentByte.toInt()
         }
@@ -75,7 +78,7 @@ class FakeProcess(
     }
 
     companion object {
-        fun withSlowInput(vararg input: String, delay: Duration = Duration.ofSeconds(1)): FakeProcess =
+        fun withSlowInput(vararg input: String, delay: Duration = 1.seconds): FakeProcess =
             FakeProcess(input = SlowInputStream(*input, delay = delay))
     }
 }

@@ -1,10 +1,11 @@
 package com.imgcstmzr.process
 
-import com.imgcstmzr.process.Output.Companion.ofType
-import com.imgcstmzr.process.OutputType.ERR
-import com.imgcstmzr.process.OutputType.META
-import com.imgcstmzr.process.OutputType.OUT
+import com.github.ajalt.clikt.output.TermUi
+import com.imgcstmzr.process.Output.Type.ERR
+import com.imgcstmzr.process.Output.Type.META
+import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.runtime.log.InfoAdaptingLogger
+import com.imgcstmzr.util.trace
 import org.slf4j.Logger
 import java.io.BufferedReader
 import java.io.IOException
@@ -49,13 +50,13 @@ class CommandLineRunner(private var blocking: Boolean = true) {
     ): RunningProcess {
         val loggerName = CommandLineRunner::class.java.simpleName + "(" + shellScript.split(" ").toTypedArray()[0] + ")"
         val process = startProcess(directory, shellScript, inputRedirect, outputRedirect, errorRedirect)
-        log = InfoAdaptingLogger(loggerName) { line -> process.processor(line.ofType(META)) }
+        log = InfoAdaptingLogger(loggerName) { line -> process.processor(META typed line) }
         if (blocking) {
-            BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line -> process.processor(line.ofType(OUT)) }
-            BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line -> process.processor(line.ofType(ERR)) }
+            BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line -> process.processor(OUT typed line) }
+            BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line -> process.processor(ERR typed line) }
         } else {
-            NonBlockingReader(process, { inputStream }).forEachLine { line -> process.processor(line.ofType(OUT)) }
-            NonBlockingReader(process, { errorStream }).forEachLine { line -> process.processor(line.ofType(ERR)) }
+            NonBlockingReader(process, { inputStream }).forEachLine { line -> process.processor(OUT typed line) }
+            NonBlockingReader(process, { errorStream }).forEachLine { line -> process.processor(ERR typed line) }
         }
         return waitForProcessAsync(process)
     }
@@ -70,9 +71,55 @@ class CommandLineRunner(private var blocking: Boolean = true) {
         val absoluteShellScript = directory.resolve(shellScript)
         return try {
             log?.info("Starting {}...", absoluteShellScript)
+            TermUi.trace(directory.resolve(shellScript))
             val process = ProcessBuilder()
                 .command(SHELL_CMD, SHELL_CMD_ARGS, absoluteShellScript.toAbsolutePath().toString())
                 .directory(directory.toAbsolutePath().toFile())
+                .redirectInput(inputRedirect)
+                .redirectOutput(outputRedirect)
+                .redirectError(errorRedirect)
+                .start()
+            log?.info("Process {} successfully started", process)
+            process
+        } catch (e: IOException) {
+            throw UncheckedIOException(e)
+        }
+    }
+
+    fun startRawProcessAndWaitForCompletion(
+        directory: Path,
+        command: List<String>,
+        inputRedirect: Redirect = PIPE,
+        outputRedirect: Redirect = INHERIT,
+        errorRedirect: Redirect = PIPE,
+        processor: Process.(Output) -> Unit,
+    ): RunningProcess {
+        val loggerName = CommandLineRunner::class.java.simpleName + "(" + command.toTypedArray()[0] + ")"
+        val process = startRawProcess(directory, command, inputRedirect, outputRedirect, errorRedirect)
+        log = InfoAdaptingLogger(loggerName) { line -> process.processor(META typed line) }
+        if (blocking) {
+            BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line -> process.processor(OUT typed line) }
+            BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line -> process.processor(ERR typed line) }
+        } else {
+            NonBlockingReader(process, { inputStream }).forEachLine { line -> process.processor(OUT typed line) }
+            NonBlockingReader(process, { errorStream }).forEachLine { line -> process.processor(ERR typed line) }
+        }
+        return waitForProcessAsync(process)
+    }
+
+    private fun startRawProcess(
+        directory: Path,
+        command: List<String>,
+        inputRedirect: Redirect = PIPE,
+        outputRedirect: Redirect = INHERIT,
+        errorRedirect: Redirect = PIPE,
+    ): Process {
+        return try {
+            log?.info("Starting {}...", command)
+            TermUi.trace(command)
+            val process = ProcessBuilder()
+                .command(command)
+                .directory(directory.toFile())
                 .redirectInput(inputRedirect)
                 .redirectOutput(outputRedirect)
                 .redirectError(errorRedirect)

@@ -16,6 +16,8 @@ import java.nio.file.Path
 class RaspberryPiOSLite : OS<Workflow> {
     override val downloadUrl: String
         get() = "downloads.raspberrypi.org/raspios_lite_armhf_latest"
+    override val username = "pi"
+    override val password = "raspberry"
 
 
     override fun increaseDiskSpace(size: Long, img: Path, runtime: Runtime<Workflow>): Int {
@@ -52,7 +54,7 @@ class RaspberryPiOSLite : OS<Workflow> {
         ) { output ->
             runningOS.process = this
             if (startUp.isNotEmpty()) {
-                renderer.log(output, startUp)
+                renderer.logLine(output, startUp)
                 if (!startUp.calc(runningOS, output)) startUp.removeAt(0)
             } else {
                 runningOS.processor(output)
@@ -64,23 +66,23 @@ class RaspberryPiOSLite : OS<Workflow> {
     }
 
     override fun compileSetupScript(name: String, commandBlocks: String): Array<Workflow> =
-        Workflow.fromSetupScript(name, readyPattern, commandBlocks)
+        Workflow.fromSetupScript(name = name, readyPattern, commandBlocks)
 
     override fun compileScript(name: String, vararg commands: String): Workflow =
         Workflow.fromScript(name, readyPattern, *commands)
 
     @Suppress("SpellCheckingInspection") private fun startCommand(name: String, img: File): String {
-        val dockerName = "$name-hot"
+        val containerName = "$name-hot"
         val dockerRun = arrayOf(
             "docker",
             "run",
-            "--name", "\"$dockerName\"",
+            "--name", "\"$containerName\"",
             "--rm",
             "-i",
             "--volume", "\"$img\":/sdcard/filesystem.img",
             "lukechilds/dockerpi:vm"
         ).joinToString(" ")
-        return "$(docker rm --force \"$dockerName\" 1>/dev/null 2>&1); $dockerRun"
+        return "docker rm --force \"$containerName\" &> /dev/null ; $dockerRun"
     }
 
     fun login(username: String, password: String): Workflow {

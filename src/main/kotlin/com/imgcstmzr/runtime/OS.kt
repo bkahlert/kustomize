@@ -40,6 +40,9 @@ interface OS<P : Program<*>> {
      */
     val downloadUrl: String?
 
+    val username:String
+    val password:String
+
     fun increaseDiskSpace(
         size: Long,
         img: Path,

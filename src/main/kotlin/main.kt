@@ -6,29 +6,53 @@ import com.github.ajalt.clikt.core.requireObject
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.clikt.parameters.options.associate
+import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.prompt
+import com.github.ajalt.clikt.parameters.options.transformValues
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.long
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.cli.ColorHelpFormatter.Companion.INSTANCE
+import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
 import com.imgcstmzr.cli.Config4kValueSource
 import com.imgcstmzr.cli.Config4kValueSource.Companion.update
+import com.imgcstmzr.cli.Env
+import com.imgcstmzr.patch.PasswordPatch
+import com.imgcstmzr.patch.SshPatch
+import com.imgcstmzr.patch.UsbOnTheGoPatch
+import com.imgcstmzr.patch.UsernamePatch
+import com.imgcstmzr.process.Downloader
 import com.imgcstmzr.process.Guestfish
-import com.imgcstmzr.process.download
+import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
 import com.imgcstmzr.runtime.OS
 import com.imgcstmzr.runtime.SupportedOS
 import com.imgcstmzr.runtime.Workflow
 import com.imgcstmzr.runtime.WorkflowRuntime
+import com.imgcstmzr.util.Paths
 import java.io.File
 import java.nio.file.Path
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
+
+fun main() {
+//    CliCommand().subcommands(ImgCommand(), CstmzrCommand(), FlshCommand()).main(listOf("--help"))
+    CliCommand().subcommands(ImgCommand(), CstmzrCommand(), FlshCommand()).main(
+        listOf(
+            "--config", "bother-you.conf", "img",
+            "--reuse-last-working-copy", "cstmzr"
+        )
+    )
+//    CliCommand().subcommands(XyzCommands(), ImgCommand(), FlshCommand()).main(listOf("img", "--name", "name-by-cmdline"))
+//    CliCommand().subcommands(XyzCommands(), ImgCommand(), FlshCommand()).main(listOf("img"))
+//    F1().subcommands(DriverCommands(), CircuitCommands(), FlshCommand()).main(args)
+}
+
 
 @OptIn(ExperimentalValueSourceApi::class)
 class CliCommand : NoOpCliktCommand(
@@ -48,6 +72,9 @@ class CliCommand : NoOpCliktCommand(
     private val configFile: File? by option("--config", "--config-file", help = "configuration to be used for image customization")
         .file(mustExist = true, canBeDir = false, mustBeReadable = true)
 
+    private val envFile: File by option("--env", "--env-file", help = ".env file that can be used to pass credentials like a new user password")
+        .file(mustExist = false, canBeDir = false, mustBeReadable = false).default(Paths.USER_HOME.resolve(".env.imgcstmzr").toFile())
+
     private val name: String? by option(help = "name of the generated appliance").default("my-img")
 
     private val cacheDir: File by option("--cache-dir", help = "temporary directory that holds intermediary states to improve performance")
@@ -59,8 +86,10 @@ class CliCommand : NoOpCliktCommand(
     override fun run() {
         configFile?.also {
             currentContext.valueSource.update(it)
-            echo("Using config (file: $it, name: $name, size: ${it.readText().length})")
+            echo((tc.cyan + tc.bold)("Using config (file: $it, name: $name, size: ${it.readText().length})"))
         }
+        echo("Checking $envFile for .env file")
+        shared[Env::class] = Env(envFile.toPath())
         shared[Cache::class] = Cache(cacheDir.toPath())
         echo("Using cache (path: $cacheDir)")
     }
@@ -81,7 +110,7 @@ class ImgCommand : CliktCommand(help = "Provides an IMG file containing the spec
 
         shared[Path::class] = cache.provideCopy(name, reuseLastWorkingCopy) {
             val downloadUrl: String = os.downloadUrl ?: throw NoSuchElementException("$os has no download URL.")
-            download(downloadUrl).also { TermUi.echo("Downloaded $it from $downloadUrl") }
+            Downloader.download(downloadUrl).also { TermUi.echo("Downloaded $it from $downloadUrl") }
         }
     }
 }
@@ -93,8 +122,14 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
     )
 
     private val name by option().prompt(default = "my-img")
+
     private val os by option().enum<SupportedOS>().default(SupportedOS.RPI_LITE)
     private val size by option().long()
+    private val enableSsh by option().convert { SshPatch() }
+    private val renameUsername by option().transformValues(2) { list: List<String> -> UsernamePatch(list[0], list[1]) }
+    private val changePassword by option().transformValues(2) { list: List<String> -> PasswordPatch(list[0], list[1]) }
+    private val usbOtg by option().convert { UsbOnTheGoPatch() }
+
     private val scripts: Map<String, String> by option().associate()
 
     private val shared by requireObject<MutableMap<KClass<*>, Any>>()
@@ -109,7 +144,9 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
 
         with(img.toPath()) {
 
-            Guestfish("$name-guestfish", this).copyFromGuest(listOf("/etc/hostname", "/boot/cmdline.txt", "/boot/config.txt").map(Path::of))
+            val guestfish = Guestfish(this, "$name-guestfish")
+            guestfish.run(copyOutCommands(listOf("/etc/hostname", "/boot/cmdline.txt", "/boot/config.txt").map(Path::of)))
+            guestfish.guestRootOnHost
                 .also { echo("Success $it") }
 
             exitProcess(0)
@@ -140,17 +177,4 @@ class FlshCommand : CliktCommand(help = "Flashes the given IMG to an SD card") {
             TermUi.echo("OK!")
         }
     }
-}
-
-fun main() {
-//    CliCommand().subcommands(ImgCommand(), CstmzrCommand(), FlshCommand()).main(listOf("--help"))
-    CliCommand().subcommands(ImgCommand(), CstmzrCommand(), FlshCommand()).main(
-        listOf(
-            "--config", "bother-you.conf", "img",
-            "--reuse-last-working-copy", "cstmzr"
-        )
-    )
-//    CliCommand().subcommands(XyzCommands(), ImgCommand(), FlshCommand()).main(listOf("img", "--name", "name-by-cmdline"))
-//    CliCommand().subcommands(XyzCommands(), ImgCommand(), FlshCommand()).main(listOf("img"))
-//    F1().subcommands(DriverCommands(), CircuitCommands(), FlshCommand()).main(args)
 }

@@ -4,7 +4,7 @@ import java.net.URL
 import java.util.regex.Pattern
 import kotlin.random.Random
 import kotlin.streams.toList
-import kotlin.text.contains as originalContains
+import kotlin.text.contains as containsRegex
 import kotlin.text.split as originalSplit
 
 private val ansiRemovalPattern: Pattern = Pattern.compile("(?:\\x9B|\\x1B\\[)[0-?]*[ -/]*[@-~]") ?: throw IllegalStateException("Erroneous regex pattern")
@@ -38,9 +38,9 @@ operator fun CharSequence.contains(
     ignoreAnsiFormatting: Boolean = false,
 ): Boolean =
     if (ignoreAnsiFormatting)
-        this.stripOffAnsi().originalContains(other.stripOffAnsi(), ignoreCase)
+        this.stripOffAnsi().containsRegex(other.stripOffAnsi(), ignoreCase)
     else
-        originalContains(other, ignoreCase)
+        containsRegex(other, ignoreCase)
 
 
 /**
@@ -67,7 +67,7 @@ private val unicodeControlCharacterDictionary: Map<Char, Char> = mapOf(
     '\u0007' to '\u2407', // ␇
     '\u0008' to '\u2408', // ␈
     '\u0009' to '\u2409', // ␉
-    '\u000A' to '\u240A', // ␊
+    '\u000A' to '⏎',// '\u240A', // ␊
     '\u000B' to '\u240B', // ␋
     '\u000C' to '\u240C', // ␌
     '\u000D' to '\u240D', // ␍
@@ -110,23 +110,64 @@ fun String.replaceNonPrintableCharacters(): String = this.replace(specialCharact
     else "❲" + char.unicodeName + "❳"
 }
 
+val String.Companion.LINE_BREAKS: Array<String> get() = arrayOf("\r\n", "\r", "\n")
+val String.Companion.LINE_BREAKS_REGEX: Regex get() = Regex(String.LINE_BREAKS.joinToString("|", "(?:", ")", transform = Regex.Companion::escape))
+
 /**
  * Splits this char sequence to a list of strings around occurrences of line breaks.
  *
  * @param limit The maximum number of substrings to return. Zero by default means no limit is set.
  */
 fun CharSequence.splitLineBreaks(limit: Int = 0): List<String> =
-    this.originalSplit("\r\n", "\r", "\n", limit = limit)
+    this.originalSplit(*String.LINE_BREAKS, limit = limit)
+
+val CharSequence.multiline: Boolean
+    get() = containsRegex(String.Companion.LINE_BREAKS_REGEX)
 
 /**
  * Creates a [here document](https://en.wikipedia.org/wiki/Here_document) consisting the given [lines], [label] and [lineSeparator].
  */
-fun hereDoc(lines: List<String>, label: String = "_EOF_", lineSeparator: String = System.lineSeparator()) =
+fun hereDoc(lines: List<String>, label: String = "_HERE_" + String.random(), lineSeparator: String = System.lineSeparator()): String =
     lines.joinToString(lineSeparator, "<<$label$lineSeparator", "$lineSeparator$label")
 
 fun CharSequence.wrap(value: CharSequence): String = "$value$this$value"
 
 fun CharSequence.quote(): String = this.wrap("\"")
 
+val CharSequence.quotes: String get() = quote()
+
 private val randomCharacterPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 fun String.Companion.random(length: Int = 16): String = (1..length).map { randomCharacterPool[Random.nextInt(0, randomCharacterPool.size)] }.joinToString("")
+
+
+/**
+ * Creates a truncated string from selected elements separated using [separator] and using the given [prefix] and [postfix] if supplied.
+ *
+ * If the collection could be huge, you can specify a non-negative value of [startLimit], in which case at most the first [startLimit]
+ * elements and the [endLimit] last elements will be appended, leaving out the elements in between using the [truncated] string (which defaults to "...").
+ */
+fun <T> List<T>.joinToTruncatedString(
+    separator: CharSequence = ", ",
+    prefix: CharSequence = "",
+    postfix: CharSequence = "",
+    startLimit: Int = 2,
+    endLimit: Int = 1,
+    truncated: CharSequence = "...",
+    transform: ((T) -> CharSequence)?,
+    transformEnd: ((T) -> CharSequence)?,
+): String {
+    val limit = startLimit + endLimit
+    if (size <= limit) return joinToString(separator, prefix, postfix, limit, truncated, transform)
+
+    val list: List<T> = this.filterIndexed { index, _ -> index <= startLimit + 1 || index > size - endLimit }
+    var index = 0
+    return list.joinTo(StringBuilder(), separator, prefix, postfix, size, "", { element ->
+        kotlin.run {
+            when (index) {
+                in (0 until startLimit) -> transform?.invoke(element) ?: element.toString()
+                startLimit -> truncated
+                else -> transformEnd?.invoke(element) ?: transform?.invoke(element) ?: element.toString()
+            }
+        }.also { index++ }
+    }).toString()
+}

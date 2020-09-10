@@ -1,8 +1,7 @@
 package com.imgcstmzr.runtime
 
 import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
-import com.imgcstmzr.process.Output.Companion.ofType
-import com.imgcstmzr.process.OutputType.META
+import com.imgcstmzr.process.Output.Type.META
 import com.imgcstmzr.runtime.Program.Companion.calc
 import java.nio.file.Path
 import java.time.Duration
@@ -21,11 +20,9 @@ class WorkflowRuntime(
         val unfinishedPrograms: MutableList<Workflow> = mutableListOf(*programs)
 
         val watchdog = Watchdog(Duration.ofSeconds(15)) {
-            with(META) {
-                log(("\n" + tc.red("\nThe console seems to have halted... ◔̯◔")).ofType(this), unfinishedPrograms)
-                log(("\n" + tc.cyan("To help debugging, you can open a separate console and connect using:")).ofType(this), unfinishedPrograms)
-                log((tc.dim(tc.cyan("(ᵔᴥᵔ)$") + (tc.cyan + tc.bold)(" docker attach $name-*")) + "\n").ofType(this), unfinishedPrograms)
-            }
+            logLine(META typed ("\n" + tc.red("\nThe console seems to have halted... ◔̯◔")), unfinishedPrograms)
+            logLine(META typed ("\n" + tc.cyan("To help debugging, you can open a separate console and connect using:")), unfinishedPrograms)
+            logLine(META typed (tc.dim(tc.cyan("$") + (tc.cyan + tc.bold)(" docker attach $name-*")) + "\n"), unfinishedPrograms)
         }
 
         return os.bootAndRun(scenario, img, this@WorkflowRuntime) { output ->
