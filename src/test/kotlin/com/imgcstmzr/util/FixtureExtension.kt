@@ -1,40 +1,61 @@
 package com.imgcstmzr.util
 
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.process.Downloader
+import com.imgcstmzr.cli.Cache
+import com.imgcstmzr.process.Downloader.download
 import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.process.Output.Type.META
-import com.imgcstmzr.runtime.OS
+import com.imgcstmzr.runtime.OperatingSystem
+import com.imgcstmzr.runtime.OperatingSystemMock
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
-import java.io.File
 import java.nio.file.Path
+import java.time.Instant.now
+import kotlin.annotation.AnnotationRetention.RUNTIME
+import kotlin.reflect.KClass
 
-class FixtureExtension : ParameterResolver, AfterEachCallback {
+@Retention(RUNTIME)
+@Target(AnnotationTarget.VALUE_PARAMETER)
+annotation class OS(val value: KClass<out OperatingSystem> = OperatingSystemMock::class, val autoDelete: Boolean = true)
 
-    val baseImg = Paths.TEST
-        .resolve("test")
-        .mkdirs()
-        .resolve("imgcstmzr.img")
-        .also { if (!it.exists) prepareImg("cmdline.txt", "config.txt").copyTo(it) }
+open class FixtureExtension : ParameterResolver, AfterEachCallback {
+
+    override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext?): Boolean =
+        Path::class.java.isAssignableFrom(parameterContext.parameter.type)
+
+    override fun resolveParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext?): Any? {
+        val annotation = parameterContext.parameter.getAnnotation(OS::class.java)
+        val os = annotation?.value?.objectInstance
+        val autoDelete = annotation?.autoDelete ?: true
+        return cachedCopyOf(os).also { if (autoDelete) saveReferenceForCleanup(extensionContext ?: throw NoSuchElementException(), it) }
+    }
+
+    override fun afterEach(context: ExtensionContext) {
+        cleanUp(context)
+    }
 
     companion object {
+        private val cache = Cache(Paths.TEST.resolve("test"), maxConcurrentWorkingDirectories = 20)
+        private fun cachedCopyOf(os: OperatingSystem?): Path {
+            val name = os?.downloadUrl?.let { Path.of(it).baseName } ?: "imgcstmzr"
+            return cache.provideCopy(name, false) { os?.download() ?: prepareImg("cmdline.txt", "config.txt") }
+        }
 
         /**
          * Dynamically creates a raw image with two partitions containing the given [files].
          */
         private fun prepareImg(vararg files: String): Path {
-            val randomBasename = "img-${String.random()}"
-            echo(META typed "Preparing test img with files ${files.joinToString(", ")}. This takes a moment...")
-            val hostDir = Paths.TEST.resolve(randomBasename).mkdirs()
+            val basename = "imgcstmzr"
+            echo(META typed now().asEmoji() + " Preparing test img with files ${files.joinToString(", ")}. This takes a moment...")
+            val hostDir = Paths.TEST.resolve(basename + String.random(4)).mkdirs()
             val copyFileCommands: List<String> = files.map {
                 ClassPath.of(it).copyTo(hostDir.resolve(it))
                 "copy-in ${Guestfish.DOCKER_MOUNT_ROOT.resolve(it)} /boot"
             }
 
-            val imgName = "$randomBasename.img"
+            val imgName = "$basename.img"
             Guestfish.execute(
                 containerName = imgName,
                 volumes = mapOf(hostDir to Guestfish.DOCKER_MOUNT_ROOT),
@@ -56,64 +77,41 @@ class FixtureExtension : ParameterResolver, AfterEachCallback {
             return hostDir.resolve(imgName)
         }
 
-        fun downloadImg(os: OS<*>): Path {
-            val randomBasename = "$os-${String.random()}"
-            echo(META typed "Preparing test img with OS $os. This takes a moment...")
-            val hostDir = File.createTempFile("imgcstmzr", ".img").also { it.delete() }.toPath().resolve(randomBasename).mkdirs()
-            return Downloader.download(os.downloadUrl ?: throw IllegalArgumentException("$os does not provide a download URL"))
-                .also { echo(META typed "Finish download.") }
-                .copyTo(hostDir.resolve("$randomBasename.img"))
-        }
-
-        fun prepareRoot(): Path {
+        fun prepareSharedDirectory(): Path {
             val root = createTempDir("imgcstmzr")
             val boot = root.resolve("boot").toPath()
             ClassPath.of("cmdline.txt").copyToDirectory(boot)
             ClassPath.of("config.txt").copyToDirectory(boot)
             return root.toPath()
         }
+
+        private fun cleanUp(context: ExtensionContext) {
+            deleteImgRelatedDirectories(context)
+        }
+
+        private fun deleteImgRelatedDirectories(context: ExtensionContext) {
+            loadImg(context)
+                ?.let {
+                    val imgDirectory = it.parent
+                    val imgDirectoryContainer = imgDirectory.parent
+                    imgDirectoryContainer.listFilesRecursively({ other ->
+                        other.toString().startsWith(imgDirectory.toString())
+                    })
+                }
+                ?.onEach { imgDirectoryBasedCopy ->
+                    imgDirectoryBasedCopy.delete(true)
+                }
+        }
+
+        private fun loadImg(context: ExtensionContext): Path? =
+            getStore(context).get(context.requiredTestInstance, Path::class.java)
+
+        private fun saveReferenceForCleanup(context: ExtensionContext, img: Path) {
+            getStore(context).put(context.requiredTestInstance, img)
+        }
+
+        private fun getStore(context: ExtensionContext): ExtensionContext.Store =
+            context.getStore(ExtensionContext.Namespace.create(FixtureExtension::class))
     }
-
-    override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext?): Boolean =
-        Path::class.java.isAssignableFrom(parameterContext.parameter.type)
-
-    override fun resolveParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext?): Any? =
-        baseImg.copyToTempSiblingDirectory()
-            .also { setUp(extensionContext ?: throw NoSuchElementException(), it) }
-
-    private fun setUp(context: ExtensionContext, path: Path) {
-        saveImg(context, path)
-    }
-
-    override fun afterEach(context: ExtensionContext) {
-        cleanUp(context)
-    }
-
-    private fun cleanUp(context: ExtensionContext) {
-        deleteImgRelatedDirectories(context)
-    }
-
-    private fun deleteImgRelatedDirectories(context: ExtensionContext) {
-        loadImg(context)
-            ?.let {
-                val imgDirectory = it.parent
-                val imgDirectoryContainer = imgDirectory.parent
-                imgDirectoryContainer.listFilesRecursively({ other ->
-                    other.toString().startsWith(imgDirectory.toString())
-                })
-            }
-            ?.onEach { imgDirectoryBasedCopy ->
-                imgDirectoryBasedCopy.delete(true)
-            }
-    }
-
-    private fun loadImg(context: ExtensionContext): Path? =
-        getStore(context).get(context.requiredTestInstance, Path::class.java)
-
-    private fun saveImg(context: ExtensionContext, img: Path) {
-        getStore(context).put(context.requiredTestInstance, img)
-    }
-
-    private fun getStore(context: ExtensionContext): ExtensionContext.Store =
-        context.getStore(ExtensionContext.Namespace.create(FixtureExtension::class))
 }
+

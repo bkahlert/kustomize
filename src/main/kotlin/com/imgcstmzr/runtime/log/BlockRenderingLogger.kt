@@ -6,7 +6,6 @@ import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
 import com.imgcstmzr.process.Output
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.HasStatus.Companion.status
-import com.imgcstmzr.runtime.Program
 import com.imgcstmzr.util.stripOffAnsi
 
 class BlockRenderingLogger<in HS : HasStatus>(caption: String) : RenderingLogger<HS> {
@@ -49,12 +48,12 @@ class BlockRenderingLogger<in HS : HasStatus>(caption: String) : RenderingLogger
             " ".repeat((statusInformationColumn - text.stripOffAnsi().length).coerceAtLeast(statusInformationMinimalPadding))
         }
 
-        fun <PROGRAM : Program<*>> render(caption: String, block: (RenderingLogger<PROGRAM>) -> Int) {
-            val renderer = BlockRenderingLogger<PROGRAM>(caption)
+        fun render(caption: String, block: (RenderingLogger<HasStatus>) -> Int) {
+            val renderer = BlockRenderingLogger<HasStatus>(caption)
             val exitCode = block(renderer)
             renderer.endLogging(caption, exitCode)
         }
 
-        fun <PROGRAM : Program<*>> render(caption: String): BlockRenderingLogger<PROGRAM> = BlockRenderingLogger(caption)
+        fun render(caption: String): BlockRenderingLogger<HasStatus> = BlockRenderingLogger(caption)
     }
 }

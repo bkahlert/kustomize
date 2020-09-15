@@ -1,13 +1,18 @@
 package com.imgcstmzr.process
 
 import com.github.ajalt.clikt.output.TermUi.echo
+import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
+import com.imgcstmzr.process.Exec.Sync.execShellScript
+import com.imgcstmzr.process.Output.Type.ERR
 import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.asEmoji
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.hereDoc
-import com.imgcstmzr.util.quote
+import com.imgcstmzr.util.random
 import com.imgcstmzr.util.splitLineBreaks
 import com.imgcstmzr.util.withExtension
 import java.nio.file.Path
+import java.time.Instant.now
 
 /**
  * API for easy usage of [guestfish](https://libguestfs.org/guestfish.1.html)—"the guest filesystem shell".
@@ -25,7 +30,10 @@ class Guestfish(
      * Name to be used for the underlying Docker container. If a container with the same name exists, it will be stopped and removed.
      */
     private val containerName: String = imgPathOnHost.fileName.toString(),
+
+    private val debug: Boolean = true,
 ) {
+    fun withRandomSuffix(): Guestfish = Guestfish(imgPathOnHost, imgPathOnHost.fileName.toString() + "-" + String.random(4))
 
     /**
      * [Path] on this host mapped to the OS running inside Docker.
@@ -45,14 +53,14 @@ class Guestfish(
     private fun imgMountingDockerCmd(vararg appArguments: String): String {
         val volumes = mapOf(
             imgPathOnHost to imgPathOnDocker,
-            guestRootOnHost to GUEST_ROOT_ON_DOCKER,
+            imgPathOnHost.parent.resolve(SHARED_DIRECTORY_NAME) to GUEST_ROOT_ON_DOCKER,
         )
 
         return dockerCmd(
             containerName,
             volumes,
             "--rw",
-            "--add ${imgPathOnDocker.quote()}",
+            "--add $imgPathOnDocker",
             "--mount /dev/sda2:/",
             "--mount /dev/sda1:/boot",
             *appArguments,
@@ -70,18 +78,24 @@ class Guestfish(
      * Runs the given [commands] on a [Guestfish] instance with [imgPathOnHost] mounted.
      */
     fun run(commands: List<String>): Int {
-        echo("Running ${commands.size} commands inside ${imgPathOnHost.fileName}. This takes a moment...")
+        echo(now().asEmoji() + " Running ${commands.size} commands inside ${imgPathOnHost.fileName}. This takes a moment...")
         val cmd = commandApplyingDockerCmd(commands)
-        val exitCode = runProcess(cmd, processor = Output.LOGGING_PROCESSOR).blockExitCode
-        check(exitCode == 0) { "An error while running the following command inside $imgPathOnHost:\n$cmd" }
+        val exitCode = execShellScript(workingDirectory = imgPathOnHost.parent,
+            lines = arrayOf(cmd),
+            expectedExitValue = null,
+            outputProcessor = newOutputProcessor(debug)).exitValue
+        check(exitCode == 0) {
+            "An error while running the following command inside $imgPathOnHost:\n$cmd\n" +
+                tc.bold("To debug you could try: docker exec -it ${imgPathOnHost.fileName} bash")
+        }
         return exitCode
     }
 
     companion object {
-        private const val IMAGE_NAME: String = "curator/guestfish"
-        val DOCKER_MOUNT_ROOT: Path = Path.of("/root")
+        private const val IMAGE_NAME: String = "cmattoon/guestfish"//"curator/guestfish"
+        val DOCKER_MOUNT_ROOT: Path = Path.of("/work")///root")
         val GUEST_MOUNT_ROOT: Path = Path.of("/")
-        private const val SHARED_DIRECTORY_NAME: String = "guestfish.shared"
+        val SHARED_DIRECTORY_NAME: String = "guestfish.shared"
 
         /**
          * [Path] on the OS running inside Docker mapped to this host.
@@ -133,17 +147,21 @@ class Guestfish(
         """.trimIndent().splitLineBreaks() + copyOutCommands(listOf(shadowPath, shadowBackup))
         }
 
+        private fun newOutputProcessor(debug: Boolean): Process?.(Output) -> Unit {
+            return { output ->
+                if (debug || output.type == ERR) echo(output)
+            }
+        }
+
         /**
          * Constructs a command that starts a Guestfish Docker container with the given [volumes] mapped.
          *
          * The command stops and removes any existing Guestfish Docker container with the same [containerName].
-         *
-         * TODO Use cmattoon/guestfish (/work instead of /root)
          */
         private fun dockerCmd(containerName: String, volumes: Map<Path, Path> = emptyMap(), vararg appArguments: String): String {
-            val volumeArguments = volumes.map { "--volume \"${it.key}\":\"${it.value}\"" }.toTypedArray()
+            val volumeArguments = volumes.map { "--volume ${it.key}:${it.value}" }.toTypedArray()
             val dockerRun = arrayOf(
-                "docker", "run", "--name", "\"$containerName\"", "--rm", "-i", *volumeArguments, IMAGE_NAME, *appArguments
+                "docker 2>&1", "run", "--name", "\"$containerName\"", "--rm", "-i", *volumeArguments, IMAGE_NAME, "\$CMD", *appArguments
             ).joinToString(" ")
             return "docker rm --force \"$containerName\" &> /dev/null ; $dockerRun"
         }
@@ -151,10 +169,9 @@ class Guestfish(
         /**
          * Executes the given [commands] on a [Guestfish] instance with just [volumes] mounted.
          */
-        fun execute(containerName: String, volumes: Map<Path, Path>, vararg commands: String): Int {
+        fun execute(containerName: String, volumes: Map<Path, Path>, vararg commands: String, debug: Boolean = false): Int {
             val cmd = dockerCmd(containerName, volumes, appArguments = arrayOf("--", hereDoc(commands.toList().plus("umount-all").plus("quit"))))
-//            val exitCode = runProcess(cmd, processor = Output.LOGGING_PROCESSOR).blockExitCode TODO
-            val exitCode = runProcess(cmd, processor = Output.LOGGING_PROCESSOR).blockExitCode
+            val exitCode = runProcess(cmd, processor = newOutputProcessor(debug)).blockExitCode
             check(exitCode == 0) { "An error while running the following command inside $containerName:\n$cmd" }
             return exitCode
         }

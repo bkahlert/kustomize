@@ -14,7 +14,8 @@ internal class UsbOnTheGoPatchTest {
 
     @Test
     internal fun `should patch configtxt and cmdlinetxt ssh file`() {
-        val root = FixtureExtension.prepareRoot().also { expectThat(it).get { resolve("boot/cmdline.txt") }.not { this.containsContent("g_ether,g_webcam") } }
+        val root = FixtureExtension.prepareSharedDirectory()
+            .also { expectThat(it).get { resolve("boot/cmdline.txt") }.not { this.containsContent("g_ether,g_webcam") } }
         val usbOnTheGoPatch = UsbOnTheGoPatch()
 
         usbOnTheGoPatch(root)
@@ -24,7 +25,7 @@ internal class UsbOnTheGoPatchTest {
 
     @Test
     internal fun `should not patch twice `() {
-        val root = FixtureExtension.prepareRoot()
+        val root = FixtureExtension.prepareSharedDirectory()
         val usbOnTheGoPatch = UsbOnTheGoPatch()
 
         (0..10).forEach { usbOnTheGoPatch(root) }

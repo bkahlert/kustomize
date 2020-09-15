@@ -32,7 +32,7 @@ internal class PatcherTest {
             PasswordPatch("newUser", "newPassword"),
         )
             .map { patch ->
-                val root = FixtureExtension.prepareRoot()
+                val root = FixtureExtension.prepareSharedDirectory()
                 dynamicTest("${patch.name} on ${root.fileName}") {
                     val patcher = Patcher()
                     expectCatching { patcher(img, patch) }.isSuccess()

@@ -1,12 +1,12 @@
 <configuration>
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <!--        <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>-->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd} | %d{HH:mm:ss.SSS} | %thread | %5p | %logger{25} | %12(ID: %8mdc{id}) | %m%n</pattern>
+            <charset>utf8</charset>
+        </encoder>
     </appender>
 
-    <root level="trace">
-        <appender-ref ref="STDOUT"/>
+    <root level="DEBUG">
+        <appender-ref ref="CONSOLE"/>
     </root>
-
-    <logger name="org.eclipse.jetty" level="INFO"/>
-    <logger name="io.netty" level="INFO"/>
 </configuration>

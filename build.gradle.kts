@@ -22,10 +22,11 @@ dependencies {
     implementation("com.github.ajalt:clikt:2.8.0")
     implementation("com.github.ajalt:mordant:1.2.1")
     implementation("io.github.config4k:config4k:0.4.2")
+    implementation("org.zeroturnaround:zt-exec:1.12")
 
     testImplementation(kotlin("test-junit5"))
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.5.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
 
     testImplementation("io.strikt:strikt-core:0.27.0")

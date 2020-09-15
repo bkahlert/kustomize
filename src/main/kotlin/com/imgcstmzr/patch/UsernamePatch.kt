@@ -1,10 +1,10 @@
 package com.imgcstmzr.patch
 
 import com.github.ajalt.clikt.output.TermUi
+import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.readAll
 import com.imgcstmzr.util.readAllLines
 import com.imgcstmzr.util.readable
-import com.imgcstmzr.util.trace
 import com.imgcstmzr.util.writeText
 import java.nio.file.Path
 
@@ -24,7 +24,7 @@ class UsernamePatch(private val oldUsername: String, private val newUsername: St
                     path.readAll()
                         .replace(oldUsernamePattern) { newUsername }
                         .also { patchedContent -> path.writeText(patchedContent) }
-                        .also { patchedContent -> TermUi.trace("Replaced: ($oldUsernamePattern) -> $newUsername\n$patchedContent") }
+                        .also { patchedContent -> TermUi.debug("Replaced: ($oldUsernamePattern) -> $newUsername\n$patchedContent") }
                 }
             }
 
@@ -36,7 +36,7 @@ class UsernamePatch(private val oldUsername: String, private val newUsername: St
             val readAllLines = path.readAllLines()
             require(readAllLines.none {
                 (oldUsernamePattern.containsMatchIn(it)).also { result ->
-                    TermUi.trace(oldUsernamePattern.pattern + " containsMatchIn " + it + " => " + result)
+                    TermUi.debug(oldUsernamePattern.pattern + " containsMatchIn " + it + " => " + result)
                 }
             }) { "$path matches $regex" }
         }

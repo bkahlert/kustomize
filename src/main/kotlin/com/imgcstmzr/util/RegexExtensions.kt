@@ -8,6 +8,13 @@ package com.imgcstmzr.util
 fun Regex.optional(): String = "(?:$pattern)?"
 
 /**
+ * Returns a group with no name matching [pattern].
+ *
+ * This method is useful in situations where expressions should be grouped together without modifying the group order.
+ */
+fun Regex.Companion.anonymousGroup(pattern: String): String = "(?:$pattern)"
+
+/**
  * Returns a group with a [name] matching [pattern].
  *
  * Once matches the matching group can be retrieved using [MatchNamedGroupCollection] starting with Kotlin 1.1.

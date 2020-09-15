@@ -22,6 +22,9 @@ val Path.exists: Boolean
 val Path.size: Long
     get() = Files.size(this)
 
+val Path.humanReadableSize: String get() = Size.formatTraditionally(size)
+val Path.humanReadableSizeSI: String get() = Size.format(size)
+
 val Path.readable: Boolean
     get() = toFile().canRead()
 
@@ -45,7 +48,7 @@ fun Path.mkdirs(): Path {
     return this
 }
 
-fun Path.mkRandomDir(): Path = resolve(String.random()).mkdirs()
+fun Path.mkRandomDir(): Path = resolve(String.random(4)).mkdirs()
 
 private val Path.fileNameParts: Pair<String, String?>
     get() = fileName.toString().split(".").let {
@@ -67,6 +70,8 @@ fun Path.resourceAsBufferedReader(): InputStreamReader? =
     resourceAsBufferedStream()?.let { InputStreamReader(it) }
 
 fun Path.writeText(text: String): Unit = toFile().writeText(text)
+
+fun Path.appendText(text: String): Unit = toFile().appendText(text)
 
 
 /**
@@ -162,7 +167,7 @@ fun Path.copyToTempFile(isolated: Boolean = false): Path {
  * Returns a temporary copy of this paths in a sibling directory with random name and a modified file name.
  */
 fun Path.copyToTempSiblingDirectory(): Path {
-    val random = String.random()
+    val random = String.random(4)
     val siblingDir: Path = parent.resolveSibling("${parent.fileName}-$random").mkdirs()
     val siblingFile: Path = siblingDir.resolve("${fileNameParts.first}-$random" + if (fileNameParts.second != null) ".${fileNameParts.second}" else "")
     copyTo(siblingFile, true)

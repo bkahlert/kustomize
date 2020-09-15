@@ -5,12 +5,18 @@ import java.nio.ByteBuffer
 import java.time.Duration
 
 class NonBlockingReader(
-    private val process: Process,
-    stream: Process.() -> InputStream = { inputStream },
+    private val isAlive: () -> Boolean,
+    private val inputStream: InputStream,
     timeout: Duration = Duration.ofMillis(100),
     capacity: Int = 8 * 1024 * 1024,
 ) {
-    private val inputStream: InputStream = stream.invoke(process)
+    constructor(
+        process: Process,
+        stream: Process.() -> InputStream,
+        timeout: Duration = Duration.ofMillis(100),
+        capacity: Int = 8 * 1024 * 1024,
+    ) : this({ process.isAlive }, process.stream(), timeout, capacity)
+
     private val buffer = ByteBuffer.wrap(ByteArray(capacity))
     private val timeoutMillis = timeout.toMillis()
     private val lineFeed = '\r'
@@ -30,7 +36,7 @@ class NonBlockingReader(
             when (readResult) {
                 -1 -> return null
                 0 -> {
-                    if (!process.isAlive) {
+                    if (!isAlive()) {
                         return null
                     }
                     continue

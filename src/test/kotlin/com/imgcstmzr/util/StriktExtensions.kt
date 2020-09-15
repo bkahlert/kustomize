@@ -1,3 +1,5 @@
+@file:Suppress("PublicApiImplicitType")
+
 package com.imgcstmzr.util
 
 import strikt.api.Assertion
@@ -7,6 +9,18 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
+
+fun Assertion.Builder<*>.asString(trim: Boolean = true) = get("asString") { toString().takeUnless { trim } ?: toString().trim() }
+
+fun Assertion.Builder<*>.isEqualToStringWise(other: Any?, removeAnsi: Boolean = true) =
+    assert("have same toString value") { value ->
+        val thisString = value.toString().let { if (removeAnsi) it.stripOffAnsi() else it }
+        val otherString = other.toString().let { if (removeAnsi) it.stripOffAnsi() else it }
+        when (thisString == otherString) {
+            true -> pass()
+            else -> fail("was $otherString instead of $thisString.")
+        }
+    }
 
 fun Assertion.Builder<File>.exists() =
     assert("exists") {
@@ -30,6 +44,15 @@ fun Assertion.Builder<File>.isWritable() =
         when (it.canWrite()) {
             true -> pass()
             else -> fail()
+        }
+    }
+
+fun Assertion.Builder<Path>.hasSize(size: Long) =
+    assert("has ${Size.format(size)}") {
+        val actualSize = it.size
+        when (actualSize == size) {
+            true -> pass()
+            else -> fail("was ${Size.format(actualSize)} (${it.size} B)")
         }
     }
 
@@ -122,4 +145,10 @@ fun Assertion.Builder<Path>.lastModified(duration: Duration) =
             in (recent..now) -> pass()
             else -> fail()
         }
+    }
+
+fun Assertion.Builder<String>.matches(curlyPattern: String) =
+    assert("matches $curlyPattern") {
+        if (it.matches(curlyPattern)) pass()
+        else fail()
     }

@@ -13,7 +13,6 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.prompt
 import com.github.ajalt.clikt.parameters.options.transformValues
-import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.long
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
@@ -23,17 +22,16 @@ import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
 import com.imgcstmzr.cli.Config4kValueSource
 import com.imgcstmzr.cli.Config4kValueSource.Companion.update
 import com.imgcstmzr.cli.Env
+import com.imgcstmzr.cli.Options.os
 import com.imgcstmzr.patch.PasswordPatch
 import com.imgcstmzr.patch.SshPatch
 import com.imgcstmzr.patch.UsbOnTheGoPatch
 import com.imgcstmzr.patch.UsernamePatch
-import com.imgcstmzr.process.Downloader
+import com.imgcstmzr.process.Downloader.download
 import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
-import com.imgcstmzr.runtime.OS
-import com.imgcstmzr.runtime.SupportedOS
-import com.imgcstmzr.runtime.Workflow
-import com.imgcstmzr.runtime.WorkflowRuntime
+import com.imgcstmzr.runtime.OperatingSystems
+import com.imgcstmzr.runtime.Runtime
 import com.imgcstmzr.util.Paths
 import java.io.File
 import java.nio.file.Path
@@ -101,17 +99,15 @@ class ImgCommand : CliktCommand(help = "Provides an IMG file containing the spec
     )
 
     private val name by option().default("my-img")
-    private val os by option().enum<SupportedOS>().default(SupportedOS.RPI_LITE)
+    private val os by option().os().default(OperatingSystems.RaspberryPiLite)
     private val reuseLastWorkingCopy: Boolean by option().flag(default = false)
     private val shared by requireObject<MutableMap<KClass<*>, Any>>()
 
     override fun run() {
         val cache: Cache = shared[Cache::class] as Cache
 
-        shared[Path::class] = cache.provideCopy(name, reuseLastWorkingCopy) {
-            val downloadUrl: String = os.downloadUrl ?: throw NoSuchElementException("$os has no download URL.")
-            Downloader.download(downloadUrl).also { TermUi.echo("Downloaded $it from $downloadUrl") }
-        }
+        shared[Path::class] = cache.provideCopy(name, reuseLastWorkingCopy) { os.download() }
+            .also { TermUi.echo("Downloaded completed.") }
     }
 }
 
@@ -123,7 +119,7 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
 
     private val name by option().prompt(default = "my-img")
 
-    private val os by option().enum<SupportedOS>().default(SupportedOS.RPI_LITE)
+    private val os by option().os().default(OperatingSystems.RaspberryPiLite)
     private val size by option().long()
     private val enableSsh by option().convert { SshPatch() }
     private val renameUsername by option().transformValues(2) { list: List<String> -> UsernamePatch(list[0], list[1]) }
@@ -140,7 +136,6 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
 
     override fun run() {
         val cache: Cache = shared[Cache::class] as Cache
-        val os: OS<Workflow> = os.invoke()
 
         with(img.toPath()) {
 
@@ -150,7 +145,7 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
                 .also { echo("Success $it") }
 
             exitProcess(0)
-            val runtime = WorkflowRuntime(name)
+            val runtime = Runtime(name)
             size?.let { os.increaseDiskSpace(size!!, this, runtime) }
 //            runtime.bootAndRun("test", this, os.login("pi", "raspberry"), os.sequence("test", "wget https://bkahlert.com/wp-content/uploads/2019/08/Retrospective-02-Flipchart-Featured-720x405.jpg"))
             scripts.forEach { (scriptName, script) ->

@@ -5,7 +5,7 @@ import com.imgcstmzr.process.Output.Type.ERR
 import com.imgcstmzr.process.Output.Type.META
 import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.runtime.log.InfoAdaptingLogger
-import com.imgcstmzr.util.trace
+import com.imgcstmzr.util.debug
 import org.slf4j.Logger
 import java.io.BufferedReader
 import java.io.IOException
@@ -68,12 +68,11 @@ class CommandLineRunner(private var blocking: Boolean = true) {
         outputRedirect: Redirect = INHERIT,
         errorRedirect: Redirect = PIPE,
     ): Process {
-        val absoluteShellScript = directory.resolve(shellScript)
         return try {
-            log?.info("Starting {}...", absoluteShellScript)
-            TermUi.trace(directory.resolve(shellScript))
+            log?.info("Starting {}...", shellScript)
+            TermUi.debug("$directory\$ $shellScript")
             val process = ProcessBuilder()
-                .command(SHELL_CMD, SHELL_CMD_ARGS, absoluteShellScript.toAbsolutePath().toString())
+                .command(SHELL_CMD, SHELL_CMD_ARGS, shellScript)
                 .directory(directory.toAbsolutePath().toFile())
                 .redirectInput(inputRedirect)
                 .redirectOutput(outputRedirect)
@@ -116,7 +115,7 @@ class CommandLineRunner(private var blocking: Boolean = true) {
     ): Process {
         return try {
             log?.info("Starting {}...", command)
-            TermUi.trace(command)
+            TermUi.debug(command)
             val process = ProcessBuilder()
                 .command(command)
                 .directory(directory.toFile())

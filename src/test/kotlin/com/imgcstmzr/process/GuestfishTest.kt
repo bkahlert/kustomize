@@ -1,13 +1,12 @@
 package com.imgcstmzr.process
 
-import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.process.Guestfish.Companion.changePasswordCommand
 import com.imgcstmzr.process.Guestfish.Companion.copyInCommands
 import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
-import com.imgcstmzr.runtime.DietPi
+import com.imgcstmzr.runtime.OperatingSystems.DietPi
 import com.imgcstmzr.util.ClassPath
 import com.imgcstmzr.util.FixtureExtension
-import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.hasContent
@@ -16,7 +15,6 @@ import com.imgcstmzr.util.mkdirs
 import com.imgcstmzr.util.random
 import com.imgcstmzr.util.withExtension
 import com.imgcstmzr.util.writeText
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
@@ -37,7 +35,7 @@ internal class GuestfishTest {
     internal fun `copy-in should make paths absolute if relative`() {
         val commands = copyInCommands(listOf(Path.of("foo/bar"), Path.of("/bar/baz")))
         expectThat(commands).containsExactly(
-            "copy-in /root/guestfish.shared/foo/bar /foo", "copy-in /root/guestfish.shared/bar/baz /bar",
+            "copy-in /work/guestfish.shared/foo/bar /foo", "copy-in /work/guestfish.shared/bar/baz /bar",
         )
     }
 
@@ -45,19 +43,19 @@ internal class GuestfishTest {
     internal fun `copy-out should make paths absolute if relative`() {
         val commands = copyOutCommands(listOf(Path.of("foo/bar"), Path.of("/bar/baz")))
         expectThat(commands).containsExactly(
-            "!mkdir -p /root/guestfish.shared/foo", "- copy-out /foo/bar /root/guestfish.shared/foo",
-            "!mkdir -p /root/guestfish.shared/bar", "- copy-out /bar/baz /root/guestfish.shared/bar",
+            "!mkdir -p /work/guestfish.shared/foo", "- copy-out /foo/bar /work/guestfish.shared/foo",
+            "!mkdir -p /work/guestfish.shared/bar", "- copy-out /bar/baz /work/guestfish.shared/bar",
         )
     }
 
     @Test
     internal fun `should copy file from img, skip non-existing and override one`(img: Path) {
-        val guestfish = Guestfish(img)
+        val guestfish = Guestfish(img).withRandomSuffix()
         guestfish.run(copyOutCommands(listOf(Path.of("/boot/cmdline.txt"), Path.of("/non/existing.txt"))))
         val dir = guestfish.guestRootOnHost
 
         dir.resolve("boot/config.txt").writeText("overwrite me")
-        Guestfish(img, img.fileName.toString()).run(copyOutCommands(listOf(Path.of("/boot/config.txt"))))
+        Guestfish(img).withRandomSuffix().run(copyOutCommands(listOf(Path.of("/boot/config.txt"))))
 
         expectThat(dir.resolve("boot/cmdline.txt")).hasEqualContent(ClassPath.of("cmdline.txt"))
         expectThat(dir.resolve("boot/config.txt")).hasEqualContent(ClassPath.of("config.txt")).not { hasContent("overwrite") }
@@ -65,7 +63,7 @@ internal class GuestfishTest {
 
     @Test
     internal fun `should copy new file to img and overwrite a second one`(img: Path) {
-        val guestfish = Guestfish(img)
+        val guestfish = Guestfish(img).withRandomSuffix()
         val exampleHtml = Path.of("/example.html")
         val exampleHtmlOnHost = guestfish.guestRootOnHost.asRootFor(exampleHtml).also { ClassPath.of("example.html").copyTo(it) }
         val configTxt = Path.of("/boot/config.txt")
@@ -82,30 +80,8 @@ internal class GuestfishTest {
     }
 
     @Test
-    @Disabled
-    internal fun `should provide access to filesystem`(img: Path) {
-        // @see https://medium.com/@kumar_pravin/mount-disk-image-to-host-using-guestfish-d5f33c0297e0
-
-        val imgName = img.fileName.toString()
-        Guestfish.execute(
-            containerName = imgName,
-            volumes = mapOf(img.parent to Guestfish.DOCKER_MOUNT_ROOT, img to Guestfish.DOCKER_MOUNT_ROOT.resolve(imgName)),
-            "add " + Guestfish.DOCKER_MOUNT_ROOT.resolve(imgName),
-            "run",
-            "modprobe fuse",
-            "mount /dev/sda2 /",
-            "mount /dev/sda1 /boot",
-            "mounts",
-//            "!mkdir -p " + Guestfish.dockerMountRoot.resolve(imgName).resolve("/mnt"),
-            "mount-local ${Guestfish.DOCKER_MOUNT_ROOT} readonly:true",
-            "mount-local-run",
-        )
-    }
-
-    @Test
-    internal fun `should change password`() {
-        val img = Cache(Paths.CACHE.resolve("dietpi")).provideCopy("dietpi", true) { Downloader.download(DietPi().downloadUrl) }
-        val guestfish = Guestfish(img)
+    internal fun `should change password`(@OS(DietPi::class) img: Path) {
+        val guestfish = Guestfish(img).withRandomSuffix()
         val shadowPath = Path.of("/etc/shadow")
         val hostShadow = guestfish.guestRootOnHost.asRootFor(shadowPath)
 

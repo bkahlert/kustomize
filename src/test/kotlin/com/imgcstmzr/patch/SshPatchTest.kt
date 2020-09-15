@@ -14,7 +14,7 @@ internal class SshPatchTest {
 
     @Test
     internal fun `should create ssh file`() {
-        val root = FixtureExtension.prepareRoot().also { expectThat(it).get { resolve("boot/ssh") }.not { exists() } }
+        val root = FixtureExtension.prepareSharedDirectory().also { expectThat(it).get { resolve("boot/ssh") }.not { exists() } }
         val sshPatch = SshPatch()
 
         sshPatch(root)

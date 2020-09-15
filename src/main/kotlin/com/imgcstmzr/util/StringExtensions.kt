@@ -2,6 +2,8 @@ package com.imgcstmzr.util
 
 import java.net.URL
 import java.util.regex.Pattern
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.random.Random
 import kotlin.streams.toList
 import kotlin.text.contains as containsRegex
@@ -10,14 +12,9 @@ import kotlin.text.split as originalSplit
 private val ansiRemovalPattern: Pattern = Pattern.compile("(?:\\x9B|\\x1B\\[)[0-?]*[ -/]*[@-~]") ?: throw IllegalStateException("Erroneous regex pattern")
 
 /**
- * Returns the [CharSequence] with [ANSI escape codes](https://en.wikipedia.org/wiki/ANSI_escape_code) removed.
- */
-fun CharSequence.stripOffAnsi(): CharSequence = ansiRemovalPattern.matcher(this).replaceAll("")
-
-/**
  * Returns the [String] with [ANSI escape codes](https://en.wikipedia.org/wiki/ANSI_escape_code) removed.
  */
-fun String.stripOffAnsi(): String = ansiRemovalPattern.matcher(this).replaceAll("")
+fun CharSequence.stripOffAnsi(): String = ansiRemovalPattern.matcher(this.toString()).replaceAll("")
 
 /**
  * Returns the [String] truncated to [maxLength] characters including the [truncationMarker].
@@ -125,16 +122,18 @@ val CharSequence.multiline: Boolean
     get() = containsRegex(String.Companion.LINE_BREAKS_REGEX)
 
 /**
- * Creates a [here document](https://en.wikipedia.org/wiki/Here_document) consisting the given [lines], [label] and [lineSeparator].
+ * Creates a [here document](https://en.wikipedia.org/wiki/Here_document) consisting of the given [lines], [label] and [lineSeparator].
  */
-fun hereDoc(lines: List<String>, label: String = "_HERE_" + String.random(), lineSeparator: String = System.lineSeparator()): String =
+fun hereDoc(lines: List<String>, label: String = "HERE-" + String.random(8).toUpperCase(), lineSeparator: String = System.lineSeparator()): String =
     lines.joinToString(lineSeparator, "<<$label$lineSeparator", "$lineSeparator$label")
 
-fun CharSequence.wrap(value: CharSequence): String = "$value$this$value"
+fun CharSequence?.wrap(value: CharSequence): String = "$value$this$value"
 
-fun CharSequence.quote(): String = this.wrap("\"")
+fun CharSequence?.wrap(left: CharSequence, right: CharSequence): String = "$left$this$right"
 
-val CharSequence.quotes: String get() = quote()
+fun CharSequence?.quote(): String = this.wrap("\"")
+
+fun CharSequence?.squote(): String = this.wrap("'")
 
 private val randomCharacterPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 fun String.Companion.random(length: Int = 16): String = (1..length).map { randomCharacterPool[Random.nextInt(0, randomCharacterPool.size)] }.joinToString("")
@@ -153,8 +152,8 @@ fun <T> List<T>.joinToTruncatedString(
     startLimit: Int = 2,
     endLimit: Int = 1,
     truncated: CharSequence = "...",
-    transform: ((T) -> CharSequence)?,
-    transformEnd: ((T) -> CharSequence)?,
+    transform: ((T) -> CharSequence)? = null,
+    transformEnd: ((T) -> CharSequence)? = null,
 ): String {
     val limit = startLimit + endLimit
     if (size <= limit) return joinToString(separator, prefix, postfix, limit, truncated, transform)
@@ -170,4 +169,119 @@ fun <T> List<T>.joinToTruncatedString(
             }
         }.also { index++ }
     }).toString()
+}
+
+/**
+ * Masks a char sequence with a blend effect, that is every second character is replaced by [blender].
+ */
+fun CharSequence.blend(blender: Char): String = mapIndexed { index, char -> if (index.isEven) blender else char }.joinToString("")
+
+/**
+ * Returns true if this char sequence matches the given SLF4J / Logback style [pattern], like `I {} you have to {}`.
+ *
+ * Example:
+ * ```
+ * val pattern = "I {} you have to {}"
+ * "I think you have to take a break".matches(pattern).emoji ➜ ✅
+ * "I guess you do right".matches(pattern).emoji ➜ ❌
+ * ```
+ */
+fun CharSequence.matches(pattern: String): Boolean =
+    this.matches(Regex(pattern.originalSplit("{}").joinToString(".*") { Regex.escape(it) }))
+
+val Boolean?.emoji
+    inline get() = when (this) {
+        true -> "✅"
+        false -> "❌"
+        null -> "⭕"
+    }
+
+
+/**
+ * Centers this collection of strings by adding the needed amount of whitespaces from the left (and right)
+ * of each line.
+ *
+ * For example:
+ * ```
+ * foo
+ *   bar baz
+ * ```
+ * becomes
+ * ```
+ *   foo
+ * bar baz
+ * ```
+ */
+fun Collection<String>.center(whitespace: Char = '\u00A0'): List<String> {
+    return map { it.trim() }.let { trimmed ->
+        trimmed.maxOfOrNull { it.length }?.let { maxLength ->
+            trimmed.map { line ->
+                val missing: Double = (maxLength - line.stripOffAnsi().length) / 2.0
+                whitespace.repeat(floor(missing).toInt()) + line + whitespace.repeat(ceil(missing).toInt())
+            }.toList()
+        } ?: emptyList()
+    }
+}
+
+private fun Char.repeat(count: Int): String = String((1..count).map { this }.toCharArray())
+
+/**
+ * Centers this collection of strings by adding the needed amount of whitespaces from the left (and right)
+ * of each line.
+ *
+ * For example:
+ * ```
+ * foo
+ *   bar baz
+ * ```
+ * becomes
+ * ```
+ *   foo
+ * bar baz
+ * ```
+ */
+fun String.center(whitespace: Char = '\u00A0'): String = splitLineBreaks().center(whitespace).joinToString(System.lineSeparator())
+
+
+/**
+ * Centers this collection of strings by adding the needed amount of whitespaces from the left (and right)
+ * of each line.
+ *
+ * For example:
+ * ```
+ * foo
+ *   bar baz
+ * ```
+ * becomes
+ * ```
+ *   foo
+ * bar baz
+ * ```
+ */
+fun String.border(
+    border: String = """
+    ╭─╮
+    │ │
+    ╰─╯
+""".trimIndent(),
+    padding: Int = 0,
+    margin: Int = 0,
+): String {
+    val block = splitLineBreaks().center(border[5])
+    if (block.isEmpty()) return border
+    val width = block[0].stripOffAnsi().length
+    val height = block.size
+    val bordered = "${border[0]}${border[1].repeat(width + padding * 2)}${border[2]}\n" +
+        (0 until padding / 2).joinToString("") { y ->
+            "${border[4]}${border[5].repeat(width + padding * 2)}${border[6]}\n"
+        } +
+        (0 until height).joinToString("") { y ->
+            "${border[4]}${border[5].repeat(padding)}${block[y]}${border[5].repeat(padding)}${border[6]}\n"
+        } +
+        (0 until padding / 2).joinToString("") { y ->
+            "${border[4]}${border[5].repeat(width + padding * 2)}${border[6]}\n"
+        } +
+        "${border[8]}${border[9].repeat(width + padding * 2)}${border[10]}"
+    return if (margin == 0) bordered
+    else bordered.border(border[5].repeat(11), padding = margin - 1, margin = 0)
 }

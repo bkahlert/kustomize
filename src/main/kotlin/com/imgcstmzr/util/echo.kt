@@ -7,7 +7,7 @@ import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
 import com.imgcstmzr.process.Output.Type.ERR
 import com.imgcstmzr.process.Output.Type.META
 
-fun TermUi.trace(
+fun TermUi.debug(
     message: Any?,
     trailingNewline: Boolean = true,
     err: Boolean = false,
