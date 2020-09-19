@@ -47,35 +47,26 @@ fun Assertion.Builder<File>.isWritable() =
         }
     }
 
-fun Assertion.Builder<Path>.hasSize(size: Long) =
-    assert("has ${Size.format(size)}") {
-        val actualSize = it.size
-        when (actualSize == size) {
-            true -> pass()
-            else -> fail("was ${Size.format(actualSize)} (${it.size} B)")
-        }
-    }
-
 fun Assertion.Builder<Path>.hasContent(expectedContent: String) =
-    assert("has content ${expectedContent.quote()}") {
+    assert("has content ${expectedContent.quoted}") {
         val actualContent = it.toFile().readText()
         when (actualContent.contentEquals(expectedContent)) {
             true -> pass()
-            else -> fail("was ${actualContent.quote()}")
+            else -> fail("was ${actualContent.quoted}")
         }
     }
 
 fun Assertion.Builder<Path>.containsContent(expectedContent: String) =
-    assert("contains content ${expectedContent.quote()}") {
+    assert("contains content ${expectedContent.quoted}") {
         val actualContent = it.toFile().readText()
         when (actualContent.contains(expectedContent)) {
             true -> pass()
-            else -> fail("was " + (if (actualContent.multiline) "\n$actualContent" else actualContent.quote()))
+            else -> fail("was " + (if (actualContent.multiline) "\n$actualContent" else actualContent.quoted))
         }
     }
 
 fun Assertion.Builder<Path>.containsContentAtMost(expectedContent: String, limit: Int = 1) =
-    assert("contains content ${expectedContent.quote()} at most ${limit}x") {
+    assert("contains content ${expectedContent.quoted} at most ${limit}x") {
         val actualContent = it.toFile().readText()
         val actual = Regex.fromLiteral(expectedContent).matchEntire(actualContent)?.groups?.size ?: 0
         if (actual <= limit) pass()
@@ -145,10 +136,4 @@ fun Assertion.Builder<Path>.lastModified(duration: Duration) =
             in (recent..now) -> pass()
             else -> fail()
         }
-    }
-
-fun Assertion.Builder<String>.matches(curlyPattern: String) =
-    assert("matches $curlyPattern") {
-        if (it.matches(curlyPattern)) pass()
-        else fail()
     }

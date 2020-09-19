@@ -1,12 +1,12 @@
 package com.imgcstmzr.process
 
+import com.bkahlert.koodies.test.strikt.matches
 import com.imgcstmzr.process.Exec.Sync.execShellScript
 import com.imgcstmzr.process.Exec.redirectMsg
 import com.imgcstmzr.util.asString
 import com.imgcstmzr.util.isEqualToStringWise
 import com.imgcstmzr.util.logging.CapturedOutput
 import com.imgcstmzr.util.logging.OutputCaptureExtension
-import com.imgcstmzr.util.matches
 import com.imgcstmzr.util.stripOffAnsi
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -53,7 +53,7 @@ internal class ExecTest {
                 redirectOutput(out)
                 redirectError(err)
             }) { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }
-            expectThat(msg).asString().matches("""
+            expectThat(msg).matches("""
                                 Executing [sh, -c, >&1 echo "test output"
                                 >&2 echo "test error"] in {}
                                 Started Process[pid={}, exitValue={}]

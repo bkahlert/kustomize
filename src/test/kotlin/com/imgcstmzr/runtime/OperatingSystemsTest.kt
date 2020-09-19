@@ -1,5 +1,6 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.boolean.emoji
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.imgcstmzr.cli.TestCli
@@ -7,7 +8,6 @@ import com.imgcstmzr.process.NonBlockingReader
 import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.util.emoji
 import org.junit.jupiter.api.Assertions.assertTimeoutPreemptively
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest

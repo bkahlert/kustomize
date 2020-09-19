@@ -1,5 +1,7 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.unit.Mebi
+import com.bkahlert.koodies.unit.bytes
 import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
 import com.imgcstmzr.util.FixtureExtension
@@ -26,6 +28,7 @@ internal class PatcherTest {
     @TestFactory
     fun `patches should not throw`(img: Path) =
         listOf(
+            ImgResizePatch(10.Mebi.bytes),
             SshPatch(),
             UsbOnTheGoPatch(),
             UsernamePatch("oldUser", "newUser"),

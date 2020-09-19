@@ -1,5 +1,6 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.unit.Size
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
 import com.imgcstmzr.patch.Action.Status.Failure
@@ -7,12 +8,15 @@ import com.imgcstmzr.patch.Action.Status.Finished
 import com.imgcstmzr.patch.Action.Status.Ready
 import com.imgcstmzr.patch.Action.Status.Running
 import com.imgcstmzr.patch.GuestfishAction.GuestfishCommandBuilder
+import com.imgcstmzr.patch.ImgAction.ImgCommandBuilder
 import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.process.Guestfish.Companion.copyInCommands
 import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
 import com.imgcstmzr.process.Output.Type.ERR
 import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.runtime.HasStatus
+import com.imgcstmzr.runtime.OperatingSystem
+import com.imgcstmzr.runtime.Runtime
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.util.asRootFor
@@ -47,8 +51,8 @@ class Patcher {
 
 interface Patch {
     val name: String
-    val actions: List<Action<*>>
 
+    val actions: List<Action<*>>
     val commands: List<String>
         get() {
             val logger = BlockRenderingLogger<HasStatus>(name)
@@ -66,6 +70,7 @@ interface Patch {
                 .onFailure { logger.endLogging("Patch preparation failure: $it", 1) }
             return collectedCommands
         }
+
     val paths: List<Path>
         get() = actions.targets()
 
@@ -107,6 +112,50 @@ interface Action<TARGET> : HasStatus {
     val target: TARGET
 
     override fun status(): String
+}
+
+class ImgAction2 private constructor(
+    val commands: MutableList<(OperatingSystem, Path, Runtime) -> Int> = mutableListOf(),
+) {
+    data class Builder(val commands: MutableList<(OperatingSystem, Path, Runtime) -> Int> = mutableListOf()) {
+        fun resize(size: Size) {
+            commands += { os: OperatingSystem, img: Path, runtime: Runtime -> os.increaseDiskSpace(size, img, runtime) }
+        }
+
+        fun build() = ImgAction2(commands)
+    }
+}
+
+
+class ImgAction(override val target: ImgCommandBuilder, val handler: ImgCommandBuilder.() -> Unit) : Action<ImgCommandBuilder> {
+
+
+    class ImgCommandBuilder {
+        val commands: MutableList<(OperatingSystem, Path, Runtime) -> Int> = mutableListOf()
+
+        fun resize(size: Size) {
+            commands += { os: OperatingSystem, img: Path, runtime: Runtime -> os.increaseDiskSpace(size, img, runtime) }
+        }
+
+        override fun toString(): String = "Building commands"
+    }
+
+    override var currentStatus: Action.Status = Ready
+
+    override operator fun invoke(target: ImgCommandBuilder, log: RenderingLogger<HasStatus>) {
+        log.rawLogStart("Preparing invocations ...")
+        currentStatus = Running
+        val result = runCatching { handler.invoke(target) }
+        if (result.isFailure) {
+            currentStatus = Failure
+            log.rawLogEnd((tc.red + tc.bold)(" Failure."))
+        } else {
+            currentStatus = Finished
+            log.rawLogEnd((tc.green + tc.bold)(" Success."))
+        }
+    }
+
+    override fun status(): String = currentStatus("Img preparation")
 }
 
 class GuestfishAction(override val target: GuestfishCommandBuilder, val handler: GuestfishCommandBuilder.() -> Unit) : Action<GuestfishCommandBuilder> {

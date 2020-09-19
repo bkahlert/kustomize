@@ -1,5 +1,7 @@
 package com.imgcstmzr.util
 
+import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.string.random
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.process.Downloader.download

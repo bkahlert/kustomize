@@ -1,5 +1,7 @@
 package com.imgcstmzr.util
 
+import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.string.random
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest
@@ -60,22 +62,6 @@ internal class PathExtensionsKtTest {
         internal fun `should return false if classpath is missing`() {
             val path = ClassPath.of("missing.txt")
             expectThat(path.exists).isFalse()
-        }
-    }
-
-    @Nested
-    inner class Size {
-
-        val tempFile = Paths.tempFile().apply { 2500.times { appendText("1234567890") } }
-
-        @Test
-        internal fun `should format size human-readible (power of 1024)`() {
-            expectThat(tempFile.humanReadableSize).isEqualTo("24.4 KiB")
-        }
-
-        @Test
-        internal fun `should format size human-readible (power of 1000)`() {
-            expectThat(tempFile.humanReadableSizeSI).isEqualTo("25.0 kB")
         }
     }
 

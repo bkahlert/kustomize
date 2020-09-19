@@ -1,10 +1,12 @@
 package com.imgcstmzr.process
 
+import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.string.random
 import com.imgcstmzr.process.Guestfish.Companion.changePasswordCommand
 import com.imgcstmzr.process.Guestfish.Companion.copyInCommands
 import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
 import com.imgcstmzr.runtime.OperatingSystems.DietPi
-import com.imgcstmzr.util.ClassPath
+import com.imgcstmzr.util.DockerRequired
 import com.imgcstmzr.util.FixtureExtension
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.asRootFor
@@ -12,7 +14,6 @@ import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.hasContent
 import com.imgcstmzr.util.hasEqualContent
 import com.imgcstmzr.util.mkdirs
-import com.imgcstmzr.util.random
 import com.imgcstmzr.util.withExtension
 import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.Test
@@ -49,6 +50,7 @@ internal class GuestfishTest {
     }
 
     @Test
+    @DockerRequired
     internal fun `should copy file from img, skip non-existing and override one`(img: Path) {
         val guestfish = Guestfish(img).withRandomSuffix()
         guestfish.run(copyOutCommands(listOf(Path.of("/boot/cmdline.txt"), Path.of("/non/existing.txt"))))
@@ -62,6 +64,7 @@ internal class GuestfishTest {
     }
 
     @Test
+    @DockerRequired
     internal fun `should copy new file to img and overwrite a second one`(img: Path) {
         val guestfish = Guestfish(img).withRandomSuffix()
         val exampleHtml = Path.of("/example.html")
@@ -80,6 +83,7 @@ internal class GuestfishTest {
     }
 
     @Test
+    @DockerRequired
     internal fun `should change password`(@OS(DietPi::class) img: Path) {
         val guestfish = Guestfish(img).withRandomSuffix()
         val shadowPath = Path.of("/etc/shadow")

@@ -2,14 +2,17 @@ package com.imgcstmzr.patch
 
 import com.github.ajalt.clikt.output.TermUi
 import com.imgcstmzr.util.debug
+import com.imgcstmzr.util.isReadable
 import com.imgcstmzr.util.readAll
 import com.imgcstmzr.util.readAllLines
-import com.imgcstmzr.util.readable
 import com.imgcstmzr.util.writeText
 import java.nio.file.Path
 
 // "Change username pi to $username?"
-class UsernamePatch(private val oldUsername: String, private val newUsername: String) : Patch {
+class UsernamePatch(
+    oldUsername: String,
+    private val newUsername: String,
+) : Patch {
 
     override val name: String = "Username Change"
 
@@ -32,7 +35,7 @@ class UsernamePatch(private val oldUsername: String, private val newUsername: St
 
     private fun requireNotMatchingContent(regex: Regex): (Path) -> Unit {
         return { path ->
-            require(path.readable) { "$path can't be read" }
+            require(path.isReadable) { "$path can't be read" }
             val readAllLines = path.readAllLines()
             require(readAllLines.none {
                 (oldUsernamePattern.containsMatchIn(it)).also { result ->

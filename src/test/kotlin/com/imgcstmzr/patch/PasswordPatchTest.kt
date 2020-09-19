@@ -1,7 +1,7 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.string.random
 import com.imgcstmzr.process.Guestfish
-import com.imgcstmzr.util.random
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode

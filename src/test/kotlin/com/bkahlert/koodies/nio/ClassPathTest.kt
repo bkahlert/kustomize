@@ -1,6 +1,8 @@
-package com.imgcstmzr.util
+package com.bkahlert.koodies.nio
 
-import com.imgcstmzr.util.ClassPath.Companion.SCHEMA
+import com.bkahlert.koodies.nio.ClassPath.Companion.SCHEMA
+import com.imgcstmzr.util.delete
+import com.imgcstmzr.util.quoted
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -36,26 +38,26 @@ internal class ClassPathTest {
         val nullity: String = if (spec.exists) "non-null" else "null"
         val size = if (spec.exists) "${spec.size}" else "no"
 
-        dynamicContainer("${path.quote()} -> ${"$SCHEMA:$path".quote()}",
+        dynamicContainer("${path.quoted} -> ${"$SCHEMA:$path".quoted}",
             listOf(
-                dynamicTest("should produce ${"$SCHEMA:$path".quote()}") {
+                dynamicTest("should produce ${"$SCHEMA:$path".quoted}") {
                     expectThat(classPath).get { toString() }.isEqualTo("classpath:$path")
                 },
                 dynamicTest("should $validity") {
                     expectThat(classPath).get { exists }.isEqualTo(spec.exists)
                 },
-                dynamicTest("should return resource ${spec.resource.quote()}") {
+                dynamicTest("should return resource ${spec.resource.quoted}") {
                     expectThat(classPath).get { resource() }.isEqualTo(spec.resource)
                 },
                 dynamicTest("should return $nullity resourceStream") {
                     if (spec.exists) expectThat(classPath).get { resourceAsStream() }.isNotNull()
                     else expectThat(classPath).get { resourceAsStream() }.isNull()
                 },
-                dynamicTest("should read $size bytes from ${path.quote()}") {
+                dynamicTest("should read $size bytes from ${path.quoted}") {
                     if (spec.exists) expectThat(classPath).get { readAllBytes().size }.isEqualTo(spec.size)
                     else expectCatching { classPath.readAllBytes() }.isFailure().isA<IOException>()
                 },
-                dynamicTest("should $not copy ${path.quote()}") {
+                dynamicTest("should $not copy ${path.quoted}") {
                     val dest: Path = File.createTempFile("class-path-copy-dest", "").toPath()
                     dest.delete()
                     if (spec.exists) expectThat(classPath.copyTo(dest)).exists()

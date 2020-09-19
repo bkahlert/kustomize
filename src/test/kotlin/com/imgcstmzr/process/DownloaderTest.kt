@@ -1,8 +1,9 @@
 package com.imgcstmzr.process
 
+import com.bkahlert.koodies.test.strikt.hasSize
+import com.bkahlert.koodies.unit.bytes
 import com.imgcstmzr.process.Downloader.download
 import com.imgcstmzr.runtime.OperatingSystemMock
-import com.imgcstmzr.util.hasSize
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
@@ -19,7 +20,7 @@ internal class DownloaderTest {
     @Test
     internal fun `should download OS`() {
         val path = OperatingSystemMock(downloadUrl = "https://file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg").download()
-        expectThat(path).hasSize(102117)
+        expectThat(path).hasSize(102117.bytes)
     }
 
     @Test
@@ -30,13 +31,13 @@ internal class DownloaderTest {
     @Test
     internal fun `should download file with explicit protocol`() {
         val path = download("https://file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg")
-        expectThat(path).hasSize(102117)
+        expectThat(path).hasSize(102117.bytes)
     }
 
     @Test
     internal fun `should download file without explicit protocol`() {
         val path = download("file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg")
-        expectThat(path).hasSize(102117)
+        expectThat(path).hasSize(102117.bytes)
     }
 
     @Test

@@ -1,3 +1,4 @@
+import com.bkahlert.koodies.unit.bytes
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.NoOpCliktCommand
 import com.github.ajalt.clikt.core.context
@@ -12,9 +13,7 @@ import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.prompt
-import com.github.ajalt.clikt.parameters.options.transformValues
 import com.github.ajalt.clikt.parameters.types.file
-import com.github.ajalt.clikt.parameters.types.long
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.cli.ColorHelpFormatter.Companion.INSTANCE
@@ -33,6 +32,7 @@ import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.Runtime
 import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.debug
 import java.io.File
 import java.nio.file.Path
 import kotlin.reflect.KClass
@@ -42,8 +42,8 @@ fun main() {
 //    CliCommand().subcommands(ImgCommand(), CstmzrCommand(), FlshCommand()).main(listOf("--help"))
     CliCommand().subcommands(ImgCommand(), CstmzrCommand(), FlshCommand()).main(
         listOf(
-            "--config", "bother-you.conf", "img",
-            "--reuse-last-working-copy", "cstmzr"
+            "--config", "bother-you.conf", "img", "--reuse-last-working-copy",
+            "cstmzr", "--username-rename=pi:bkahlert"
         )
     )
 //    CliCommand().subcommands(XyzCommands(), ImgCommand(), FlshCommand()).main(listOf("img", "--name", "name-by-cmdline"))
@@ -106,8 +106,7 @@ class ImgCommand : CliktCommand(help = "Provides an IMG file containing the spec
     override fun run() {
         val cache: Cache = shared[Cache::class] as Cache
 
-        shared[Path::class] = cache.provideCopy(name, reuseLastWorkingCopy) { os.download() }
-            .also { TermUi.echo("Downloaded completed.") }
+        shared[Path::class] = cache.provideCopy(name, reuseLastWorkingCopy) { os.download().also { TermUi.echo("Download completed.") } }
     }
 }
 
@@ -120,11 +119,19 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
     private val name by option().prompt(default = "my-img")
 
     private val os by option().os().default(OperatingSystems.RaspberryPiLite)
-    private val size by option().long()
+    private val size by option().convert { it.toLong().bytes }
     private val enableSsh by option().convert { SshPatch() }
-    private val renameUsername by option().transformValues(2) { list: List<String> -> UsernamePatch(list[0], list[1]) }
-    private val changePassword by option().transformValues(2) { list: List<String> -> PasswordPatch(list[0], list[1]) }
-    private val usbOtg by option().convert { UsbOnTheGoPatch() }
+    private val usernameRename by option().convert { argument: String ->
+        argument.split(":").let { list: List<String> ->
+            UsernamePatch(list[0], list[1])
+        }
+    }
+    private val passwordChange by option().convert { argument: String ->
+        argument.split(":").let { x ->
+            PasswordPatch(x[0], x[1])
+        }
+    }
+    private val usbOtgProfiles by option().convert { UsbOnTheGoPatch() }
 
     private val scripts: Map<String, String> by option().associate()
 
@@ -138,6 +145,14 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
         val cache: Cache = shared[Cache::class] as Cache
 
         with(img.toPath()) {
+            TermUi.debug(os)
+            TermUi.debug(size)
+            TermUi.debug(enableSsh)
+            TermUi.debug(usernameRename)
+            TermUi.debug(passwordChange)
+            TermUi.debug(usbOtgProfiles)
+
+            exitProcess(0)
 
             val guestfish = Guestfish(this, "$name-guestfish")
             guestfish.run(copyOutCommands(listOf("/etc/hostname", "/boot/cmdline.txt", "/boot/config.txt").map(Path::of)))

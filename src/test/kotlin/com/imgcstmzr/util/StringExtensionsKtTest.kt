@@ -16,7 +16,9 @@ import java.nio.file.Path
 @Suppress("RedundantInnerClassModifier")
 @Execution(ExecutionMode.CONCURRENT)
 internal class StringExtensionsKtTest {
-    private val ESC = '\u001B'
+    companion object {
+        private const val ESC = '\u001B'
+    }
 
     @TestFactory
     internal fun `stripping ANSI off of`() = listOf(
@@ -127,29 +129,6 @@ internal class StringExtensionsKtTest {
     internal fun `should blend`() {
         val blended = "this is a test".blend('X')
         expectThat(blended).isEqualTo("XhXsXiX X XeXt")
-    }
-
-    @TestFactory
-    internal fun `should match with placeholders`() = listOf(
-        "this is a test" to "this is a {}",
-        """
-            Executing [sh, -c, >&1 echo "test output"
-            >&2 echo "test error"] in /Users/bkahlert/Development/com.imgcstmzr.
-            Started Process[pid=72692, exitValue=0]
-            Process[pid=72692, exitValue=0] stopped with exit code 0
-        """.trimIndent() to
-            """
-                Executing [sh, -c, >&1 echo "test output"
-                >&2 echo "test error"] in {}
-                Started Process[pid={}, exitValue={}]
-                Process[pid={}, exitValue={}] stopped with exit code {}
-            """.trimIndent()
-    ).flatMap { (input: CharSequence, pattern) ->
-        val blended = input.blend('X')
-        listOf(
-            dynamicTest("$input.matches($pattern)") { expectThat(input).matches(pattern) },
-            dynamicTest("not matches X-blended $blended") { expectThat(blended).not { matches(pattern) } },
-        )
     }
 
     @Test

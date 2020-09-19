@@ -1,7 +1,7 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.string.random
 import com.imgcstmzr.patch.GuestfishAction.GuestfishCommandBuilder
-import com.imgcstmzr.util.random
 
 // "Change password according to custom password file?"
 class PasswordPatch(

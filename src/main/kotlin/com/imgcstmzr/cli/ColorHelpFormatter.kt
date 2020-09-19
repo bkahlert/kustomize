@@ -27,6 +27,8 @@ class ColorHelpFormatter(tc: TermColors) : CliktHelpFormatter(showRequiredTag = 
     val grayPrefix = rainbow.map { (normal, bright) -> (tc.red.bg + normal)("░") }.joinToString("")
     fun randomColor() = rainbow.map { (normal, _) -> normal }.shuffled()
     fun colorize(string: String) = string.map { randomColor().first()(it.toString()) }.joinToString("")
+    fun wizard() = (tc.bold + tc.italic)("(＃￣${mouth()}￣)o" + colorize("・━・・━・━━・━☆"))
+    fun mouth() = arrayListOf('□', '-', '—').let { it[(Math.random() * it.size).toInt()] }
 
 
     //    override fun renderSectionTitle(title: String) = "$prefix ${tc.bold(title)}"

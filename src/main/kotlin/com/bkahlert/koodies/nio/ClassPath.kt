@@ -1,4 +1,4 @@
-package com.imgcstmzr.util
+package com.bkahlert.koodies.nio
 
 import java.io.IOException
 import java.io.InputStream

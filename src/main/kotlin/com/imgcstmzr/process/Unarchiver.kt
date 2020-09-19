@@ -1,7 +1,7 @@
 package com.imgcstmzr.process
 
+import com.bkahlert.koodies.unit.size
 import com.imgcstmzr.process.Exec.Sync.execShellScript
-import com.imgcstmzr.util.size
 import java.nio.file.Files
 import java.nio.file.Path
 

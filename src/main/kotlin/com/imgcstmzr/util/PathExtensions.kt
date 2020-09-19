@@ -1,5 +1,7 @@
 package com.imgcstmzr.util
 
+import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.string.random
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.InputStream
@@ -19,16 +21,11 @@ val Path.exists: Boolean
         toFile().exists()
     }
 
-val Path.size: Long
-    get() = Files.size(this)
 
-val Path.humanReadableSize: String get() = Size.formatTraditionally(size)
-val Path.humanReadableSizeSI: String get() = Size.format(size)
-
-val Path.readable: Boolean
+val Path.isReadable: Boolean
     get() = toFile().canRead()
 
-val Path.writable: Boolean
+val Path.isWritable: Boolean
     get() = toFile().canWrite()
 
 val Path.isFile: Boolean
@@ -36,6 +33,9 @@ val Path.isFile: Boolean
 
 val Path.isDirectory: Boolean
     get() = toFile().isDirectory
+
+val Path.isSymlink: Boolean
+    get() = Files.isSymbolicLink(this)
 
 fun Path.touch(): Path {
     if (!exists) Files.write(this, emptyList())
@@ -117,7 +117,7 @@ fun Path.asRootFor(subPath: Path): Path {
 
 fun Path.wrap(value: CharSequence): String = toString().wrap(value)
 
-fun Path.quote(): String = toString().quote()
+fun Path.quote(): String = toString().quoted
 
 fun Path.readAllBytes(): ByteArray = if (this is ClassPath) this.readAllBytes() else Files.readAllBytes(this)
 

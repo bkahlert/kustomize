@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 @Suppress("SpellCheckingInspection")
 plugins {
     kotlin("jvm") version "1.4.0"
+    id("org.jetbrains.dokka") version "1.4.0"
     id("se.patrikerdes.use-latest-versions") version "0.2.14"
     id("com.github.ben-manes.versions") version "0.29.0"
     application
@@ -14,8 +15,8 @@ group = "com.imgcstmzr"
 version = "1.0-SNAPSHOT"
 
 repositories {
-    mavenCentral()
     jcenter()
+    mavenCentral()
 }
 dependencies {
     implementation("org.slf4j:slf4j-simple:2.0.0-alpha1")
@@ -23,8 +24,13 @@ dependencies {
     implementation("com.github.ajalt:mordant:1.2.1")
     implementation("io.github.config4k:config4k:0.4.2")
     implementation("org.zeroturnaround:zt-exec:1.12")
+    implementation("com.jakewharton.byteunits:byteunits:0.9.1")
+    implementation("commons-io:commons-io:2.8.0")
+
+    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.4.0")
 
     testImplementation(kotlin("test-junit5"))
+    testImplementation("org.junit.platform:junit-platform-launcher:1.7.0")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
@@ -33,12 +39,23 @@ dependencies {
     testImplementation("io.strikt:strikt-mockk:0.27.0")
 }
 
+tasks.dokkaHtml.configure {
+    outputDirectory.set(buildDir.resolve("docs"))
+    dokkaSourceSets {
+        configureEach {
+            samples.from("src/test/com/bkahlert/koodies/string/MatchesKtTest.kt")
+        }
+    }
+}
+
 tasks.withType<KotlinCompile>().all {
     kotlinOptions.jvmTarget = "1.8"
     kotlinOptions.useIR = true
     kotlinOptions.languageVersion = "1.4"
     @Suppress("SpellCheckingInspection")
+    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.InlineClasses"
     kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
+    kotlinOptions.freeCompilerArgs += "-Xinline-classes"
 }
 application {
     mainClassName = "MainKt"
@@ -71,5 +88,4 @@ generateNativeImageConfig {
     byRunningApplication {
         arguments("drivers")
     }
-
 }

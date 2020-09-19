@@ -3,7 +3,7 @@ package com.imgcstmzr.patch.ini
 import com.imgcstmzr.patch.ini.ParsedElement.Companion.toParsedElement
 import com.imgcstmzr.patch.ini.ParsedElements.Companion.toParsedElements
 import com.imgcstmzr.util.namedGroup
-import com.imgcstmzr.util.quote
+import com.imgcstmzr.util.quoted
 import com.imgcstmzr.util.values
 
 open class RegexParser(groups: Iterable<Pair<String, String>>, matchCompleteLine: Boolean = false) {
@@ -25,7 +25,7 @@ open class RegexParser(groups: Iterable<Pair<String, String>>, matchCompleteLine
 
     fun parseSingle(input: CharSequence): ParsedElement {
         val iterator = parseAsSequence(input).iterator()
-        require(iterator.hasNext()) { "${input.quote()} does not match ${regex.pattern.quote()}." }
+        require(iterator.hasNext()) { "${input.quoted} does not match ${regex.pattern.quoted}." }
         val single = iterator.next()
         require(!iterator.hasNext()) { "Sequence has more than one element ($single), e.g. ${iterator.next()}" }
         return single
@@ -68,9 +68,9 @@ open class RegexParser(groups: Iterable<Pair<String, String>>, matchCompleteLine
     fun verifyingTransformation(name: String, transformation: (String) -> String): (String) -> String {
         return { input: String ->
             val transformed = transformation(input)
-            val regex = groupRegexes[name] ?: throw IllegalStateException("No regex found for ${name.quote()}")
+            val regex = groupRegexes[name] ?: throw IllegalStateException("No regex found for ${name.quoted}")
             require(regex.matchEntire(transformed) != null) {
-                "The value ${input.quote()} of field ${name.quote()} could not be changed to ${transformed.quote()} as it does not match ${regex.pattern}"
+                "The value ${input.quoted} of field ${name.quoted} could not be changed to ${transformed.quoted} as it does not match ${regex.pattern}"
             }
             transformed
         }

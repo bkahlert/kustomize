@@ -14,27 +14,32 @@ class OutputCaptureExtension : BeforeAllCallback, AfterAllCallback, BeforeEachCa
         CapturedOutput::class.java == parameterContext.parameter.type
 
     override fun resolveParameter(parameterContext: ParameterContext?, extensionContext: ExtensionContext): Any? =
-        getOutputCapture(extensionContext)
-
-    private fun getOutputCapture(context: ExtensionContext): OutputCapture =
-        getStore(context).getOrComputeIfAbsent(OutputCapture::class.java)
-
-    private fun getStore(context: ExtensionContext): ExtensionContext.Store =
-        context.getStore(ExtensionContext.Namespace.create(javaClass))
+        extensionContext.getOutputCapture()
 
     override fun beforeAll(context: ExtensionContext) {
-        getOutputCapture(context).push()
+        context.getOutputCapture().push()
     }
 
     override fun afterAll(context: ExtensionContext) {
-        getOutputCapture(context).pop()
+        context.getOutputCapture().pop()
     }
 
     override fun beforeEach(context: ExtensionContext) {
-        getOutputCapture(context).push()
+        context.getOutputCapture().push()
     }
 
     override fun afterEach(context: ExtensionContext) {
-        getOutputCapture(context).pop()
+        context.getOutputCapture().pop()
+    }
+
+    private fun ExtensionContext.getOutputCapture() = getStore<OutputCaptureExtension>().getSingleton<OutputCapture>()
+
+    companion object {
+
+        inline fun <reified T : Any> ExtensionContext.Store.getSingleton() =
+            getOrComputeIfAbsent(T::class.java)
+
+        inline fun <reified T : Any> ExtensionContext.getStore(): ExtensionContext.Store =
+            getStore(ExtensionContext.Namespace.create(T::class))
     }
 }

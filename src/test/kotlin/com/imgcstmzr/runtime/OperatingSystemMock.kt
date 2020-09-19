@@ -1,5 +1,6 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.unit.Size
 import com.imgcstmzr.process.Output
 import java.nio.file.Path
 
@@ -9,7 +10,7 @@ class OperatingSystemMock(
     override val username: String = "",
     override val password: String = "",
 ) : OperatingSystem {
-    override fun increaseDiskSpace(size: Long, img: Path, runtime: Runtime): Int {
+    override fun increaseDiskSpace(size: Size, img: Path, runtime: Runtime): Int {
         TODO("Not yet implemented")
     }
 

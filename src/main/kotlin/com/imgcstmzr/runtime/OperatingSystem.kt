@@ -1,5 +1,9 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.unit.Mega
+import com.bkahlert.koodies.unit.Size
+import com.bkahlert.koodies.unit.bytes
+import com.bkahlert.koodies.unit.size
 import com.imgcstmzr.process.CommandLineRunner
 import com.imgcstmzr.process.Output
 import com.imgcstmzr.process.RunningProcess
@@ -10,7 +14,6 @@ import com.imgcstmzr.runtime.Program.Companion.calc
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Path
 
 sealed class OperatingSystems : OperatingSystem {
@@ -23,10 +26,10 @@ sealed class OperatingSystems : OperatingSystem {
      * [Raspberry Pi OS Lite](https://www.raspberrypi.org/downloads/raspberry-pi-os/)
      */
     object RaspberryPiLite : OperatingSystems() {
-        override val name = "Raspberry Pi OS Lite"
-        override val downloadUrl = "https://downloads.raspberrypi.org/raspios_lite_armhf_latest"
-        override val username = "pi"
-        override val password = "raspberry"
+        override val name: String = "Raspberry Pi OS Lite"
+        override val downloadUrl: String = "https://downloads.raspberrypi.org/raspios_lite_armhf_latest"
+        override val username: String = "pi"
+        override val password: String = "raspberry"
 
         val loginPattern: Regex
             get() = Regex("(?<host>[\\w-_]+)(?<sep>\\s+)(?<const>login):(?<optWhitespace>\\s*)")
@@ -35,12 +38,12 @@ sealed class OperatingSystems : OperatingSystem {
         val readyPattern: Regex
             get() = Regex("(?<user>[\\w-_]+)@(?<host>[\\w-_]+):(?<path>[^#$]+?)[#$](?<optWhitespace>\\s*)")
 
-        override fun increaseDiskSpace(size: Long, img: Path, runtime: Runtime): Int {
-            var missing = size - Files.size(img)
-            val tenMB = ByteArray(10 * 1024 * 1024)
-            if (missing > 0) {
-                while (missing > 0) {
-                    val write = if (missing < tenMB.size) ByteArray(missing.toInt()) else tenMB
+        override fun increaseDiskSpace(size: Size, img: Path, runtime: Runtime): Int {
+            var missing = size - img.size
+            val tenMegaBytesArray = 10.Mega.bytes.toZeroFilledByteArray()
+            if (missing > 0.bytes) {
+                while (missing > 0.bytes) {
+                    val write = if (missing < 10.Mega.bytes) missing.toZeroFilledByteArray() else tenMegaBytesArray
                     img.toFile().appendBytes(write)
                     missing -= write.size
                 }
@@ -117,18 +120,20 @@ sealed class OperatingSystems : OperatingSystem {
                     } else "waiting for password prompt"
                 })
         }
+
+        override fun toString(): String = name
     }
 
     /**
      * [DietPi](https://dietpi.com)
      */
     object DietPi : OperatingSystems() {
-        override val name = "Diet Pi"
-        override val downloadUrl = "https://dietpi.com/downloads/images/DietPi_RPi-ARMv6-Buster.7z"
-        override val username = "root"
-        override val password = "dietpi"
+        override val name: String = "Diet Pi"
+        override val downloadUrl: String = "https://dietpi.com/downloads/images/DietPi_RPi-ARMv6-Buster.7z"
+        override val username: String = "root"
+        override val password: String = "dietpi"
 
-        override fun increaseDiskSpace(size: Long, img: Path, runtime: Runtime): Int {
+        override fun increaseDiskSpace(size: Size, img: Path, runtime: Runtime): Int {
             TODO("Not yet implemented")
         }
 
@@ -193,7 +198,7 @@ interface OperatingSystem {
     val password: String
 
     fun increaseDiskSpace(
-        size: Long,
+        size: Size,
         img: Path,
         runtime: Runtime,
     ): Int;

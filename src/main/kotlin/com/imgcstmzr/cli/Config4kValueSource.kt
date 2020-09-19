@@ -29,28 +29,31 @@ class Config4kValueSource(private val name: String, private val config: Config) 
     override fun getValues(context: Context, option: Option): List<Invocation> {
         val key = computeKey(context, option)
         if (key == nameKey) return Invocation.just(name)
-        val value = getValue(key)
+        val value = getValue(key, option)
         if (value.isEmpty() && context.parent != null) {
             return getValues(context.parent!!, option)
         }
         return value
     }
 
-    private fun getValue(key: String): List<Invocation> {
+    private fun getValue(key: String, option: Option): List<Invocation> =
         if (!config.hasPath(key)) {
-            return emptyList()
+            emptyList()
+        } else {
+            listOf(
+                { config.getString(key)?.let { Invocation.just(it) }.orEmpty() },
+                {
+                    val keyValue: List<String> = config.getList(key).map { it.unwrapped().toString() }.toList()
+                    require(keyValue.size == 2)
+                    listOf(Invocation(listOf("${keyValue[0]}:${keyValue[1]}")))
+                },
+                { config.getStringList(key)?.let { Invocation.just(it) }.orEmpty() },
+                {
+                    val stringMap: List<List<String>> = config.extract(key)
+                    stringMap.map { Invocation(listOf("${it[0]}=${it[1]}")) }
+                },
+            ).mapNotNull { runCatching { it() }.getOrNull() }.first()
         }
-        return try {
-            config.getString(key)?.let { Invocation.just(it) }.orEmpty()
-        } catch (e: Exception) {
-            try {
-                config.getStringList(key)?.let { Invocation.just(it) }.orEmpty()
-            } catch (e: Exception) {
-                val stringMap: List<List<String>> = config.extract(key)
-                return stringMap.map { Invocation(listOf("${it[0]}=${it[1]}")) }
-            }
-        }
-    }
 
     companion object {
 

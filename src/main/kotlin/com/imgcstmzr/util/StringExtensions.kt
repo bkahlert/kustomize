@@ -1,10 +1,13 @@
 package com.imgcstmzr.util
 
+import com.bkahlert.koodies.string.LINE_BREAKS
+import com.bkahlert.koodies.string.LINE_BREAKS_REGEX
+import com.bkahlert.koodies.string.random
+import com.github.ajalt.mordant.AnsiCode
 import java.net.URL
 import java.util.regex.Pattern
 import kotlin.math.ceil
 import kotlin.math.floor
-import kotlin.random.Random
 import kotlin.streams.toList
 import kotlin.text.contains as containsRegex
 import kotlin.text.split as originalSplit
@@ -107,8 +110,6 @@ fun String.replaceNonPrintableCharacters(): String = this.replace(specialCharact
     else "❲" + char.unicodeName + "❳"
 }
 
-val String.Companion.LINE_BREAKS: Array<String> get() = arrayOf("\r\n", "\r", "\n")
-val String.Companion.LINE_BREAKS_REGEX: Regex get() = Regex(String.LINE_BREAKS.joinToString("|", "(?:", ")", transform = Regex.Companion::escape))
 
 /**
  * Splits this char sequence to a list of strings around occurrences of line breaks.
@@ -128,16 +129,9 @@ fun hereDoc(lines: List<String>, label: String = "HERE-" + String.random(8).toUp
     lines.joinToString(lineSeparator, "<<$label$lineSeparator", "$lineSeparator$label")
 
 fun CharSequence?.wrap(value: CharSequence): String = "$value$this$value"
-
 fun CharSequence?.wrap(left: CharSequence, right: CharSequence): String = "$left$this$right"
-
-fun CharSequence?.quote(): String = this.wrap("\"")
-
-fun CharSequence?.squote(): String = this.wrap("'")
-
-private val randomCharacterPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
-fun String.Companion.random(length: Int = 16): String = (1..length).map { randomCharacterPool[Random.nextInt(0, randomCharacterPool.size)] }.joinToString("")
-
+inline val CharSequence?.quoted: String get() = this.wrap("\"")
+inline val CharSequence?.singleQuoted: String get() = this.wrap("'")
 
 /**
  * Creates a truncated string from selected elements separated using [separator] and using the given [prefix] and [postfix] if supplied.
@@ -176,26 +170,6 @@ fun <T> List<T>.joinToTruncatedString(
  */
 fun CharSequence.blend(blender: Char): String = mapIndexed { index, char -> if (index.isEven) blender else char }.joinToString("")
 
-/**
- * Returns true if this char sequence matches the given SLF4J / Logback style [pattern], like `I {} you have to {}`.
- *
- * Example:
- * ```
- * val pattern = "I {} you have to {}"
- * "I think you have to take a break".matches(pattern).emoji ➜ ✅
- * "I guess you do right".matches(pattern).emoji ➜ ❌
- * ```
- */
-fun CharSequence.matches(pattern: String): Boolean =
-    this.matches(Regex(pattern.originalSplit("{}").joinToString(".*") { Regex.escape(it) }))
-
-val Boolean?.emoji
-    inline get() = when (this) {
-        true -> "✅"
-        false -> "❌"
-        null -> "⭕"
-    }
-
 
 /**
  * Centers this collection of strings by adding the needed amount of whitespaces from the left (and right)
@@ -214,7 +188,7 @@ val Boolean?.emoji
  */
 fun Collection<String>.center(whitespace: Char = '\u00A0'): List<String> {
     return map { it.trim() }.let { trimmed ->
-        trimmed.maxOfOrNull { it.length }?.let { maxLength ->
+        trimmed.maxOfOrNull { it.stripOffAnsi().length }?.let { maxLength ->
             trimmed.map { line ->
                 val missing: Double = (maxLength - line.stripOffAnsi().length) / 2.0
                 whitespace.repeat(floor(missing).toInt()) + line + whitespace.repeat(ceil(missing).toInt())
@@ -266,22 +240,23 @@ fun String.border(
 """.trimIndent(),
     padding: Int = 0,
     margin: Int = 0,
+    ansiCode: AnsiCode = AnsiCode(emptyList()),
 ): String {
     val block = splitLineBreaks().center(border[5])
     if (block.isEmpty()) return border
     val width = block[0].stripOffAnsi().length
     val height = block.size
-    val bordered = "${border[0]}${border[1].repeat(width + padding * 2)}${border[2]}\n" +
+    val bordered = ansiCode("${border[0]}${border[1].repeat(width + padding * 2)}${border[2]}") + "\n" +
         (0 until padding / 2).joinToString("") { y ->
-            "${border[4]}${border[5].repeat(width + padding * 2)}${border[6]}\n"
+            ansiCode("${border[4]}${border[5].repeat(width + padding * 2)}${border[6]}") + "\n"
         } +
         (0 until height).joinToString("") { y ->
-            "${border[4]}${border[5].repeat(padding)}${block[y]}${border[5].repeat(padding)}${border[6]}\n"
+            ansiCode("${border[4]}${border[5].repeat(padding)}") + block[y] + ansiCode("${border[5].repeat(padding)}${border[6]}") + "\n"
         } +
         (0 until padding / 2).joinToString("") { y ->
-            "${border[4]}${border[5].repeat(width + padding * 2)}${border[6]}\n"
+            ansiCode("${border[4]}${border[5].repeat(width + padding * 2)}${border[6]}") + "\n"
         } +
-        "${border[8]}${border[9].repeat(width + padding * 2)}${border[10]}"
+        ansiCode("${border[8]}${border[9].repeat(width + padding * 2)}${border[10]}")
     return if (margin == 0) bordered
-    else bordered.border(border[5].repeat(11), padding = margin - 1, margin = 0)
+    else bordered.border(border[5].repeat(11), padding = margin - 1, margin = 0, ansiCode = ansiCode)
 }

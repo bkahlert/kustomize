@@ -1,5 +1,6 @@
 package com.imgcstmzr.process
 
+import com.bkahlert.koodies.string.random
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
 import com.imgcstmzr.process.Exec.Sync.execShellScript
@@ -8,7 +9,6 @@ import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.asEmoji
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.hereDoc
-import com.imgcstmzr.util.random
 import com.imgcstmzr.util.splitLineBreaks
 import com.imgcstmzr.util.withExtension
 import java.nio.file.Path

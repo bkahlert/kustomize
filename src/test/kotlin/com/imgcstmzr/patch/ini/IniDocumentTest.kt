@@ -1,12 +1,12 @@
 package com.imgcstmzr.patch.ini
 
+import com.bkahlert.koodies.nio.ClassPath
 import com.imgcstmzr.patch.ini.IniDocument.CommentLine
 import com.imgcstmzr.patch.ini.IniDocument.KeyLine
 import com.imgcstmzr.patch.ini.IniDocument.Line
 import com.imgcstmzr.patch.ini.IniDocument.SectionLine
-import com.imgcstmzr.util.ClassPath
 import com.imgcstmzr.util.copyToTempFile
-import com.imgcstmzr.util.quote
+import com.imgcstmzr.util.quoted
 import com.imgcstmzr.util.readAll
 import com.imgcstmzr.util.replaceNonPrintableCharacters
 import org.junit.jupiter.api.DynamicTest
@@ -84,7 +84,7 @@ internal class IniDocumentTest {
         listOf(::SectionLine, ::KeyLine, ::CommentLine)
             .filter { !parsers.contains(it) }
             .map { parser ->
-                dynamicTest("${fragment.replaceNonPrintableCharacters().quote()} should NOT be parsed by $parser") {
+                dynamicTest("${fragment.replaceNonPrintableCharacters().quoted} should NOT be parsed by $parser") {
                     expectCatching {
                         val instance = parser(fragment)
                         println(instance)
@@ -94,7 +94,7 @@ internal class IniDocumentTest {
                 }
             }.plus(
                 parsers.map { parser ->
-                    dynamicTest("${fragment.replaceNonPrintableCharacters().quote()} should be parsed by $parser") {
+                    dynamicTest("${fragment.replaceNonPrintableCharacters().quoted} should be parsed by $parser") {
                         val actual = parser(fragment)
                         println(actual)
                         expectThat(actual.toString()).isEqualTo(fragment)
