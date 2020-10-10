@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 @Suppress("SpellCheckingInspection")
 plugins {
     kotlin("jvm") version "1.4.0"
-    id("org.jetbrains.dokka") version "1.4.0"
+    id("org.jetbrains.dokka") version "1.4.10"
     id("se.patrikerdes.use-latest-versions") version "0.2.14"
     id("com.github.ben-manes.versions") version "0.29.0"
     application
@@ -23,11 +23,8 @@ dependencies {
     implementation("com.github.ajalt:clikt:2.8.0")
     implementation("com.github.ajalt:mordant:1.2.1")
     implementation("io.github.config4k:config4k:0.4.2")
-    implementation("org.zeroturnaround:zt-exec:1.12")
-    implementation("com.jakewharton.byteunits:byteunits:0.9.1")
-    implementation("commons-io:commons-io:2.8.0")
-
-    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.4.0")
+    implementation("org.apache.maven.shared:maven-shared-utils:3.3.3")
+    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.4.10")
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.platform:junit-platform-launcher:1.7.0")
@@ -88,4 +85,8 @@ generateNativeImageConfig {
     byRunningApplication {
         arguments("drivers")
     }
+}
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.kotlinOptions {
+    languageVersion = "1.4"
 }

@@ -2,16 +2,19 @@ package com.imgcstmzr.util
 
 import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.string.random
+import java.awt.datatransfer.MimeTypeParseException
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.net.URLConnection
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 import java.time.Instant
+import java.util.Base64
 import kotlin.streams.toList
 
 val Path.exists: Boolean
@@ -21,21 +24,28 @@ val Path.exists: Boolean
         toFile().exists()
     }
 
-
 val Path.isReadable: Boolean
-    get() = toFile().canRead()
+    get() = Files.isReadable(this)
 
 val Path.isWritable: Boolean
-    get() = toFile().canWrite()
+    get() = Files.isWritable(this)
+
+val Path.isExecutable: Boolean
+    get() = Files.isExecutable(this)
+
+fun Path.makeExecutable() = toFile().setExecutable(true)
 
 val Path.isFile: Boolean
-    get() = toFile().isFile
+    get() = Files.isRegularFile(this)
 
 val Path.isDirectory: Boolean
-    get() = toFile().isDirectory
+    get() = Files.isDirectory(this)
 
 val Path.isSymlink: Boolean
     get() = Files.isSymbolicLink(this)
+
+val Path.isHidden: Boolean
+    get() = Files.isHidden(this)
 
 fun Path.touch(): Path {
     if (!exists) Files.write(this, emptyList())
@@ -68,6 +78,24 @@ fun Path.resourceAsBufferedStream(): BufferedInputStream? =
 
 fun Path.resourceAsBufferedReader(): InputStreamReader? =
     resourceAsBufferedStream()?.let { InputStreamReader(it) }
+
+/**
+ * Converts this path using Base64.
+ */
+fun Path.toBase64(): String = Base64.getEncoder().encodeToString(readAllBytes())
+
+/**
+ * Converts this path to a [data URI](https://en.wikipedia.org/wiki/Data_URI_scheme) of the form
+ * `data:[<media type>][;base64],<data>`, e.g. `data:image/gif;base64,...`
+ *
+ * @throws MimeTypeParseException if the mime type cannot be guessed by the resource name
+ */
+fun Path.toDataUri(): String {
+    val mimeType = URLConnection.guessContentTypeFromName(fileName.toString())
+    val data = Base64.getEncoder().encodeToString(readAllBytes())
+    return "data:$mimeType;base64,$data"
+}
+
 
 fun Path.writeText(text: String): Unit = toFile().writeText(text)
 
@@ -117,7 +145,7 @@ fun Path.asRootFor(subPath: Path): Path {
 
 fun Path.wrap(value: CharSequence): String = toString().wrap(value)
 
-fun Path.quote(): String = toString().quoted
+val Path.quoted get() = toAbsolutePath().toString().quoted
 
 fun Path.readAllBytes(): ByteArray = if (this is ClassPath) this.readAllBytes() else Files.readAllBytes(this)
 
@@ -126,7 +154,7 @@ fun Path.readAllLines(charset: Charset = StandardCharsets.UTF_8): List<String> =
 
 fun Path.readAll(): String = String(readAllBytes())
 
-fun Path.copyTo(dest: Path, createDirectories: Boolean = true) =
+fun Path.copyTo(dest: Path, createDirectories: Boolean = true): Path =
     if (this is ClassPath) {
         this.copyTo(dest, createDirectories)
     } else {
@@ -183,7 +211,7 @@ fun Path.listFilesRecursively(predicate: ((path: Path) -> Boolean) = { true }, c
 /**
  * Calls [action] on each directory and file in this [Path] **and its sub directories**.
  */
-fun Path.onEachFileRecursively(action: (path: Path) -> Unit, comparator: Comparator<Path> = naturalOrder()): Unit {
+fun Path.onEachFileRecursively(action: (path: Path) -> Unit, comparator: Comparator<Path> = naturalOrder()) {
     Files.walk(this).use { it.sorted(comparator).forEach(action) }
 }
 

@@ -7,6 +7,7 @@ import org.slf4j.helpers.SubstituteLogger
 /**
  * Logger that redirects all INFO logs to the given consumer.
  */
+@Deprecated(message = "Remove after CommandLineRunner is removed")
 class InfoAdaptingLogger(name: String, private val consumer: (String) -> Unit) : SubstituteLogger(name, null, true) {
     override fun isInfoEnabled(): Boolean = true
 

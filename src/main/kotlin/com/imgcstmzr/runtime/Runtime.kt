@@ -1,55 +1,94 @@
 package com.imgcstmzr.runtime
 
-import com.imgcstmzr.cli.ColorHelpFormatter
+import com.bkahlert.koodies.string.mapLines
+import com.bkahlert.koodies.terminal.ANSI.EscapeSequences.termColors
+import com.bkahlert.koodies.terminal.ascii.Kaomojis
+import com.bkahlert.koodies.terminal.removeEscapeSequences
 import com.imgcstmzr.process.Output
-import com.imgcstmzr.runtime.Program.Companion.calc
+import com.imgcstmzr.process.Output.Type.ERR
+import com.imgcstmzr.process.Output.Type.META
+import com.imgcstmzr.runtime.Program.Companion.compute
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
+import com.imgcstmzr.runtime.log.segment
+import com.imgcstmzr.util.replaceNonPrintableCharacters
 import java.nio.file.Path
 import java.time.Duration
 
 /**
- * Capable of running programs using an [OperatingSystem].
+ * Boots the machine using the given [OperatingSystem] on [img],
+ * runs all programs and finally shuts down the [OperatingSystem].
+ *
+ * @return machine's exit code
  */
-class Runtime(
-    /**
-     * Name of this runtime.
-     */
-    val name: String,
+fun Program.bootRunStop(
+    scenario: String,
+    os: OperatingSystem,
+    img: Path,
+    parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+): Unit =
+    listOf(this).bootRunStop(scenario, os, img, parentLogger)
+
+
+/**
+ * Boots the machine using the given [OperatingSystem] on [img],
+ * runs all programs and finally shuts down the [OperatingSystem].
+ *
+ * @return machine's exit code
+ */
+fun <P : Program> Collection<P>.bootRunStop(
+    scenario: String,
+    os: OperatingSystem,
+    img: Path,
+    parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
 ) {
+    val unfinishedPrograms: MutableList<Program> = this.toMutableList()
+    var watchdog: Watchdog? = null
+    return parentLogger.segment("Run ${unfinishedPrograms.size} programs on ${os.name}@${img.fileName}", null, additionalInterceptor = { originalMessage ->
+        watchdog?.reset()
+        originalMessage.removeEscapeSequences().takeIf { line ->
+            line.toLowerCase().contains("failed") || line.toLowerCase().contains("error")
+        }?.let { replace ->
+            return@let replace.mapLines { line ->
+                return@mapLines line.removeEscapeSequences().let {
+                    it.substringBefore(" ") + " " + ERR.format(it.substringAfter(" "))
+                }
+            }
+        } ?: originalMessage
+    }) {
+        val outputHistory = mutableListOf<Output>()
 
-    /**
-     * Boots the machine using the given [OperatingSystem] on [img],
-     * runs all provided [programs] and finally shuts down the [OperatingSystem].
-     *
-     * @return machine's exit code
-     */
-    fun bootAndRun(scenario: String, os: OperatingSystem, img: Path, vararg programs: Program): Int {
-        val unfinishedPrograms: MutableList<Program> = mutableListOf(*programs)
-
-        val watchdog = Watchdog(Duration.ofSeconds(15)) {
-            logLine(Output.Type.META typed ("\n" + ColorHelpFormatter.tc.red("\nThe console seems to have halted... ◔̯◔")), unfinishedPrograms)
-            logLine(Output.Type.META typed ("\n" + ColorHelpFormatter.tc.cyan("To help debugging, you can open a separate console and connect using:")),
+        watchdog = Watchdog(Duration.ofSeconds(45), repeating = true) {
+            this@segment.logLine(ERR typed ("\n" + termColors.red("\nThe console seems to have halted... ${Kaomojis.Dogs.random()}")))
+            this@segment.logLine(META typed ("\nLast processed output was:\n" + outputHistory.joinToString("\n") {
+                it.unformatted.replaceNonPrintableCharacters()
+            }), listOf(object : HasStatus {
+                override fun status(): String = Kaomojis.Dogs.random() + " ... console seems to have halted." // TODO
+            }))
+            this@segment.logLine(META typed ("\n" + termColors.cyan("To help debugging, you can open a separate console and connect using:")),
                 unfinishedPrograms)
-            logLine(Output.Type.META typed (ColorHelpFormatter.tc.dim(ColorHelpFormatter.tc.cyan("$") + (ColorHelpFormatter.tc.cyan + ColorHelpFormatter.tc.bold)(
-                " docker attach $name-*")) + "\n"), unfinishedPrograms)
+            this@segment.logLine(META typed (termColors.dim(termColors.cyan("$") + (termColors.cyan + termColors.bold)(
+                " docker attach ...")) + "\n"), unfinishedPrograms)
         }
 
-        return os.bootAndRun(scenario, img, this) { output ->
+        os.bootToUserSession(scenario, img, this) { output ->
+            outputHistory.add(output) // TODO
             if (!output.isBlank) {
                 status(output, unfinishedPrograms)
-                watchdog.reset()
+                watchdog?.reset()
             }
 
             if (!shuttingDown) {
-                val programRunning: Boolean = unfinishedPrograms.calc(this, output)
+                val programRunning: Boolean = unfinishedPrograms.compute(this, output)
 
                 if (!programRunning) {
-                    unfinishedPrograms.removeAt(0)
+                    if (unfinishedPrograms.isNotEmpty()) unfinishedPrograms.removeAt(0)
                 }
 
                 if (unfinishedPrograms.isEmpty()) {
                     shutdown()
                 }
             }
-        }.also { watchdog.stop() }
+        }.also { watchdog?.stop() }
     }
 }
+

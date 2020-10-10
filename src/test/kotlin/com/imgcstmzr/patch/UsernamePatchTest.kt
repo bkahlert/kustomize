@@ -1,11 +1,14 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.util.FixtureExtension
+import com.imgcstmzr.util.FixtureResolverExtension
+import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.containsContent
 import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.hasContent
 import com.imgcstmzr.util.isFile
 import com.imgcstmzr.util.listFilesRecursively
+import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.util.matches
 import com.imgcstmzr.util.mkdirs
 import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.Test
@@ -15,21 +18,28 @@ import org.junit.jupiter.api.parallel.ExecutionMode
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.all
+import strikt.assertions.hasSize
 import strikt.assertions.isSuccess
 import strikt.assertions.none
 import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
-@Suppress("RedundantInnerClassModifier")
-@ExtendWith(FixtureExtension::class)
+@ExtendWith(FixtureResolverExtension::class)
 internal class UsernamePatchTest {
 
     @Test
-    internal fun `should clean all files`() {
+    internal fun `should not do anything but patch 6 password files`() {
+        expectThat(UsernamePatch("pi", "ella")).matches(fileSystemOperationsAssertion = { hasSize(6) })
+    }
+
+    @Test
+    internal fun `should clean all files`(logger: InMemoryLogger<Unit>) {
         val root = prepare()
         val patch = UsernamePatch("pi", "ella")
 
-        patch(root)
+        patch.fileSystemOperations.onEach { op ->
+            op(root.asRootFor(op.target), logger)
+        }
 
         expectThat(root.listFilesRecursively(Path::isFile)) {
             all { containsContent("ella:") }
@@ -37,29 +47,37 @@ internal class UsernamePatchTest {
     }
 
     @Test
-    internal fun `should finish if files are missing`() {
+    internal fun `should finish if files are missing`(logger: InMemoryLogger<Unit>) {
         val root = prepare().also { it.resolve("etc").delete() }
         val patch = UsernamePatch("pi", "ella")
-
-        expectCatching { patch(root) }.isSuccess()
+        expectCatching {
+            patch.fileSystemOperations.onEach { op ->
+                op(root.asRootFor(op.target), logger)
+            }
+        }.isSuccess()
     }
 
     @Test
-    internal fun `should not touch other files`() {
+    internal fun `should not touch other files`(logger: InMemoryLogger<Unit>) {
         val root = prepare().also { it.resolve("dont-touch-me").writeText("pi\npi\n") }
         val patch = UsernamePatch("pi", "ella")
 
-        patch(root)
+        patch.fileSystemOperations.onEach { op ->
+            op(root.asRootFor(op.target), logger)
+        }
 
         expectThat(root.resolve("dont-touch-me")).hasContent("pi\npi\n")
     }
 
     @Test
-    internal fun `should not pull a single word apart`() {
+    internal fun `should not pull a single word apart`(logger: InMemoryLogger<Unit>) {
         val root = prepare()
         val patch = UsernamePatch("pi", "ella")
 
-        patch(root)
+        patch.fileSystemOperations.onEach { op ->
+            val target = root.asRootFor(op.target)
+            op(root.asRootFor(op.target), logger)
+        }
 
         expectThat(root.listFilesRecursively(Path::isFile)) {
             all { containsContent("dietpi:") }
@@ -68,6 +86,7 @@ internal class UsernamePatchTest {
     }
 }
 
+@Suppress("SpellCheckingInspection")
 private fun prepare(): Path = createTempDir("username-patch").toPath().also {
     listOf("passwd", "shadow").onEach { file ->
         it.resolve("etc").mkdirs().resolve(file).writeText("""

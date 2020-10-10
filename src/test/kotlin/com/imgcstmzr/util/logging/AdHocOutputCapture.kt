@@ -1,6 +1,6 @@
 package com.imgcstmzr.util.logging
 
-import com.imgcstmzr.util.logging.NegativeIndexSupportList.Companion.negativeIndexSupport
+import com.bkahlert.koodies.collections.withNegativeIndices
 import com.imgcstmzr.util.logging.OutputCapture.Companion.splitOutput
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
@@ -40,13 +40,13 @@ class AdHocOutputCapture : CapturedOutput {
     }
 
     override val all: String get() = allStream.toString()
-    override val allLines: List<String> by negativeIndexSupport { splitOutput(all) }
+    override val allLines: List<String> by withNegativeIndices { splitOutput(all) }
 
     override val out: String get() = outStream.toString()
-    override val outLines: List<String> by negativeIndexSupport { splitOutput(out) }
+    override val outLines: List<String> by withNegativeIndices { splitOutput(out) }
 
     override val err: String get() = errStream.toString()
-    override val errLines: List<String> by negativeIndexSupport { splitOutput(err) }
+    override val errLines: List<String> by withNegativeIndices { splitOutput(err) }
 
     /**
      * Print stream that forwards all calls to a [TeeOutputStream] of the given output streams

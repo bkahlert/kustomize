@@ -4,6 +4,7 @@ import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.Isolated
 import strikt.api.expectThat
 import strikt.assertions.get
 import strikt.assertions.hasEntry
@@ -11,9 +12,8 @@ import strikt.assertions.isNotEmpty
 import strikt.assertions.isNotEqualTo
 import java.nio.file.Path
 
-
 @Execution(ExecutionMode.CONCURRENT)
-@Suppress("RedundantInnerClassModifier")
+@Isolated // flaky OutputCapture
 internal class EnvTest {
 
     @Test
@@ -27,7 +27,7 @@ internal class EnvTest {
     @Test
     fun `should favor environment variables`() {
         val path: Path = createTempFile("personal", ".env").toPath().also { it.writeText("JAVA_HOME=dummy\n") }
-        expectThat(Env(path)).get("JAVA_HOME").isNotEqualTo("dummy")
+        expectThat(Env(path))["JAVA_HOME"].isNotEqualTo("dummy")
     }
 
     @Test

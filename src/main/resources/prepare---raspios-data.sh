@@ -148,6 +148,8 @@ if [ -r etc ] && [ ! -b "etc/network/interfaces.d/usb0.network" ] || [ -w "etc/n
     _p "Configuring usb0... "
     mkdir -p etc/network/interfaces.d
     cat <<EOF >etc/network/interfaces.d/usb0.network
+auto lo usb0
+
 auth usb0
 allow-hotplug usb0
 iface usb0 inet static

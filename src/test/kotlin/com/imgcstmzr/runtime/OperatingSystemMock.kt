@@ -2,27 +2,37 @@ package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.unit.Size
 import com.imgcstmzr.process.Output
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import java.nio.file.Path
 
-class OperatingSystemMock(
+open class OperatingSystemMock(
     override val name: String = "ImgCstmzr Test OS",
     override val downloadUrl: String? = null,
-    override val username: String = "",
-    override val password: String = "",
+    override val defaultUsername: String = "",
+    override val defaultPassword: String = "",
 ) : OperatingSystem {
-    override fun increaseDiskSpace(size: Size, img: Path, runtime: Runtime): Int {
-        TODO("Not yet implemented")
+    override fun increaseDiskSpace(
+        size: Size,
+        img: Path,
+        parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+    ) {
+        error(::increaseDiskSpace.name + " not implemented in mock")
     }
 
-    override fun bootAndRun(scencario: String, img: Path, runtime: Runtime, processor: RunningOS.(Output) -> Unit): Int {
-        TODO("Not yet implemented")
+    override fun bootToUserSession(
+        scenario: String,
+        img: Path,
+        parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+        processor: RunningOS.(Output) -> Unit,
+    ) {
+        error(::bootToUserSession.name + " not implemented in mock")
     }
 
     override fun compileSetupScript(name: String, commandBlocks: String): Array<Program> {
-        TODO("Not yet implemented")
+        error(::compileSetupScript.name + " not implemented in mock")
     }
 
     override fun compileScript(name: String, vararg commands: String): Program {
-        TODO("Not yet implemented")
+        error(::compileScript.name + " not implemented in mock")
     }
 }

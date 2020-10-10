@@ -1,15 +1,14 @@
 package com.imgcstmzr.patch.ini
 
 import com.imgcstmzr.util.readAll
-import com.imgcstmzr.util.splitLineBreaks
 import java.nio.file.Path
 
 @Suppress("PublicApiImplicitType")
 class IniDocument private constructor(mutableElements: Collection<Line>) : Collection<IniDocument.Line> by mutableElements {
     private val lines: MutableList<Line> = mutableElements.toMutableList()
 
-    constructor(input: String) : this(input.splitLineBreaks().map { Line(it) }.toList())
-    constructor(path: Path) : this(path.readAll()) {}
+    constructor(input: String) : this(input.lines().map { Line(it) }.toList())
+    constructor(path: Path) : this(path.readAll())
 
     override fun toString(): String = lines.joinToString("\n")
 

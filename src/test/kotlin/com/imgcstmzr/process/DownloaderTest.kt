@@ -7,13 +7,11 @@ import com.imgcstmzr.runtime.OperatingSystemMock
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
-import org.zeroturnaround.exec.InvalidExitValueException
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.isA
 import strikt.assertions.isFailure
 
-@Suppress("RedundantInnerClassModifier")
 @Execution(ExecutionMode.CONCURRENT)
 internal class DownloaderTest {
 
@@ -43,6 +41,6 @@ internal class DownloaderTest {
     @Test
     internal fun `should throw on error`() {
         expectCatching { download("protocol--------/uploads/2017/10/file_example_JPG_100kB.jpg") }
-            .isFailure().isA<InvalidExitValueException>()
+            .isFailure().isA<IllegalStateException>()
     }
 }

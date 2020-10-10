@@ -21,5 +21,5 @@ FROM scratch
 LABEL description="Downloads and Customizes Raspberry Pi Images" url="https://imgcstmzr.com" maintainer="\"Björn Kahlert\"<mail@bkahlert.com>"
 COPY --from=0 /project/build/native-image/imgcstmzr .
 RUN groupadd -r app && useradd --no-log-init -r -g app app
-# TODO USER appuser
+# TODO USER appuser ENV ANSIBLE_USER=ansible SUDO_GROUP=wheel DEPLOY_GROUP=deployer
 CMD ["/imgcstmzr"]

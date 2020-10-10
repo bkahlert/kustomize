@@ -7,7 +7,6 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(ExecutionMode.CONCURRENT)
-@Suppress("RedundantInnerClassModifier")
 internal class RegexElementTest {
 
     @Test

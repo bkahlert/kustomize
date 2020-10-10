@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.number
 
-import com.bkahlert.koodies.test.strikt.matches
+import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.DecimalPrefix
 import com.bkahlert.koodies.unit.Exa
@@ -23,7 +23,6 @@ import com.bkahlert.koodies.unit.abi
 import com.bkahlert.koodies.unit.atto
 import com.bkahlert.koodies.unit.bytes
 import com.bkahlert.koodies.unit.centi
-import com.bkahlert.koodies.unit.deca
 import com.bkahlert.koodies.unit.deci
 import com.bkahlert.koodies.unit.fembi
 import com.bkahlert.koodies.unit.femto
@@ -44,126 +43,246 @@ import com.bkahlert.koodies.unit.zebi_
 import com.bkahlert.koodies.unit.zepto
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.appendText
-import com.imgcstmzr.util.logging.AdHocOutputCapture.Companion.capture
 import com.imgcstmzr.util.times
+import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
-import org.junit.jupiter.api.parallel.Isolated
+import strikt.api.expectCatching
 import strikt.api.expectThat
+import strikt.assertions.isA
 import strikt.assertions.isEqualTo
+import strikt.assertions.isFailure
+import strikt.assertions.message
+import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
-@Suppress("RedundantInnerClassModifier")
 internal class SizeTest {
 
-    @TestFactory
-    internal fun `should format decimal format`() = listOf(
-        42.Yotta.bytes to "42 YB",
-        42.Zetta.bytes to "42 ZB",
-        42.Exa.bytes to "42 EB",
-        42.Peta.bytes to "42 PB",
-        42.Tera.bytes to "42 TB",
-        42.Giga.bytes to "42 GB",
-        42.Mega.bytes to "42 MB",
-        42.kilo.bytes to "42 kB",
-        42.bytes to "42 B",
-    ).map { (size: Size, expected: String) ->
-        dynamicTest("$size -> $expected") {
-            expectThat(size.formatted).isEqualTo(expected)
-        }
-    }
-
-    @TestFactory
-    internal fun `should not use untypical decimal prefixes for decimal format`() = listOf(
-        42.hecto.bytes to "4 kB",
-        42.deca.bytes to "420 B",
-        42.deci.bytes to "0 B",
-        42.centi.bytes to "0 B",
-        42.milli.bytes to "0 B",
-        42.micro.bytes to "0 B",
-        42.nano.bytes to "0 B",
-        42.pico.bytes to "0 B",
-        42.femto.bytes to "0 B",
-        42.atto.bytes to "0 B",
-        42.zebi_.bytes to "0 B",
-        42.yobi_.bytes to "0 B",
-    ).map { (size: Size, expected: String) ->
-        dynamicTest("$size -> $expected") {
-            expectThat(size.formatted).isEqualTo(expected)
-        }
-    }
-
-    @TestFactory
-    internal fun `should format binary format`() = listOf(
-        42.Yobi.bytes to "42 YiB",
-        42.Zebi.bytes to "42 ZiB",
-        42.Exbi.bytes to "42 EiB",
-        42.Pebi.bytes to "42 PiB",
-        42.Tebi.bytes to "42 TiB",
-        42.Gibi.bytes to "42 GiB",
-        42.Mebi.bytes to "42 MiB",
-        42.Kibi.bytes to "42 KiB",
-        42.bytes to "42 B",
-    ).map { (size: Size, expected: String) ->
-        dynamicTest("$size -> $expected") {
-            expectThat(size.binaryFormatted).isEqualTo(expected)
-        }
-    }
-
-    @TestFactory
-    internal fun `should not use untypical prefixes for binary format`() = listOf(
-        42.mibi.bytes to "0 B",
-        42.mubi.bytes to "0 B",
-        42.nabi.bytes to "0 B",
-        42.pibi.bytes to "0 B",
-        42.fembi.bytes to "0 B",
-        42.abi.bytes to "0 B",
-        42.zebi_.bytes to "0 B",
-        42.yobi_.bytes to "0 B",
-    ).map { (size: Size, expected: String) ->
-        dynamicTest("$size -> $expected") {
-            expectThat(size.formatted).isEqualTo(expected)
-        }
+    @Test
+    internal fun `should use decimal unit by default`() {
+        expectThat(42.Mega.bytes.toString()).isEqualTo("42.0 MB")
     }
 
     @Nested
-    @Isolated
-    inner class Unsupported {
-        @TestFactory
-        internal fun `should warn of unsupported decimal prefixes`() = listOf(
-            42::deci to DecimalPrefix.deci,
-            42::centi to DecimalPrefix.centi,
-            42::milli to DecimalPrefix.milli,
-            42::micro to DecimalPrefix.micro,
-            42::nano to DecimalPrefix.nano,
-            42::pico to DecimalPrefix.pico,
-            42::femto to DecimalPrefix.femto,
-            42::atto to DecimalPrefix.atto,
-            42::zepto to DecimalPrefix.zepto,
-            42::yocto to DecimalPrefix.yocto,
-        ).map { (property, prefix) ->
-            dynamicTest("$prefix") {
-                expectThat(capture { prefix.getValue(42, property) }).matches("{} currently not {} supported{}")
+    inner class WithBinaryPrefix {
+
+        @ConcurrentTestFactory
+        internal fun `should format integer binary form`() = listOf(
+            4_200_000.Yobi.bytes to "4.20e+6 YiB",
+            42.Yobi.bytes to "42.0 YiB",
+            42.Zebi.bytes to "42.0 ZiB",
+            42.Exbi.bytes to "42.0 EiB",
+            42.Pebi.bytes to "42.0 PiB",
+            42.Tebi.bytes to "42.0 TiB",
+            42.Gibi.bytes to "42.0 GiB",
+            42.Mebi.bytes to "42.0 MiB",
+            42.Kibi.bytes to "42.0 KiB",
+            42.bytes to "42 B",
+        ).map { (size: Size, expected: String) ->
+            val actual = size.toString(BinaryPrefix::class)
+            val actualNegative = (-size).toString(BinaryPrefix::class)
+            dynamicTest("$expected == $actual ← ${size.bytes}") {
+                expectThat(actual).isEqualTo(expected)
+            } to dynamicTest("-$expected == $actualNegative ← ${(-size).bytes}") {
+                expectThat(actualNegative).isEqualTo("-$expected")
+            }
+        }.unzip()
+            .let { (pos, neg) ->
+                listOf(
+                    dynamicContainer("positive", pos),
+                    dynamicContainer("negative", neg),
+                )
+            }
+
+
+        @ConcurrentTestFactory
+        internal fun `should format fraction binary form`() = listOf(
+//            4_200.Gibi.bytes to "4.10 TiB",
+            420.Gibi.bytes to "420 GiB",
+            42.Gibi.bytes to "42.0 GiB",
+            4.2.Gibi.bytes to "4.20 GiB",
+            .42.Gibi.bytes to "430 MiB",
+            .042.Gibi.bytes to "43.0 MiB",
+            .0042.Gibi.bytes to "4.30 MiB",
+        ).map { (size: Size, expected: String) ->
+            val actual = size.toString(BinaryPrefix::class)
+            val actualNegative = (-size).toString(BinaryPrefix::class)
+            dynamicTest("$expected == $actual ← ${size.bytes}") {
+                expectThat(actual).isEqualTo(expected)
+            } to dynamicTest("-$expected == $actualNegative ← ${(-size).bytes}") {
+                expectThat(actualNegative).isEqualTo("-$expected")
+            }
+        }.unzip()
+            .let { (pos, neg) ->
+                listOf(
+                    dynamicContainer("positive", pos),
+                    dynamicContainer("negative", neg),
+                )
+            }
+
+        @ConcurrentTestFactory
+        internal fun `should format 0 binary form`() = listOf(
+            0.Yobi.bytes to "0 B",
+            0.Kibi.bytes to "0 B",
+            0.bytes to "0 B",
+        ).map { (size: Size, expected: String) ->
+            val actual = size.toString(BinaryPrefix::class)
+            dynamicTest("$expected == $actual ← ${size.bytes}") {
+                expectThat(actual).isEqualTo(expected)
             }
         }
 
-        @TestFactory
-        internal fun `should warn of unsupported binary prefixes`() = listOf(
-            42::mibi to BinaryPrefix.mibi,
-            42::mubi to BinaryPrefix.mubi,
-            42::nabi to BinaryPrefix.nabi,
-            42::pibi to BinaryPrefix.pibi,
-            42::fembi to BinaryPrefix.fembi,
-            42::abi to BinaryPrefix.abi,
-            42::zebi_ to BinaryPrefix.zebi,
-            42::yobi_ to BinaryPrefix.yobi,
-        ).map { (property, prefix) ->
+        @ConcurrentTestFactory
+        internal fun `should throw on yet unsupported prefixes`() = listOf(
+            BinaryPrefix.mibi to { number: Int -> number.mibi },
+            BinaryPrefix.mubi to { number: Int -> number.mubi },
+            BinaryPrefix.nabi to { number: Int -> number.nabi },
+            BinaryPrefix.pibi to { number: Int -> number.pibi },
+            BinaryPrefix.fembi to { number: Int -> number.fembi },
+            BinaryPrefix.abi to { number: Int -> number.abi },
+            BinaryPrefix.zebi to { number: Int -> number.zebi_ },
+            BinaryPrefix.yobi to { number: Int -> number.yobi_ },
+        ).map { (prefix, factory) ->
             dynamicTest("$prefix") {
-                expectThat(capture { prefix.getValue(42, property) }).matches("{} currently not {} supported{}")
+                expectCatching { factory(0) }
+                    .isFailure()
+                    .isA<IllegalArgumentException>().message.isEqualTo("Small $prefix are currently not fully supported!")
+            }
+        }
+
+        @ConcurrentTestFactory
+        internal fun `should format to specific unit`() = listOf(
+            4_200_000.Yobi.bytes to "4.84e+24 MiB",
+            42.Yobi.bytes to "4.84e+19 MiB",
+            42.Zebi.bytes to "4.73e+16 MiB",
+            42.Exbi.bytes to "46179488366592.0000 MiB",
+            42.Pebi.bytes to "45097156608.0000 MiB",
+            42.Tebi.bytes to "44040192.0000 MiB",
+            42.Gibi.bytes to "43008.0000 MiB",
+            42.Mebi.bytes to "42.0000 MiB",
+//            52.Kibi.bytes to "0.1000 MiB",
+            42.Kibi.bytes to "0.0000 MiB",
+            42.bytes to "0.0000 MiB",
+        ).map { (size: Size, expected: String) ->
+            val actual = size.toString(BinaryPrefix.Mebi, 4)
+            dynamicTest("$expected == $actual ← ${size.bytes}") {
+                expectThat(actual).isEqualTo(expected)
+            }
+        }
+    }
+
+
+    @Nested
+    inner class WithDecimalPrefix {
+
+        @ConcurrentTestFactory
+        internal fun `should format integer decimal form`() = listOf(
+            4_200_000.Yotta.bytes to "4.20e+6 YB",
+            42.Yotta.bytes to "42.0 YB",
+            42.Zetta.bytes to "42.0 ZB",
+            42.Exa.bytes to "42.0 EB",
+            42.Peta.bytes to "42.0 PB",
+            42.Tera.bytes to "42.0 TB",
+            42.Giga.bytes to "42.0 GB",
+            42.Mega.bytes to "42.0 MB",
+            42.kilo.bytes to "42.0 KB",
+            42.bytes to "42 B",
+        ).map { (size: Size, expected: String) ->
+            val actual = size.toString(DecimalPrefix::class)
+            val actualNegative = (-size).toString(DecimalPrefix::class)
+            dynamicTest("$expected == $actual ← ${size.bytes}") {
+                expectThat(actual).isEqualTo(expected)
+            } to dynamicTest("-$expected == $actualNegative ← ${(-size).bytes}") {
+                expectThat(actualNegative).isEqualTo("-$expected")
+            }
+        }.unzip()
+            .let { (pos, neg) ->
+                listOf(
+                    dynamicContainer("positive", pos),
+                    dynamicContainer("negative", neg),
+                )
+            }
+
+
+        @ConcurrentTestFactory
+        internal fun `should format fraction decimal form`() = listOf(
+//            4_200.Giga.bytes to "4.20 TB",
+            420.Giga.bytes to "420 GB",
+            42.Giga.bytes to "42.0 GB",
+            4.2.Giga.bytes to "4.20 GB",
+            .42.Giga.bytes to "420 MB",
+            .042.Giga.bytes to "42.0 MB",
+            .0042.Giga.bytes to "4.20 MB",
+        ).map { (size: Size, expected: String) ->
+            val actual = size.toString(DecimalPrefix::class)
+            val actualNegative = (-size).toString(DecimalPrefix::class)
+            dynamicTest("$expected == $actual ← ${size.bytes}") {
+                expectThat(actual).isEqualTo(expected)
+            } to dynamicTest("-$expected == $actualNegative ← ${(-size).bytes}") {
+                expectThat(actualNegative).isEqualTo("-$expected")
+            }
+        }.unzip()
+            .let { (pos, neg) ->
+                listOf(
+                    dynamicContainer("positive", pos),
+                    dynamicContainer("negative", neg),
+                )
+            }
+
+        @ConcurrentTestFactory
+        internal fun `should format 0 decimal form`() = listOf(
+            0.Yotta.bytes to "0 B",
+            0.kilo.bytes to "0 B",
+            0.bytes to "0 B",
+        ).map { (size: Size, expected: String) ->
+            val actual = size.toString()
+            dynamicTest("$expected == $actual ← ${size.bytes}") {
+                expectThat(actual).isEqualTo(expected)
+            }
+        }
+
+        @ConcurrentTestFactory
+        internal fun `should throw on yet unsupported prefixes`() = listOf(
+            DecimalPrefix.deci to { number: Int -> number.deci },
+            DecimalPrefix.centi to { number: Int -> number.centi },
+            DecimalPrefix.milli to { number: Int -> number.milli },
+            DecimalPrefix.micro to { number: Int -> number.micro },
+            DecimalPrefix.nano to { number: Int -> number.nano },
+            DecimalPrefix.pico to { number: Int -> number.pico },
+            DecimalPrefix.femto to { number: Int -> number.femto },
+            DecimalPrefix.atto to { number: Int -> number.atto },
+            DecimalPrefix.zepto to { number: Int -> number.zepto },
+            DecimalPrefix.yocto to { number: Int -> number.yocto },
+        ).map { (prefix, factory) ->
+            dynamicTest("$prefix") {
+                expectCatching { factory(0) }
+                    .isFailure()
+                    .isA<IllegalArgumentException>().message.isEqualTo("Small $prefix are currently not fully supported!")
+            }
+        }
+
+        @ConcurrentTestFactory
+        internal fun `should format to specific unit`() = listOf(
+            4_200_000.Yotta.bytes to "4.20e+24 MB",
+            42.Yotta.bytes to "4.20e+19 MB",
+            42.Zetta.bytes to "4.20e+16 MB",
+            42.Exa.bytes to "42000000000000.0000 MB",
+            42.Peta.bytes to "42000000000.0000 MB",
+            42.Tera.bytes to "42000000.0000 MB",
+            42.Giga.bytes to "42000.0000 MB",
+            42.Mega.bytes to "42.0000 MB",
+//            520.hecto.bytes to "0.1000 MB", // ⛳️
+            420.hecto.bytes to "0.0000 MB", // 🌽
+//            52.kilo.bytes to "0.1000 MB",
+            42.kilo.bytes to "0.0000 MB",
+            42.bytes to "0.0000 MB",
+        ).map { (size: Size, expected: String) ->
+            val actual = size.toString(DecimalPrefix.Mega, 4)
+            dynamicTest("$expected == $actual ← ${size.bytes}") {
+                expectThat(actual).isEqualTo(expected)
             }
         }
     }
@@ -172,16 +291,16 @@ internal class SizeTest {
     @Nested
     inner class AsSize {
 
-        val tempFile = Paths.tempFile().apply { 2500.times { appendText("1234567890") } }
+        val tempFile: Path = Paths.tempFile().apply { 2500.times { appendText("1234567890") } }
 
         @Test
-        internal fun `should format size human-readable (power of 1000)`() {
-            expectThat(tempFile.size.formatted).isEqualTo("25 kB")
+        internal fun `should format size human-readable (10^x)`() {
+            expectThat(tempFile.size.toString(DecimalPrefix::class)).isEqualTo("25.0 KB")
         }
 
         @Test
-        internal fun `should format size human-readable (power of 1024)`() {
-            expectThat(tempFile.size.binaryFormatted).isEqualTo("24 KiB")
+        internal fun `should format size human-readable (2^y)`() {
+            expectThat(tempFile.size.toString(BinaryPrefix::class)).isEqualTo("24.0 KiB")
         }
     }
 }

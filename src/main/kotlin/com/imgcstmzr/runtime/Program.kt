@@ -1,13 +1,18 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.terminal.ansi.Style.Companion.red
+import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.github.ajalt.mordant.TermColors
 import com.imgcstmzr.process.Output
+import com.imgcstmzr.util.debug
+import com.imgcstmzr.util.quoted
 import com.imgcstmzr.util.replaceNonPrintableCharacters
-import com.imgcstmzr.util.splitLineBreaks
 
 /**
  * Instances of this class can interact with a process based on a state machine for the given [name].
+ * Or in other words: A [Program] does not run in a [RunningOS] but on it, like somehow a human interacts with his machine.
+ *
  * The workflow is as follows:
  * 1. The handler of the [initialState] is called whenever the [Process] generates an output.
  *    Based on the current state and the output the handler has to return with the new state whereas the new state can be the old state.
@@ -46,16 +51,16 @@ class Program(
             return initialState
         }
         if (halted) {
-            return { output -> echo(tc.red("Execution already stopped. No more processing.")); null }
+            return { output -> echo("Execution of ${name.quoted} already stopped. No more processing.".red()); null }
         }
         return stateMachine[state] ?: throw IllegalStateException("Unknown state $state. Available: ${stateMachine.keys}. History: $stateHistory")
     }
 
-    fun calc(runningOS: RunningOS, output: Output): Boolean {
+    fun compute(runningOS: RunningOS, output: Output): Boolean {
         val oldState = state
         state = handler().invoke(runningOS, output.unformatted)
         val historyElement = HistoryElement(oldState, output, state)
-        if (logging) println("$name: $historyElement")
+        if (logging) TermUi.debug("$name: $historyElement")
         stateHistory.add(historyElement)
         return state != null
     }
@@ -85,20 +90,21 @@ class Program(
      * Renders the status of this [Program].
      */
     override fun status(): String = when (state) {
-        null -> tc.gray("◀ $name")
+        null -> tc.gray(name)
         else -> when (stateCount) {
-            0 -> tc.green("◀◀ ") + tc.bold(name)
-            else -> tc.green("◀◀ ") + tc.bold(name) + tc.gray("❬${state.toString()}❭")
+            0 -> tc.bold(name)
+            else -> tc.bold(name) + tc.gray("❬${state.toString()}❭")
         }
     }
 
     companion object {
         /**
-         * Given an [output] of the [OperatingSystem] conducts calculations until new feedback in the form of [output] is needed.
-         * @return `true` if the calculation if ongoing; otherwise return `false`
+         * Utility version of [Program.compute] that delegates the output to the first [Program] of this [Collection].
+         *
+         * @return `true` if the calculation is ongoing; otherwise return `false`
          */
-        fun Collection<Program>.calc(runningOS: RunningOS, output: Output): Boolean =
-            this.firstOrNull()?.calc(runningOS, output) ?: false
+        fun Collection<Program>.compute(runningOS: RunningOS, output: Output): Boolean =
+            this.firstOrNull()?.compute(runningOS, output) ?: false
 
         private fun stateName(index: Int, commands: Array<out String>): String {
             val commandLine = commands[index]
@@ -106,9 +112,31 @@ class Program(
             return "${index + 1}/${commands.size}: $command"
         }
 
+        /**
+         * Converts a setup script to an [Array] of [Program]s.
+         *
+         * The following script is an example of such a script that consist of multiple blocks
+         * each with a description precedes by a colon about the purpose of this code block.
+         *
+         * Example:
+         * ```shell script
+         * sudo -i
+         *
+         * : configure SSH port
+         * sed -i 's/^\#Port 22$/Port 1234/g' /etc/ssh/sshd_config
+         *
+         * : configure
+         * systemctl enable getty@ttyGS0.service
+         *
+         * : remove unused DHCP clients
+         * apt-get purge -qq -m isc-dhcp-client
+         * apt-get purge -y -m udhcpd
+         * apt-get autoremove -y -m
+         * ```
+         */
         fun fromSetupScript(name: String, readyPattern: Regex, labelledScripts: String): Array<Program> {
-            return splitScripts(labelledScripts).map { labelledScripts ->
-                splitLabel(labelledScripts).let { (label, script) -> fromScript(label ?: script, readyPattern, script) }
+            return splitScripts(labelledScripts).map { labelledScript ->
+                splitLabel(labelledScript).let { (label, script) -> fromScript(label ?: "$name—$script", readyPattern, script) }
             }.toTypedArray()
         }
 
@@ -117,7 +145,7 @@ class Program(
         /**
          * Splits a [labelledScript] into label and script, whereas the label is `null` if there was none.
          */
-        private fun splitLabel(labelledScript: String): Pair<String?, String> = labelledScript.splitLineBreaks(limit = 2).let {
+        private fun splitLabel(labelledScript: String): Pair<String?, String> = labelledScript.lines().let {
             if (it.size == 1) null to it[0] else it[0] to it[1]
         }
 

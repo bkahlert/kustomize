@@ -1,3 +1,5 @@
+import com.bkahlert.koodies.terminal.ANSI
+import com.bkahlert.koodies.terminal.colorize
 import com.bkahlert.koodies.unit.bytes
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.NoOpCliktCommand
@@ -16,8 +18,7 @@ import com.github.ajalt.clikt.parameters.options.prompt
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.imgcstmzr.cli.Cache
-import com.imgcstmzr.cli.ColorHelpFormatter.Companion.INSTANCE
-import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
+import com.imgcstmzr.cli.ColorHelpFormatter
 import com.imgcstmzr.cli.Config4kValueSource
 import com.imgcstmzr.cli.Config4kValueSource.Companion.update
 import com.imgcstmzr.cli.Env
@@ -29,14 +30,17 @@ import com.imgcstmzr.patch.UsernamePatch
 import com.imgcstmzr.process.Downloader.download
 import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
+import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.OperatingSystems
-import com.imgcstmzr.runtime.Runtime
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.debug
 import java.io.File
 import java.nio.file.Path
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
+
+val debug = true
 
 fun main() {
 //    CliCommand().subcommands(ImgCommand(), CstmzrCommand(), FlshCommand()).main(listOf("--help"))
@@ -54,7 +58,7 @@ fun main() {
 
 @OptIn(ExperimentalValueSourceApi::class)
 class CliCommand : NoOpCliktCommand(
-    epilog = "((ε(*･ω･)_/${INSTANCE.colorize("ﾟ･.*･･｡☆")}",
+    epilog = "((ε(*･ω･)_/${ANSI.EscapeSequences.termColors.colorize("ﾟ･.*･･｡☆")}",
     name = "imgcstmzr",
     allowMultipleSubcommands = true,
     printHelpOnEmptyArgs = true,
@@ -62,7 +66,7 @@ class CliCommand : NoOpCliktCommand(
 ) {
     init {
         context {
-            helpFormatter = INSTANCE
+            helpFormatter = ColorHelpFormatter()
             valueSource = Config4kValueSource.proxy()
         }
     }
@@ -84,7 +88,7 @@ class CliCommand : NoOpCliktCommand(
     override fun run() {
         configFile?.also {
             currentContext.valueSource.update(it)
-            echo((tc.cyan + tc.bold)("Using config (file: $it, name: $name, size: ${it.readText().length})"))
+            echo((ANSI.EscapeSequences.termColors.cyan + ANSI.EscapeSequences.termColors.bold)("Using config (file: $it, name: $name, size: ${it.readText().length})"))
         }
         echo("Checking $envFile for .env file")
         shared[Env::class] = Env(envFile.toPath())
@@ -111,6 +115,7 @@ class ImgCommand : CliktCommand(help = "Provides an IMG file containing the spec
 }
 
 class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
+
     override fun aliases(): Map<String, List<String>> = mapOf(
         "customize" to listOf("cstmzr"),
         "cstmz" to listOf("cstmzr"),
@@ -131,7 +136,7 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
             PasswordPatch(x[0], x[1])
         }
     }
-    private val usbOtgProfiles by option().convert { UsbOnTheGoPatch() }
+    private val usbOtgProfiles by option().convert { UsbOnTheGoPatch(listOf("update", "me")) }
 
     private val scripts: Map<String, String> by option().associate()
 
@@ -152,20 +157,24 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
             TermUi.debug(passwordChange)
             TermUi.debug(usbOtgProfiles)
 
+//            patch.patch(img)
+//            patcher(this, listOfNotNull(enableSsh, usernameRename, passwordChange, usbOtgProfiles))
+
             exitProcess(0)
 
-            val guestfish = Guestfish(this, "$name-guestfish")
+            val logger = BlockRenderingLogger<Unit, HasStatus>("Project: $name")
+
+            val guestfish = Guestfish(this, logger, "$name-guestfish")
             guestfish.run(copyOutCommands(listOf("/etc/hostname", "/boot/cmdline.txt", "/boot/config.txt").map(Path::of)))
             guestfish.guestRootOnHost
                 .also { echo("Success $it") }
 
             exitProcess(0)
-            val runtime = Runtime(name)
-            size?.let { os.increaseDiskSpace(size!!, this, runtime) }
+//            val runtime = Runtime(name)
+//            size?.let { os.increaseDiskSpace(size!!, this) }
 //            runtime.bootAndRun("test", this, os.login("pi", "raspberry"), os.sequence("test", "wget https://bkahlert.com/wp-content/uploads/2019/08/Retrospective-02-Flipchart-Featured-720x405.jpg"))
-            scripts.forEach { (scriptName, script) ->
-                runtime.bootAndRun(scriptName, os, this, *os.compileSetupScript(scriptName, script))
-            }
+//            scripts.forEach { (scriptName, script) ->
+//                runtime.bootAndRun(scriptName, os, this, *os.compileSetupScript(scriptName, script))
         }
     }
 }

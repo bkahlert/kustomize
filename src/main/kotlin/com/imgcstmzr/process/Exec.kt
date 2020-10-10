@@ -1,38 +1,29 @@
 package com.imgcstmzr.process
 
-import com.github.ajalt.clikt.output.TermUi
+import com.bkahlert.koodies.shell.toHereDoc
+import com.bkahlert.koodies.string.random
+import com.imgcstmzr.process.Output.Type.META
+import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.Paths.WORKING_DIRECTORY
-import com.imgcstmzr.util.debug
-import com.imgcstmzr.util.hereDoc
-import com.imgcstmzr.util.slf4jFormat
-import org.zeroturnaround.exec.ProcessExecutor
-import org.zeroturnaround.exec.ProcessResult
-import org.zeroturnaround.exec.StartedProcess
-import org.zeroturnaround.exec.listener.ProcessListener
-import org.zeroturnaround.exec.stream.LogOutputStream
-import java.io.OutputStream
+import com.imgcstmzr.util.appendText
+import com.imgcstmzr.util.makeExecutable
+import com.imgcstmzr.util.quoted
+import org.apache.maven.shared.utils.cli.CommandLineCallable
+import org.apache.maven.shared.utils.cli.CommandLineUtils
+import org.apache.maven.shared.utils.cli.Commandline
+import java.io.InputStream
 import java.nio.file.Path
-import java.util.Locale
-import kotlin.properties.ReadOnlyProperty
-import kotlin.reflect.KProperty
 
 /**
  * Helper functions to facilitate the integration of command line tools in ImgCstmzr.
  */
 object Exec {
-    private val IS_WINDOWS = System.getProperty("os.name").toLowerCase(Locale.ENGLISH).startsWith("windows")
-    private val SHELL_CMD = if (IS_WINDOWS) "cmd.exe" else "sh"
-    private val SHELL_CMD_ARG = if (IS_WINDOWS) "/c" else "-c"
-
-    /**
-     * Redirects log messages just as [ProcessExecutor.redirectOutput] and [ProcessExecutor.redirectError]
-     * do with their input.
-     */
-    fun ProcessExecutor.redirectMsg(outputStream: OutputStream) {
-        setMessageLogger { log, format, arguments ->
-            outputStream.write(slf4jFormat(format + "\n", *arguments).toByteArray())
-        }
-    }
+    const val REDIRECT = ">"
+    const val REFERENCE = "&"
+    const val DEV_NULL = "/dev/null"
+    const val ONE_TO_DEV_NULL = "$REDIRECT$DEV_NULL"
+    const val TWO_TO_ONE = "2$REDIRECT${REFERENCE}1"
+    const val REDIRECT_ALL_TO_NULL = "$ONE_TO_DEV_NULL $TWO_TO_ONE"
 
     @DslMarker
     annotation class ShellScriptMarker
@@ -45,7 +36,7 @@ object Exec {
          * Creates a [here document](https://en.wikipedia.org/wiki/Here_document) consisting of the given [lines].
          */
         fun heredoc(vararg heredocLines: String) {
-            val hereDoc = hereDoc(heredocLines.toList())
+            val hereDoc = heredocLines.toList().toHereDoc("HERE-" + String.random(8).toUpperCase())
             lines.add(hereDoc)
         }
 
@@ -76,6 +67,11 @@ object Exec {
      */
     object Sync {
 
+        fun checkIfOutputContains(command: String, needle: String, caseSensitive: Boolean = false): Boolean = runCatching {
+            val flags = if (caseSensitive) "" else "i"
+            check(execShellScript { line("$command | grep -q$flags '$needle'") } == 0)
+        }.isSuccess
+
         /**
          * Builds and starts a shell script synchronously.
          *
@@ -84,20 +80,18 @@ object Exec {
         fun execShellScript(
             workingDirectory: Path = WORKING_DIRECTORY,
             env: Map<String, String> = emptyMap(),
-            expectedExitValue: Int? = 0,
-            outputProcessor: (Process?.(Output) -> Unit)? = null,
-            customizer: ProcessExecutor.() -> Unit = {},
+            inputStream: InputStream? = null,
+            outputProcessor: ((Output) -> Unit)? = null,
             init: ShellScript.() -> Unit,
-        ): ProcessResult {
+        ): Int {
             val shellScript = ShellScript()
             shellScript.init()
             return execShellScript(
+                inputStream = inputStream,
                 outputProcessor = outputProcessor,
-                customizer = customizer,
                 *shellScript.lines.toTypedArray(),
                 workingDirectory = workingDirectory,
                 env = env,
-                expectedExitValue = expectedExitValue,
             )
         }
 
@@ -109,20 +103,21 @@ object Exec {
          * You are to introduce further line breaks on purpose if you know the consequences.
          */
         fun execShellScript(
-            outputProcessor: (Process?.(Output) -> Unit)? = null,
-            customizer: ProcessExecutor.() -> Unit = {},
+            inputStream: InputStream? = null,
+            outputProcessor: ((Output) -> Unit)? = null,
             vararg lines: String,
             workingDirectory: Path = WORKING_DIRECTORY,
             env: Map<String, String> = emptyMap(),
-            expectedExitValue: Int? = 0,
-        ): ProcessResult = execCommand(
-            SHELL_CMD, SHELL_CMD_ARG, lines.joinToString("\n"),
-            workingDirectory = workingDirectory,
-            env = env,
-            expectedExitValue = expectedExitValue,
-            outputProcessor = outputProcessor,
-            customizer = customizer,
-        )
+        ): Int {
+            return execCommand(
+                command = lines.toCommand(workingDirectory).toString(),
+                arguments = emptyArray(),
+                workingDirectory = null,
+                env = env,
+                inputStream = inputStream,
+                outputProcessor = outputProcessor
+            )
+        }
 
         /**
          * Starts a command synchronously (blocking).
@@ -134,20 +129,20 @@ object Exec {
         fun execCommand(
             command: String,
             vararg arguments: String,
-            workingDirectory: Path = WORKING_DIRECTORY,
+            workingDirectory: Path? = WORKING_DIRECTORY,
             env: Map<String, String> = emptyMap(),
-            expectedExitValue: Int? = 0,
-            outputProcessor: (Process?.(Output) -> Unit)? = null,
-            customizer: ProcessExecutor.() -> Unit = {},
-        ): ProcessResult = prepareCommand(
-            command,
-            arguments,
-            workingDirectory,
-            env,
-            expectedExitValue,
-            outputProcessor,
-            customizer,
-        ).execute()
+            inputStream: InputStream? = InputStream.nullInputStream(),
+            outputProcessor: ((Output) -> Unit)? = { line -> println(line) },
+        ): Int {
+            val commandline = commandLine(command, arguments, workingDirectory, env)
+            outputProcessor?.let { it(META typed "Executing $commandline") }
+            return CommandLineUtils.executeCommandLine(
+                commandline,
+                inputStream,
+                { line -> outputProcessor?.let { it(Output.Type.OUT typed line) } },
+                { line -> outputProcessor?.let { it(Output.Type.ERR typed line) } },
+            )
+        }
     }
 
     /**
@@ -163,20 +158,18 @@ object Exec {
         fun startShellScript(
             workingDirectory: Path = WORKING_DIRECTORY,
             env: Map<String, String> = emptyMap(),
-            expectedExitValue: Int? = 0,
-            outputProcessor: (Process?.(Output) -> Unit)? = null,
-            customizer: ProcessExecutor.() -> Unit = {},
+            inputStream: InputStream? = null,
+            outputProcessor: ((Output) -> Unit)? = null,
             init: ShellScript.() -> Unit,
-        ): StartedProcess {
+        ): CommandLineCallable {
             val shellScript = ShellScript()
             shellScript.init()
             return startShellScript(
+                inputStream = inputStream,
                 outputProcessor = outputProcessor,
-                customizer = customizer,
                 *shellScript.lines.toTypedArray(),
                 workingDirectory = workingDirectory,
                 env = env,
-                expectedExitValue = expectedExitValue,
             )
         }
 
@@ -188,19 +181,17 @@ object Exec {
          * You are to introduce further line breaks on purpose if you know the consequences.
          */
         fun startShellScript(
-            outputProcessor: (Process?.(Output) -> Unit)? = null,
-            customizer: ProcessExecutor.() -> Unit = {},
+            inputStream: InputStream? = null,
+            outputProcessor: ((Output) -> Unit)? = null,
             vararg lines: String,
             workingDirectory: Path = WORKING_DIRECTORY,
             env: Map<String, String> = emptyMap(),
-            expectedExitValue: Int? = 0,
-        ): StartedProcess = Async.startCommand(
-            SHELL_CMD, SHELL_CMD_ARG, lines.joinToString("\n"),
-            workingDirectory = workingDirectory,
+        ): CommandLineCallable = startCommand(
+            command = lines.toCommand(workingDirectory).toString(),
+            workingDirectory = null,
             env = env,
-            expectedExitValue = expectedExitValue,
+            inputStream = inputStream,
             outputProcessor = outputProcessor,
-            customizer = customizer,
         )
 
         /**
@@ -213,93 +204,49 @@ object Exec {
         fun startCommand(
             command: String,
             vararg arguments: String,
-            workingDirectory: Path = WORKING_DIRECTORY,
+            workingDirectory: Path? = WORKING_DIRECTORY,
             env: Map<String, String> = emptyMap(),
-            expectedExitValue: Int? = 0,
-            outputProcessor: (Process?.(Output) -> Unit)? = null,
-            customizer: ProcessExecutor.() -> Unit = {},
-        ): StartedProcess = prepareCommand(
-            command,
-            arguments,
-            workingDirectory,
-            env,
-            expectedExitValue,
-            outputProcessor,
-            customizer,
-        ).start()
+            inputStream: InputStream? = InputStream.nullInputStream(),
+            outputProcessor: ((Output) -> Unit)? = { line -> println(line) },
+        ): CommandLineCallable {
+            val commandline = commandLine(command, arguments, workingDirectory, env)
+            outputProcessor?.let { it(META typed "Executing $commandline") }
+            return CommandLineUtils.executeCommandLineAsCallable(
+                commandline,
+                inputStream,
+                { line -> outputProcessor?.let { it(Output.Type.OUT typed line) } },
+                { line -> outputProcessor?.let { it(Output.Type.ERR typed line) } },
+                0,
+                {}
+            )
+        }
     }
 
-    /**
-     * Sets up a command to run to the extend that only the firing call has to be done.
-     */
-    private fun prepareCommand(
+    private fun commandLine(
         command: String,
         arguments: Array<out String>,
-        workingDirectory: Path,
+        workingDirectory: Path?,
         env: Map<String, String>,
-        expectedExitValue: Int?,
-        outputProcessor: (Process?.(Output) -> Unit)? = null,
-        customizer: ProcessExecutor.() -> Unit,
-    ): ProcessExecutor {
-        return ProcessExecutor()
-            .command(command, *arguments)
-            .directory(workingDirectory.toFile())
-            .environment(env)
-            .exitValue(expectedExitValue)
-            .apply(customizer)
-            .also { if (outputProcessor != null) it.apply(outputMultiplexerFor(outputProcessor)) }
+    ): Commandline {
+        val commandline = Commandline(command)
+        commandline.addArguments(*arguments)
+        commandline.workingDirectory = workingDirectory?.toFile()
+        env.forEach { commandline.addEnvironment(it.key, it.value) }
+        return commandline
     }
 
-    private fun outputMultiplexerFor(outputProcessor: (Process?.(Output) -> Unit)): ProcessExecutor.() -> Unit = {
-        val processExecutor: ProcessExecutor = this
-        val process by ProcessProperty(processExecutor)
-        var runningLogOutputStreams = 0
-        fun convertingOutputStream(conversionType: Output.Type): LogOutputStream {
-            return object : LogOutputStream() {
-                init {
-                    runningLogOutputStreams++
-                    processExecutor.addListener(object : ProcessListener() {
-                        override fun afterFinish(process: Process?, result: ProcessResult?) {
-                            close()
-                            runningLogOutputStreams--
-                        }
-                    })
-                }
-
-                override fun processLine(line: String) {
-                    kotlin.runCatching {
-                        val output = conversionType typed line
-                        process.outputProcessor(output)
-                    }
-                }
-            }
-        }
-        redirectMsg(convertingOutputStream(Output.Type.META))
-        redirectErrorStream(false)
-        redirectOutput(convertingOutputStream(Output.Type.OUT))
-        redirectError(convertingOutputStream(Output.Type.ERR))
-
-        processExecutor.addListener(object : ProcessListener() {
-            override fun afterFinish(process: Process?, result: ProcessResult?) {
-                while (runningLogOutputStreams > 0) {
-                    TermUi.debug("Busy wait")
-                    Thread.sleep(100)
-                }
-            }
-        })
+    private fun Array<out String>.toCommand(workingDirectory: Path): Path {
+        val script = Paths.tempFile(extension = ".sh")
+            .also { scriptFile -> scriptFile.appendText("#!/bin/sh\n") }
+            .also { scriptFile -> scriptFile.appendText("cd ${workingDirectory.quoted}\n") }
+            .also { scriptFile -> forEach { scriptFile.appendText("$it\n") } }
+            .also { scriptFile -> scriptFile.makeExecutable() }
+        //                .also {
+        //                    val log = "Script Generated: $it\n${it.readAll()}"
+        //                    if (outputProcessor != null) outputProcessor(META typed log)
+        //                    else println(META.format(log))
+        //                }
+//        val inlineScript = joinToString(("; ")).singleQuoted
+        return script
     }
-}
-
-class ProcessProperty(processExecutor: ProcessExecutor) : ReadOnlyProperty<Nothing?, Process?>, ProcessListener() {
-    init {
-        processExecutor.addListener(this)
-    }
-
-    private var startedProcess: Process? = null
-
-    override fun afterStart(process: Process?, executor: ProcessExecutor?) {
-        startedProcess = process
-    }
-
-    override fun getValue(thisRef: Nothing?, property: KProperty<*>): Process? = startedProcess
 }

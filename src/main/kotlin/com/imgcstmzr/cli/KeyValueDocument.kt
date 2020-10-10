@@ -1,5 +1,7 @@
 package com.imgcstmzr.cli
 
+import com.github.ajalt.clikt.output.TermUi
+import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.readAll
 import com.imgcstmzr.util.writeText
 import java.nio.file.Path
@@ -24,9 +26,13 @@ class KeyValueDocument(private val properties: MutableList<Pair<String, MutableL
     fun addValue(key: String, value: String) {
         val foundProperties: Pair<String, MutableList<String>>? = findProperty(key)
         if (foundProperties == null) properties.add(key to mutableListOf(value))
-        else if (!foundProperties.second.contains(value)) {
-            val second: MutableList<String> = foundProperties.second
-            second.add(value)
+        else {
+            if (!foundProperties.second.contains(value)) {
+                val second: MutableList<String> = foundProperties.second
+                second.add(value)
+            } else {
+                TermUi.debug("$foundProperties already contains $value")
+            }
         }
     }
 
@@ -45,6 +51,6 @@ class KeyValueDocument(private val properties: MutableList<Pair<String, MutableL
     companion object {
         private val PROPERTY_SEPARATOR = Regex("\\s+")
         private val KEY_VALUE_SEPARATOR = Regex("\\s*=\\s*")
-        private val VALUE_SEPARATOR = ","
+        private const val VALUE_SEPARATOR = ","
     }
 }

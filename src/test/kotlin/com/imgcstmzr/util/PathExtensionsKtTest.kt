@@ -2,13 +2,13 @@ package com.imgcstmzr.util
 
 import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import strikt.api.expectCatching
@@ -30,7 +30,6 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
 @Execution(ExecutionMode.CONCURRENT)
-@Suppress("RedundantInnerClassModifier")
 internal class PathExtensionsKtTest {
 
     @Nested
@@ -66,9 +65,22 @@ internal class PathExtensionsKtTest {
     }
 
     @Nested
+    inner class Executables {
+
+        @Test
+        internal fun `should assert isExecutable`() {
+            val path = Paths.tempFile()
+            expectThat(path.isExecutable).isFalse()
+
+            path.makeExecutable()
+            expectThat(path.isExecutable).isTrue()
+        }
+    }
+
+    @Nested
     inner class FileName {
 
-        @TestFactory
+        @ConcurrentTestFactory
         internal fun `basename of`() = listOf(
             "filename", "filename.test",
             "my/path/filename", "my/path/filename.test",
@@ -81,7 +93,7 @@ internal class PathExtensionsKtTest {
             )
         }
 
-        @TestFactory
+        @ConcurrentTestFactory
         internal fun `extension of`() = listOf(
             "filename" to null,
             "filename." to "",
@@ -100,7 +112,7 @@ internal class PathExtensionsKtTest {
             )
         }
 
-        @TestFactory
+        @ConcurrentTestFactory
         internal fun `replaced extension of`() = listOf(
             "filename", "filename.test",
             "my/path/filename", "my/path/filename.test",
@@ -151,30 +163,32 @@ internal class PathExtensionsKtTest {
     inner class InputStreaming {
 
         val testFile: Path = ClassPath.of("classpath:/cmdline.txt").copyToTempFile()
+
+        @Suppress("SpellCheckingInspection")
         val expected = "console=serial0,115200 console=tty1 root=PARTUUID=907af7d0-02 rootfstype=ext4 elevator=deadline " +
             "fsck.repair=yes rootwait quiet init=/usr/lib/raspi-config/init_resize.sh\n"
 
-        @TestFactory
+        @ConcurrentTestFactory
         internal fun `should read bytes`(): List<DynamicTest> {
             return listOf(
                 ClassPath.of("classpath:/cmdline.txt"),
                 testFile,
             ).flatMap { path: Path ->
                 listOf(
-                    dynamicTest("should stream ${path.quote()}") {
+                    dynamicTest("should stream ${path.quoted}") {
                         expectThat(path.resourceAsStream()).isNotNull().get { String(readAllBytes()) }.isEqualTo(expected)
                     },
-                    dynamicTest("should stream buffered ${path.quote()}") {
+                    dynamicTest("should stream buffered ${path.quoted}") {
                         expectThat(path.resourceAsBufferedStream()).isNotNull().get { String(readAllBytes()) }.isEqualTo(expected)
                     },
-                    dynamicTest("should read buffered ${path.quote()}") {
+                    dynamicTest("should read buffered ${path.quoted}") {
                         expectThat(path.resourceAsBufferedReader()).isNotNull().get { readText() }.isEqualTo(expected)
                     },
                 )
             }
         }
 
-        @TestFactory
+        @ConcurrentTestFactory
         internal fun `should return null when streaming missing resource`() = listOf(
             ClassPath.of("classpath:/missing.txt"),
             ClassPath.of("/Users/missing/missing.missing"),
@@ -198,7 +212,7 @@ internal class PathExtensionsKtTest {
     @Nested
     inner class Wrap {
 
-        @TestFactory
+        @ConcurrentTestFactory
         @DisplayName("should wrap")
         internal fun `should generate filename_test for`() = listOf(
             "filename" to "@@filename@@",
@@ -220,19 +234,20 @@ internal class PathExtensionsKtTest {
     @Nested
     inner class Quote {
 
-        @TestFactory
-        @DisplayName("should quote")
-        internal fun `should generate filename_test for`() = listOf(
-            "filename" to "\"filename\"",
-            "filename.test" to "\"filename.test\"",
-            "my/path/filename" to "\"my/path/filename\"",
-            "my/path/filename.test" to "\"my/path/filename.test\"",
-            "/my/path/filename" to "\"/my/path/filename\"",
-            "/my/path/filename.test" to "\"/my/path/filename.test\"",
-        ).flatMap { (path, expected) ->
+        @ConcurrentTestFactory
+        internal fun `should absolute path`() = Paths.WORKING_DIRECTORY.let { pwd ->
+            listOf(
+                "filename" to "\"$pwd/filename\"",
+                "filename.test" to "\"$pwd/filename.test\"",
+                "my/path/filename" to "\"$pwd/my/path/filename\"",
+                "my/path/filename.test" to "\"$pwd/my/path/filename.test\"",
+                "/my/path/filename" to "\"/my/path/filename\"",
+                "/my/path/filename.test" to "\"/my/path/filename.test\"",
+            )
+        }.flatMap { (path, expected) ->
             listOf(
                 dynamicTest("$path -> $expected") {
-                    val actual = Path.of(path).quote()
+                    val actual = Path.of(path).quoted
                     expectThat(actual).isEqualTo(expected)
                 }
             )
@@ -245,7 +260,7 @@ internal class PathExtensionsKtTest {
         val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
         val tempFile = File.createTempFile(tempFilePrefix, ".txt").also { it.writeBytes(ByteArray(10)); it.deleteOnExit() }
 
-        @TestFactory
+        @ConcurrentTestFactory
         internal fun `should read bytes`() = mapOf(
             tempFile.toPath() to 10,
             ClassPath.of("classpath:funny.img.zip") to 540,
@@ -269,7 +284,7 @@ internal class PathExtensionsKtTest {
     @Nested
     inner class ReadAll {
 
-        @TestFactory
+        @ConcurrentTestFactory
         internal fun `should read complete string`() {
             val expected = """
                 console=serial0,115200 console=tty1 root=PARTUUID=907af7d0-02 rootfstype=ext4 elevator=deadline fsck.repair=yes rootwait quiet init=/usr/lib/raspi-config/init_resize.sh
@@ -281,6 +296,60 @@ internal class PathExtensionsKtTest {
         @Test
         internal fun `should throw on missing file`() {
             expectCatching { ClassPath.of("deleted").readAllBytes() }.isFailure().isA<IOException>()
+        }
+    }
+
+    @Nested
+    inner class Base64 {
+        @Test
+        internal fun `should encode using Base64`() {
+            @Suppress("SpellCheckingInspection")
+            val logo =
+                """
+iVBORw0KGgoAAAANSUhEUgAAAFQAAAARCAMAAAB0IHssAAABYlBMVEVMaXEmq+J4TIfCHnMmq+LCHnMmq+Imq+LCHnMmq+LCHn
+Mmq+Imq+Imq+Imq+J2U40mq+Imq+LCHnMmq+LCHnPCHnPCHnPCHnMmq+KNbp04otcmq+Jna5/CHnPCHnPCHnNaiLtqN3ySMHl8b6GSc6HCHnPCHnNilccmq
++JImc1HntKpLnhfhri5LHefToeqSoRtap1yaZ1NndCFeadikMJ8M3pfeqywPX52fKzCHnOEYJWVTIZ3NXtxT4mOMHlqcaN6U4yqKHaRPX9Sir5gf7KCXZKDS
+YSxR4JWlcijQoCIWY9vf69lWZGhO32cR4OmOHxrdqhojb6sM3p8iLabVotwY5hlL3gmq+LCHnNYb6SUKXarJHRKjcFiSodkOX1ClcmfJ3W8H3NjQYFyLneDL
+Hd+LHdgUox3LXdWd6uaKHVbaJ6JK3axI3SPKnY4nNFdYZkypNlfWpJrL3hPhblUfbKlJXWlLrboAAAAVnRSTlMAMO/AwIDwQECAMBAgsHDr0KAg4NDwoFCQc
+MRQ6OCwcND++LA8YJBMYMiI6MSXoHTg2HlkgvvikJQQwMT88/jc5/To6NTP6EyeuMig+tS+0M50zC6U5O6Ej+cAAAAJcEhZcwAAAWIAAAFiAV8n0FMAAAKfS
+URBVDiNrdNnU9tAEAbgtXxyb2AwxkCA0Anpvffe27sryb1jesn/z9xZ4CHwicl+0Eg63TOrfeforIqJjNK0yIUzV89ZEREhWyT4P9H7tj1NMdseOy8wC6yL1
+B7tbCeJSMTrMicXRkRkdmc7RWTLOtCRzboTSsREZCTAzBUAFU7pW1NDcQrxcQUIgCuyAZRvGXTDYW7XRESA8pxGXQDiAU5Yj0WuMHMRQJGj4WMnQwOTwxq9a
+D+sA01bo7V9h3uoioxM6ZVhg/acxedAuY96FeaXrVZrRgU0molGM8w8Meg0lNDog0CI642azlqqcHaBztQwURdwcwZlpnEAS320xPxWRCJEYdMWxbPMUSLS0
+8ibmQKYzPAhNsV02oRzB8BVIuIStkbJli2NLgG42UfhcOQESqqP6hFEj9Cys4eOjA4TUQ1w7jaBG/oTB2gVrrWg0fcA/N8HKmuu634MGHSib59CTXkx/VQFJ
+nNVIOujKOpLqa2pukFzl4CSWYkaLaTMNANnoo1RrXaA64t/AP3RADXplysGjYz7G4opGqQ/RP+ie0PvDsqoXiCaB+BoppIn4h6a+mA1USqZSfbRcA9wPc8bp
+0GnWTqFTsbjIQcNIboHoHug5SzRbh3uiJ9+0EP9COUSvEFQE7Tsx3US/UC0WgLWY5HHAGbU7QbgjEfagDvto2MecJjy0Up5/UT6IWZ1CnWDU9IAPtU2AVSHa
+azWADYEwIv+iWImHY85SGth5q6ZKed9NMrMiVOoiFRRrrhbAC4T0cITYF+A9uox+kszGp3RUtugykcTR0kdo88s62swGMx9K6gvn630nHk5/zT9Jvj6lQoQj
+QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJggg==
+""".trimIndent().lines().joinToString("")
+
+            expectThat(ClassPath("BKAHLERT.png").toBase64()).isEqualTo(logo)
+        }
+    }
+
+    @Nested
+    inner class DataUri {
+        @Test
+        internal fun `should create data URI`() {
+            @Suppress("SpellCheckingInspection")
+            val logo =
+                """
+data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFQAAAARCAMAAAB0IHssAAABYlBMVEVMaXEmq+J4TIfCHnMmq+LCHnMmq+Imq+LCHnMmq+LCHn
+Mmq+Imq+Imq+Imq+J2U40mq+Imq+LCHnMmq+LCHnPCHnPCHnPCHnMmq+KNbp04otcmq+Jna5/CHnPCHnPCHnNaiLtqN3ySMHl8b6GSc6HCHnPCHnNilccmq
++JImc1HntKpLnhfhri5LHefToeqSoRtap1yaZ1NndCFeadikMJ8M3pfeqywPX52fKzCHnOEYJWVTIZ3NXtxT4mOMHlqcaN6U4yqKHaRPX9Sir5gf7KCXZKDS
+YSxR4JWlcijQoCIWY9vf69lWZGhO32cR4OmOHxrdqhojb6sM3p8iLabVotwY5hlL3gmq+LCHnNYb6SUKXarJHRKjcFiSodkOX1ClcmfJ3W8H3NjQYFyLneDL
+Hd+LHdgUox3LXdWd6uaKHVbaJ6JK3axI3SPKnY4nNFdYZkypNlfWpJrL3hPhblUfbKlJXWlLrboAAAAVnRSTlMAMO/AwIDwQECAMBAgsHDr0KAg4NDwoFCQc
+MRQ6OCwcND++LA8YJBMYMiI6MSXoHTg2HlkgvvikJQQwMT88/jc5/To6NTP6EyeuMig+tS+0M50zC6U5O6Ej+cAAAAJcEhZcwAAAWIAAAFiAV8n0FMAAAKfS
+URBVDiNrdNnU9tAEAbgtXxyb2AwxkCA0Anpvffe27sryb1jesn/z9xZ4CHwicl+0Eg63TOrfeforIqJjNK0yIUzV89ZEREhWyT4P9H7tj1NMdseOy8wC6yL1
+B7tbCeJSMTrMicXRkRkdmc7RWTLOtCRzboTSsREZCTAzBUAFU7pW1NDcQrxcQUIgCuyAZRvGXTDYW7XRESA8pxGXQDiAU5Yj0WuMHMRQJGj4WMnQwOTwxq9a
+D+sA01bo7V9h3uoioxM6ZVhg/acxedAuY96FeaXrVZrRgU0molGM8w8Meg0lNDog0CI642azlqqcHaBztQwURdwcwZlpnEAS320xPxWRCJEYdMWxbPMUSLS0
+8ibmQKYzPAhNsV02oRzB8BVIuIStkbJli2NLgG42UfhcOQESqqP6hFEj9Cys4eOjA4TUQ1w7jaBG/oTB2gVrrWg0fcA/N8HKmuu634MGHSib59CTXkx/VQFJ
+nNVIOujKOpLqa2pukFzl4CSWYkaLaTMNANnoo1RrXaA64t/AP3RADXplysGjYz7G4opGqQ/RP+ie0PvDsqoXiCaB+BoppIn4h6a+mA1USqZSfbRcA9wPc8bp
+0GnWTqFTsbjIQcNIboHoHug5SzRbh3uiJ9+0EP9COUSvEFQE7Tsx3US/UC0WgLWY5HHAGbU7QbgjEfagDvto2MecJjy0Up5/UT6IWZ1CnWDU9IAPtU2AVSHa
+azWADYEwIv+iWImHY85SGth5q6ZKed9NMrMiVOoiFRRrrhbAC4T0cITYF+A9uox+kszGp3RUtugykcTR0kdo88s62swGMx9K6gvn630nHk5/zT9Jvj6lQoQj
+QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJggg==
+""".trimIndent().lines().joinToString("")
+
+            expectThat(ClassPath("BKAHLERT.png").toDataUri()).isEqualTo(logo)
         }
     }
 
@@ -303,7 +372,7 @@ internal class PathExtensionsKtTest {
             expectCatching { deletedFile.copyTo(tempFile) }.isFailure().isA<IOException>()
         }
 
-        @TestFactory
+        @ConcurrentTestFactory
         internal fun `should create temporary copy for`() = listOf(
             ClassPath.of("cmdline.txt") to Regex(".*/cmdline.*\\.txt"),
             ClassPath.of("cmdline") to Regex(".*/cmdline.*\\.tmp"),

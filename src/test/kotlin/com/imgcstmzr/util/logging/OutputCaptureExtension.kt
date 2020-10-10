@@ -10,10 +10,10 @@ import org.junit.jupiter.api.extension.ParameterResolver
 
 class OutputCaptureExtension : BeforeAllCallback, AfterAllCallback, BeforeEachCallback, AfterEachCallback, ParameterResolver {
 
-    override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext?): Boolean =
-        CapturedOutput::class.java == parameterContext.parameter.type
+    override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =
+        parameterContext.parameter.type.isAssignableFrom(CapturedOutput::class.java)
 
-    override fun resolveParameter(parameterContext: ParameterContext?, extensionContext: ExtensionContext): Any? =
+    override fun resolveParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Any? =
         extensionContext.getOutputCapture()
 
     override fun beforeAll(context: ExtensionContext) {

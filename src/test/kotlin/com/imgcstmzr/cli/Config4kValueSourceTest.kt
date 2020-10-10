@@ -38,7 +38,7 @@ internal class Config4kValueSourceTest {
         """.trimMargin())),
             Invocation(listOf("very-----------------long=echo ''")),
             Invocation(listOf("middle=echo ''")),
-            Invocation(listOf("shrt=echo ''")), Invocation(listOf("leisure=\n" + """
+            Invocation(listOf("s=echo ''")), Invocation(listOf("leisure=\n" + """
             sudo -i
             : I'm titling things
             # I rather explain things

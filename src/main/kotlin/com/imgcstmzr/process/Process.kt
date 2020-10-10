@@ -1,6 +1,9 @@
 package com.imgcstmzr.process
 
-import com.imgcstmzr.util.hereDoc
+import com.bkahlert.koodies.shell.toHereDoc
+import com.bkahlert.koodies.string.LineSeparators.CR
+import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.string.withSuffix
 import java.io.BufferedWriter
 import java.io.File
 import java.io.InputStream
@@ -9,7 +12,6 @@ import java.io.OutputStreamWriter
 import java.lang.ProcessBuilder.Redirect
 import java.lang.ProcessBuilder.Redirect.INHERIT
 import java.lang.ProcessBuilder.Redirect.PIPE
-import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
@@ -26,52 +28,12 @@ fun runProcess(
     return CommandLineRunner(blocking)
         .startProcessAndWaitForCompletion(
             File("/bin").toPath(),
-            "sh " + hereDoc(listOf(cmd)),
+            "sh " + listOf(cmd).toHereDoc("HERE-" + String.random(8).toUpperCase()),
             inputRedirect,
             outputRedirect,
             errorRedirect,
             processor,
         )
-}
-
-fun runRawProcess(
-    directory: Path,
-    command: List<String>,
-    blocking: Boolean = true,
-    inputRedirect: Redirect = PIPE,
-    outputRedirect: Redirect = INHERIT,
-    errorRedirect: Redirect = PIPE,
-    processor: Process.(Output) -> Unit,
-): RunningProcess {
-    return CommandLineRunner(blocking)
-        .startRawProcessAndWaitForCompletion(
-            directory,
-            command,
-            inputRedirect,
-            outputRedirect,
-            errorRedirect,
-            processor,
-        )
-}
-
-fun runDocker(
-    containerName: String,
-    vararg args: String,
-    blocking: Boolean = true,
-    inputRedirect: Redirect = PIPE,
-    outputRedirect: Redirect = INHERIT,
-    errorRedirect: Redirect = PIPE,
-    processor: Process.(Output) -> Unit,
-): RunningProcess {
-    val dockerRun = arrayOf(
-        "docker",
-        "run",
-        "--name", "\"$containerName\"",
-        "--rm",
-        *args
-    ).joinToString(" ")
-    val cmd = "docker rm --force \"$containerName\" &> /dev/null ; $dockerRun"
-    return runProcess(args = arrayOf(cmd), blocking, inputRedirect, outputRedirect, errorRedirect, processor)
 }
 
 
@@ -133,7 +95,7 @@ fun Process.input(vararg input: String) {
     val stdin = BufferedWriter(OutputStreamWriter(this.outputStream))
     input.forEach {
         TimeUnit.MILLISECONDS.sleep(10)
-        stdin.write(it)
+        stdin.write(it.withSuffix(CR))
         stdin.flush()
     }
 }
@@ -142,6 +104,6 @@ fun Process.input(vararg input: String) {
  * Enters the given [input] by writing it on the [Process]'s [InputStream] as
  * if it was a user's input sent by a hit of the enter key.
  */
-fun Process.enter(vararg input: String) {
-    input("\r")
+fun Process.enter(vararg inputs: String) {
+    input(*inputs.map { "$it\r" }.toTypedArray())
 }

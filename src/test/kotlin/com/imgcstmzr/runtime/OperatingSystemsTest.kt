@@ -1,39 +1,51 @@
 package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.boolean.emoji
-import com.github.ajalt.clikt.output.TermUi.echo
+import com.bkahlert.koodies.nio.NonBlockingReader
+import com.bkahlert.koodies.terminal.ANSI.EscapeSequences.termColors
+import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
+import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.imgcstmzr.cli.TestCli
-import com.imgcstmzr.process.NonBlockingReader
+import com.imgcstmzr.process.Output.Type.META
 import com.imgcstmzr.process.Output.Type.OUT
+import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.runtime.log.RenderingLogger
-import org.junit.jupiter.api.Assertions.assertTimeoutPreemptively
+import com.imgcstmzr.runtime.ProcessExitMock.Companion.computing
+import com.imgcstmzr.runtime.ProcessExitMock.Companion.immediateSuccess
+import com.imgcstmzr.runtime.ProcessMock.SlowInputStream.Companion.prompt
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
+import com.imgcstmzr.runtime.log.miniTrace
+import com.imgcstmzr.util.debug
+import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.util.logging.InMemoryLoggerFactory
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestFactory
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
+import kotlin.time.minutes
 import kotlin.time.seconds
-import kotlin.time.toJavaDuration
 
 @ExperimentalValueSourceApi
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 @OptIn(ExperimentalTime::class)
 class OperatingSystemsTest {
 
     @Nested
-    inner class Raspi {
+    inner class Raspberry {
         val os = RaspberryPiLite
 
         @Test
@@ -41,17 +53,19 @@ class OperatingSystemsTest {
             expectThat(os.downloadUrl).isEqualTo("https://downloads.raspberrypi.org/raspios_lite_armhf_latest")
         }
 
-        @TestFactory
+        @ConcurrentTestFactory
         internal fun `should detect login line`() = mapOf(
             true to listOf(
                 "raspberrypi login: ",
                 "raspberry-pi login:",
+                "DietPi login: ",
+                "DietPi login:",
                 "anything login:",
                 "ignoreCASE login:",
                 "trailingWhiteSpaces login: \t",
+                "raspberry login: user input",
             ),
             false to listOf(
-                "raspberry login: user input",
                 "",
                 "   ",
                 "anything",
@@ -65,7 +79,7 @@ class OperatingSystemsTest {
             }
         }
 
-        @TestFactory
+        @ConcurrentTestFactory
         internal fun `should detect ready line`() = mapOf(
             true to listOf(
                 "pi@raspberrypi:~$",
@@ -104,69 +118,96 @@ class OperatingSystemsTest {
                 "the-basics",
                 "very-----------------long",
                 "middle",
-                "shrt",
+                "s",
                 "leisure")
         }
 
-        @TestFactory
-        internal fun `should perform log in and terminate`(): List<DynamicTest> {
-            val maxWaitPerLine = 100.milliseconds.toJavaDuration()
-            val prompt = { promptStart: String ->
+        @Timeout(5, unit = TimeUnit.MINUTES)
+        @Execution(CONCURRENT)
+        @ConcurrentTestFactory
+        internal fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory<String?>): List<DynamicTest> {
+            val nonBlockingReaderTimeout = 100.milliseconds
+            val generateProcessOutput = { promptStart: String ->
                 arrayOf(
-                    "boot\n",
-                    "boot\n",
-                    "boot\n",
-                    "raspberry-pi login: $promptStart",
-                    "${maxWaitPerLine.plus(2.seconds.toJavaDuration())}",
-                    "Password: $promptStart",
-                    "${maxWaitPerLine.plus(2.seconds.toJavaDuration())}",
-                    "lorem ipsum\n",
-                    "GNU\n",
-                    "...ABSOLUTELY NO WARRANTY...\n",
-                    "\n",
-                    "\n",
-                    "stuff\n",
-                    "juergen@raspberrypi:~$ \n")
+                    0.seconds to "boot\n",
+                    0.seconds to "boot\n",
+                    0.seconds to "boot\n",
+                    0.seconds to "raspberry-pi login: $promptStart", prompt(),
+                    2.seconds to "Password: $promptStart", prompt(),
+                    2.seconds to "lorem ipsum\n",
+                    0.seconds to "GNU\n",
+                    0.seconds to "...ABSOLUTELY NO WARRANTY...\n",
+                    0.seconds to "\n",
+                    0.seconds to "\n",
+                    0.seconds to "stuff\n",
+                    0.seconds to "juergen@raspberrypi:~$ \n",
+                )
             }
-            val promptWithLineBreaks = "prompt with new lines" to prompt("\n")
-            val promptWithoutLineBreaks = "prompt without new lines" to prompt("")
+            val promptWithLineBreaks = "login:\\𝗻" to generateProcessOutput("\n")
+            val promptWithoutLineBreaks = "login:\\̵n̵" to generateProcessOutput("")
 
-            class Reader(val blocking: Boolean, val succeeding: Boolean = true) : (Process, (String) -> Unit) -> Unit {
-                override fun invoke(process: Process, lineConsumer: (String) -> Unit) =
+            class Reader(val blocking: Boolean, val succeeding: Boolean = true) :
+                    (Process, BlockRenderingLogger<String?, HasStatus>?, (String) -> Unit) -> Unit {
+                override fun invoke(process: Process, logger: BlockRenderingLogger<String?, HasStatus>?, lineConsumer: (String) -> Unit) =
                     if (blocking) BufferedReader(InputStreamReader(process.inputStream)).forEachLine(lineConsumer)
-                    else NonBlockingReader(process, { inputStream }, timeout = maxWaitPerLine).forEachLine(lineConsumer)
+                    else NonBlockingReader(process.inputStream, timeout = nonBlockingReaderTimeout, logger = logger).forEachLine(lineConsumer)
 
-                override fun toString(): String = (if (blocking) "" else "non-") + "blocking reader"
+                override fun toString(): String = (if (blocking) "" else "max $nonBlockingReaderTimeout waiting non-") + "blocking reader"
             }
 
             return mapOf(
-//            Reader(blocking = true) to promptWithLineBreaks,
-//            Reader(blocking = true, succeeding = false) to promptWithoutLineBreaks,
+                // TODO
+//                Reader(blocking = true) to promptWithLineBreaks,
+//                Reader(blocking = true, succeeding = false) to promptWithoutLineBreaks,
                 Reader(blocking = false) to promptWithLineBreaks,
                 Reader(blocking = false) to promptWithoutLineBreaks,
-            ).flatMap { (reader, caseInput: Pair<String, Array<String>>) ->
+            ).flatMap { (reader, caseInput: Pair<String, Array<Pair<Duration, String>>>) ->
                 val case = caseInput.first
-                val input = caseInput.second
-                listOf(50.milliseconds, 200.milliseconds).map { delay ->
-                    dynamicTest("$reader processing $case with $delay delay per line") {
-                        TestCli.cmd.main(emptyList())
-                        val workflow = os.login("john", "passwd123").logging()
-                        val fakeProcess = FakeProcess.withSlowInput(*input, delay = delay)
-                        val runningOS = RunningOS(RenderingLogger.DEFAULT, fakeProcess)
+                val inputs = caseInput.second
+                listOf(
+                    nonBlockingReaderTimeout / 2,
+                    nonBlockingReaderTimeout * 2,
+                ).map { baseDelayPerWord ->
 
-                        assertTimeoutPreemptively(300.seconds.toJavaDuration(), {
-                            reader.invoke(fakeProcess) { line ->
-                                echo(line)
-                                val finished = !workflow.calc(runningOS, OUT typed line)
-                                if (finished) {
-                                    fakeProcess.exit(0)
+                    val name = "$reader + $case + $baseDelayPerWord line delay"
+                    dynamicTest(name) {
+                        TestCli.cmd.main(emptyList())
+                        val workflow = os.loginProgram(Credentials("john", "passwd123")).logging()
+                        val logger = loggerFactory.createLogger(name)
+                        val processMock = ProcessMock.withIndividuallySlowInput(
+                            inputs = inputs,
+                            baseDelayPerWord = baseDelayPerWord,
+                            echoInput = true, // TODO
+                            processExit = { immediateSuccess() },
+                            logger = logger,
+                        )
+                        val runningOS = RunningOS(logger, processMock)
+
+                        assertTimeoutPreemptively(1.minutes, {
+                            var finished = false
+                            reader(processMock, logger) { line ->
+                                logger.miniTrace<String?, Unit>("read<<") {
+                                    if (finished) {
+                                        trace(termColors.magenta(line.debug))
+                                    } else {
+                                        trace(termColors.brightMagenta(line.debug))
+                                        trace("... processing")
+                                        finished = !workflow.compute(runningOS, OUT typed line)
+                                        if (finished) {
+                                            trace("FINISHED")
+                                        } else {
+                                            trace("Ongoing")
+                                        }
+                                    }
                                 }
                             }
-                        }) { "Output till timeout: ${fakeProcess.output}" }
+                        }) {
+                            logger.logLast(Result.failure(IllegalStateException("Deadlock")))
+                            META.format("Unprocessed output: ${processMock.inputStream}")
+                        }
 
                         expectThat(workflow).assertThat("Halted") { it.halted == reader.succeeding }
-                        expectThat(fakeProcess.output.toString()) {
-
+                        expectThat(processMock.received) {
                             if (reader.succeeding) contains("john").contains("passwd123").not { contains("stuff") }
                             else not { contains("john") }.not { contains("passwd123") }.not { contains("stuff") }
                         }
@@ -176,22 +217,22 @@ class OperatingSystemsTest {
         }
 
         @Test
-        internal fun `should finish program`() {
+        internal fun `should finish program`(logger: InMemoryLogger<String?>) {
             TestCli.cmd.main(emptyList())
-            val program = TestCli.cmd.scripts["the-basics"] ?: throw NoSuchElementException("Could not load program")
-            val workflow = os.compileSetupScript("test", program)[1].logging()
-            val fakeProcess = FakeProcess()
-            val runningOS = RunningOS(RenderingLogger.DEFAULT, fakeProcess)
+            val scriptContent = TestCli.cmd.scripts["the-basics"] ?: throw NoSuchElementException("Could not load program")
+            val script = os.compileSetupScript("test", scriptContent)[1].logging()
+            val processMock = ProcessMock(logger = logger, processExit = { computing() })
+            val runningOS = RunningOS(logger, processMock)
 
-            assertTimeoutPreemptively(100.seconds.toJavaDuration(), {
+            assertTimeoutPreemptively(100.seconds, {
                 var running = true
                 while (running) {
-                    running = workflow.calc(runningOS, OUT typed "pi@raspberrypi:~$ ")
+                    running = script.compute(runningOS, OUT typed "pi@raspberrypi:~$ ")
                 }
-            }) { "Output till timeout: ${fakeProcess.output}" }
+            }) { "Output till timeout: ${processMock.outputStream}" }
 
-            expectThat(workflow).assertThat("Halted") { it.halted }
-            expectThat(fakeProcess.output.toString().byteString()).isEqualTo("""
+            expectThat(script).assertThat("Halted") { it.halted }
+            expectThat(processMock.outputStream.toString().byteString()).isEqualTo("""
             sudo -i
             ${"\r"}
             echo "Configuring SSH port"
@@ -203,7 +244,8 @@ ${"\r"}
         }
 
         private fun String.byteString() {
-            toString().toByteArray().joinToString(", ") { it.toString() }
+            toString().toByteArray().joinToString(", ") { "$it" }
         }
     }
 }
+

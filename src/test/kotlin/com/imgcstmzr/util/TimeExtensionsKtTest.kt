@@ -1,8 +1,8 @@
 package com.imgcstmzr.util
 
+import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import strikt.api.expectThat
@@ -10,13 +10,12 @@ import strikt.assertions.isEqualTo
 import java.time.Instant
 
 @Execution(ExecutionMode.CONCURRENT)
-@Suppress("RedundantInnerClassModifier")
 internal class TimeExtensionsKtTest {
 
     @Nested
     inner class ClockMapping {
 
-        @TestFactory
+        @ConcurrentTestFactory
         internal fun `maps hours`() = listOf(
             listOf(-12, 0, 12, 24) to listOf("🕛", "🕧"),
             listOf(-8, 4, 16) to listOf("🕓", "🕟"),
@@ -35,7 +34,7 @@ internal class TimeExtensionsKtTest {
             }
         }
 
-        @TestFactory
+        @ConcurrentTestFactory
         internal fun `maps instants`() = listOf(
             Instant.parse("2020-02-02T02:02:02Z") to listOf("🕝", "🕑", "🕑"),
             Instant.parse("2020-02-02T22:32:02Z") to listOf("🕚", "🕥", "🕥"),

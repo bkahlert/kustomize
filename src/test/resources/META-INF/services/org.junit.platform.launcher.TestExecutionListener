@@ -1,1 +1,2 @@
-com.imgcstmzr.util.TestResultVisualizer
+com.bkahlert.koodies.test.junit.TestExecutionReporter
+com.imgcstmzr.util.logging.InMemoryLoggerResolver

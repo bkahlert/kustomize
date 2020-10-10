@@ -15,7 +15,6 @@ import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 
 @Execution(ExecutionMode.CONCURRENT)
-@Suppress("RedundantInnerClassModifier")
 internal class RegexParserTest {
 
     val regexParser = RegexParser(

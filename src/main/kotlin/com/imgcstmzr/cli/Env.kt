@@ -1,7 +1,7 @@
 package com.imgcstmzr.cli
 
+import com.bkahlert.koodies.terminal.ANSI
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
 import com.typesafe.config.ConfigFactory
 import java.nio.file.Path
 
@@ -12,9 +12,9 @@ class Env private constructor(vararg maps: Map<String, String?>) : Map<String, S
                 .root()
                 .toMap()
                 .mapValues { entry -> entry.value?.unwrapped().toString() }
-                .also { echo((tc.cyan + tc.bold)("${it.size} environment properties found in $path")) }
+                .also { echo((ANSI.EscapeSequences.termColors.cyan + ANSI.EscapeSequences.termColors.bold)("${it.size} environment properties found in $path")) }
         } else {
-            emptyMap<String, String?>().also { echo(tc.yellow("No $path found")) }
+            emptyMap<String, String?>().also { echo(ANSI.EscapeSequences.termColors.yellow("No $path found")) }
         }.toMap(),
         System.getenv(),
     )

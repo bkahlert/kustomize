@@ -2,7 +2,7 @@ PUT http://192.168.16.45:1880/status
 Content-Type: application/json
 
 {
-    "status": "Curious"
+  "status": "Curious"
 }
 
 > {%
@@ -16,11 +16,11 @@ PUT http://192.168.168.192:1880/status
 Content-Type: application/json
 
 {
-    "status": "SettingThingsUp",
-    "task": "BTHR-1",
-    "initial-time": "PT8H",
-    "passed-time": "PT6H30M14S",
-    "email": "mail@bkahlert.com"
+  "status": "SettingThingsUp",
+  "task": "BTHR-1",
+  "initial-time": "PT8H",
+  "passed-time": "PT6H30M14S",
+  "email": "mail@bkahlert.com"
 }
 
 > {%

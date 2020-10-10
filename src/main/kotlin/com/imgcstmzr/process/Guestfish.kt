@@ -1,18 +1,26 @@
 package com.imgcstmzr.process
 
+import com.bkahlert.koodies.string.match
 import com.bkahlert.koodies.string.random
-import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
+import com.bkahlert.koodies.terminal.ANSI
+import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
+import com.github.ajalt.clikt.output.TermUi
 import com.imgcstmzr.process.Exec.Sync.execShellScript
 import com.imgcstmzr.process.Output.Type.ERR
+import com.imgcstmzr.process.Output.Type.META
+import com.imgcstmzr.runtime.HasStatus
+import com.imgcstmzr.runtime.OperatingSystems
+import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
+import com.imgcstmzr.runtime.log.RenderingLogger
+import com.imgcstmzr.runtime.log.miniSegment
+import com.imgcstmzr.runtime.log.segment
 import com.imgcstmzr.util.Paths
-import com.imgcstmzr.util.asEmoji
 import com.imgcstmzr.util.asRootFor
-import com.imgcstmzr.util.hereDoc
-import com.imgcstmzr.util.splitLineBreaks
+import com.imgcstmzr.util.exists
+import com.imgcstmzr.util.quoted
 import com.imgcstmzr.util.withExtension
 import java.nio.file.Path
-import java.time.Instant.now
 
 /**
  * API for easy usage of [guestfish](https://libguestfs.org/guestfish.1.html)—"the guest filesystem shell".
@@ -26,14 +34,16 @@ class Guestfish(
      */
     private val imgPathOnHost: Path,
 
+    private val logger: BlockRenderingLogger<Unit, HasStatus>,
+
     /**
      * Name to be used for the underlying Docker container. If a container with the same name exists, it will be stopped and removed.
      */
     private val containerName: String = imgPathOnHost.fileName.toString(),
 
-    private val debug: Boolean = true,
+    private val debug: Boolean = false,
 ) {
-    fun withRandomSuffix(): Guestfish = Guestfish(imgPathOnHost, imgPathOnHost.fileName.toString() + "-" + String.random(4))
+    fun withRandomSuffix(): Guestfish = Guestfish(imgPathOnHost, logger, imgPathOnHost.fileName.toString() + "-" + String.random(4))
 
     /**
      * [Path] on this host mapped to the OS running inside Docker.
@@ -68,34 +78,60 @@ class Guestfish(
     }
 
     /**
-     * Constructs a command that starts a Guestfish Docker container that runs the given [commands] on [imgPathOnHost].
+     * Constructs a command that starts a Guestfish Docker container that runs the given [guestfishOperation] on [imgPathOnHost].
      *
      * The command stops and removes any existing Guestfish Docker container with the same [containerName].
      */
-    private fun commandApplyingDockerCmd(commands: List<String>): String = imgMountingDockerCmd(hereDoc(commands.plus("umount-all").plus("quit")))
+    private fun commandApplyingDockerCmd(guestfishOperation: GuestfishOperation): String =
+        imgMountingDockerCmd((guestfishOperation + shutdownOperation).asHereDoc())
 
     /**
-     * Runs the given [commands] on a [Guestfish] instance with [imgPathOnHost] mounted.
+     * Runs the given [guestfishOperation] on a [Guestfish] instance with [imgPathOnHost] mounted.
      */
-    fun run(commands: List<String>): Int {
-        echo(now().asEmoji() + " Running ${commands.size} commands inside ${imgPathOnHost.fileName}. This takes a moment...")
-        val cmd = commandApplyingDockerCmd(commands)
-        val exitCode = execShellScript(workingDirectory = imgPathOnHost.parent,
-            lines = arrayOf(cmd),
-            expectedExitValue = null,
-            outputProcessor = newOutputProcessor(debug)).exitValue
-        check(exitCode == 0) {
-            "An error while running the following command inside $imgPathOnHost:\n$cmd\n" +
-                tc.bold("To debug you could try: docker exec -it ${imgPathOnHost.fileName} bash")
+    fun run(guestfishOperation: GuestfishOperation) {
+        if (guestfishOperation.commandCount == 0) {
+            logger.logLine(META typed "No commands specified to run inside ${imgPathOnHost.fileName}. Skipping.")
+            return
         }
-        return exitCode
+
+        val caption = "Running ${imgPathOnHost.fileName} ${guestfishOperation.summary} "
+        val block: RenderingLogger<Unit, HasStatus>.() -> Unit = {
+            val command = commandApplyingDockerCmd(guestfishOperation)
+            require(imgPathOnHost.exists) { "imgcstmzr.img".wrapWithBorder(padding = 20, margin = 20) }
+            val exitCode = execShellScript(workingDirectory = imgPathOnHost.parent,
+                lines = arrayOf(command),
+                outputProcessor = { output ->
+                    if (debug || output.type == ERR) logLine(output)
+                })
+            check(exitCode == 0) {
+                "An error while running the following command inside $imgPathOnHost:\n$command\n" +
+                    ANSI.EscapeSequences.termColors.bold("To debug you could try: docker exec -it ${imgPathOnHost.fileName} bash")
+            }
+            guestfishOperation.commands.map { it.match("""! perl -i.{} -pe 's|(?<={}:)[^:]*|crypt("{}","\\\${'$'}6\\\${'$'}{}\\\${'$'}")|e' {}/shadow""") }
+                .filter { it.size > 2 }
+                .forEach {
+                    val credentials = Credentials(it[1], it[2])
+                    logLine(META typed "Password of user ${credentials.username.quoted} updated.")
+                    OperatingSystems.credentials[imgPathOnHost] = credentials
+                }
+            0
+        }
+        if (debug) logger.segment(caption = caption, ansiCode = null, block = block)
+        else logger.miniSegment(caption = caption, block = block)
+    }
+
+    fun copyOut(guestPathAsString: String): Path {
+        val guestPath = Path.of(guestPathAsString)
+        run(copyOutCommands(listOf(guestPath)))
+        return guestRootOnHost.asRootFor(guestPath)
     }
 
     companion object {
         private const val IMAGE_NAME: String = "cmattoon/guestfish"//"curator/guestfish"
         val DOCKER_MOUNT_ROOT: Path = Path.of("/work")///root")
         val GUEST_MOUNT_ROOT: Path = Path.of("/")
-        val SHARED_DIRECTORY_NAME: String = "guestfish.shared"
+        const val SHARED_DIRECTORY_NAME: String = "guestfish.shared"
+        val shutdownOperation = GuestfishOperation("umount-all", "quit")
 
         /**
          * [Path] on the OS running inside Docker mapped to this host.
@@ -105,24 +141,26 @@ class Guestfish(
         /**
          * Given an [img] location returns the [Path] which is used to exchange data with [img] mounted using [Guestfish].
          */
-        private fun guestRootOnHost(img: Path) = img.parent.resolve(SHARED_DIRECTORY_NAME)!!
+        private fun guestRootOnHost(img: Path) = img.parent.resolve(SHARED_DIRECTORY_NAME)
 
         /**
          * Creates the commands needed to copy the [guestPaths] to this host.
          */
-        fun copyOutCommands(guestPaths: List<Path>): List<String> =
-            guestPaths.flatMap { sourcePath ->
+        fun copyOutCommands(guestPaths: List<Path>): GuestfishOperation =
+            GuestfishOperation(guestPaths.flatMap { sourcePath ->
                 val sanitizedSourcePath = Path.of("/").asRootFor(sourcePath)
                 val destDir = GUEST_ROOT_ON_DOCKER.asRootFor(sourcePath).parent
                 listOf("!mkdir -p $destDir", "- copy-out $sanitizedSourcePath $destDir")
-            }
+            })
 
         /**
          * Creates the commands needed to copy the [hostPaths] to this guest.
+         *
+         * @see <a href="https://unix.stackexchange.com/questions/81240/manually-generate-password-for-etc-shadow">Manually generate password for /etc/shadow</a>
          */
-        fun copyInCommands(hostPaths: List<Path>): List<String> {
-            return hostPaths.flatMap { hostPath ->
-                val relativeHostPath = if (hostPath.contains(SHARED_DIRECTORY_NAME)) {
+        fun copyInCommands(hostPaths: List<Path>): GuestfishOperation =
+            GuestfishOperation(hostPaths.flatMap { hostPath ->
+                val relativeHostPath = if (hostPath.map { toString() }.contains(SHARED_DIRECTORY_NAME)) {
                     hostPath.toList().dropWhile { it.toString() == SHARED_DIRECTORY_NAME }.drop(1).let { Paths.of(it) }
                 } else {
                     hostPath
@@ -130,27 +168,20 @@ class Guestfish(
                 val sourcePath = GUEST_ROOT_ON_DOCKER.asRootFor(relativeHostPath)
                 val destPath = GUEST_MOUNT_ROOT.asRootFor(relativeHostPath.parent)
                 listOf("copy-in $sourcePath $destPath")
-            }
-        }
+            })
 
         /**
          * Creates the commands needed to change the password of [username] to [password].
          */
-        fun changePasswordCommand(username: String, password: String, salt: String): List<String> {
+        fun changePasswordCommand(username: String, password: String, salt: String): GuestfishOperation {
             val shadowPath = Path.of("/etc/shadow")
             val bakExtension = "bak"
             val shadowBackup = shadowPath.withExtension(bakExtension)
-            return """
-            copy-out $shadowPath $DOCKER_MOUNT_ROOT
-            ! perl -i.$bakExtension -pe 's|(?<=$username:)[^:]*|crypt("$password","\\\\\\\${'$'}6\\\\\\\${'$'}$salt\\\\\\\${'$'}")|e' $DOCKER_MOUNT_ROOT/shadow
-            copy-in $DOCKER_MOUNT_ROOT/shadow $DOCKER_MOUNT_ROOT/shadow.$bakExtension /etc
-        """.trimIndent().splitLineBreaks() + copyOutCommands(listOf(shadowPath, shadowBackup))
-        }
-
-        private fun newOutputProcessor(debug: Boolean): Process?.(Output) -> Unit {
-            return { output ->
-                if (debug || output.type == ERR) echo(output)
-            }
+            return GuestfishOperation("""
+                    copy-out $shadowPath $DOCKER_MOUNT_ROOT
+                    ! perl -i.$bakExtension -pe 's|(?<=$username:)[^:]*|crypt("$password","\\\${'$'}6\\\${'$'}$salt\\\${'$'}")|e' $DOCKER_MOUNT_ROOT/shadow
+                    copy-in $DOCKER_MOUNT_ROOT/shadow $DOCKER_MOUNT_ROOT/shadow.$bakExtension /etc
+                """.trimIndent().lines()) + copyOutCommands(listOf(shadowPath, shadowBackup))
         }
 
         /**
@@ -167,11 +198,13 @@ class Guestfish(
         }
 
         /**
-         * Executes the given [commands] on a [Guestfish] instance with just [volumes] mounted.
+         * Executes the given [operation] on a [Guestfish] instance with just [volumes] mounted.
          */
-        fun execute(containerName: String, volumes: Map<Path, Path>, vararg commands: String, debug: Boolean = false): Int {
-            val cmd = dockerCmd(containerName, volumes, appArguments = arrayOf("--", hereDoc(commands.toList().plus("umount-all").plus("quit"))))
-            val exitCode = runProcess(cmd, processor = newOutputProcessor(debug)).blockExitCode
+        fun execute(containerName: String, volumes: Map<Path, Path>, operation: GuestfishOperation, debug: Boolean = false): Int {
+            val cmd = dockerCmd(containerName, volumes, appArguments = arrayOf("--", (operation + shutdownOperation).asHereDoc()))
+            val exitCode = runProcess(cmd, processor = { output ->
+                if (debug || output.type == ERR) TermUi.echo(output)
+            }).blockExitCode
             check(exitCode == 0) { "An error while running the following command inside $containerName:\n$cmd" }
             return exitCode
         }

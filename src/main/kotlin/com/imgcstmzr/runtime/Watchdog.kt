@@ -2,6 +2,7 @@ package com.imgcstmzr.runtime
 
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.github.ajalt.mordant.TermColors
+import com.imgcstmzr.process.Output
 import com.imgcstmzr.runtime.Watchdog.Command.RESET
 import com.imgcstmzr.runtime.Watchdog.Command.STOP
 import com.imgcstmzr.runtime.log.RenderingLogger
@@ -29,28 +30,30 @@ class Watchdog(
     /**
      * Logger that can be accessed in [timedOut].
      */
-    private val renderingLogger: RenderingLogger<Program> = DEFAULT,
+    private val renderingLogger: RenderingLogger<*, *> = DEFAULT,
     /**
      * Gets called after more time has passed between the start of this watchdog and/or two consecutive [reset] calls.
      */
-    val timedOut: RenderingLogger<Program>.() -> Unit,
+    val timedOut: RenderingLogger<*, *>.() -> Unit,
 ) {
     private val blockingQueue = LinkedBlockingQueue<Command>()
     private val thread = Thread {
+        var lastEvent: Command? = RESET
         while (true) {
             try {
                 when (blockingQueue.poll(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
                     RESET -> {
                         // start another poll
+                        lastEvent = RESET
                     }
                     STOP -> {
-                        with(TC) {
-                            echo(cyan("Watchdog stopped."))
-                        }
+                        renderingLogger.logLine(Output.Type.META typed "Watchdog stopped.")
+                        lastEvent = STOP
                         return@Thread
                     }
                     null -> {
-                        renderingLogger.timedOut()
+                        if (lastEvent != null) renderingLogger.timedOut()
+                        lastEvent = null
                         if (!repeating) return@Thread
                     }
                 }

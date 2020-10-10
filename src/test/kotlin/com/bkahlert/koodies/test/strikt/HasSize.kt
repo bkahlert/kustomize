@@ -6,10 +6,10 @@ import strikt.api.Assertion
 import java.nio.file.Path
 
 fun Assertion.Builder<Path>.hasSize(size: Size) =
-    assert("has ${size.formatted}") {
+    assert("has $size") {
         val actualSize = it.size
         when (actualSize == size) {
             true -> pass()
-            else -> fail("was ${actualSize.formatted}")
+            else -> fail("was $actualSize (Δ: ${actualSize - size})")
         }
     }

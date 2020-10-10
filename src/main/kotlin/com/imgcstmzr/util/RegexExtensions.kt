@@ -8,11 +8,16 @@ package com.imgcstmzr.util
 fun Regex.optional(): String = "(?:$pattern)?"
 
 /**
- * Returns a group with no name matching [pattern].
+ * Returns a non capturing group with no name matching [pattern].
  *
  * This method is useful in situations where expressions should be grouped together without modifying the group order.
  */
 fun Regex.Companion.anonymousGroup(pattern: String): String = "(?:$pattern)"
+
+/**
+ * Returns a capturing group with no name matching [pattern].
+ */
+fun Regex.Companion.group(pattern: String): String = "($pattern)"
 
 /**
  * Returns a group with a [name] matching [pattern].

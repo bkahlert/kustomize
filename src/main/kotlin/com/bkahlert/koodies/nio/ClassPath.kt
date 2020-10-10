@@ -8,7 +8,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.ArrayList
 
-class ClassPath private constructor(val path: String) : Path by Path.of("$SCHEMA:$path") {
+class ClassPath(val path: String) : Path by Path.of("$SCHEMA:$path") {
     companion object {
         const val SCHEMA: String = "classpath"
         private const val PREFIX = "$SCHEMA:"

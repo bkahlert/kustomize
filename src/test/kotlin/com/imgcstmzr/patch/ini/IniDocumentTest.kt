@@ -1,6 +1,7 @@
 package com.imgcstmzr.patch.ini
 
 import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.patch.ini.IniDocument.CommentLine
 import com.imgcstmzr.patch.ini.IniDocument.KeyLine
 import com.imgcstmzr.patch.ini.IniDocument.Line
@@ -13,7 +14,6 @@ import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import strikt.api.expectCatching
@@ -28,7 +28,6 @@ import strikt.assertions.isFailure
 import strikt.assertions.isNull
 
 @Execution(ExecutionMode.CONCURRENT)
-@Suppress("RedundantInnerClassModifier")
 internal class IniDocumentTest {
 
     @Suppress("SpellCheckingInspection") val rawDocument = """
@@ -59,7 +58,7 @@ internal class IniDocumentTest {
            abc = 'de f"g${"\t\t\t"} #t${'$'}€$£💷 peace ✌️
         """.trimIndent()
 
-    @TestFactory
+    @ConcurrentTestFactory
     internal fun fragment(): List<DynamicTest> = listOf(
         """
             dtparam=audio=on
@@ -142,6 +141,7 @@ internal class IniDocumentTest {
             expectThat(foundKeys).hasSize(1).get { get(0).toString() }.isEqualTo("dtparam=audio=on")
         }
 
+        @Suppress("SpellCheckingInspection")
         @Test
         fun `should find key by name and section`() {
             val iniDocument = IniDocument(rawDocument)
@@ -160,6 +160,7 @@ internal class IniDocumentTest {
             expectThat(foundKeys).isEmpty()
         }
 
+        @Suppress("SpellCheckingInspection")
         @Test
         fun `should return empty on missing section`() {
             val iniDocument = IniDocument(rawDocument)
@@ -176,6 +177,7 @@ internal class IniDocumentTest {
             println(iniDocument)
         }
 
+        @Suppress("SpellCheckingInspection")
         @Test
         fun `should add to existing key`() {
             val iniDocument = IniDocument(rawDocument)
@@ -207,6 +209,7 @@ internal class IniDocumentTest {
             println(iniDocument.toString())
         }
 
+        @Suppress("SpellCheckingInspection")
         @Test
         fun `should make basic changes and persist file`() {
             val path = ClassPath.of("config.txt").copyToTempFile()

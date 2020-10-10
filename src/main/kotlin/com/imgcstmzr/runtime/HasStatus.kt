@@ -1,6 +1,6 @@
 package com.imgcstmzr.runtime
 
-import com.imgcstmzr.cli.ColorHelpFormatter.Companion.tc
+import com.bkahlert.koodies.terminal.ANSI
 import com.imgcstmzr.util.joinToTruncatedString
 
 interface HasStatus {
@@ -11,9 +11,9 @@ interface HasStatus {
     fun status(): String
 
     companion object {
-        private val pauseSymbol = tc.gray("▮▮")
-        private val playSymbol = tc.gray("◀")
-        private val fastForwardSymbol = tc.green("◀◀")
+        private val pauseSymbol = ANSI.EscapeSequences.termColors.gray("▮▮")
+        private val playSymbol = ANSI.EscapeSequences.termColors.gray("◀")
+        private val fastForwardSymbol = ANSI.EscapeSequences.termColors.green("◀◀")
 
         /**
          * Default implementation to render the status of a [List] of [HasStatus] instances.
@@ -22,8 +22,19 @@ interface HasStatus {
             if (size == 0) return pauseSymbol
             return joinToTruncatedString("  $playSymbol ", "$fastForwardSymbol ",
                 truncated = "…",
-                transform = { x -> tc.bold(x.status()) },
-                transformEnd = { x -> tc.gray(x.status()) })
+                transform = { element -> ANSI.EscapeSequences.termColors.bold(element.status()) },
+                transformEnd = { lastElement -> ANSI.EscapeSequences.termColors.gray(lastElement.status()) })
+        }
+
+        /**
+         * Default implementation to render the status of a [List] of [HasStatus] instances.
+         */
+        fun List<String>.asStatus(): String {
+            if (size == 0) return pauseSymbol
+            return joinToTruncatedString("  $playSymbol ", "$fastForwardSymbol ",
+                truncated = "…",
+                transform = { element -> ANSI.EscapeSequences.termColors.bold(element) },
+                transformEnd = { lastElement -> ANSI.EscapeSequences.termColors.gray(lastElement) })
         }
     }
 }

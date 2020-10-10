@@ -1,11 +1,11 @@
 package com.bkahlert.koodies.nio
 
 import com.bkahlert.koodies.nio.ClassPath.Companion.SCHEMA
+import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.quoted
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
-import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import strikt.api.expectCatching
@@ -21,12 +21,11 @@ import java.io.IOException
 import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
-@Suppress("RedundantInnerClassModifier")
 internal class ClassPathTest {
 
     data class Spec(val exists: Boolean, val resource: String, val size: Int?)
 
-    @TestFactory
+    @ConcurrentTestFactory
     internal fun `fulfills specification`() = listOf(
         "cmdline.txt" to Spec(true, "cmdline.txt", 169),
         "/cmdline.txt" to Spec(true, "cmdline.txt", 169),

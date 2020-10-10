@@ -1,5 +1,6 @@
 package com.imgcstmzr.process
 
+import com.bkahlert.koodies.nio.NonBlockingReader
 import com.github.ajalt.clikt.output.TermUi
 import com.imgcstmzr.process.Output.Type.ERR
 import com.imgcstmzr.process.Output.Type.META
@@ -17,12 +18,14 @@ import java.lang.ProcessBuilder.Redirect.PIPE
 import java.nio.file.Path
 import java.util.Locale
 import java.util.concurrent.CompletableFuture
+import kotlin.time.ExperimentalTime
 
 
 /**
  * Tool that allows to run a shell script without having to hassle with
  * problems concerning output redirection and synchronization.
  */
+@Deprecated("Replace by Exec")
 class CommandLineRunner(private var blocking: Boolean = true) {
     private var log: Logger? = null
 
@@ -40,6 +43,7 @@ class CommandLineRunner(private var blocking: Boolean = true) {
      *
      * @return completed future that blocks on access in case the process has not terminated execution yet
      */
+    @OptIn(ExperimentalTime::class)
     fun startProcessAndWaitForCompletion(
         directory: Path,
         shellScript: String,
@@ -55,8 +59,8 @@ class CommandLineRunner(private var blocking: Boolean = true) {
             BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line -> process.processor(OUT typed line) }
             BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line -> process.processor(ERR typed line) }
         } else {
-            NonBlockingReader(process, { inputStream }).forEachLine { line -> process.processor(OUT typed line) }
-            NonBlockingReader(process, { errorStream }).forEachLine { line -> process.processor(ERR typed line) }
+            NonBlockingReader(process.inputStream).forEachLine { line -> process.processor(OUT typed line) }
+            NonBlockingReader(process.errorStream).forEachLine { line -> process.processor(ERR typed line) }
         }
         return waitForProcessAsync(process)
     }
@@ -100,8 +104,8 @@ class CommandLineRunner(private var blocking: Boolean = true) {
             BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line -> process.processor(OUT typed line) }
             BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line -> process.processor(ERR typed line) }
         } else {
-            NonBlockingReader(process, { inputStream }).forEachLine { line -> process.processor(OUT typed line) }
-            NonBlockingReader(process, { errorStream }).forEachLine { line -> process.processor(ERR typed line) }
+            NonBlockingReader(process.inputStream).forEachLine { line -> process.processor(OUT typed line) }
+            NonBlockingReader(process.errorStream).forEachLine { line -> process.processor(ERR typed line) }
         }
         return waitForProcessAsync(process)
     }

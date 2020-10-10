@@ -1,47 +1,11 @@
 package com.imgcstmzr.util
 
-import com.bkahlert.koodies.string.LINE_BREAKS
-import com.bkahlert.koodies.string.LINE_BREAKS_REGEX
-import com.bkahlert.koodies.string.random
-import com.github.ajalt.mordant.AnsiCode
+import com.bkahlert.koodies.string.Unicode
+import com.bkahlert.koodies.terminal.ansi.Style.Companion.brightCyan
+import com.bkahlert.koodies.terminal.ansi.Style.Companion.gray
 import java.net.URL
-import java.util.regex.Pattern
-import kotlin.math.ceil
-import kotlin.math.floor
 import kotlin.streams.toList
-import kotlin.text.contains as containsRegex
 import kotlin.text.split as originalSplit
-
-private val ansiRemovalPattern: Pattern = Pattern.compile("(?:\\x9B|\\x1B\\[)[0-?]*[ -/]*[@-~]") ?: throw IllegalStateException("Erroneous regex pattern")
-
-/**
- * Returns the [String] with [ANSI escape codes](https://en.wikipedia.org/wiki/ANSI_escape_code) removed.
- */
-fun CharSequence.stripOffAnsi(): String = ansiRemovalPattern.matcher(this.toString()).replaceAll("")
-
-/**
- * Returns the [String] truncated to [maxLength] characters including the [truncationMarker].
- */
-fun String.truncate(maxLength: Int = 15, truncationMarker: String = "…"): String =
-    if (length > maxLength) take(maxLength - truncationMarker.length) + truncationMarker else this
-
-/**
- * Returns if this char sequence contains the specified [other] [CharSequence] as a substring.
- *
- * @param ignoreCase `true` to ignore character case when comparing strings. By default `false`.
- * @param ignoreAnsiFormatting ANSI formatting / escapes are ignored by default. Use `false` consider escape codes as well
- */
-@Suppress("INAPPLICABLE_OPERATOR_MODIFIER")
-operator fun CharSequence.contains(
-    other: CharSequence,
-    ignoreCase: Boolean = false,
-    ignoreAnsiFormatting: Boolean = false,
-): Boolean =
-    if (ignoreAnsiFormatting)
-        this.stripOffAnsi().containsRegex(other.stripOffAnsi(), ignoreCase)
-    else
-        containsRegex(other, ignoreCase)
-
 
 /**
  * Directory that maps Unicode codes to their names.
@@ -99,7 +63,8 @@ val Char.replacementSymbol: Char? get() = unicodeControlCharacterDictionary[this
  */
 val Char.unicodeName: String
     get() = unicodeDictionary.value[this.toLong()] ?: "\\u${toLong().toString(16)}!!${category.name}"
-private val specialCharacterPattern = Regex("[\\P{Print}]")
+private val boxDrawings = Regex.escape(Unicode.boxDrawings.joinToString(""))
+private val specialCharacterPattern = Regex("[^\\p{Print}\\p{IsPunctuation}$boxDrawings]")
 
 /**
  * Replaces all special/non-printable characters, that is, all characters but \x20 (space) to \x7E (tilde) with their Unicode name.
@@ -111,27 +76,27 @@ fun String.replaceNonPrintableCharacters(): String = this.replace(specialCharact
 }
 
 
-/**
- * Splits this char sequence to a list of strings around occurrences of line breaks.
- *
- * @param limit The maximum number of substrings to return. Zero by default means no limit is set.
- */
-fun CharSequence.splitLineBreaks(limit: Int = 0): List<String> =
-    this.originalSplit(*String.LINE_BREAKS, limit = limit)
-
-val CharSequence.multiline: Boolean
-    get() = containsRegex(String.Companion.LINE_BREAKS_REGEX)
-
-/**
- * Creates a [here document](https://en.wikipedia.org/wiki/Here_document) consisting of the given [lines], [label] and [lineSeparator].
- */
-fun hereDoc(lines: List<String>, label: String = "HERE-" + String.random(8).toUpperCase(), lineSeparator: String = System.lineSeparator()): String =
-    lines.joinToString(lineSeparator, "<<$label$lineSeparator", "$lineSeparator$label")
-
 fun CharSequence?.wrap(value: CharSequence): String = "$value$this$value"
 fun CharSequence?.wrap(left: CharSequence, right: CharSequence): String = "$left$this$right"
 inline val CharSequence?.quoted: String get() = this.wrap("\"")
 inline val CharSequence?.singleQuoted: String get() = this.wrap("'")
+inline val CharSequence?.debug: String
+    get() = if (this == null) null.wrap("❬".brightCyan(), "❭".brightCyan())
+    else toString().replaceNonPrintableCharacters().wrap("❬".brightCyan(), "⫻".brightCyan() + "${this.length}".gray() + "❭".brightCyan())
+inline val <T> Iterable<T>?.debug: String get() = this?.joinToString("") { it.toString().debug }.debug
+inline val List<Byte>?.debug: String get() = this?.toByteArray()?.let { bytes: ByteArray -> String(bytes) }.debug
+inline val Char?.debug: String get() = this.toString().replaceNonPrintableCharacters().wrap("❬", "❭")
+inline val Byte?.debug: String get() = this?.let { byte: Byte -> "❬$byte=${byte.toChar().toString().replaceNonPrintableCharacters()}❭" } ?: "❬null❭"
+inline val Any?.debug: String
+    get() =
+        when (this) {
+            null -> "❬null❭"
+            is Iterable<*> -> this.debug
+            is CharSequence -> this.debug
+            is ByteArray -> toList().debug
+            is Byte -> this.debug
+            else -> toString().debug
+        }
 
 /**
  * Creates a truncated string from selected elements separated using [separator] and using the given [prefix] and [postfix] if supplied.
@@ -163,100 +128,4 @@ fun <T> List<T>.joinToTruncatedString(
             }
         }.also { index++ }
     }).toString()
-}
-
-/**
- * Masks a char sequence with a blend effect, that is every second character is replaced by [blender].
- */
-fun CharSequence.blend(blender: Char): String = mapIndexed { index, char -> if (index.isEven) blender else char }.joinToString("")
-
-
-/**
- * Centers this collection of strings by adding the needed amount of whitespaces from the left (and right)
- * of each line.
- *
- * For example:
- * ```
- * foo
- *   bar baz
- * ```
- * becomes
- * ```
- *   foo
- * bar baz
- * ```
- */
-fun Collection<String>.center(whitespace: Char = '\u00A0'): List<String> {
-    return map { it.trim() }.let { trimmed ->
-        trimmed.maxOfOrNull { it.stripOffAnsi().length }?.let { maxLength ->
-            trimmed.map { line ->
-                val missing: Double = (maxLength - line.stripOffAnsi().length) / 2.0
-                whitespace.repeat(floor(missing).toInt()) + line + whitespace.repeat(ceil(missing).toInt())
-            }.toList()
-        } ?: emptyList()
-    }
-}
-
-private fun Char.repeat(count: Int): String = String((1..count).map { this }.toCharArray())
-
-/**
- * Centers this collection of strings by adding the needed amount of whitespaces from the left (and right)
- * of each line.
- *
- * For example:
- * ```
- * foo
- *   bar baz
- * ```
- * becomes
- * ```
- *   foo
- * bar baz
- * ```
- */
-fun String.center(whitespace: Char = '\u00A0'): String = splitLineBreaks().center(whitespace).joinToString(System.lineSeparator())
-
-
-/**
- * Centers this collection of strings by adding the needed amount of whitespaces from the left (and right)
- * of each line.
- *
- * For example:
- * ```
- * foo
- *   bar baz
- * ```
- * becomes
- * ```
- *   foo
- * bar baz
- * ```
- */
-fun String.border(
-    border: String = """
-    ╭─╮
-    │ │
-    ╰─╯
-""".trimIndent(),
-    padding: Int = 0,
-    margin: Int = 0,
-    ansiCode: AnsiCode = AnsiCode(emptyList()),
-): String {
-    val block = splitLineBreaks().center(border[5])
-    if (block.isEmpty()) return border
-    val width = block[0].stripOffAnsi().length
-    val height = block.size
-    val bordered = ansiCode("${border[0]}${border[1].repeat(width + padding * 2)}${border[2]}") + "\n" +
-        (0 until padding / 2).joinToString("") { y ->
-            ansiCode("${border[4]}${border[5].repeat(width + padding * 2)}${border[6]}") + "\n"
-        } +
-        (0 until height).joinToString("") { y ->
-            ansiCode("${border[4]}${border[5].repeat(padding)}") + block[y] + ansiCode("${border[5].repeat(padding)}${border[6]}") + "\n"
-        } +
-        (0 until padding / 2).joinToString("") { y ->
-            ansiCode("${border[4]}${border[5].repeat(width + padding * 2)}${border[6]}") + "\n"
-        } +
-        ansiCode("${border[8]}${border[9].repeat(width + padding * 2)}${border[10]}")
-    return if (margin == 0) bordered
-    else bordered.border(border[5].repeat(11), padding = margin - 1, margin = 0, ansiCode = ansiCode)
 }

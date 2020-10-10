@@ -1,43 +1,68 @@
 package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.unit.Mebi
+import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.bytes
 import com.bkahlert.koodies.unit.size
+import com.imgcstmzr.runtime.HasStatus
+import com.imgcstmzr.runtime.OperatingSystemMock
+import com.imgcstmzr.runtime.OperatingSystems
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.util.DockerRequired
-import com.imgcstmzr.util.FixtureExtension
+import com.imgcstmzr.util.FixtureResolverExtension
+import com.imgcstmzr.util.OS
+import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.util.matches
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import strikt.api.expectThat
-import strikt.assertions.containsExactly
+import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEqualTo
 import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
-@Suppress("RedundantInnerClassModifier")
-@ExtendWith(FixtureExtension::class)
+@ExtendWith(FixtureResolverExtension::class)
 internal class ImgResizePatchTest {
 
     @Test
-    internal fun `should provide commands`() {
-        val patch = ImgResizePatch(10.Mebi.bytes)
-
-        val commands = patch.commands
-
-        expectThat(commands)
-            .containsExactly("xxx")
+    @Disabled
+    internal fun `should provide commands`(logger: InMemoryLogger<Unit>) {
+        expectThat(ImgResizePatch(10.Mebi.bytes)).matches(imgOperationsAssertion = {
+            hasSize(1)
+            get { this[0] }.assert("") { op ->
+                val os = object : OperatingSystemMock() {
+                    var size: Size? = null
+                    var img: Path? = null
+                    var runtime: Runtime? = null
+                    override fun increaseDiskSpace(
+                        size: Size,
+                        img: Path,
+                        parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+                    ) {
+                        this.size = size
+                        this.img = img
+                    }
+                }
+                val img = Path.of("foo")
+                op(os, img, logger)
+                expectThat(os.size).isEqualTo(10.Mebi.bytes)
+                expectThat(os.img).isEqualTo(img)
+            }
+        })
     }
 
     @Test
     @DockerRequired
-    internal fun `should increase size`(img: Path) {
+    internal fun `should increase size`(@OS(OperatingSystems.DietPi::class) img: Path) {
         val oldSize = img.size
         val newSize = img.size + 10.Mebi.bytes
         val patch = ImgResizePatch(newSize)
 
-        val commands = Patcher().invoke(img, patch)
+        patch.patch(img)
 
         expectThat(img.size)
             .isEqualTo(newSize)

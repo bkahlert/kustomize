@@ -1,38 +1,34 @@
 package com.imgcstmzr.runtime.log
 
-import com.github.ajalt.clikt.output.TermUi.echo
+import com.github.ajalt.clikt.output.TermUi
 import com.imgcstmzr.process.Output
+import com.imgcstmzr.process.Output.Type.ERR
+import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.runtime.HasStatus
 
-interface RenderingLogger<in HS : HasStatus> {
+interface RenderingLogger<R, in HS : HasStatus> {
 
-    fun logLine(output: Output, items: List<HS>, trailingNewline: Boolean): RenderingLogger<HS>
+    fun log(message: String, trailingNewline: Boolean)
 
-    fun logLine(output: Output): RenderingLogger<HS> = logLine(output, emptyList(), true)
+    fun logException(
+        exception: Throwable,
+    ): RenderingLogger<R, HS> {
+        log(ERR.format(exception.stackTraceToString()), true)
+        return this
+    }
 
-    fun logLine(output: Output, trailingNewline: Boolean): RenderingLogger<HS> = logLine(output, emptyList(), trailingNewline)
-
-    fun logLine(output: Output, items: List<HS>): RenderingLogger<HS> = logLine(output, items, true)
-
-    fun rawLogStart(string: String): RenderingLogger<HS>
-
-    fun rawLog(string: String): RenderingLogger<HS>
-
-    fun rawLogEnd(string: String = ""): RenderingLogger<HS> = rawLog(string + System.lineSeparator())
+    fun logLine(
+        output: Output = OUT typed "",
+        items: List<HS> = emptyList(),
+    ): RenderingLogger<R, HS> {
+        log(output.formattedLines.joinToString("\n"), true)
+        return this
+    }
 
     companion object {
-
-        val DEFAULT: RenderingLogger<HasStatus> = object : RenderingLogger<HasStatus> {
-            override fun logLine(output: Output, items: List<HasStatus>, trailingNewline: Boolean): RenderingLogger<HasStatus> {
-                echo(output.formattedLines.joinToString(System.lineSeparator()), trailingNewline)
-                return this
-            }
-
-            override fun rawLogStart(string: String): RenderingLogger<HasStatus> = rawLog(string)
-
-            override fun rawLog(string: String): RenderingLogger<HasStatus> {
-                echo(string, trailingNewline = false)
-                return this
+        val DEFAULT: RenderingLogger<Unit, HasStatus> = object : RenderingLogger<Unit, HasStatus> {
+            override fun log(message: String, trailingNewline: Boolean) {
+                TermUi.echo(message, trailingNewline)
             }
         }
     }
