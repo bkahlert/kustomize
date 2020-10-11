@@ -3,7 +3,6 @@ package com.imgcstmzr.runtime.log
 import com.bkahlert.koodies.tracing.MacroTracer
 import com.bkahlert.koodies.tracing.MiniTracer
 import com.imgcstmzr.process.Output.Type.META
-import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.util.format
 import kotlin.reflect.KCallable
 import kotlin.reflect.KFunction0
@@ -12,7 +11,7 @@ import kotlin.reflect.KFunction2
 import kotlin.reflect.KFunction3
 
 @Suppress("NonAsciiCharacters")
-inline fun <reified MR, reified mR> BlockRenderingLogger<MR, HasStatus>?._segment(
+inline fun <reified MR, reified mR> BlockRenderingLogger<MR>?._segment(
     f: String,
     crossinline block: MacroTracer<mR>.() -> mR,
 ): mR = segment(f, null, false, null) {
@@ -41,22 +40,22 @@ inline fun <reified MR, reified mR> BlockRenderingLogger<MR, HasStatus>?._segmen
     }.let(block)
 }
 
-inline fun <reified MR, reified mR> BlockRenderingLogger<MR, HasStatus>?.macroTrace(f: String, crossinline block: MacroTracer<mR>.() -> mR): mR =
+inline fun <reified MR, reified mR> BlockRenderingLogger<MR>?.macroTrace(f: String, crossinline block: MacroTracer<mR>.() -> mR): mR =
     _segment(f.format(), block)
 
-inline fun <reified MR, reified mR> BlockRenderingLogger<MR, HasStatus>?.macroTrace(f: KCallable<mR>, crossinline block: MacroTracer<mR>.() -> mR): mR =
+inline fun <reified MR, reified mR> BlockRenderingLogger<MR>?.macroTrace(f: KCallable<mR>, crossinline block: MacroTracer<mR>.() -> mR): mR =
     _segment(f.format(), block)
 
-inline fun <reified MR, reified mR> BlockRenderingLogger<MR, HasStatus>?.macroTrace(f: KFunction0<mR>, crossinline block: MacroTracer<mR>.() -> mR): mR =
+inline fun <reified MR, reified mR> BlockRenderingLogger<MR>?.macroTrace(f: KFunction0<mR>, crossinline block: MacroTracer<mR>.() -> mR): mR =
     _segment(f.format(), block)
 
-inline fun <reified MR, reified mR> BlockRenderingLogger<MR, HasStatus>?.macroTrace1(f: KFunction1<*, mR>, crossinline block: MacroTracer<mR>.() -> mR): mR =
+inline fun <reified MR, reified mR> BlockRenderingLogger<MR>?.macroTrace1(f: KFunction1<*, mR>, crossinline block: MacroTracer<mR>.() -> mR): mR =
     _segment(f.format(), block)
 
-inline fun <reified MR, reified mR> BlockRenderingLogger<MR, HasStatus>?.macroTrace2(f: KFunction2<*, *, mR>, crossinline block: MacroTracer<mR>.() -> mR): mR =
+inline fun <reified MR, reified mR> BlockRenderingLogger<MR>?.macroTrace2(f: KFunction2<*, *, mR>, crossinline block: MacroTracer<mR>.() -> mR): mR =
     _segment(f.format(), block)
 
-inline fun <reified MR, reified mR> BlockRenderingLogger<MR, HasStatus>?.macroTrace3(
+inline fun <reified MR, reified mR> BlockRenderingLogger<MR>?.macroTrace3(
     f: KFunction3<*, *, *, mR>,
     crossinline block: MacroTracer<mR>.() -> mR,
 ): mR =

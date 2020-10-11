@@ -2,13 +2,12 @@ package com.imgcstmzr.process
 
 import com.bkahlert.koodies.string.match
 import com.bkahlert.koodies.string.random
-import com.bkahlert.koodies.terminal.ANSI
+import com.bkahlert.koodies.terminal.ansi.Style.Companion.bold
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.github.ajalt.clikt.output.TermUi
 import com.imgcstmzr.process.Exec.Sync.execShellScript
 import com.imgcstmzr.process.Output.Type.ERR
 import com.imgcstmzr.process.Output.Type.META
-import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
@@ -34,7 +33,7 @@ class Guestfish(
      */
     private val imgPathOnHost: Path,
 
-    private val logger: BlockRenderingLogger<Unit, HasStatus>,
+    private val logger: BlockRenderingLogger<Unit>,
 
     /**
      * Name to be used for the underlying Docker container. If a container with the same name exists, it will be stopped and removed.
@@ -95,7 +94,7 @@ class Guestfish(
         }
 
         val caption = "Running ${imgPathOnHost.fileName} ${guestfishOperation.summary} "
-        val block: RenderingLogger<Unit, HasStatus>.() -> Unit = {
+        val block: RenderingLogger<Unit>.() -> Unit = {
             val command = commandApplyingDockerCmd(guestfishOperation)
             require(imgPathOnHost.exists) { "imgcstmzr.img".wrapWithBorder(padding = 20, margin = 20) }
             val exitCode = execShellScript(workingDirectory = imgPathOnHost.parent,
@@ -105,7 +104,7 @@ class Guestfish(
                 })
             check(exitCode == 0) {
                 "An error while running the following command inside $imgPathOnHost:\n$command\n" +
-                    ANSI.EscapeSequences.termColors.bold("To debug you could try: docker exec -it ${imgPathOnHost.fileName} bash")
+                    "To debug you could try: docker exec -it ${imgPathOnHost.fileName} bash".bold()
             }
             guestfishOperation.commands.map { it.match("""! perl -i.{} -pe 's|(?<={}:)[^:]*|crypt("{}","\\\${'$'}6\\\${'$'}{}\\\${'$'}")|e' {}/shadow""") }
                 .filter { it.size > 2 }

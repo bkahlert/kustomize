@@ -34,7 +34,7 @@ fun Patch.banner() { // TODO make use of it or delete
     echo("")
 }
 
-fun Patch.patch(img: Path, parentLogger: BlockRenderingLogger<Unit, HasStatus>? = null) {
+fun Patch.patch(img: Path, parentLogger: BlockRenderingLogger<Unit>? = null) {
     parentLogger.segment<Unit, Unit>(name.toUpperCase(), null, borderedOutput = false) {
         applyImgOperations(img, this@patch)
         applyGuestfishAndFileSystemOperations(img, this@patch)
@@ -42,7 +42,7 @@ fun Patch.patch(img: Path, parentLogger: BlockRenderingLogger<Unit, HasStatus>? 
     }
 }
 
-fun BlockRenderingLogger<Unit, HasStatus>.applyImgOperations(img: Path, patch: Patch) {
+fun BlockRenderingLogger<Unit>.applyImgOperations(img: Path, patch: Patch) {
     val count = patch.imgOperations.size
     if (count == 0) {
         logLine(META typed "IMG Operations: —")
@@ -56,7 +56,7 @@ fun BlockRenderingLogger<Unit, HasStatus>.applyImgOperations(img: Path, patch: P
     }
 }
 
-fun BlockRenderingLogger<Unit, HasStatus>.applyGuestfishAndFileSystemOperations(img: Path, patch: Patch) {
+fun BlockRenderingLogger<Unit>.applyGuestfishAndFileSystemOperations(img: Path, patch: Patch) {
     val count = patch.guestfishOperations.size + patch.fileSystemOperations.size
     if (count == 0) {
         logLine(META typed "File System Operations: —")
@@ -109,7 +109,7 @@ fun BlockRenderingLogger<Unit, HasStatus>.applyGuestfishAndFileSystemOperations(
     }
 }
 
-fun BlockRenderingLogger<Unit, HasStatus>.applyPrograms(img: Path, patch: Patch) {
+fun BlockRenderingLogger<Unit>.applyPrograms(img: Path, patch: Patch) {
     val count = patch.programs.size
     if (count == 0) {
         logLine(META typed "Scripts: —")
@@ -140,7 +140,7 @@ interface Operation<TARGET> : HasStatus {
         operator fun invoke(label: String): String = formatter(label)
     }
 
-    operator fun invoke(target: TARGET, log: BlockRenderingLogger<Unit, HasStatus>)
+    operator fun invoke(target: TARGET, log: BlockRenderingLogger<Unit>)
 
     val target: TARGET
 
@@ -159,7 +159,7 @@ interface Operation<TARGET> : HasStatus {
 //    }
 //}
 
-typealias ImgOperation = (OperatingSystem, Path, BlockRenderingLogger<Unit, HasStatus>?) -> Unit
+typealias ImgOperation = (OperatingSystem, Path, BlockRenderingLogger<Unit>?) -> Unit
 
 //class ImgInvocation(override val target: ImgInvocation) : Operation<ImgInvocation> {
 //
@@ -212,7 +212,7 @@ class PathOperation(override val target: Path, val verifier: (Path) -> Unit, val
 
     override var currentStatus: Operation.Status = Ready
 
-    override operator fun invoke(target: Path, log: BlockRenderingLogger<Unit, HasStatus>) {
+    override operator fun invoke(target: Path, log: BlockRenderingLogger<Unit>) {
         log.miniSegment<Unit, Unit>(target.fileName.toString()) {
             logLine(OUT typed termColors.yellow("Action needed? ..."))
             val result = runCatching { verifier.invoke(target) }

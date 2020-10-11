@@ -3,7 +3,6 @@ package com.imgcstmzr.runtime.log
 import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.tracing.MicroTracer
 import com.bkahlert.koodies.tracing.MiniTracer
-import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.util.format
 import kotlin.reflect.KCallable
 import kotlin.reflect.KFunction0
@@ -12,7 +11,7 @@ import kotlin.reflect.KFunction2
 import kotlin.reflect.KFunction3
 
 @Suppress("NonAsciiCharacters")
-inline fun <reified MR, reified mR> BlockRenderingLogger<MR, HasStatus>?._segment(
+inline fun <reified MR, reified mR> BlockRenderingLogger<MR>?._segment(
     f: String,
     crossinline block: MiniTracer<mR>.() -> mR,
 ): mR = miniSegment(f.format()) {
@@ -47,27 +46,27 @@ inline fun <reified MR, reified mR> BlockRenderingLogger<MR, HasStatus>?._segmen
 }
 
 @Suppress("NonAsciiCharacters")
-inline fun <reified mR, reified μR> BlockRenderingLogger<mR, HasStatus>?.miniTrace(f: String, crossinline block: MiniTracer<μR>.() -> μR): μR =
+inline fun <reified mR, reified μR> BlockRenderingLogger<mR>?.miniTrace(f: String, crossinline block: MiniTracer<μR>.() -> μR): μR =
     _segment(f.format(), block)
 
 @Suppress("NonAsciiCharacters")
-inline fun <reified mR, reified μR> BlockRenderingLogger<mR, HasStatus>?.miniTrace(f: KCallable<μR>, crossinline block: MiniTracer<μR>.() -> μR): μR =
+inline fun <reified mR, reified μR> BlockRenderingLogger<mR>?.miniTrace(f: KCallable<μR>, crossinline block: MiniTracer<μR>.() -> μR): μR =
     _segment(f.format(), block)
 
 @Suppress("NonAsciiCharacters")
-inline fun <reified mR, reified μR> BlockRenderingLogger<mR, HasStatus>?.miniTrace(f: KFunction0<μR>, crossinline block: MiniTracer<μR>.() -> μR): μR =
+inline fun <reified mR, reified μR> BlockRenderingLogger<mR>?.miniTrace(f: KFunction0<μR>, crossinline block: MiniTracer<μR>.() -> μR): μR =
     _segment(f.format(), block)
 
 @Suppress("NonAsciiCharacters")
-inline fun <reified mR, reified μR> BlockRenderingLogger<mR, HasStatus>?.miniTrace1(f: KFunction1<*, μR>, crossinline block: MiniTracer<μR>.() -> μR): μR =
+inline fun <reified mR, reified μR> BlockRenderingLogger<mR>?.miniTrace1(f: KFunction1<*, μR>, crossinline block: MiniTracer<μR>.() -> μR): μR =
     _segment(f.format(), block)
 
 @Suppress("NonAsciiCharacters")
-inline fun <reified mR, reified μR> BlockRenderingLogger<mR, HasStatus>?.miniTrace2(f: KFunction2<*, *, μR>, crossinline block: MiniTracer<μR>.() -> μR): μR =
+inline fun <reified mR, reified μR> BlockRenderingLogger<mR>?.miniTrace2(f: KFunction2<*, *, μR>, crossinline block: MiniTracer<μR>.() -> μR): μR =
     _segment(f.format(), block)
 
 @Suppress("NonAsciiCharacters")
-inline fun <reified mR, reified μR> BlockRenderingLogger<mR, HasStatus>?.miniTrace3(
+inline fun <reified mR, reified μR> BlockRenderingLogger<mR>?.miniTrace3(
     f: KFunction3<*, *, *, μR>,
     crossinline block: MiniTracer<μR>.() -> μR,
 ): μR = _segment(f.format(), block)

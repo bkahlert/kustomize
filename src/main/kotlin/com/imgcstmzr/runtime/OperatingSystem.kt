@@ -51,7 +51,7 @@ sealed class OperatingSystems : OperatingSystem {
         override fun increaseDiskSpace(
             size: Size,
             img: Path,
-            parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+            parentLogger: BlockRenderingLogger<Unit>?,
         ) {
             parentLogger.segment<Unit, Unit>("Increasing Disk Space: ${img.size} ➜ $size", null) {
                 var missing = size - img.size
@@ -89,7 +89,7 @@ sealed class OperatingSystems : OperatingSystem {
         override fun bootToUserSession(
             scenario: String,
             img: Path,
-            parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+            parentLogger: BlockRenderingLogger<Unit>?,
             processor: RunningOS.(Output) -> Unit,
         ) {
             val cmd: String = startCommand(scenario, img.toFile())
@@ -150,13 +150,13 @@ sealed class OperatingSystems : OperatingSystem {
         override fun increaseDiskSpace(
             size: Size,
             img: Path,
-            parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+            parentLogger: BlockRenderingLogger<Unit>?,
         ) = RaspberryPiLite.increaseDiskSpace(size, img, parentLogger)
 
         override fun bootToUserSession(
             scenario: String,
             img: Path,
-            parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+            parentLogger: BlockRenderingLogger<Unit>?,
             processor: RunningOS.(Output) -> Unit,
         ): Unit = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
     }
@@ -164,7 +164,7 @@ sealed class OperatingSystems : OperatingSystem {
 
 
 class RunningOS(
-    val renderer: BlockRenderingLogger<*, HasStatus>,
+    val renderer: BlockRenderingLogger<*>,
     var process: Process? = null,
     val shutdownCommand: String = "sudo shutdown -h now",
 ) {
@@ -238,7 +238,7 @@ interface OperatingSystem {
     fun increaseDiskSpace(
         size: Size,
         img: Path,
-        parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+        parentLogger: BlockRenderingLogger<Unit>?,
     )
 
     /**
@@ -248,7 +248,7 @@ interface OperatingSystem {
     fun bootToUserSession(
         scenario: String,
         img: Path,
-        parentLogger: BlockRenderingLogger<Unit, HasStatus>? = null,
+        parentLogger: BlockRenderingLogger<Unit>? = null,
         processor: RunningOS.(Output) -> Unit,
     ): Unit
 
@@ -286,7 +286,7 @@ interface OperatingSystem {
                 }
                 output.matches(passwordPattern) -> {
                     input("${credentials.password}\r")
-                    null
+                    "debug"
                 }
                 else -> "1/2: waiting for prompt"
             }
@@ -299,7 +299,13 @@ interface OperatingSystem {
             "2/2: password..." to { output ->
                 typeInCredentials(output, credentials)
             },
-        )
+            "debug" to { output ->
+                println("\n\n")
+                if (output.contains("Login incorrect")) println("Login incorrect seen")
+//                println(this.hi)
+                null
+            },
+        ).logging()
     }
 
 

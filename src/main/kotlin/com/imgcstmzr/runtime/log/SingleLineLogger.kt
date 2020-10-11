@@ -9,7 +9,7 @@ import com.imgcstmzr.util.debug
 import kotlin.properties.Delegates.vetoable
 import kotlin.reflect.KProperty
 
-abstract class SingleLineLogger<R>(caption: CharSequence) : RenderingLogger<R, HasStatus> {
+abstract class SingleLineLogger<R>(caption: CharSequence) : RenderingLogger<R> {
     init {
         require(caption.isNotBlank()) { "No blank caption allowed." }
     }
@@ -20,7 +20,7 @@ abstract class SingleLineLogger<R>(caption: CharSequence) : RenderingLogger<R, H
     override fun logLine(
         output: Output,
         items: List<HasStatus>,
-    ): RenderingLogger<R, HasStatus> {
+    ): RenderingLogger<R> {
         strings = strings?.plus(output.formattedLines.joinToString(", "))
         if (items.isNotEmpty()) strings = strings?.plus(items.status().lines().joinToString(", ", "(", ")"))
         return this

@@ -2,7 +2,6 @@ package com.bkahlert.koodies.nio
 
 import com.bkahlert.koodies.string.LineSeparators.firstLineSeparatorLength
 import com.bkahlert.koodies.terminal.ANSI
-import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.segment
 import java.io.ByteArrayOutputStream
@@ -16,7 +15,7 @@ import java.io.ByteArrayOutputStream
 class PartialLineReader(
     private val outputStream: ConsumableByteArrayOutputStream,
 ) {
-    fun readPartialLine(logger: BlockRenderingLogger<String?, HasStatus>? = null): String? =
+    fun readPartialLine(logger: BlockRenderingLogger<String?>? = null): String? =
         logger.segment(PartialLineReader::class.simpleName + "." + ::readPartialLine.name + "()", ansiCode = ANSI.EscapeSequences.termColors.blue) {
             return@readPartialLine outputStream.readAll(this@segment)
                 .let { content ->

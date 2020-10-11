@@ -2,7 +2,7 @@ package com.imgcstmzr.runtime.log
 
 //
 //@Suppress("NonAsciiCharacters")
-//inline fun <reified MR> BlockRenderingLogger<MR, HasStatus>?._segment(
+//inline fun <reified MR> BlockRenderingLogger<MR>?._segment(
 //    f: String,
 //    crossinline block: Tracer<MR>.() -> MR,
 //): MR = segment<*, MR>(f, null, false, null) {
@@ -32,24 +32,24 @@ package com.imgcstmzr.runtime.log
 //    }.let(block)
 //}
 //
-//inline fun <reified R, reified MR> BlockRenderingLogger<R, HasStatus>?.trace(f: String, crossinline block: Tracer<MR>.() -> MR): MR =
+//inline fun <reified R, reified MR> BlockRenderingLogger<R>?.trace(f: String, crossinline block: Tracer<MR>.() -> MR): MR =
 //    _segment(f.format(), block)
 //
-//inline fun <reified R, reified MR> BlockRenderingLogger<R, HasStatus>?.trace(f: KCallable<MR>, crossinline block: Tracer<MR>.() -> MR): MR =
+//inline fun <reified R, reified MR> BlockRenderingLogger<R>?.trace(f: KCallable<MR>, crossinline block: Tracer<MR>.() -> MR): MR =
 //    _segment(f.format(), block)
 //
 //@JvmName("trace0")
-//inline fun <reified R, reified MR> BlockRenderingLogger<R, HasStatus>?.trace(f: KFunction0<MR>, crossinline block: Tracer<MR>.() -> MR): MR =
+//inline fun <reified R, reified MR> BlockRenderingLogger<R>?.trace(f: KFunction0<MR>, crossinline block: Tracer<MR>.() -> MR): MR =
 //    _segment(f.format(), block)
 //
 //@JvmName("trace1")
-//inline fun <reified R, reified MR> BlockRenderingLogger<R, HasStatus>?.trace(f: KFunction1<*, MR>, crossinline block: Tracer<MR>.() -> MR): MR =
+//inline fun <reified R, reified MR> BlockRenderingLogger<R>?.trace(f: KFunction1<*, MR>, crossinline block: Tracer<MR>.() -> MR): MR =
 //    _segment(f.format(), block)
 //
 //@JvmName("trace2")
-//inline fun <reified R, reified MR> BlockRenderingLogger<R, HasStatus>?.trace(f: KFunction2<*, *, MR>, crossinline block: Tracer<MR>.() -> MR): MR =
+//inline fun <reified R, reified MR> BlockRenderingLogger<R>?.trace(f: KFunction2<*, *, MR>, crossinline block: Tracer<MR>.() -> MR): MR =
 //    _segment(f.format(), block)
 //
 //@JvmName("trace3")
-//inline fun <reified R, reified MR> BlockRenderingLogger<R, HasStatus>?.trace(f: KFunction3<*, *, *, MR>, crossinline block: Tracer<MR>.() -> MR): MR =
+//inline fun <reified R, reified MR> BlockRenderingLogger<R>?.trace(f: KFunction3<*, *, *, MR>, crossinline block: Tracer<MR>.() -> MR): MR =
 //    _segment(f.format(), block)

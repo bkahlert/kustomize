@@ -30,11 +30,11 @@ class Watchdog(
     /**
      * Logger that can be accessed in [timedOut].
      */
-    private val renderingLogger: RenderingLogger<*, *> = DEFAULT,
+    private val renderingLogger: RenderingLogger<*> = DEFAULT,
     /**
      * Gets called after more time has passed between the start of this watchdog and/or two consecutive [reset] calls.
      */
-    val timedOut: RenderingLogger<*, *>.() -> Unit,
+    val timedOut: RenderingLogger<*>.() -> Unit,
 ) {
     private val blockingQueue = LinkedBlockingQueue<Command>()
     private val thread = Thread {

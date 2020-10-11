@@ -4,7 +4,6 @@ import com.bkahlert.koodies.terminal.ANSI.EscapeSequences.termColors
 import com.bkahlert.koodies.terminal.ansi.Style.Companion.gray
 import com.bkahlert.koodies.terminal.ansi.Style.Companion.strikethrough
 import com.imgcstmzr.process.Output.Type.OUT
-import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.segment
 import com.imgcstmzr.util.debug
@@ -29,7 +28,7 @@ class ConsumableByteArrayOutputStream() : ByteArrayOutputStream() {
     private var offset: Int = 0
     private var lastRead: Pair<IntRange, String> = 0..0 to ""
 
-    fun readAll(logger: BlockRenderingLogger<String?, HasStatus>? = null): String? =
+    fun readAll(logger: BlockRenderingLogger<String?>? = null): String? =
         logger.segment(ConsumableByteArrayOutputStream::class.simpleName + "." + ::readAll.name + "()", ansiCode = termColors.brightBlue) {
             return@readAll toByteArray().let { buffer ->
                 logLine(OUT typed writtenBuf().debug)

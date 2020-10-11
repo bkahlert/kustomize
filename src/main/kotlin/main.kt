@@ -30,7 +30,6 @@ import com.imgcstmzr.patch.UsernamePatch
 import com.imgcstmzr.process.Downloader.download
 import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
-import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.util.Paths
@@ -162,7 +161,7 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
 
             exitProcess(0)
 
-            val logger = BlockRenderingLogger<Unit, HasStatus>("Project: $name")
+            val logger = BlockRenderingLogger<Unit>("Project: $name")
 
             val guestfish = Guestfish(this, logger, "$name-guestfish")
             guestfish.run(copyOutCommands(listOf("/etc/hostname", "/boot/cmdline.txt", "/boot/config.txt").map(Path::of)))

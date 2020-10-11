@@ -6,7 +6,6 @@ import com.bkahlert.koodies.terminal.ascii.Kaomojis
 import com.bkahlert.koodies.terminal.removeEscapeSequences
 import com.imgcstmzr.process.Output
 import com.imgcstmzr.process.Output.Type.ERR
-import com.imgcstmzr.process.Output.Type.META
 import com.imgcstmzr.runtime.Program.Companion.compute
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.segment
@@ -24,7 +23,7 @@ fun Program.bootRunStop(
     scenario: String,
     os: OperatingSystem,
     img: Path,
-    parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+    parentLogger: BlockRenderingLogger<Unit>?,
 ): Unit =
     listOf(this).bootRunStop(scenario, os, img, parentLogger)
 
@@ -39,7 +38,7 @@ fun <P : Program> Collection<P>.bootRunStop(
     scenario: String,
     os: OperatingSystem,
     img: Path,
-    parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+    parentLogger: BlockRenderingLogger<Unit>?,
 ) {
     val unfinishedPrograms: MutableList<Program> = this.toMutableList()
     var watchdog: Watchdog? = null
@@ -59,14 +58,14 @@ fun <P : Program> Collection<P>.bootRunStop(
 
         watchdog = Watchdog(Duration.ofSeconds(45), repeating = true) {
             this@segment.logLine(ERR typed ("\n" + termColors.red("\nThe console seems to have halted... ${Kaomojis.Dogs.random()}")))
-            this@segment.logLine(META typed ("\nLast processed output was:\n" + outputHistory.joinToString("\n") {
+            this@segment.logLine(Output.Type.META typed ("\nLast processed output was:\n" + outputHistory.joinToString("\n") {
                 it.unformatted.replaceNonPrintableCharacters()
             }), listOf(object : HasStatus {
                 override fun status(): String = Kaomojis.Dogs.random() + " ... console seems to have halted." // TODO
             }))
-            this@segment.logLine(META typed ("\n" + termColors.cyan("To help debugging, you can open a separate console and connect using:")),
+            this@segment.logLine(Output.Type.META typed ("\n" + termColors.cyan("To help debugging, you can open a separate console and connect using:")),
                 unfinishedPrograms)
-            this@segment.logLine(META typed (termColors.dim(termColors.cyan("$") + (termColors.cyan + termColors.bold)(
+            this@segment.logLine(Output.Type.META typed (termColors.dim(termColors.cyan("$") + (termColors.cyan + termColors.bold)(
                 " docker attach ...")) + "\n"), unfinishedPrograms)
         }
 

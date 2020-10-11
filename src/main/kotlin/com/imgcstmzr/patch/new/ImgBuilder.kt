@@ -6,7 +6,6 @@ import com.imgcstmzr.patch.ImgOperation
 import com.imgcstmzr.patch.PathOperation
 import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.process.GuestfishOperation
-import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.Program
@@ -64,7 +63,7 @@ class PatchBuilder(
 @PatchDsl
 class ImgOperationsCollector(private val imgOperations: MutableList<ImgOperation>) {
     fun resize(size: Size) {
-        imgOperations += { os: OperatingSystem, path: Path, parentLogger: BlockRenderingLogger<Unit, HasStatus>? ->
+        imgOperations += { os: OperatingSystem, path: Path, parentLogger: BlockRenderingLogger<Unit>? ->
             os.increaseDiskSpace(size,
                 path,
                 parentLogger)

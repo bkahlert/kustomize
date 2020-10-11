@@ -21,14 +21,14 @@ import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.HasStatus.Companion.status
 
 //
-open class BlockRenderingLogger<R, in HS : HasStatus>(
+open class BlockRenderingLogger<R>(
     private val caption: String,
     val borderedOutput: Boolean = false,
     val interceptor: (String) -> String? = { it },
     private val log: (String) -> Unit = { output: String ->
         TermUi.echo(output, trailingNewline = false)
     },
-) : RenderingLogger<R, HS> {
+) : RenderingLogger<R> {
 
     final override fun log(message: String, trailingNewline: Boolean) {
         val finalMessage: String? = interceptor.invoke(message + if (trailingNewline) "\n" else "")
@@ -57,7 +57,7 @@ open class BlockRenderingLogger<R, in HS : HasStatus>(
         log(blockStart, true)
     }
 
-    override fun logLine(output: Output, items: List<HS>): BlockRenderingLogger<R, HS> {
+    override fun logLine(output: Output, items: List<HasStatus>): BlockRenderingLogger<R> {
         if (output.unformatted.isBlank()) return this
 
         val currentPrefix = prefix
@@ -91,28 +91,28 @@ open class BlockRenderingLogger<R, in HS : HasStatus>(
         }
 
         @Deprecated(message = "Use segment instead")
-        inline fun <reified R> render(caption: String, borderedOutput: Boolean = true, block: (RenderingLogger<R, HasStatus>) -> R) {
-            val logger = BlockRenderingLogger<R, HasStatus>(caption, borderedOutput)
+        inline fun <reified R> render(caption: String, borderedOutput: Boolean = true, block: (RenderingLogger<R>) -> R) {
+            val logger = BlockRenderingLogger<R>(caption, borderedOutput)
             kotlin.runCatching { block(logger) }.also { logger.logLast(it) }.getOrThrow()
         }
 
-        inline fun <reified R> render(caption: String): BlockRenderingLogger<R, HasStatus> = BlockRenderingLogger(caption)
+        inline fun <reified R> render(caption: String): BlockRenderingLogger<R> = BlockRenderingLogger(caption)
     }
 }
 
 
-fun BlockRenderingLogger.Companion.Quiet(): BlockRenderingLogger<String?, HasStatus> =
+fun BlockRenderingLogger.Companion.Quiet(): BlockRenderingLogger<String?> =
     BlockRenderingLogger(caption = "", borderedOutput = false) { output -> /* bye bye output */ }
 
 // TODO remove HS
-inline fun <R, R2> BlockRenderingLogger<R, HasStatus>?.segment(
+inline fun <R, R2> BlockRenderingLogger<R>?.segment(
     caption: String,
     ansiCode: AnsiCode? = ANSI.EscapeSequences.color,
     borderedOutput: Boolean = this?.borderedOutput ?: false,
     noinline additionalInterceptor: ((String) -> String?)? = null,
-    block: BlockRenderingLogger<R2, HasStatus>.() -> R2,
+    block: BlockRenderingLogger<R2>.() -> R2,
 ): R2 {
-    val logger: BlockRenderingLogger<R2, HasStatus> =
+    val logger: BlockRenderingLogger<R2> =
         if (this == null) BlockRenderingLogger(
             caption = caption,
             borderedOutput = borderedOutput,
@@ -137,7 +137,7 @@ inline fun <R, R2> BlockRenderingLogger<R, HasStatus>?.segment(
 }
 
 
-inline fun <reified R1, reified R2> BlockRenderingLogger<R1, HasStatus>?.miniSegment(
+inline fun <reified R1, reified R2> BlockRenderingLogger<R1>?.miniSegment(
     caption: String,
     noinline block: SingleLineLogger<R2>.() -> R2,
 ): R2 = if (this == null) {

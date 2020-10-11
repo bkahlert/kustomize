@@ -2,7 +2,6 @@ package com.bkahlert.koodies.nio
 
 import com.bkahlert.koodies.terminal.ANSI.EscapeSequences.termColors
 import com.imgcstmzr.process.Output.Type.OUT
-import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.Quiet
 import com.imgcstmzr.runtime.log.miniSegment
@@ -18,12 +17,12 @@ import kotlin.time.milliseconds
 class NonBlockingReader(
     inputStream: InputStream,
     private val timeoutMillis: Long = 6000,
-    private val logger: BlockRenderingLogger<String?, HasStatus>? = BlockRenderingLogger.Quiet(),
+    private val logger: BlockRenderingLogger<String?>? = BlockRenderingLogger.Quiet(),
 ) {
     @ExperimentalTime constructor(
         inputStream: InputStream,
         timeout: Duration,
-        logger: BlockRenderingLogger<String?, HasStatus>? = BlockRenderingLogger.Quiet(),
+        logger: BlockRenderingLogger<String?>? = BlockRenderingLogger.Quiet(),
     ) : this(inputStream, timeout.toLongMilliseconds(), logger)
 
     private val partialLineReader: PartialLineReader = PartialLineReader(inputStream.convert())

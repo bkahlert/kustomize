@@ -147,8 +147,8 @@ class OperatingSystemsTest {
             val promptWithoutLineBreaks = "login:\\̵n̵" to generateProcessOutput("")
 
             class Reader(val blocking: Boolean, val succeeding: Boolean = true) :
-                    (Process, BlockRenderingLogger<String?, HasStatus>?, (String) -> Unit) -> Unit {
-                override fun invoke(process: Process, logger: BlockRenderingLogger<String?, HasStatus>?, lineConsumer: (String) -> Unit) =
+                    (Process, BlockRenderingLogger<String?>?, (String) -> Unit) -> Unit {
+                override fun invoke(process: Process, logger: BlockRenderingLogger<String?>?, lineConsumer: (String) -> Unit) =
                     if (blocking) BufferedReader(InputStreamReader(process.inputStream)).forEachLine(lineConsumer)
                     else NonBlockingReader(process.inputStream, timeout = nonBlockingReaderTimeout, logger = logger).forEachLine(lineConsumer)
 

@@ -14,7 +14,7 @@ open class OperatingSystemMock(
     override fun increaseDiskSpace(
         size: Size,
         img: Path,
-        parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+        parentLogger: BlockRenderingLogger<Unit>?,
     ) {
         error(::increaseDiskSpace.name + " not implemented in mock")
     }
@@ -22,7 +22,7 @@ open class OperatingSystemMock(
     override fun bootToUserSession(
         scenario: String,
         img: Path,
-        parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+        parentLogger: BlockRenderingLogger<Unit>?,
         processor: RunningOS.(Output) -> Unit,
     ) {
         error(::bootToUserSession.name + " not implemented in mock")

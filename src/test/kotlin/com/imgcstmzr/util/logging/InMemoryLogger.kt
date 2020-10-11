@@ -8,7 +8,6 @@ import com.bkahlert.koodies.string.prefixLinesWith
 import com.bkahlert.koodies.terminal.removeEscapeSequences
 import com.bkahlert.koodies.tracing.MacroTracer
 import com.bkahlert.koodies.tracing.Tracer
-import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.util.Now
 import org.apache.commons.io.output.TeeOutputStream
@@ -25,7 +24,7 @@ class InMemoryLogger<T> private constructor(
     private val outputStream: TeeOutputStream,
     private val captured: MutableList<CharSequence> = mutableListOf(),
     private val start: Long = System.currentTimeMillis(),
-) : BlockRenderingLogger<T, HasStatus>(
+) : BlockRenderingLogger<T>(
     caption = caption,
     borderedOutput = borderedOutput,
     log = { message: String ->
