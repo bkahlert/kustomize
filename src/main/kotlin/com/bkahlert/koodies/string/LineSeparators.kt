@@ -6,25 +6,26 @@ object LineSeparators : Collection<String> {
      *
      * Representations: `\r\n`,  ␍␊
      */
-    const val CRLF = Unicode.carriageReturn + Unicode.lineFeed
+    const val CRLF: String = Unicode.carriageReturn + Unicode.lineFeed
 
     /**
      * Line break as used on Unix systems and modern Mac systems.
      *
-     * Representations: `\n`,  ␊
+     * Representations: `\n`, ␊
+     *
      */
-    const val LF = Unicode.lineFeed
+    const val LF: String = Unicode.lineFeed
 
     /**
      * Line break as used on old Mac systems.
      *
      * Representations: `\r`,  ␍
      */
-    const val CR = Unicode.carriageReturn
+    const val CR: String = Unicode.carriageReturn
 
     private val ALL by lazy { listOf(CRLF, LF, CR) }
 
-    override val size by lazy { ALL.size }
+    override val size: Int by lazy { ALL.size }
 
     override fun contains(element: String): Boolean = ALL.contains(element)
 
@@ -34,7 +35,7 @@ object LineSeparators : Collection<String> {
 
     override fun iterator(): Iterator<String> = ALL.iterator()
 
-    val MAX_LENGTH by lazy { ALL.maxOf { it.length } }
+    val MAX_LENGTH: Int by lazy { ALL.maxOf { it.length } }
 
     /**
      * If this [CharSequence] consists of more than one line this property is `true`.
@@ -44,7 +45,7 @@ object LineSeparators : Collection<String> {
     /**
      * If this [CharSequence] ends with one of the [LineSeparators] this property includes it.
      */
-    val CharSequence.trailingLineSeparator get() :String? = ALL.firstOrNull { this.endsWith(it) }
+    val CharSequence.trailingLineSeparator: String? get() :String? = ALL.firstOrNull { this.endsWith(it) }
 
     /**
      * If this [CharSequence] ends with one of the [LineSeparators] this property is `true`.
