@@ -3,7 +3,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 @Suppress("SpellCheckingInspection")
 plugins {
     kotlin("jvm") version "1.4.0"
-    id("org.jetbrains.dokka") version "1.4.10"
     id("se.patrikerdes.use-latest-versions") version "0.2.14"
     id("com.github.ben-manes.versions") version "0.29.0"
     application
@@ -24,29 +23,71 @@ dependencies {
     implementation("com.github.ajalt:mordant:1.2.1")
     implementation("io.github.config4k:config4k:0.4.2")
     implementation("org.apache.maven.shared:maven-shared-utils:3.3.3")
-    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.4.10")
 
-    testImplementation(kotlin("test-junit5"))
-    testImplementation("org.junit.platform:junit-platform-launcher:1.7.0")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.7.0")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
+    testImplementation(platform("org.junit:junit-bom:5.7.0"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly("org.junit.platform:junit-platform-console") {
+        because("needed to launch the JUnit Platform Console program")
+    }
+    testImplementation("org.junit.platform:junit-platform-commons")
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation("org.junit.jupiter:junit-jupiter-params")
 
     testImplementation("io.strikt:strikt-core:0.27.0")
     testImplementation("io.strikt:strikt-mockk:0.27.0")
 }
 
-tasks.dokkaHtml.configure {
-    outputDirectory.set(buildDir.resolve("docs"))
-    dokkaSourceSets {
-        configureEach {
-            samples.from("src/test/com/bkahlert/koodies/string/MatchesKtTest.kt")
+tasks {
+    test {
+        jvmArgs("-XX:MaxPermSize=256m")
+        minHeapSize = "128m"
+        maxHeapSize = "512m"
+        failFast = false
+    }
+}
+
+allprojects {
+    fun emoji(value: Boolean?): String = when (value) {
+        true -> "✅"
+        false -> "❌"
+        null -> "⭕"
+    }
+
+    fun createTestTypeConfigurer(vararg testTypes: String): Test.() -> Unit = {
+        useJUnitPlatform {
+            println("System properties: ${System.getProperties()}")
+            testTypes.forEach { testType ->
+                val propertyName = "skip${testType}Tests"
+                val propertyValue = System.getProperty(propertyName)
+                val skipTestType: Boolean = propertyValue?.let { it == "" || it == "true" } ?: false
+                println("Checking $propertyName ... $propertyValue → ${emoji(!skipTestType)}   ")
+                if (skipTestType) {
+                    excludeTags(testType)
+                    systemProperties[propertyName] = "true"
+                } else {
+                    includeTags(testType)
+                    systemProperties[propertyName] = "false"
+                }
+            }
+            check(includeTags.all { !excludeTags.contains(it) } && excludeTags.all { !includeTags.contains(it) }) {
+                "includeTage $includeTags and excludeTags $excludeTags must be mutually exclusive!"
+            }
+            println("Running " + testTypes.joinToString("  ", postfix = "  ") {
+                it + " Tests? " + emoji(includeTags.contains(it))
+            })
+        }
+    }
+
+    plugins.withId("java") {
+        this@allprojects.tasks {
+            val test = "test"(Test::class, createTestTypeConfigurer("Unit", "Integration", "E2E"))
         }
     }
 }
 
-tasks.withType<KotlinCompile>().all {
-    kotlinOptions.jvmTarget = "1.8"
+tasks.withType<KotlinCompile> {
+    kotlinOptions.jvmTarget = "11"
     kotlinOptions.useIR = true
     kotlinOptions.languageVersion = "1.4"
     @Suppress("SpellCheckingInspection")
@@ -54,6 +95,7 @@ tasks.withType<KotlinCompile>().all {
     kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
     kotlinOptions.freeCompilerArgs += "-Xinline-classes"
 }
+
 application {
     mainClassName = "MainKt"
 }

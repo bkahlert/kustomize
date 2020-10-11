@@ -41,7 +41,7 @@ internal class ImgResizePatchTest {
                     override fun increaseDiskSpace(
                         size: Size,
                         img: Path,
-                        parentLogger: BlockRenderingLogger<Unit, HasStatus>?,
+                        parentLogger: BlockRenderingLogger<Unit>?,
                     ) {
                         this.size = size
                         this.img = img

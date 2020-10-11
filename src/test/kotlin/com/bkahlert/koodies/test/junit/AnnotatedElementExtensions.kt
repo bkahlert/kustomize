@@ -38,8 +38,10 @@ inline fun <reified A : Annotation> List<AnnotatedElement>.withoutAnnotation(cro
 /**
  * Checks if at least one of [this] elements [annotations] or meta annotations is of the provided type.
  */
-inline fun <reified T : Annotation> AnnotatedElement?.isA(): Boolean =
-    AnnotationSupport.isAnnotated(Optional.ofNullable(this), T::class.java)
+inline fun <reified A : Annotation> AnnotatedElement?.isA(annotationFilter: (A) -> Boolean = { true }): Boolean {
+    val annotation: A? = AnnotationUtils.findAnnotation(this, A::class.java).orElseGet { null }
+    return annotation?.let { annotationFilter(it) } ?: false
+}
 
 /**
  * Checks if at least one of [this] elements [annotations] or meta annotations is of the provided type.
@@ -61,5 +63,7 @@ inline fun <reified T : Annotation> Method?.isA(): Boolean =
 /**
  * Checks if current context is annotated with [A].
  */
-inline fun <reified A : Annotation> ExtensionContext.isAnnotated() = element { isA<A>() }
+inline fun <reified A : Annotation> ExtensionContext.isAnnotated(
+    crossinline annotationFilter: (A) -> Boolean = { true },
+) = element { isA<A>(annotationFilter) }
 
