@@ -5,7 +5,6 @@ import com.imgcstmzr.util.logging.OutputCapture.Companion.splitOutput
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.io.PrintStream
-import java.nio.charset.StandardCharsets
 
 /**
  * Allows to capture a pair of output and error stream like [System.out] and [System.err]
@@ -52,7 +51,7 @@ class AdHocOutputCapture : CapturedOutput {
      * Print stream that forwards all calls to a [TeeOutputStream] of the given output streams
      */
     private class TeePrintStream(vararg streams: OutputStream) :
-        PrintStream(TeeOutputStream(*streams), false, StandardCharsets.UTF_8.name())
+        PrintStream(TeeOutputStream(*streams), false, Charsets.UTF_8.name())
 
     /**
      * Output stream that forwards all output calls to the given output streams

@@ -1,4 +1,5 @@
-package com.bkahlert.koodies.nio//import static org.assertj.core.api.Assertions.assertThat;
+package com.bkahlert.koodies.nio
+
 import com.bkahlert.koodies.number.times
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution

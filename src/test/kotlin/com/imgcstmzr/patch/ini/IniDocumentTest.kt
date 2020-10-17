@@ -1,6 +1,7 @@
 package com.imgcstmzr.patch.ini
 
 import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.patch.ini.IniDocument.CommentLine
 import com.imgcstmzr.patch.ini.IniDocument.KeyLine
@@ -9,7 +10,6 @@ import com.imgcstmzr.patch.ini.IniDocument.SectionLine
 import com.imgcstmzr.util.copyToTempFile
 import com.imgcstmzr.util.quoted
 import com.imgcstmzr.util.readAll
-import com.imgcstmzr.util.replaceNonPrintableCharacters
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested

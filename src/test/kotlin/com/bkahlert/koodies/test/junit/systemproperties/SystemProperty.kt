@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.test.junit.systemproperties
 
+import org.junit.jupiter.api.extension.ExtendWith
 import java.lang.annotation.Repeatable
 
 /**
@@ -22,4 +23,5 @@ import java.lang.annotation.Repeatable
     AnnotationTarget.VALUE_PARAMETER
 )
 @Repeatable(SystemProperties::class)
+@ExtendWith(SystemPropertyExtension::class)
 annotation class SystemProperty(val name: String, val value: String)

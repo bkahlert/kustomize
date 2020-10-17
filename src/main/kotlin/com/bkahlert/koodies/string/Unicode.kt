@@ -1,6 +1,15 @@
 package com.bkahlert.koodies.string
 
-object Unicode {
+import com.bkahlert.koodies.collections.Dictionary
+import com.bkahlert.koodies.collections.dictOf
+import java.net.URL
+import kotlin.streams.toList
+
+object Unicode : Dictionary<Long, String>
+by dictOf("unicode.dict.tsv"
+    .asSystemResourceUrl()
+    .loadTabSeparatedValues(skipLines = 1),
+    { "\\u${it.toString(16)}!!${it.toChar().category.name}" }) {
 
     /**
      * Returns the [CodePoint] with the specified index.
@@ -47,6 +56,7 @@ object Unicode {
         const val tetragramForPurety = "\uD834\uDF2A" // 𝌪
     }
 
+    var boxDrawings = ('\u2500'..'\u257F').toList()
 
     @Suppress("SpellCheckingInspection")
     var whitespaces: List<Char> = listOf(
@@ -72,5 +82,50 @@ object Unicode {
         '\uFEFF', // ZERO WIDTH NO-BREAK SPACE: 0
     )
 
-    var boxDrawings = ('\u2500'..'\u257F').toList()
+    private val controlCharacters: Map<Char, Char> = mapOf(
+        '\u0000' to '\u2400', // ␀
+        '\u0001' to '\u2401', // ␁
+        '\u0002' to '\u2402', // ␂
+        '\u0003' to '\u2403', // ␃
+        '\u0004' to '\u2404', // ␄
+        '\u0005' to '\u2405', // ␅
+        '\u0006' to '\u2406', // ␆
+        '\u0007' to '\u2407', // ␇
+        '\u0008' to '\u2408', // ␈
+        '\u0009' to '\u2409', // ␉
+        '\u000A' to '⏎',// '\u240A', // ␊
+        '\u000B' to '\u240B', // ␋
+        '\u000C' to '\u240C', // ␌
+        '\u000D' to '\u240D', // ␍
+        '\u000E' to '\u240E', // ␎
+        '\u000F' to '\u240F', // ␏
+        '\u0010' to '\u2410', // ␐
+        '\u0011' to '\u2411', // ␑
+        '\u0012' to '\u2412', // ␒
+        '\u0013' to '\u2413', // ␓
+        '\u0014' to '\u2414', // ␔
+        '\u0015' to '\u2415', // ␕
+        '\u0016' to '\u2416', // ␖
+        '\u0017' to '\u2417', // ␗
+        '\u0018' to '\u2418', // ␘
+        '\u0019' to '\u2419', // ␙
+        '\u001A' to '\u241A', // ␚
+        '\u001B' to '\u241B', // ␛
+        '\u001C' to '\u241C', // ␜
+        '\u001D' to '\u241D', // ␝
+        '\u001E' to '\u241E', // ␞
+        '\u001F' to '\u241F', // ␟
+        '\u007F' to '\u2421', // ␡
+    )
+
+    val Char.replacementSymbol: Char? get() = controlCharacters[this]
+
+    /**
+     * Returns this character's [Unicode name](https://unicode.org/charts/charindex.html).
+     */
+    val Char.unicodeName: String get() = Unicode[this.toLong()]
 }
+
+private fun URL.loadTabSeparatedValues(skipLines: Long) = openStream().bufferedReader().lines().skip(skipLines).map { row ->
+    row.split("\t").let { java.lang.Long.parseLong(it.first(), 16) to it.last() }
+}.toList().toMap()

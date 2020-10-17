@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.terminal.ascii
 
+import com.bkahlert.koodies.string.lines
 import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.terminal.ascii.Borders.Block
 import com.bkahlert.koodies.terminal.ascii.Borders.Double
@@ -8,7 +9,7 @@ import com.bkahlert.koodies.terminal.ascii.Borders.HeavyDotted
 import com.bkahlert.koodies.terminal.ascii.Borders.Light
 import com.bkahlert.koodies.terminal.ascii.Borders.LightDotted
 import com.bkahlert.koodies.terminal.ascii.Borders.Rounded
-import com.bkahlert.koodies.terminal.ascii.Borders.Spikes
+import com.bkahlert.koodies.terminal.ascii.Borders.SpikedOutward
 import com.bkahlert.koodies.terminal.removeEscapeSequences
 import com.github.ajalt.mordant.AnsiCode
 
@@ -42,6 +43,17 @@ fun <T : CharSequence> T.wrapWithBorder(
     return if (margin == 0) bordered
     else bordered.wrapWithBorder(border[5].repeat(11), padding = margin - 1, margin = 0, ansiCode = ansiCode)
 }
+
+/**
+ * Centers this list of [CharSequence] and the specified [padding] and puts a [ansiCode] styled [border] around it.
+ * Furthermore a [margin] can be set to distance the bordered text.
+ */
+fun <T : CharSequence> Iterable<T>.wrapWithBorder(
+    border: CharSequence = Borders.Rounded,
+    padding: Int = 2,
+    margin: Int = 1,
+    ansiCode: AnsiCode = AnsiCode(emptyList()),
+): String = lines().wrapWithBorder(border, padding, margin, ansiCode)
 
 class Draw(val obj: CharSequence) {
     val border get() = Border()
@@ -116,13 +128,24 @@ class Draw(val obj: CharSequence) {
 
         /**
          * ```
+         *   △△△△△△△△
+         *  ◁ SAMPLE ▷
+         *   ▽▽▽▽▽▽▽▽
+         * ```
+         */
+        fun spikedOutward(padding: Int = 0, margin: Int = 0, ansiCode: AnsiCode = AnsiCode(emptyList())): String =
+            obj.wrapWithBorder(SpikedOutward, padding, margin, ansiCode)
+
+
+        /**
+         * ```
          *  ◸▽▽▽▽▽▽▽▽◹
          *  ▷ SAMPLE ◁
          *  ◺△△△△△△△△◿
          * ```
          */
-        fun spikes(padding: Int = 0, margin: Int = 0, ansiCode: AnsiCode = AnsiCode(emptyList())): String =
-            obj.wrapWithBorder(Spikes, padding, margin, ansiCode)
+        fun spikedInward(padding: Int = 0, margin: Int = 0, ansiCode: AnsiCode = AnsiCode(emptyList())): String =
+            obj.wrapWithBorder(Borders.SpikedInward, padding, margin, ansiCode)
     }
 
     companion object {

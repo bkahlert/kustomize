@@ -5,6 +5,7 @@ package com.imgcstmzr.util
 import com.bkahlert.koodies.string.CodePoint
 import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.string.LineSeparators.isMultiline
+import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.bkahlert.koodies.string.truncate
 import com.bkahlert.koodies.terminal.removeEscapeSequences
 import com.bkahlert.koodies.unit.BinaryPrefix

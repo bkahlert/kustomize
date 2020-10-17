@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.nio
 
 import com.bkahlert.koodies.number.toBigInteger
-import com.imgcstmzr.util.replaceNonPrintableCharacters
+import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import java.io.ByteArrayOutputStream
 import java.math.BigInteger
 

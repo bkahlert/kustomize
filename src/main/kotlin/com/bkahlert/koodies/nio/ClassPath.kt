@@ -3,7 +3,6 @@ package com.bkahlert.koodies.nio
 import java.io.IOException
 import java.io.InputStream
 import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.ArrayList
@@ -29,7 +28,7 @@ class ClassPath(val path: String) : Path by Path.of("$SCHEMA:$path") {
 
     fun readAllBytes(): ByteArray = resourceAsStream()?.readAllBytes() ?: throw IOException("Error reading $this")
 
-    fun readAllLines(charset: Charset = StandardCharsets.UTF_8): List<String> =
+    fun readAllLines(charset: Charset = Charsets.UTF_8): List<String> =
         Files.newBufferedReader(this, charset).use { reader ->
             val result: MutableList<String> = ArrayList()
             while (true) {

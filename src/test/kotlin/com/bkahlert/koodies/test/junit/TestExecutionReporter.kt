@@ -67,7 +67,7 @@ class TestExecutionReporter : TestExecutionListener, TestWatcher {
                 termColors.bold("Done. BUT $failedTestsCount tests failed!"),
             )
                 .joinToString("\n")
-                .draw.border.spikes(padding = 2, margin = 1, ansiCode = termColors.red)
+                .draw.border.spikedOutward(padding = 2, margin = 1, ansiCode = termColors.red)
                 .also { echo(it) }
         }
     }

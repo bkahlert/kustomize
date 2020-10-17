@@ -3,6 +3,7 @@ package com.imgcstmzr.runtime
 import com.bkahlert.koodies.boolean.emoji
 import com.bkahlert.koodies.nio.NonBlockingReader
 import com.bkahlert.koodies.terminal.ANSI.EscapeSequences.termColors
+import com.bkahlert.koodies.terminal.ansi.Style.Companion.red
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
@@ -153,7 +154,10 @@ class OperatingSystemsTest {
                     (Process, BlockRenderingLogger<String?>?, (String) -> Unit) -> Unit {
                 override fun invoke(process: Process, logger: BlockRenderingLogger<String?>?, lineConsumer: (String) -> Unit) =
                     if (blocking) BufferedReader(InputStreamReader(process.inputStream)).forEachLine(lineConsumer)
-                    else NonBlockingReader(process.inputStream, timeout = nonBlockingReaderTimeout, logger = logger).forEachLine(lineConsumer)
+                    else NonBlockingReader(process.inputStream, timeout = nonBlockingReaderTimeout, logger = logger).forEachLine {
+                        println("Read Line: " + it.red())
+                        lineConsumer(it)
+                    }
 
                 override fun toString(): String = (if (blocking) "" else "max $nonBlockingReaderTimeout waiting non-") + "blocking reader"
             }

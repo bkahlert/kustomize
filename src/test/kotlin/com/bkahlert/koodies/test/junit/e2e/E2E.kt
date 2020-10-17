@@ -1,9 +1,7 @@
 package com.bkahlert.koodies.test.junit.e2e
 
-import com.bkahlert.koodies.test.junit.SkipCondition
 import com.bkahlert.koodies.test.junit.e2e.E2E.Companion.NAME
 import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.extension.ExtendWith
 
 /**
  * JUnit 5 annotation to explicitly denote [end-to-end tests](https://wiki.c2.com/?EndToEndPrinciple)).
@@ -20,7 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith
  * are only one kind of tests that consequently gets skipped already by the sole use of `skipTests`.
  * Instead you can use `skipUnitTests` which is complementary to `skipE2ETests`.
  */
-@ExtendWith(SkipCondition::class)
 @Tag(NAME)
 @Target(
     AnnotationTarget.ANNOTATION_CLASS,

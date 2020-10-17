@@ -46,6 +46,8 @@ inline class Size(val bytes: BigDecimal) : Comparable<Size> {
             require(value.endsWith(SYMBOL)) { "Size must be in unit bytes (e.g. 5 ${DecimalPrefix.Mega}($SYMBOL})." }
             // TODO
         }
+
+        operator fun Number.times(bytes: Size): Size = (bytes.bytes * this.toBigDecimal()).bytes
     }
 
     /**
@@ -143,6 +145,7 @@ inline class Size(val bytes: BigDecimal) : Comparable<Size> {
     operator fun minus(otherBytes: Long): Size = Size(bytes - BigDecimal.valueOf(otherBytes))
     operator fun minus(otherBytes: Int): Size = Size(bytes - BigDecimal.valueOf(otherBytes.toLong()))
     operator fun unaryMinus(): Size = ZERO - this
+    operator fun times(factor: Number): Size = factor.times(this)
     fun toZeroFilledByteArray(): ByteArray = ByteArray(bytes.toInt())
 }
 

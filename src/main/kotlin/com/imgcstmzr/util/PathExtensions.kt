@@ -9,7 +9,6 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import java.net.URLConnection
 import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
@@ -149,7 +148,7 @@ val Path.quoted get() = toAbsolutePath().toString().quoted
 
 fun Path.readAllBytes(): ByteArray = if (this is ClassPath) this.readAllBytes() else Files.readAllBytes(this)
 
-fun Path.readAllLines(charset: Charset = StandardCharsets.UTF_8): List<String> =
+fun Path.readAllLines(charset: Charset = Charsets.UTF_8): List<String> =
     if (this is ClassPath) this.readAllLines(charset) else Files.readAllLines(this, charset)
 
 fun Path.readAll(): String = String(readAllBytes())

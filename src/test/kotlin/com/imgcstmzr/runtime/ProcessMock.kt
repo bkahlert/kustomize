@@ -1,13 +1,18 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.terminal.ansi.Style.Companion.magenta
 import com.bkahlert.koodies.terminal.ansi.Style.Companion.yellow
+import com.bkahlert.koodies.tracing.MiniTracer
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
+import com.imgcstmzr.runtime.log.microTrace
 import com.imgcstmzr.runtime.log.miniTrace
 import com.imgcstmzr.util.Now
 import com.imgcstmzr.util.debug
 import org.apache.commons.io.output.TeeOutputStream
+import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import kotlin.time.Duration
@@ -118,24 +123,32 @@ class ProcessMock(
         private val unread: MutableList<Pair<Duration, MutableList<Byte>>> = inputs.map { it.first to it.second.toByteArray().toMutableList() }.toMutableList()
         val unreadCount: Int get() = unread.map { it.second.size }.sum()
         private val originalCountLength = unreadCount.toString().length
+        private val blockedByPrompt get() = unread.isNotEmpty() && unread.first().first == Duration.INFINITE
         val Int.padded get() = this.toString().padStart(originalCountLength)
-        fun processInput(): Unit = logger.miniTrace(::processInput) {
+
+        fun processInput(logger: MiniTracer<Boolean>): Boolean = logger.microTrace(Grapheme("✏️")) {
             val input = byteArrayOutputStream?.toString() ?: ""
             if (input.isNotEmpty()) {
                 trace(input.debug)
-                if (unread.isNotEmpty() && unread.first().first == Duration.INFINITE) {
+                if (blockedByPrompt) {
                     if (echoInput) unread[0] = Duration.ZERO to input.map { it.toByte() }.toMutableList()
                     else unread.removeFirst()
-                    trace("unblocked")
+                    trace("${input.debug} unblocked prompt")
+                } else {
+                    trace("${input.debug} had no effect, since there was no prompt")
                 }
                 byteArrayOutputStream?.reset()
+            } else {
+                if (blockedByPrompt) {
+                    trace("blocked by prompt")
+                } else {
+                    trace("no input and no prompt")
+                }
             }
+            blockedByPrompt
         }
 
-        fun handleAndReturnBlockingState(): Boolean = logger.miniTrace(::handleAndReturnBlockingState) {
-            processInput()
-            return@miniTrace unread.isNotEmpty() && unread.first().first == Duration.INFINITE
-        }
+        fun handleAndReturnBlockingState(): Boolean = logger.miniTrace(::handleAndReturnBlockingState) { processInput(this) }
 
         companion object {
             fun prompt(): Pair<Duration, String> = Duration.INFINITE to ""
@@ -176,8 +189,7 @@ class ProcessMock(
             trace("${unreadCount.padded.yellow()} bytes unread")
 
             if (terminated) {
-                trace("EOF reached.")
-                return@miniTrace -1
+                throw IOException("EOF reached.")
             }
 
             val yetBlocked = blockUntil - System.currentTimeMillis()
@@ -210,6 +222,36 @@ class ProcessMock(
                 trace("— empty; waiting time for next chunk is $baseDelayPerInput")
             }
             currentByte.toInt()
+        }
+
+        /**
+         * Tries to behave exactly like [BufferedInputStream.read].
+         */
+        fun read1(b: ByteArray, off: Int, len: Int): Int {
+            val avail = available()
+            val cnt = if (avail < len) avail else len
+            (0 until cnt).map { i ->
+                b[off + i] = read().toByte()
+            }
+            return cnt
+        }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            if (off or len or off + len or b.size - (off + len) < 0) {
+                throw IndexOutOfBoundsException()
+            } else if (len == 0) {
+                return 0
+            }
+
+            var n = 0
+            while (true) {
+                val nread = read1(b, off + n, len - n)
+                if (nread <= 0) return if (n == 0) nread else n
+                n += nread
+                if (n >= len) return n
+                // if not closed but no bytes available, return
+                if (!terminated && available() <= 0) return n
+            }
         }
 
         fun input(text: String): Unit = logger.miniTrace(::input) {

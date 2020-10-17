@@ -14,7 +14,6 @@ import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.patch.isEqualTo
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.namedGroups
-import com.imgcstmzr.util.replaceNonPrintableCharacters
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested

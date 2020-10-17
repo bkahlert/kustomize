@@ -7,6 +7,7 @@ import com.imgcstmzr.util.asString
 import com.imgcstmzr.util.debug.Debug
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.api.parallel.Isolated
@@ -17,6 +18,7 @@ import strikt.assertions.isA
 import strikt.assertions.isFailure
 
 @Execution(ExecutionMode.CONCURRENT)
+@ExtendWith(OutputCaptureExtension::class)
 internal class InMemoryLoggerResolverTest {
 
     @Isolated // flaky OutputCapture

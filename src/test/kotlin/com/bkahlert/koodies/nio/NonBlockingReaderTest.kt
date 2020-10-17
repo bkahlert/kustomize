@@ -60,8 +60,8 @@ internal class NonBlockingReaderTest {
 
     @ExperimentalTime
     @Timeout(120, unit = TimeUnit.SECONDS)
-    @RepeatedTest(10)
-    internal fun `should non-BEM character block`(logger: InMemoryLogger<String?>) {
+    @RepeatedTest(3)
+    internal fun `should read characters that are represented by two chars`(logger: InMemoryLogger<String?>) {
         val slowInputStream = ProcessMock.SlowInputStream("𝌪𝌫𝌬𝌭𝌮", "𝌯𝌰\n", "𝌱𝌲𝌳𝌴𝌵\n",
             baseDelayPerInput = 1.seconds,
             logger = logger)
@@ -106,8 +106,10 @@ internal class NonBlockingReaderTest {
             val reader = NonBlockingReader(inputStream(), timeout = 1000.milliseconds, logger = logger)
 
             val read = mutableListOf<String>()
-            assertTimeoutPreemptively(10.seconds.toJavaDuration()) {
-                reader.forEachLine { read.add(it) }
+            assertTimeoutPreemptively(8.seconds.toJavaDuration()) {
+                reader.forEachLine {
+                    read.add(it)
+                }
             }
             expectThat(read.lines()).isEqualTo(inputStream().readAllBytes().decodeToString().withoutTrailingLineSeparator)
         }
@@ -116,7 +118,7 @@ internal class NonBlockingReaderTest {
         internal fun `should quickly read boot sequence using foreign forEachLine`(logger: InMemoryLogger<String?>) {
             val reader = NonBlockingReader(inputStream(), timeout = 1000.milliseconds, logger = logger)
 
-            assertTimeoutPreemptively(10.seconds.toJavaDuration()) {
+            assertTimeoutPreemptively(8.seconds.toJavaDuration()) {
                 val read = reader.readLines()
                 expectThat(read.lines()).isEqualTo(inputStream().readAllBytes().decodeToString().withoutTrailingLineSeparator)
             }

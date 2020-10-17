@@ -1,5 +1,6 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.bkahlert.koodies.terminal.ansi.Style.Companion.red
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.clikt.output.TermUi.echo
@@ -7,7 +8,6 @@ import com.github.ajalt.mordant.TermColors
 import com.imgcstmzr.process.Output
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.quoted
-import com.imgcstmzr.util.replaceNonPrintableCharacters
 
 /**
  * Instances of this class can interact with a process based on a state machine for the given [name].

@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.terminal
 
+import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.bkahlert.koodies.terminal.ASCII.Masking.blend
-import com.imgcstmzr.util.replaceNonPrintableCharacters
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution

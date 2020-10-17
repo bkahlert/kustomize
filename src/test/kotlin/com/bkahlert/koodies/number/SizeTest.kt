@@ -13,6 +13,7 @@ import com.bkahlert.koodies.unit.Mega
 import com.bkahlert.koodies.unit.Pebi
 import com.bkahlert.koodies.unit.Peta
 import com.bkahlert.koodies.unit.Size
+import com.bkahlert.koodies.unit.Size.Companion.times
 import com.bkahlert.koodies.unit.Tebi
 import com.bkahlert.koodies.unit.Tera
 import com.bkahlert.koodies.unit.Yobi
@@ -23,6 +24,7 @@ import com.bkahlert.koodies.unit.abi
 import com.bkahlert.koodies.unit.atto
 import com.bkahlert.koodies.unit.bytes
 import com.bkahlert.koodies.unit.centi
+import com.bkahlert.koodies.unit.deca
 import com.bkahlert.koodies.unit.deci
 import com.bkahlert.koodies.unit.fembi
 import com.bkahlert.koodies.unit.femto
@@ -303,4 +305,45 @@ internal class SizeTest {
             expectThat(tempFile.size.toString(BinaryPrefix::class)).isEqualTo("24.0 KiB")
         }
     }
+
+    @Nested
+    inner class Conversion {
+        val binFactor = BinaryPrefix.Kibi.factor
+        val decFactor = DecimalPrefix.kilo.factor
+
+        @ConcurrentTestFactory
+        internal fun `should format to specific unit`() = listOf(
+            42.Yobi.bytes to binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * 42.bytes,
+            42.Zebi.bytes to binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * 42.bytes,
+            42.Exbi.bytes to binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * 42.bytes,
+            42.Pebi.bytes to binFactor * binFactor * binFactor * binFactor * binFactor * 42.bytes,
+            42.Tebi.bytes to binFactor * binFactor * binFactor * binFactor * 42.bytes,
+            42.Gibi.bytes to binFactor * binFactor * binFactor * 42.bytes,
+            42.Mebi.bytes to binFactor * binFactor * 42.bytes,
+            42.Kibi.bytes to binFactor * 42.bytes,
+            42.bytes to 42.bytes,
+
+            42.Yotta.bytes to decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * 42.bytes,
+            42.Zetta.bytes to decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * 42.bytes,
+            42.Exa.bytes to decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * 42.bytes,
+            42.Peta.bytes to decFactor * decFactor * decFactor * decFactor * decFactor * 42.bytes,
+            42.Tera.bytes to decFactor * decFactor * decFactor * decFactor * 42.bytes,
+            42.Giga.bytes to decFactor * decFactor * decFactor * 42.bytes,
+            42.Mega.bytes to decFactor * decFactor * 42.bytes,
+            42.kilo.bytes to decFactor * 42.bytes,
+            42.hecto.bytes to 10 * 10 * 42.bytes, // ⛳️
+            42.deca.bytes to 10 * 42.bytes, // 🌽
+            42.bytes to 42.bytes,
+        ).flatMap { (decimalSize: Size, binarySize: Size) ->
+            listOf(
+                dynamicTest("$decimalSize == $binarySize") {
+                    expectThat(decimalSize).isEqualTo(binarySize)
+                },
+                dynamicTest("${decimalSize.bytes} == ${binarySize.bytes}") {
+                    expectThat(decimalSize.bytes).isEqualTo(binarySize.bytes)
+                },
+            )
+        }
+    }
 }
+

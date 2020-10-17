@@ -55,7 +55,7 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
          */
         private fun prepareImg(vararg files: String): Path {
             val basename = "imgcstmzr"
-            echo(META typed now().asEmoji() + " Preparing test img with files ${files.joinToString(", ")}. This takes a moment...") // TODO
+            echo(META typed now().asEmoji() + " Preparing test img with files ${files.joinToString(", ")}. This takes a moment...")
             val hostDir = Paths.TEST.resolve(basename + String.random(4)).mkdirs()
             val copyFileCommands: List<String> = files.map {
                 ClassPath.of(it).copyTo(hostDir.resolve(it))

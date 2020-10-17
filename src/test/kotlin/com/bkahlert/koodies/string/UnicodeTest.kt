@@ -1,4 +1,5 @@
-package com.bkahlert.koodies.string//import static org.assertj.core.api.Assertions.assertThat;
+package com.bkahlert.koodies.string
+
 import com.bkahlert.koodies.string.Unicode.nextLine
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.util.isEqualToStringWise

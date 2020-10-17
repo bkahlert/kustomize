@@ -3,6 +3,7 @@ package com.imgcstmzr.util.logging
 import com.bkahlert.koodies.terminal.removeEscapeSequences
 import com.imgcstmzr.util.asString
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.api.parallel.Isolated
@@ -13,6 +14,7 @@ import strikt.assertions.startsWith
 import java.io.ByteArrayOutputStream
 
 @Execution(ExecutionMode.CONCURRENT)
+@ExtendWith(OutputCaptureExtension::class)
 @Isolated // flaky OutputCapture
 internal class InMemoryLoggerTest {
     @Test

@@ -3,10 +3,12 @@ package com.imgcstmzr.runtime
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
 import com.bkahlert.koodies.thread.startAsDaemon
+import com.bkahlert.koodies.tracing.MiniTracer
 import com.imgcstmzr.process.input
 import com.imgcstmzr.runtime.ProcessExitMock.Companion.immediateExit
 import com.imgcstmzr.runtime.ProcessExitMock.Companion.immediateSuccess
 import com.imgcstmzr.runtime.ProcessMock.SlowInputStream.Companion.prompt
+import com.imgcstmzr.runtime.log.miniTrace
 import com.imgcstmzr.util.isEqualToByteWise
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.DynamicTest.dynamicTest
@@ -268,7 +270,7 @@ internal class ProcessMockTest {
                 flush() // !
 
                 expectThat(p.received).isEqualTo("user input")
-                (p.inputStream as ProcessMock.SlowInputStream).processInput()
+                (p.inputStream as ProcessMock.SlowInputStream).processInput(logger.miniTrace("???") { MiniTracer.nullMiniTracer() })
                 expectThat(p.inputStream.available()).isEqualTo("user input".length)
             }
         }
