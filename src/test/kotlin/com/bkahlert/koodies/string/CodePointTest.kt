@@ -1,9 +1,11 @@
 package com.bkahlert.koodies.string
 
+import com.bkahlert.koodies.string.CodePoint.Companion.isValidCodePoint
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.util.asString
 import com.imgcstmzr.util.quoted
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
@@ -12,6 +14,8 @@ import strikt.api.expectThat
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
+import strikt.assertions.isFalse
+import strikt.assertions.isTrue
 
 @Execution(ExecutionMode.CONCURRENT)
 internal class CodePointTest {
@@ -51,7 +55,7 @@ internal class CodePointTest {
     ).flatMap { (string, codePointCount) ->
         listOf(
             dynamicTest("${string.quoted} should validate successfully") {
-                val actual = CodePoint.isCodePoint(string)
+                val actual = string.isValidCodePoint()
                 expectThat(actual).isEqualTo(codePointCount == 1L)
             },
 
@@ -78,5 +82,21 @@ internal class CodePointTest {
                     expectCatching { CodePoint(string) }
                 },
         )
+    }
+
+    @Nested
+    inner class CodePointValidation {
+
+        @Test
+        internal fun `should detekt valid code points`() {
+            expectThat('A'.toInt())
+                .isEqualTo(65)
+                .get { isValidCodePoint() }.isTrue()
+        }
+
+        @Test
+        internal fun `should detekt invalid code points`() {
+            expectThat(Character.MAX_CODE_POINT + 1).get { isValidCodePoint() }.isFalse()
+        }
     }
 }

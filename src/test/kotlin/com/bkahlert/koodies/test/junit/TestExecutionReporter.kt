@@ -23,7 +23,7 @@ class TestExecutionReporter : TestExecutionListener, TestWatcher {
     private var startTimestamp by Delegates.notNull<Long>()
     private var failedTestsCount: Int = 0
 
-    override fun testPlanExecutionStarted(testPlan: TestPlan?) {
+    override fun testPlanExecutionStarted(testPlan: TestPlan) {
         startTimestamp = System.currentTimeMillis()
     }
 

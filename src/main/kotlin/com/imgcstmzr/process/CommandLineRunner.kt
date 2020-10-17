@@ -89,7 +89,7 @@ class CommandLineRunner(private var blocking: Boolean = true) {
         }
     }
 
-    fun startRawProcessAndWaitForCompletion(
+    @ExperimentalTime fun startRawProcessAndWaitForCompletion(
         directory: Path,
         command: List<String>,
         inputRedirect: Redirect = PIPE,

@@ -7,7 +7,7 @@ import kotlin.toBigInteger as kotlinToBigInteger
 /**
  * Returns the value of this number as a [BigInteger], which may involve rounding.
  */
-fun Number.toBigIntegerXXX(): BigInteger = when (this) {
+fun Number.toBigInteger(): BigInteger = when (this) {
     is BigDecimal -> toBigInteger()
     is Float -> toLong().kotlinToBigInteger()
     is Double -> toLong().kotlinToBigInteger()

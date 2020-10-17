@@ -3,6 +3,8 @@ package com.bkahlert.koodies.test.junit
 import com.bkahlert.koodies.string.random
 import com.imgcstmzr.util.debug.Debug
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
+import org.junit.jupiter.api.TestTemplate
 import org.junit.jupiter.api.extension.ExtensionContext
 import java.lang.reflect.AnnotatedElement
 import java.lang.reflect.Executable
@@ -41,7 +43,7 @@ val ExtensionContext.isDebug: Boolean
 val Optional<Method>?.isDebug get() = this?.orElse(null).isDebug
 val Optional<Method>?.isTest get() = this?.orElse(null).isTest
 val Method?.isDebug get() = this.isA<Debug>()
-val Method?.isTest get() = this.isA<Test>()
+val Method?.isTest get() = this.isA<Test>() || this.isA<TestFactory>() || this.isA<TestTemplate>()
 
 val Optional<Class<*>>.children
     get() = orElse(null)?.declaredMethods?.filter { it.isTest }?.toList() ?: emptyList()

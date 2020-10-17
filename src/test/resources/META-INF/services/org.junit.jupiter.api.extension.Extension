@@ -4,4 +4,4 @@ com.imgcstmzr.util.logging.InMemoryLoggerResolver
 com.imgcstmzr.util.logging.OutputCaptureExtension
 com.imgcstmzr.util.FixtureResolverExtension
 com.bkahlert.koodies.test.junit.systemproperties.SystemPropertyExtension
-com.bkahlert.koodies.test.junit.SystemPropertyBasedSkipTestCondition
+com.bkahlert.koodies.test.junit.SkipCondition

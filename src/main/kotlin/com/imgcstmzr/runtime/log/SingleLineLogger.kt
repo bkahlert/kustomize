@@ -17,11 +17,8 @@ abstract class SingleLineLogger<R>(caption: CharSequence) : RenderingLogger<R> {
     var strings: List<String>? by vetoable(listOf("$caption:"),
         onChange = { property: KProperty<*>, oldValue: List<String>?, newValue: List<String>? -> oldValue != null })
 
-    override fun logLine(
-        output: Output,
-        items: List<HasStatus>,
-    ): RenderingLogger<R> {
-        strings = strings?.plus(output.formattedLines.joinToString(", "))
+    override fun logLineLambda(items: List<HasStatus>, block: () -> Output): RenderingLogger<R> {
+        strings = strings?.plus(block().formattedLines.joinToString(", "))
         if (items.isNotEmpty()) strings = strings?.plus(items.status().lines().joinToString(", ", "(", ")"))
         return this
     }

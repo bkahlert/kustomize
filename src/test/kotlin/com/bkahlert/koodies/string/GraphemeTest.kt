@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.string
 
+import com.bkahlert.koodies.string.Grapheme.Companion.asGraphemeSequence
 import com.bkahlert.koodies.string.Grapheme.Companion.getGrapheme
 import com.bkahlert.koodies.string.Grapheme.Companion.getGraphemeCount
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
@@ -13,6 +14,7 @@ import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
 import strikt.assertions.isA
+import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 
@@ -94,7 +96,105 @@ internal class GraphemeTest {
     }
 
     @Test
+    internal fun `should provide sequence`() {
+        expectThat("웃유♋⌚⌛⚡𝌿☯✡☪".asGraphemeSequence().map { it.toString() }.toList()).containsExactly("웃", "유", "♋", "⌚", "⌛", "⚡", "𝌿", "☯", "✡", "☪")
+    }
+
+    @Test
     internal fun `should throw n+1th grapheme`() {
         expectCatching { "웃유♋⌚⌛⚡☯✡☪".let { it.getGrapheme(it.getGraphemeCount()) } }.isFailure().isA<StringIndexOutOfBoundsException>()
+    }
+
+    @Test
+    fun `should parse empty`() {
+        expectThat(Grapheme.toGraphemeList("")).isEmpty()
+    }
+
+    @Test
+    fun `should parse latin`() {
+        val string = "yo"
+        expectThat(Grapheme.toGraphemeList(string))
+            .containsExactly(
+                nonEmojiResultAt(string, 0, 1),
+                nonEmojiResultAt(string, 1, 1)
+            )
+    }
+
+    @Test
+    fun `should parse emojis`() {
+        val emoji = StringBuilder()
+            .appendCodePoint(0x1F4A9)
+            .appendCodePoint(0x1F525)
+            .toString()
+        expectThat(Grapheme.toGraphemeList(emoji))
+            .containsExactly(
+                emojiResultAt(emoji, 0, 2),
+                emojiResultAt(emoji, 2, 2)
+            )
+    }
+
+    @Test
+    fun `should parse emoji sequences`() {
+        /**
+         * [Flag of Scotland](http://emojipedia.org/flag-for-scotland/)
+         */
+        val emoji = StringBuilder()
+            .appendCodePoint(0x1F3F4)
+            .appendCodePoint(0xE0067)
+            .appendCodePoint(0xE0062)
+            .appendCodePoint(0xE0073)
+            .appendCodePoint(0xE0063)
+            .appendCodePoint(0xE0074)
+            .appendCodePoint(0xE007F)
+            .toString()
+        expectThat(Grapheme.toGraphemeList(emoji))
+            .containsExactly(
+                emojiResultAt(emoji, 0, 14)
+            )
+    }
+
+    @Test
+    fun `should parse emoji modifiers`() {
+        val emoji = StringBuilder()
+            .appendCodePoint(0x1F46E)
+            .appendCodePoint(0x1F3FF)
+            .appendCodePoint(0x200D)
+            .appendCodePoint(0x2640)
+            .appendCodePoint(0xFE0F)
+            .toString()
+        expectThat(Grapheme.toGraphemeList(emoji))
+            .containsExactly(
+                emojiResultAt(emoji, 0, 7)
+            )
+    }
+
+    @Test
+    fun `should parse family sequences`() {
+        /**
+         * [Family of two men with two girls](http://www.iemoji.com/view/emoji/1712/smileys-people/family-of-two-men-with-two-girls)
+         */
+        val emoji = StringBuilder()
+            .appendCodePoint(0x1F468)
+            .appendCodePoint(0x200D)
+            .appendCodePoint(0x1F468)
+            .appendCodePoint(0x200D)
+            .appendCodePoint(0x1F467)
+            .appendCodePoint(0x200D)
+            .appendCodePoint(0x1F467)
+            .toString()
+        expectThat(Grapheme.toGraphemeList(emoji))
+            .containsExactly(
+                emojiResultAt(emoji, 0, 11)
+            )
+    }
+
+    companion object {
+        private fun nonEmojiResultAt(string: String, offset: Int, length: Int): Grapheme {
+            return Grapheme(string.subSequence(offset, offset + length))
+        }
+
+        private fun emojiResultAt(string: String, offset: Int, length: Int): Grapheme {
+            return Grapheme(string.subSequence(offset, offset + length))
+        }
     }
 }

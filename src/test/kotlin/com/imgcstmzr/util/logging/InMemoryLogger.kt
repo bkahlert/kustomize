@@ -48,7 +48,7 @@ class InMemoryLogger<T> private constructor(
     /**
      * Returns the so far rendered content—pretending this block was finished with [result].
      */
-    fun finalizedDump(result: Result<T>): String = raw + "\n" + blockEnd(result)
+    fun finalizedDump(result: Result<T>): String = raw + "\n" + getBlockEnd(result)
 
     @Suppress("UNCHECKED_CAST")
     override fun toString(): String = finalizedDump(Result.success(Unit) as Result<Nothing>)

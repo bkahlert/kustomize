@@ -1,8 +1,6 @@
 package com.bkahlert.koodies.test.junit.integration;
 
 
-import com.bkahlert.koodies.test.junit.SkipIfSystemPropertyIsTrueOrEmpty;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.commons.annotation.Testable;
 
@@ -10,8 +8,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
-import static com.bkahlert.koodies.test.junit.integration.IntegrationTest.NAME;
 
 /**
  * JUnit 5 {@link Test} annotation to explicitly denote <a href="https://wiki.c2.com/?IntegrationTest)">integration tests</a>.
@@ -29,11 +25,8 @@ import static com.bkahlert.koodies.test.junit.integration.IntegrationTest.NAME;
  * annotations as tests.
  */
 @SuppressWarnings("SpellCheckingInspection")
-@SkipIfSystemPropertyIsTrueOrEmpty(NAME)
-@Tag(NAME)
+@Integration
 @Test
-@Target(ElementType.METHOD)
+@Target({ElementType.ANNOTATION_TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface IntegrationTest {
-    String NAME = "Integration";
-}
+public @interface IntegrationTest {}

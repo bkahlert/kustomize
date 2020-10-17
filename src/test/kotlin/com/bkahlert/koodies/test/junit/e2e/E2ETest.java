@@ -1,8 +1,6 @@
 package com.bkahlert.koodies.test.junit.e2e;
 
 
-import com.bkahlert.koodies.test.junit.SkipIfSystemPropertyIsTrueOrEmpty;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.commons.annotation.Testable;
 
@@ -10,8 +8,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
-import static com.bkahlert.koodies.test.junit.e2e.E2ETest.NAME;
 
 /**
  * JUnit 5 {@link Test} annotation to explicitly denote <a href="https://wiki.c2.com/?EndToEndPrinciple)">end-to-end tests</a>.
@@ -33,11 +29,8 @@ import static com.bkahlert.koodies.test.junit.e2e.E2ETest.NAME;
  * annotations as tests.
  */
 @SuppressWarnings("SpellCheckingInspection")
-@SkipIfSystemPropertyIsTrueOrEmpty(NAME)
-@Tag(NAME)
+@E2E
 @Test
-@Target(ElementType.METHOD)
+@Target({ElementType.ANNOTATION_TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface E2ETest {
-    String NAME = "E2E";
-}
+public @interface E2ETest {}

@@ -4,7 +4,6 @@ import com.bkahlert.koodies.unit.Mebi
 import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.bytes
 import com.bkahlert.koodies.unit.size
-import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.OperatingSystemMock
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
@@ -57,7 +56,7 @@ internal class ImgResizePatchTest {
 
     @Test
     @DockerRequired
-    internal fun `should increase size`(@OS(OperatingSystems.DietPi::class) img: Path) {
+    internal fun `should increase size`(@OS(OperatingSystems.RaspberryPiLite::class) img: Path) {
         val oldSize = img.size
         val newSize = img.size + 10.Mebi.bytes
         val patch = ImgResizePatch(newSize)

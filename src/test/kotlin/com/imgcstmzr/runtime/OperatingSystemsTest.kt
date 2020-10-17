@@ -17,12 +17,14 @@ import com.imgcstmzr.runtime.ProcessMock.SlowInputStream.Companion.prompt
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.miniTrace
 import com.imgcstmzr.util.debug
+import com.imgcstmzr.util.debug.Debug
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.InMemoryLoggerFactory
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -124,7 +126,8 @@ class OperatingSystemsTest {
 
         @Timeout(5, unit = TimeUnit.MINUTES)
         @Execution(CONCURRENT)
-        @ConcurrentTestFactory
+        @Debug //TODO
+        @TestFactory
         internal fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory<String?>): List<DynamicTest> {
             val nonBlockingReaderTimeout = 100.milliseconds
             val generateProcessOutput = { promptStart: String ->
@@ -159,14 +162,14 @@ class OperatingSystemsTest {
                 // TODO
 //                Reader(blocking = true) to promptWithLineBreaks,
 //                Reader(blocking = true, succeeding = false) to promptWithoutLineBreaks,
-                Reader(blocking = false) to promptWithLineBreaks,
+//                Reader(blocking = false) to promptWithLineBreaks,
                 Reader(blocking = false) to promptWithoutLineBreaks,
             ).flatMap { (reader, caseInput: Pair<String, Array<Pair<Duration, String>>>) ->
                 val case = caseInput.first
                 val inputs = caseInput.second
                 listOf(
                     nonBlockingReaderTimeout / 2,
-                    nonBlockingReaderTimeout * 2,
+//                    nonBlockingReaderTimeout * 2,
                 ).map { baseDelayPerWord ->
 
                     val name = "$reader + $case + $baseDelayPerWord line delay"
@@ -176,7 +179,7 @@ class OperatingSystemsTest {
                         val logger = loggerFactory.createLogger(name)
                         val processMock = ProcessMock.withIndividuallySlowInput(
                             inputs = inputs,
-                            baseDelayPerWord = baseDelayPerWord,
+                            baseDelayPerInput = baseDelayPerWord,
                             echoInput = true, // TODO
                             processExit = { immediateSuccess() },
                             logger = logger,

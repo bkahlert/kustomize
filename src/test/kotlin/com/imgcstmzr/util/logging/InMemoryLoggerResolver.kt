@@ -65,6 +65,6 @@ class InMemoryLoggerResolver : ParameterResolver, AfterEachCallback, TestExecuti
     }
 
     private fun ExtensionContext.store(): ExtensionContext.Store = getStore(create(InMemoryLoggerResolver::class.java))
-    private val ExtensionContext.isVerbose get() = isDebug || testCount == 1
-    private val ParameterContext.isVerbose get() = this.parameter.isA<Debug>()
+    private val ExtensionContext.isVerbose: Boolean get() = isDebug || testCount == 1
+    private val ParameterContext.isVerbose: Boolean get() = parameter.isA<Debug>()
 }

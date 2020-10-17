@@ -2,10 +2,10 @@ package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.terminal.ansi.Style.Companion.magenta
 import com.bkahlert.koodies.terminal.ansi.Style.Companion.yellow
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.miniTrace
 import com.imgcstmzr.util.Now
 import com.imgcstmzr.util.debug
-import com.imgcstmzr.util.logging.InMemoryLogger
 import org.apache.commons.io.output.TeeOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -21,7 +21,7 @@ class ProcessMock(
     private var outputStream: OutputStream = ByteArrayOutputStream(),
     private val inputStream: InputStream = InputStream.nullInputStream(),
     private val processExit: ProcessMock.() -> ProcessExitMock,
-    var logger: InMemoryLogger<String?>?,
+    var logger: BlockRenderingLogger<String?>?,
 ) : Process() {
 
     private val completeOutputSequence = ByteArrayOutputStream()
@@ -34,15 +34,15 @@ class ProcessMock(
     companion object {
         fun withSlowInput(
             vararg inputs: String,
-            baseDelayPerReadOperation: Duration = 1.seconds,
+            baseDelayPerInput: Duration = 1.seconds,
             echoInput: Boolean,
             processExit: ProcessMock.() -> ProcessExitMock,
-            logger: InMemoryLogger<String?>?,
+            logger: BlockRenderingLogger<String?>?,
         ): ProcessMock {
             val outputStream = ByteArrayOutputStream()
             val slowInputStream = SlowInputStream(
                 inputs = inputs,
-                baseDelayPerWord = baseDelayPerReadOperation,
+                baseDelayPerInput = baseDelayPerInput,
                 byteArrayOutputStream = outputStream,
                 echoInput = echoInput,
                 logger = logger
@@ -57,15 +57,15 @@ class ProcessMock(
 
         fun withIndividuallySlowInput(
             vararg inputs: Pair<Duration, String>,
-            baseDelayPerWord: Duration = 1.seconds,
+            baseDelayPerInput: Duration = 1.seconds,
             echoInput: Boolean,
             processExit: ProcessMock.() -> ProcessExitMock,
-            logger: InMemoryLogger<String?>?,
+            logger: BlockRenderingLogger<String?>?,
         ): ProcessMock {
             val outputStream = ByteArrayOutputStream()
             val slowInputStream = SlowInputStream(
                 inputs = inputs,
-                baseDelayPerWord = baseDelayPerWord,
+                baseDelayPerInput = baseDelayPerInput,
                 byteArrayOutputStream = outputStream,
                 echoInput = echoInput,
                 logger = logger
@@ -99,18 +99,18 @@ class ProcessMock(
 
     class SlowInputStream(
         vararg inputs: Pair<Duration, String>,
-        val baseDelayPerWord: Duration,
+        val baseDelayPerInput: Duration,
         val byteArrayOutputStream: ByteArrayOutputStream? = null,
         val echoInput: Boolean = false,
-        var logger: InMemoryLogger<String?>?,
+        var logger: BlockRenderingLogger<String?>?,
     ) : InputStream() {
         constructor(
             vararg inputs: String,
-            baseDelayPerWord: Duration,
+            baseDelayPerInput: Duration,
             byteArrayOutputStream: ByteArrayOutputStream? = null,
             echoInput: Boolean = false,
-            logger: InMemoryLogger<String?>?,
-        ) : this(inputs = inputs.map { Duration.ZERO to it }.toTypedArray(), baseDelayPerWord, byteArrayOutputStream, echoInput, logger)
+            logger: BlockRenderingLogger<String?>?,
+        ) : this(inputs = inputs.map { Duration.ZERO to it }.toTypedArray(), baseDelayPerInput, byteArrayOutputStream, echoInput, logger)
 
         val terminated: Boolean get() = unreadCount == 0 || !processAlive
         internal var processAlive: Boolean = true
@@ -175,17 +175,17 @@ class ProcessMock(
 
             trace("${unreadCount.padded.yellow()} bytes unread")
 
+            if (terminated) {
+                trace("EOF reached.")
+                return@miniTrace -1
+            }
+
             val yetBlocked = blockUntil - System.currentTimeMillis()
             if (yetBlocked > 0) {
                 microTrace<Unit>(Now.grapheme) {
                     trace("blocking for the remaining ${yetBlocked.milliseconds}...")
                     Thread.sleep(yetBlocked)
                 }
-            }
-
-            if (terminated) {
-                trace("EOF reached.")
-                return@miniTrace -1
             }
 
             val currentWord: MutableList<Byte> = unread.let {
@@ -206,8 +206,8 @@ class ProcessMock(
 
             if (currentWord.isEmpty()) {
                 unread.removeFirst()
-                blockUntil = System.currentTimeMillis() + baseDelayPerWord.toLongMilliseconds()
-                trace("— empty; waiting time for next chunk is $baseDelayPerWord")
+                blockUntil = System.currentTimeMillis() + baseDelayPerInput.toLongMilliseconds()
+                trace("— empty; waiting time for next chunk is $baseDelayPerInput")
             }
             currentByte.toInt()
         }

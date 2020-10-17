@@ -456,6 +456,6 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
     }
 }
 
-inline fun <reified T : Number> T.times(function: (Int) -> Unit) {
-    (0..this.toInt()).forEach { i -> function(i) }
+inline operator fun <reified T : Number> T.times(function: (Int) -> Unit) {
+    (0 until toInt()).forEach { i -> function(i) }
 }

@@ -2,13 +2,12 @@
 
 package com.bkahlert.koodies.test.junit
 
-import com.bkahlert.koodies.test.junit.e2e.E2ETest
-import com.bkahlert.koodies.test.junit.integration.IntegrationTest
+import com.bkahlert.koodies.test.junit.e2e.E2E
+import com.bkahlert.koodies.test.junit.integration.Integration
 import com.bkahlert.koodies.test.junit.systemproperties.SystemProperties
 import com.bkahlert.koodies.test.junit.systemproperties.SystemProperty
-import com.bkahlert.koodies.test.junit.unit.UnitTest
+import com.bkahlert.koodies.test.junit.unit.Unit
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -19,14 +18,13 @@ import strikt.api.expectThat
 import strikt.assertions.containsExactlyInAnyOrder
 
 /**
- * Tests [TestSystemProperties.skipUnitTests] and [TestSystemProperties.skipE2ETests].
+ * Tests `skipUnitTests`, `skipIntegrationTests` and `skipE2ETests`.
  *
  * Since it can unintentionally deactivate actual tests, this test container runs [Isolated].
  */
-@Disabled // can't get Gradle to recognize meta annotated instances of @Test
 @Isolated
 @Execution(SAME_THREAD)
-internal class TestAnnotationsIntTest {
+internal class SkipConditionIntTest {
 
     @Nested
     @SystemProperties(
@@ -42,17 +40,20 @@ internal class TestAnnotationsIntTest {
             runMethods.add(::`untyped test should run`)
         }
 
-        @UnitTest
+        @Unit
+        @Test
         internal fun `unit test should not run`() {
             expectThat(::`unit test should not run`).get { fail("$name did run") }
         }
 
-        @IntegrationTest
+        @Integration
+        @Test
         internal fun `integration test should not run`() {
             expectThat(::`integration test should not run`).get { fail("$name did run") }
         }
 
-        @E2ETest
+        @E2E
+        @Test
         internal fun `e2e test should not run`() {
             expectThat(::`e2e test should not run`).get { fail("$name did run") }
         }
@@ -79,17 +80,20 @@ internal class TestAnnotationsIntTest {
             runMethods.add(::`untyped test should run`)
         }
 
-        @UnitTest
+        @Unit
+        @Test
         internal fun `unit test should not run`() {
             expectThat(::`unit test should not run`).get { fail("$name did run") }
         }
 
-        @IntegrationTest
+        @Integration
+        @Test
         internal fun `integration test should run`() {
             runMethods.add(::`integration test should run`)
         }
 
-        @E2ETest
+        @E2E
+        @Test
         internal fun `e2e test should run`() {
             runMethods.add(::`e2e test should run`)
         }
@@ -118,17 +122,20 @@ internal class TestAnnotationsIntTest {
             runMethods.add(::`untyped test should run`)
         }
 
-        @UnitTest
+        @Unit
+        @Test
         internal fun `unit test should run`() {
             runMethods.add(::`unit test should run`)
         }
 
-        @IntegrationTest
+        @Integration
+        @Test
         internal fun `integration test should not run`() {
             expectThat(::`integration test should not run`).get { fail("$name did run") }
         }
 
-        @E2ETest
+        @E2E
+        @Test
         internal fun `e2e test should run`() {
             runMethods.add(::`e2e test should run`)
         }
@@ -157,17 +164,20 @@ internal class TestAnnotationsIntTest {
             runMethods.add(::`untyped test should run`)
         }
 
-        @UnitTest
+        @Unit
+        @Test
         internal fun `unit test should run`() {
             runMethods.add(::`unit test should run`)
         }
 
-        @UnitTest
+        @Integration
+        @Test
         internal fun `integration test should run`() {
             runMethods.add(::`integration test should run`)
         }
 
-        @E2ETest
+        @E2E
+        @Test
         internal fun `e2e test should not run`() {
             expectThat(::`e2e test should not run`).get { fail("$name did run") }
         }
@@ -183,18 +193,14 @@ internal class TestAnnotationsIntTest {
     }
 
     /**
-     * Integration tests [TestSystemProperties.skipUnitTests], [TestSystemProperties.skipIntegrationTests]
-     * and [TestSystemProperties.skipE2ETests].
+     * Integration tests `skipUnitTests`, `skipIntegrationTests` and `skipE2ETests`.
      *
      * This test container is disabled if either one of the properties is already present
      * to not break the GitLab pipeline if that is an actually used property.
      */
     @Nested
     @SystemProperties(SystemProperty(name = "skipSomethingElse", value = "true"))
-    @SkipIfAtLeastOneSystemPropertyIsEnabled([
-        SkipIfSystemPropertyIsTrueOrEmpty("skipUnitTests"),
-        SkipIfSystemPropertyIsTrueOrEmpty("skipIntegrationTests"),
-        SkipIfSystemPropertyIsTrueOrEmpty("skipE2ETests")])
+    @Unit @Integration @E2E
     inner class NothingSkipped {
         val runMethods = mutableListOf<Function<*>>()
 
@@ -203,17 +209,20 @@ internal class TestAnnotationsIntTest {
             runMethods.add(::`untyped test should run`)
         }
 
-        @UnitTest
+        @Unit
+        @Test
         internal fun `unit test should run`() {
             runMethods.add(::`unit test should run`)
         }
 
-        @IntegrationTest
+        @Integration
+        @Test
         internal fun `integration test should run`() {
             runMethods.add(::`integration test should run`)
         }
 
-        @E2ETest
+        @E2E
+        @Test
         internal fun `e2e test should run`() {
             runMethods.add(::`e2e test should run`)
         }

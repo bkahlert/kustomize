@@ -29,8 +29,7 @@ internal class InMemoryLoggerResolverTest {
             @Debug(includeInReport = false)
             @Test
             internal fun `should log to console automatically with @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
-                logger.logLine(OUT typed "☎Σ⊂⊂(☉ω☉∩)")
-                logger.logLast(Result.success(Unit))
+                logger.logLineLambda { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
 
                 expectThat(logger.logged).asString().contains("☎Σ⊂⊂(☉ω☉∩)")
                 expectThat(output.removeEscapeSequences()).asString().contains("☎Σ⊂⊂(☉ω☉∩)")
@@ -43,7 +42,7 @@ internal class InMemoryLoggerResolverTest {
             @Debug(includeInReport = false)
             @Test
             internal fun `should log to console automatically with @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
-                logger.logLine(OUT typed "(*｀へ´*)")
+                logger.logLineLambda { OUT typed "(*｀へ´*)" }
 
                 expectCatching { logger.logLast(Result.failure(IllegalStateException("test"))) }
                     .isFailure().isA<IllegalStateException>()
@@ -61,8 +60,7 @@ internal class InMemoryLoggerResolverTest {
 
             @Test
             internal fun `should not automatically log to console without @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
-                logger.logLine(OUT typed "☎Σ⊂⊂(☉ω☉∩)")
-                logger.logLast(Result.success(Unit))
+                logger.logLineLambda { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
 
                 expectThat(logger.logged).asString().contains("☎Σ⊂⊂(☉ω☉∩)")
                 expectThat(output.removeEscapeSequences()).asString().not { contains("☎Σ⊂⊂(☉ω☉∩)") }
@@ -74,7 +72,7 @@ internal class InMemoryLoggerResolverTest {
 
             @Test
             internal fun `should not catch exceptions`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
-                logger.logLine(OUT typed "(*｀へ´*)")
+                logger.logLineLambda { OUT typed "(*｀へ´*)" }
 
                 expectCatching { logger.logLast(Result.failure(IllegalStateException("test"))) }
                     .isFailure().isA<IllegalStateException>()

@@ -23,6 +23,9 @@ dependencies {
     implementation("com.github.ajalt:mordant:1.2.1")
     implementation("io.github.config4k:config4k:0.4.2")
     implementation("org.apache.maven.shared:maven-shared-utils:3.3.3")
+    implementation("com.tunnelvisionlabs:antlr4-runtime:4.7.4") // grapheme parsing
+    implementation("com.tunnelvisionlabs:antlr4-perf-testsuite:4.7.4")
+    implementation("org.jline:jline-reader:3.16.0")
 
     testImplementation(platform("org.junit:junit-bom:5.7.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")

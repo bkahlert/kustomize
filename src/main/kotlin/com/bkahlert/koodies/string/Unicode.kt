@@ -2,8 +2,51 @@ package com.bkahlert.koodies.string
 
 object Unicode {
 
+    /**
+     * Returns the [CodePoint] with the specified index.
+     */
+    operator fun get(codePoint: Int): CodePoint = CodePoint(codePoint)
+
+    /**
+     * [CARRIAGE RETURN (CR)](https://codepoints.net/U+000D)
+     */
     const val carriageReturn = "\r"
+
+    /**
+     * [LINE FEED (LF)](https://codepoints.net/U+000A)
+     */
     const val lineFeed = "\n"
+
+    /**
+     * [LINE SEPARATOR](https://codepoints.net/U+2028)
+     */
+    const val lineSeparator = "\u2028"
+
+    /**
+     * [PARAGRAPH SEPARATOR](https://codepoints.net/U+2029)
+     */
+    const val paragraphSeparator = "\u2029"
+
+    /**
+     * [NEXT LINE (NEL)](https://codepoints.net/U+0085)
+     */
+    const val nextLine = "\u0085"
+
+    /**
+     * [RIGHT-TO-LEFT MARK](https://codepoints.net/U+200F)
+     */
+    const val rightToLeftMark = '\u200F'
+
+    /**
+     * [REPLACEMENT CHARACTER](https://codepoints.net/U+FFFD) �
+     */
+    const val replacementCharacter = '\uFFFD'
+
+    object DivinationSymbols {
+        const val tetragramForEnlargment = "\uD834\uDF33" // 𝌳
+        const val tetragramForPurety = "\uD834\uDF2A" // 𝌪
+    }
+
 
     @Suppress("SpellCheckingInspection")
     var whitespaces: List<Char> = listOf(

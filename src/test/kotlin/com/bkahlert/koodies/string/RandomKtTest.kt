@@ -3,6 +3,7 @@ package com.bkahlert.koodies.string
 import com.bkahlert.koodies.terminal.ascii.Kaomojis
 import com.imgcstmzr.util.containsOnlyCharacters
 import com.imgcstmzr.util.logging.InMemoryLogger
+import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
@@ -10,6 +11,7 @@ import strikt.api.expectThat
 import strikt.assertions.doesNotContain
 import strikt.assertions.hasLength
 import strikt.assertions.hasSize
+import strikt.assertions.isEqualTo
 
 
 @Execution(ExecutionMode.CONCURRENT)
@@ -52,5 +54,15 @@ internal class RandomKtTest {
         expectThat(String.random.cryptSalt())
             .hasLength(2)
             .containsOnlyCharacters(String.random.alphanumericCharacters)
+    }
+
+    @RepeatedTest(100)
+    internal fun `should create valid random CodePoint`() {
+        expectThat(CodePoint.random.toString().codePoints().count()).isEqualTo(1)
+    }
+
+    @RepeatedTest(100)
+    internal fun `should create valid random single character string`() {
+        expectThat(Char.random.codePoints().count()).isEqualTo(1)
     }
 }

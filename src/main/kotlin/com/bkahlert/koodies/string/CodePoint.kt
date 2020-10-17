@@ -8,7 +8,7 @@ package com.bkahlert.koodies.string
  */
 inline class CodePoint(val codePoint: Int) {
     constructor(charSequence: CharSequence) : this(charSequence.toString()
-        .also { require(isCodePoint(charSequence)) { "$it does not represent a single Unicode code point" } }
+        .also { require(charSequence.isValidCodePoint()) { "$it does not represent a single Unicode code point" } }
         .codePointAt(0))
 
     constructor(chars: CharArray) : this(String(chars))
@@ -23,16 +23,22 @@ inline class CodePoint(val codePoint: Int) {
      */
     val string: String get() = Character.toString(codePoint)
 
+    override fun toString(): String = string
+
     companion object {
+        fun Int.isValidCodePoint(): Boolean = Character.getType(this).toByte().let {
+            it != Character.PRIVATE_USE && it != Character.SURROGATE && it != Character.UNASSIGNED
+        }
+
         /**
          * `true` if these [Char] instances represent a *single* Unicode character.
          */
-        fun isCodePoint(chars: CharSequence) = chars.let {
+        fun CharSequence.isValidCodePoint(): Boolean = let {
             val codePointCount = it.codePoints().unordered().limit(2).count()
-            codePointCount == 1L
+            codePointCount == 1L && it.codePoints().findFirst().orElseThrow().isValidCodePoint()
         }
 
-        fun isCodePoint(chars: CharArray) = isCodePoint(String(chars))
+        fun CharArray.isValidCodePoint(): Boolean = String(this).isValidCodePoint()
         fun count(string: CharSequence): Long = string.codePoints().count()
         fun count(string: String): Long = string.codePoints().count()
     }
