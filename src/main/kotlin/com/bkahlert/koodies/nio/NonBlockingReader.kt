@@ -92,5 +92,8 @@ class NonBlockingReader(
         kotlin.runCatching { reader?.close() }
         reader = null
     }
+
+    override fun toString(): String =
+        "NonBlockingReader(unfinishedLine=$unfinishedLine, charArray=${charArray.contentToString()}, timeout=$timeout, logger=$logger, reader=$reader)"
 }
 
