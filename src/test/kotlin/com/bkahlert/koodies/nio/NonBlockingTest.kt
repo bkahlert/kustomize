@@ -30,7 +30,7 @@ class NonBlockingTest {
     @Nested
     inner class NonBlockingInputStream {
         @Test
-        internal fun `should produce same byte sequence as ByteArrayInputStream`(logger: InMemoryLogger<String?>) {
+        internal fun `should produce same byte sequence as ByteArrayInputStream`() {
             val input = "A𝌪𝌫𝌬𝌭𝌮Z"
             val nonBlockingInputStream =
                 NonBlocking.nonBlocking(::`should produce same byte sequence as ByteArrayInputStream`.toString(), input.byteInputStream())
@@ -41,7 +41,7 @@ class NonBlockingTest {
     @Nested
     inner class NonBlockingInputStreamReader {
         @Test
-        internal fun `should produce same byte sequence as ByteArrayInputStreamReader`(logger: InMemoryLogger<String?>) {
+        internal fun `should produce same byte sequence as ByteArrayInputStreamReader`() {
             val input = "A𝌪𝌫𝌬𝌭𝌮Z"
             val linesExpected = input.byteInputStream().reader(Charsets.UTF_8).readLines()
             val linesActual = NonBlocking.nonBlocking(::`should produce same byte sequence as ByteArrayInputStreamReader`.toString(),

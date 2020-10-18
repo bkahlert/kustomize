@@ -12,7 +12,7 @@ internal class DictionaryTest {
     private val dict = dictOf(
         "known" to 42,
         "negative" to -1,
-    ) { profile -> Int.MAX_VALUE }
+    ) { _ -> Int.MAX_VALUE }
 
     @Test
     internal fun `should get value on match`() {

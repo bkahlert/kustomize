@@ -2,6 +2,7 @@ package com.imgcstmzr.util
 
 import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.terminal.ansi.Style.Companion.cyan
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.process.Downloader.download
@@ -35,6 +36,7 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
         val annotation = parameterContext.parameter.getAnnotation(OS::class.java)
         val os = annotation?.value?.objectInstance
         val autoDelete = annotation?.autoDelete ?: true
+        echo("Provisioning an IMG copy of ${os.name.cyan()}")
         return cachedCopyOf(os).also { if (autoDelete) saveReferenceForCleanup(extensionContext, it) }
     }
 
@@ -44,12 +46,11 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
 
     companion object {
         val fixtureLog: (Path) -> Unit = FixtureLog(Paths.TEST.resolve("fixture.log"))
+        val OperatingSystem?.name get() = this?.downloadUrl?.let { Path.of(it).baseName } ?: "imgcstmzr"
 
         private val cache = Cache(Paths.TEST.resolve("test"), maxConcurrentWorkingDirectories = 500)
-        private fun cachedCopyOf(os: OperatingSystem?): Path {
-            val name = os?.downloadUrl?.let { Path.of(it).baseName } ?: "imgcstmzr"
-            return cache.provideCopy(name, false) { os?.download() ?: prepareImg("cmdline.txt", "config.txt") }
-        }
+        private fun cachedCopyOf(os: OperatingSystem?): Path =
+            cache.provideCopy(os.name, false) { os?.download() ?: prepareImg("cmdline.txt", "config.txt") }
 
         /**
          * Dynamically creates a raw image with two partitions containing the given [files].
@@ -105,9 +106,10 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
                     val imgDirectoryContainer = imgDirectory.parent
                     imgDirectoryContainer.listFilesRecursively({ other ->
                         other.toString().startsWith(imgDirectory.toString())
-                    })
+                    }, comparator = Comparator.reverseOrder())
                 }
                 ?.onEach { imgDirectoryBasedCopy ->
+                    echo("Deleting $imgDirectoryBasedCopy")
                     imgDirectoryBasedCopy.delete(true)
                 }
         }

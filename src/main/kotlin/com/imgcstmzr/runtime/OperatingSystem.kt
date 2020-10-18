@@ -1,6 +1,7 @@
 package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.docker.toContainerName
+import com.bkahlert.koodies.string.indent
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ansi.Style.Companion.green
 import com.bkahlert.koodies.terminal.ascii.Kaomojis
@@ -25,6 +26,7 @@ import com.imgcstmzr.runtime.log.segment
 import java.io.File
 import java.nio.file.Path
 import kotlin.properties.Delegates.observable
+import kotlin.streams.toList
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
@@ -174,6 +176,13 @@ class RunningOS(
         process.alive().input(*values)
     }
 
+    /**
+     * Prints [value] on the output without actually forwarding it
+     * to the OS running process.
+     */
+    fun feedback(value: String) {
+        renderer.logLine { value }
+    }
 
     val shuttingDownStatus: List<HasStatus> = listOf(object : HasStatus {
         override fun status(): String = "shutting down"
@@ -204,10 +213,11 @@ class RunningOS(
     }
 
     fun kill() {
-        process?.destroy()
+        println("All Processes: " + ProcessHandle.allProcesses().toList())
+        process?.destroyForcibly()
     }
 
-    var shuttingDown: Boolean by observable(false) { property, oldValue, newValue ->
+    var shuttingDown: Boolean by observable(false) { _, oldValue, newValue ->
         renderer.logStatus { META typed "shutdown invoked ($oldValue -> $newValue)" }
     }
 }
@@ -284,6 +294,8 @@ interface OperatingSystem {
         fun RunningOS.enterPassword() {
             input("${credentials.password}\r")
         }
+
+        var pwLineExpectationFailed = 0
         return Program(
             "login", { output -> "1/4: waiting for prompt" },
             "1/4: waiting for prompt" to { output ->
@@ -298,24 +310,19 @@ interface OperatingSystem {
                 } else "2/4: confirm username"
             },
             "3/4: password..." to { output ->
-                if (output.matches(passwordPattern)) {
+                if (output.matches(passwordPattern) || pwLineExpectationFailed % 5 == 1) {
                     enterPassword()
                     "4/4 confirm password"
-                } else "3/4: password..."
+                } else {
+                    pwLineExpectationFailed++
+                    "3/4: password..."
+                }
             },
             "4/4 confirm password" to { output ->
                 if (!output.matches(passwordPattern)) {
-                    "feedback"
+                    feedback("${output.indent}Logged in successfully ${Kaomojis.Proud.random()}".green())
+                    null
                 } else "4/4 confirm password"
-            },
-            "feedback" to { output ->
-                val message = "Logged in successfully ${Kaomojis.Proud.random()}".green()
-                input(": $message\r")
-                println(message)
-//                println("\n\n")
-                if (output.contains("Login incorrect")) println("Login incorrect seen")
-//                println(this.hi)
-                null
             },
         )//.logging()
     }

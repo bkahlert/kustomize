@@ -53,6 +53,7 @@ fun BlockRenderingLogger<Any>.applyImgOperations(img: Path, patch: Patch) {
         patch.imgOperations.onEachIndexed { index, op ->
             op(OperatingSystems.RaspberryPiLite, img, this)
         }
+        0
     }
 }
 

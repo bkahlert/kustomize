@@ -35,21 +35,21 @@ internal class InvokeKtTest {
         internal fun `should return result of applied f if non-null returned`() {
             @Suppress("RedundantNullableReturnType")
             val f: ((String) -> String?)? = { it + it }
-            expectThat("a".letIfSet(f)).isEqualTo("aa")
+            expectThat("a".let(f)).isEqualTo("aa")
         }
 
         @Test
         internal fun `should return unchanged argument if null returned`() {
             @Suppress("RedundantNullableReturnType")
             val f: ((String) -> String?)? = { null }
-            expectThat("a".letIfSet(f)).isEqualTo("a")
+            expectThat("a".let(f)).isEqualTo("a")
         }
 
         @Test
         internal fun `should return unchanged argument if f is unset`() {
             @Suppress("RedundantNullableReturnType")
             val f: ((String) -> String)? = null
-            expectThat("a".letIfSet(f)).isEqualTo("a")
+            expectThat("a".let(f)).isEqualTo("a")
         }
     }
 }

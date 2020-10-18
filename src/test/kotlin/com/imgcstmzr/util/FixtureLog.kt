@@ -1,5 +1,6 @@
 package com.imgcstmzr.util
 
+import com.github.ajalt.clikt.output.TermUi.echo
 import java.nio.file.Path
 
 /**
@@ -9,9 +10,12 @@ import java.nio.file.Path
  */
 class FixtureLog(val location: Path) : (Path) -> Unit {
     init {
-        paths().forEach { it.delete(true) }
+        paths().forEach {
+            it.delete(true)
+            echo("Deleting $it")
+        }
         // TODO delete like in FixtureExtension
-        // kill Docker container
+        // TODO kill Docker container
         location.delete()
     }
 

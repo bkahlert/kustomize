@@ -1,6 +1,7 @@
 package com.bkahlert.koodies.test.junit
 
 import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.terminal.removeEscapeSequences
 import com.imgcstmzr.util.debug.Debug
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
@@ -15,6 +16,22 @@ import java.util.Optional
  * Checks if the test class, method, test template, etc. of the current scope fulfills the requirements implemented by the provided [tester].
  */
 fun ExtensionContext.element(tester: AnnotatedElement.() -> Boolean) = element.map(tester).orElse(false)
+
+/**
+ * Name of the current test.
+ */
+val ExtensionContext.testName: String
+    get() :String {
+        val separator = " ➜ "
+        val name = element.map { parent.map { it.testName }.orElse("") + separator + dekotliniestDisplayName }.orElse("")
+        return if (name.startsWith(separator)) name.substring(separator.length) else name
+    }
+
+/**
+ * Returns a JUnit display name with the
+ */
+val ExtensionContext.dekotliniestDisplayName: String
+    get() = displayName.removeEscapeSequences().substringBeforeLast("$")
 
 /**
  * Contains an ID valid for the whole test plan run.

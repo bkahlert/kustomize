@@ -66,3 +66,5 @@ https://github.com/garthvh/ansible-raspi-playbooks/blob/master/playbooks/new-def
 - `OperatingSystemTest.kt`
 - `PatchesKtTest.kt`
 - `RenderingLoggerIntTest.kt`
+- `Program` class (e.g. login script)
+- `ShellScriptBuilder` (with !"echo 'this is a command'")

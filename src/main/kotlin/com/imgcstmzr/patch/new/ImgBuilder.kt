@@ -64,9 +64,7 @@ class PatchBuilder(
 class ImgOperationsCollector(private val imgOperations: MutableList<ImgOperation>) {
     fun resize(size: Size) {
         imgOperations += { os: OperatingSystem, path: Path, parentLogger: BlockRenderingLogger<Any>? ->
-            os.increaseDiskSpace(size,
-                path,
-                parentLogger)
+            os.increaseDiskSpace(size, path, parentLogger)
         }
     }
 }

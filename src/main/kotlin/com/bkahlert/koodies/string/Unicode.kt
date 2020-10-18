@@ -52,8 +52,8 @@ by dictOf("unicode.dict.tsv"
     const val replacementCharacter = '\uFFFD'
 
     object DivinationSymbols {
-        const val tetragramForEnlargment = "\uD834\uDF33" // 𝌳
-        const val tetragramForPurety = "\uD834\uDF2A" // 𝌪
+        const val tetragramForEnlargment: String = "\uD834\uDF33" // 𝌳
+        const val tetragramForPurety: String = "\uD834\uDF2A" // 𝌪
     }
 
     var boxDrawings = ('\u2500'..'\u257F').toList()

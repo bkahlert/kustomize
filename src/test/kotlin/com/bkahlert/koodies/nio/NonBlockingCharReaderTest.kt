@@ -42,7 +42,7 @@ internal class NonBlockingCharReaderTest {
     }
 
     @Test
-    internal fun `should read content`(logger: InMemoryLogger<String?>) {
+    internal fun `should read content`() {
         val line = "line #壹\nline #❷"
         val reader = NonBlockingCharReader(line.byteInputStream(), 100.milliseconds)
         expectThat(reader.readLines()).containsExactly("line #壹", "line #❷")

@@ -32,6 +32,10 @@ object Exec {
     class ShellScript {
         val lines: MutableList<String> = mutableListOf()
 
+        operator fun String.not() {
+            lines.add(this)
+        }
+
         /**
          * Creates a [here document](https://en.wikipedia.org/wiki/Here_document) consisting of the given [lines].
          */
