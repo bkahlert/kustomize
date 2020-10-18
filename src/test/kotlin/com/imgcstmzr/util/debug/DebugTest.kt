@@ -62,8 +62,8 @@ internal class DebugTest {
 
         @Test
         internal fun `should not automatically log to console without @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
-            logger.logLine(OUT typed "☎Σ⊂⊂(☉ω☉∩)")
-            logger.logLast(Result.success(Unit))
+            logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+            logger.logResult { Result.success(Unit) }
 
             expectThat(logger.logged).asString().contains("☎Σ⊂⊂(☉ω☉∩)")
             expectThat(output.removeEscapeSequences()).asString().not { contains("☎Σ⊂⊂(☉ω☉∩)") }
@@ -72,9 +72,9 @@ internal class DebugTest {
 
         @Test
         internal fun `should not catch exceptions`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
-            logger.logLine(OUT typed "(*｀へ´*)")
+            logger.logStatus { OUT typed "(*｀へ´*)" }
 
-            expectCatching { logger.logLast(Result.failure(IllegalStateException("test"))) }
+            expectCatching { logger.logResult { Result.failure(IllegalStateException("test")) } }
                 .isFailure().isA<IllegalStateException>()
         }
     }

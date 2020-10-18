@@ -59,7 +59,7 @@ class InMemoryLoggerResolver : ParameterResolver, AfterEachCallback, TestExecuti
             if (result.exceptionOrNull() is AssertionError) return
             kotlin.runCatching {
                 @Suppress("UNCHECKED_CAST")
-                logger.logLast(result as Result<Nothing>)
+                (logger.logResult { result as Result<Nothing> })
             }
         }
     }

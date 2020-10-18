@@ -43,15 +43,15 @@ class NonBlockingCharReader(
                     -1
                 }.getOrThrow()) {
                 -1 -> {
-                    logLineLambda { META typed "EOF" }
+                    logStatus { META typed "EOF" }
                     -1
                 }
                 -2 -> {
-                    logLineLambda { META typed "TIMEOUT" }
+                    logStatus { META typed "TIMEOUT" }
                     0
                 }
                 else -> {
-                    logLineLambda { META typed "SUCCESSFULLY READ ${read.debug}" }
+                    logStatus { META typed "SUCCESSFULLY READ ${read.debug}" }
                     cbuf[off] = read.toChar()
                     1
                 }

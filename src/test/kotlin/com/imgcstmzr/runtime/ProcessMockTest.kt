@@ -1,6 +1,9 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.nio.NonBlockingReader
+import com.bkahlert.koodies.string.lines
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
+import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
 import com.bkahlert.koodies.thread.startAsDaemon
 import com.bkahlert.koodies.tracing.MiniTracer
@@ -26,10 +29,9 @@ import strikt.assertions.isFailure
 import strikt.assertions.isFalse
 import strikt.assertions.isGreaterThan
 import strikt.assertions.isLessThan
+import strikt.assertions.isLessThanOrEqualTo
 import strikt.assertions.isTrue
-import java.io.BufferedReader
 import java.io.ByteArrayOutputStream
-import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
@@ -47,13 +49,12 @@ internal class ProcessMockTest {
             val slowInputStream = ProcessMock.SlowInputStream("Hello\n", "World!\n", baseDelayPerInput = 1.seconds, logger = logger)
 
             assertTimeoutPreemptively(10.seconds, executable = {
-                val read = String(slowInputStream.readAllBytes())
+                val read = String(slowInputStream.readBytes())
 
                 expectThat(read).isEqualTo("Hello\nWorld!\n")
             })
         }
 
-        @OptIn(ExperimentalTime::class)
         @Test
         internal fun `should provide input slowly`(logger: InMemoryLogger<String?>) {
             val delay = 1.seconds
@@ -61,7 +62,7 @@ internal class ProcessMockTest {
 
             assertTimeoutPreemptively(delay * 5, executable = {
                 val duration = measureTime {
-                    String(slowInputStream.readAllBytes())
+                    String(slowInputStream.readBytes())
                 }
                 expectThat(duration).assertThat("is slow") { it > delay }
             })
@@ -139,7 +140,7 @@ internal class ProcessMockTest {
                     inputStream.available()
                     inputStream.read()
                 }
-                expectThat(duration < 1.seconds).isTrue()
+                expectThat(duration).isLessThanOrEqualTo(2.seconds)
             }
         }
     }
@@ -167,6 +168,7 @@ internal class ProcessMockTest {
             }
         }
 
+        @Slow
         @Isolated // benchmark
         @Nested
         inner class UsingWaitFor {
@@ -276,6 +278,7 @@ internal class ProcessMockTest {
         }
     }
 
+    @Slow
     @Test
     internal fun `should terminate if all output is manually read`(logger: InMemoryLogger<String?>) {
         val p = ProcessMock.withIndividuallySlowInput(
@@ -290,7 +293,7 @@ internal class ProcessMockTest {
             logger = logger,
         )
 
-        val reader = BufferedReader(InputStreamReader(p.inputStream))
+        val reader = NonBlockingReader(p.inputStream, logger = logger)
 
         startAsDaemon {
             Thread.sleep(5000)
@@ -320,14 +323,14 @@ internal class ProcessMockTest {
             logger = logger,
         )
 
-        val reader = BufferedReader(InputStreamReader(p.inputStream))
+        val reader = NonBlockingReader(p.inputStream, logger = logger)
 
         startAsDaemon {
             Thread.sleep(5000)
             p.input("password1234")
         }
 
-        expectThat(reader.readText()).isEqualToByteWise("""
+        expectThat(reader.readLines().lines()).isEqualToByteWise("""
             Welcome!
             Password? password1234
             

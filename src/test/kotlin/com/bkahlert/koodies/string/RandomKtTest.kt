@@ -37,7 +37,7 @@ internal class RandomKtTest {
         val calculated = mutableListOf<String>()
         (0 until 10000).onEach {
             calculated += String.random(8).also {
-                logger.log(Kaomojis.`(＃￣_￣)o︠・━・・━・━━・━☆`.toString() + " " + it, true)
+                logger.logLine { Kaomojis.`(＃￣_￣)o︠・━・・━・━━・━☆`.toString() + " " + it }
                 expectThat(calculated).doesNotContain(it)
             }
         }

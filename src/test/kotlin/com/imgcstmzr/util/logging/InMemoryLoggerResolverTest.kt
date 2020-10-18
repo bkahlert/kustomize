@@ -31,7 +31,7 @@ internal class InMemoryLoggerResolverTest {
             @Debug(includeInReport = false)
             @Test
             internal fun `should log to console automatically with @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
-                logger.logLineLambda { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+                logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
 
                 expectThat(logger.logged).asString().contains("☎Σ⊂⊂(☉ω☉∩)")
                 expectThat(output.removeEscapeSequences()).asString().contains("☎Σ⊂⊂(☉ω☉∩)")
@@ -44,9 +44,9 @@ internal class InMemoryLoggerResolverTest {
             @Debug(includeInReport = false)
             @Test
             internal fun `should log to console automatically with @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
-                logger.logLineLambda { OUT typed "(*｀へ´*)" }
+                logger.logStatus { OUT typed "(*｀へ´*)" }
 
-                expectCatching { logger.logLast(Result.failure(IllegalStateException("test"))) }
+                expectCatching { logger.logResult { Result.failure(IllegalStateException("test")) } }
                     .isFailure().isA<IllegalStateException>()
 
                 expectThat(logger.logged).asString().contains("(*｀へ´*)")
@@ -62,7 +62,7 @@ internal class InMemoryLoggerResolverTest {
 
             @Test
             internal fun `should not automatically log to console without @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
-                logger.logLineLambda { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+                logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
 
                 expectThat(logger.logged).asString().contains("☎Σ⊂⊂(☉ω☉∩)")
                 expectThat(output.removeEscapeSequences()).asString().not { contains("☎Σ⊂⊂(☉ω☉∩)") }
@@ -74,9 +74,9 @@ internal class InMemoryLoggerResolverTest {
 
             @Test
             internal fun `should not catch exceptions`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
-                logger.logLineLambda { OUT typed "(*｀へ´*)" }
+                logger.logStatus { OUT typed "(*｀へ´*)" }
 
-                expectCatching { logger.logLast(Result.failure(IllegalStateException("test"))) }
+                expectCatching { logger.logResult { Result.failure(IllegalStateException("test")) } }
                     .isFailure().isA<IllegalStateException>()
             }
         }

@@ -2,12 +2,15 @@ package com.imgcstmzr.util
 
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.parallel.Execution
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.all
 import strikt.assertions.containsExactly
 import strikt.assertions.exists
 import java.nio.file.Path
 
+@Execution(CONCURRENT)
 class FixtureLogTest {
     val fixtureLog = FixtureLog(Paths.TEMP.resolve("fixture.log"))
 

@@ -45,27 +45,29 @@ class NonBlockingReader(
     override fun readLine(): String? = if (reader == null) null else
         logger.segment(NonBlockingReader::class.simpleName + "." + ::readLine.name + "()", ansiCode = termColors.cyan) {
             val maxTimeMillis = System.currentTimeMillis() + timeout.toLongMilliseconds()
-            logLineLambda { META typed "Starting to read line for at most $timeout" }
+            logStatus { META typed "Starting to read line for at most $timeout" }
             while (true) {
                 val read: Int = reader?.read(charArray, 0, 1, this@segment)!!
                 if (read == -1) {
-                    logLineLambda { META typed "InputStream Depleted. Closing. Unfinished Line: ${unfinishedLine.quoted}" }
+                    logStatus { META typed "InputStream Depleted. Closing. Unfinished Line: ${unfinishedLine.quoted}" }
                     close()
-                    return@segment null
+                    return@segment if (unfinishedLine.isEmpty()) null
+                    else unfinishedLine.toString().withoutTrailingLineSeparator.also { unfinishedLine.clear() }
                 }
-                logLineLambda { META typed Now.emoji + " ${(maxTimeMillis - System.currentTimeMillis()).milliseconds}; 📋 ${unfinishedLine.debug}" }
+                logStatus { META typed Now.emoji + " ${(maxTimeMillis - System.currentTimeMillis()).milliseconds}; 📋 ${unfinishedLine.debug}" }
                 if (read == 1) {
-                    unfinishedLine.append(charArray)
                     if (unfinishedLine.matches(LineSeparators.INTERMEDIARY_LINE_PATTERN)) {
                         val line = unfinishedLine.withoutTrailingLineSeparator
                         unfinishedLine.clear()
-                        logLineLambda { META typed "Line Completed: ${line.quoted}" }
+                        unfinishedLine.append(charArray)
+                        logStatus { META typed "Line Completed: ${line.quoted}" }
                         return@segment line
                     }
+                    unfinishedLine.append(charArray)
                 }
                 if (System.currentTimeMillis() >= maxTimeMillis) {
-                    logLineLambda { META typed Now.emoji + " Timed out. Returning ${unfinishedLine.quoted}" }
-                    return@segment unfinishedLine.toString()
+                    logStatus { META typed Now.emoji + " Timed out. Returning ${unfinishedLine.quoted}" }
+                    return@segment unfinishedLine.toString().withoutTrailingLineSeparator
                 }
             }
             @Suppress("UNREACHABLE_CODE")
@@ -84,7 +86,7 @@ class NonBlockingReader(
             val readLine: String? = readLine()
             val line = readLine ?: break
             block(line)
-            logLambda(true) { "Finished processing $line" }
+            logLine { "Finished processing $line" }
         }
     }
 

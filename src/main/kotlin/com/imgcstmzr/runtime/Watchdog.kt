@@ -47,7 +47,7 @@ class Watchdog(
                         lastEvent = RESET
                     }
                     STOP -> {
-                        renderingLogger.logLine(Output.Type.META typed "Watchdog stopped.")
+                        renderingLogger.logStatus { Output.Type.META typed "Watchdog stopped." }
                         lastEvent = STOP
                         return@Thread
                     }

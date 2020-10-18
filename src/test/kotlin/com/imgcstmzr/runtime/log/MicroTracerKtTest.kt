@@ -13,13 +13,13 @@ internal class MicroTracerKtTest {
     @Test
     internal fun `should micro seq`(logger: InMemoryLogger<Unit>) {
         logger.miniSegment<Unit, Unit>("segment") {
-            logLine(Output.Type.OUT typed "@")
+            logStatus { Output.Type.OUT typed "@" }
             microSequence(Grapheme("🤠")) {
                 trace("a")
                 trace("")
                 trace("b c")
             }
-            logLine(Output.Type.OUT typed "@")
+            logStatus { Output.Type.OUT typed "@" }
         }
 
         expectThat(logger).matches("""

@@ -30,14 +30,14 @@ open class BlockRenderingLogger<R>(
     },
 ) : RenderingLogger<R> {
 
-    override fun logLambda(trailingNewline: Boolean, block: () -> String) = block().let { message: String ->
+    override fun render(trailingNewline: Boolean, block: () -> String): Unit = block().let { message: String ->
         val finalMessage: String? = interceptor.invoke(message + if (trailingNewline) "\n" else "")
         if (finalMessage != null) log.invoke(finalMessage)
     }
 
     private val blockStart
         get() = if (borderedOutput) "\n╭─────╴" + termColors.bold(caption) + "\n$prefix" else termColors.bold("Started: $caption")
-    val prefix get() = if (borderedOutput) "│   " else " "
+    val prefix: String get() = if (borderedOutput) "│   " else " "
     fun getBlockEnd(result: Result<R>): String {
         val renderedResult: String? = result.toSingleLineString()
         val message: String =
@@ -54,10 +54,10 @@ open class BlockRenderingLogger<R>(
     }
 
     init {
-        logLambda(true) { blockStart }
+        logLine { blockStart }
     }
 
-    override fun logLineLambda(items: List<HasStatus>, block: () -> Output): BlockRenderingLogger<R> = block().let { output ->
+    override fun logStatus(items: List<HasStatus>, block: () -> Output): BlockRenderingLogger<R> = block().let { output ->
         if (output.unformatted.isNotBlank()) {
             val currentPrefix = prefix
             output.formattedLines.forEachIndexed { index, line ->
@@ -68,20 +68,17 @@ open class BlockRenderingLogger<R>(
                 } else {
                     "$currentPrefix$line"
                 }
-                log(message, true)
+                logLine { message }
             }
         }
         this
     }
 
-    @Deprecated("Use lambda variant", ReplaceWith("{ it }"))
-    override fun logLine(output: Output, items: List<HasStatus>): BlockRenderingLogger<R> = logLineLambda(items = items) { output }
-
-    override fun logLastLambda(block: () -> Result<R>): R = block().let { result ->
+    override fun logResult(block: () -> Result<R>): R = block().let { result ->
         kotlin.runCatching {
             log(getBlockEnd(result))
             result.getOrThrow()
-        }.onFailure { log(it.format(), true) }.getOrThrow()
+        }.onFailure { logLine { it.format() } }.getOrThrow()
     }
 
     companion object {
@@ -89,14 +86,14 @@ open class BlockRenderingLogger<R>(
         private const val statusInformationColumn = 100
         private const val statusInformationMinimalPadding = 5
 
-        val statusPadding = { text: String ->
+        val statusPadding: (String) -> String = { text: String ->
             " ".repeat((statusInformationColumn - text.removeEscapeSequences<CharSequence>().length).coerceAtLeast(statusInformationMinimalPadding))
         }
 
         @Deprecated(message = "Use segment instead")
         inline fun <reified R> render(caption: String, borderedOutput: Boolean = true, block: (RenderingLogger<R>) -> R) {
             val logger = BlockRenderingLogger<R>(caption, borderedOutput)
-            kotlin.runCatching { block(logger) }.also { logger.logLast(it) }.getOrThrow()
+            kotlin.runCatching { block(logger) }.also { logger.logResult { it } }.getOrThrow()
         }
 
         inline fun <reified R> render(caption: String): BlockRenderingLogger<R> = BlockRenderingLogger(caption)
@@ -111,33 +108,37 @@ inline fun <R, R2> BlockRenderingLogger<R>?.segment(
     block: BlockRenderingLogger<R2>.() -> R2,
 ): R2 {
     val logger: BlockRenderingLogger<R2> =
-        if (this == null) BlockRenderingLogger(
-            caption = caption,
-            borderedOutput = borderedOutput,
-            interceptor = additionalInterceptor ?: { it }
-        ) else if (this is MutedBlockRenderingLogger) {
-            MutedBlockRenderingLogger(
-                "$caption>",
-                borderedOutput = borderedOutput,
-                interceptor = additionalInterceptor ?: { it })
-        } else {
-            BlockRenderingLogger(
+        when {
+            this == null -> BlockRenderingLogger(
                 caption = caption,
                 borderedOutput = borderedOutput,
-                interceptor = if (additionalInterceptor != null) {
-                    { it.letIfSet(additionalInterceptor).letIfSet(interceptor) }
-                } else {
-                    interceptor
-                },
-            ) { output ->
-                val indentedOutput = output.mapLines {
-                    val truncateBy = ansiCode(it.truncateBy(prefix.length, minWhitespaceLength = 3))
-                    truncateBy.prefixWith(prefix)
+                interceptor = additionalInterceptor ?: { it }
+            )
+            this is MutedBlockRenderingLogger -> {
+                MutedBlockRenderingLogger(
+                    "$caption>",
+                    borderedOutput = borderedOutput,
+                    interceptor = additionalInterceptor ?: { it })
+            }
+            else -> {
+                BlockRenderingLogger(
+                    caption = caption,
+                    borderedOutput = borderedOutput,
+                    interceptor = if (additionalInterceptor != null) {
+                        { it.letIfSet(additionalInterceptor).letIfSet(interceptor) }
+                    } else {
+                        interceptor
+                    },
+                ) { output ->
+                    val indentedOutput = output.mapLines {
+                        val truncateBy = ansiCode(it.truncateBy(prefix.length, minWhitespaceLength = 3))
+                        truncateBy.prefixWith(prefix)
+                    }
+                    logText { indentedOutput }
                 }
-                logLambda(false) { indentedOutput }
             }
         }
-    return kotlin.runCatching { block(logger) }.also { logger.logLast(it) }.getOrThrow()
+    return kotlin.runCatching { block(logger) }.also { logger.logResult { it } }.getOrThrow()
 }
 
 
@@ -150,14 +151,14 @@ inline fun <reified R1, reified R2> BlockRenderingLogger<R1>?.miniSegment(
             override fun render(block: () -> String) {
             }
         }
-    kotlin.runCatching { block(logger) }.let { logger.logLastLambda { it } }
+    kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
 } else {
     val logger: SingleLineLogger<R2> = object : SingleLineLogger<R2>(caption) {
         override fun render(block: () -> String) {
             val message = block()
             val logMessage = if (borderedOutput) "├─╴ " + message.bold() else " :" + message.bold()
-            this@miniSegment.logLambda(true) { logMessage }
+            this@miniSegment.logLine { logMessage }
         }
     }
-    kotlin.runCatching { block(logger) }.let { logger.logLastLambda { it } }
+    kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
 }

@@ -10,43 +10,50 @@ import com.imgcstmzr.process.Output.Type.ERR
 import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.runtime.HasStatus
 
+/**
+ * Logger interface to implement loggers that don't just log
+ * but render log messages to provide easier understandable feedback.
+ */
 interface RenderingLogger<R> {
 
-    fun logLambda(trailingNewline: Boolean, block: () -> String)
-
-    @Deprecated("Use lambda variant", ReplaceWith("{ it }"))
-    fun log(message: String, trailingNewline: Boolean) = logLambda(trailingNewline) { message }
+    /**
+     * Method that is responsible to render what gets logged.
+     *
+     * All default implemented methods use this method.
+     */
+    fun render(trailingNewline: Boolean, block: () -> String)
 
     fun logException(block: () -> Throwable): RenderingLogger<R> = block().let {
-        logLambda(true) { ERR.format(it.stackTraceToString()) }
+        logLine { ERR.format(it.stackTraceToString()) }
         this
     }
 
-    @Deprecated("Use lambda variant", ReplaceWith("{ it }"))
-    fun logException(exception: Throwable): RenderingLogger<R> = logException { exception }
-
-    fun logLineLambda(items: List<HasStatus> = emptyList(), block: () -> Output = { OUT typed "" }): RenderingLogger<R> = block().let { output ->
-        logLambda(true) { output.formattedLines.joinToString("\n") }
+    fun logText(block: () -> String): RenderingLogger<R> = block().let { output ->
+        render(false) { output }
         this
     }
 
-    @Deprecated("Use lambda variant", ReplaceWith("{ it }"))
-    fun logLine(output: Output = OUT typed "", items: List<HasStatus> = emptyList()): RenderingLogger<R> = logLineLambda(items = items) { output }
+    fun logLine(block: () -> String): RenderingLogger<R> = block().let { output ->
+        render(true) { output }
+        this
+    }
 
-    fun logLastLambda(block: () -> Result<R>): R = kotlin.runCatching {
+    fun logStatus(items: List<HasStatus> = emptyList(), block: () -> Output = { OUT typed "" }): RenderingLogger<R> = block().let { output ->
+        logLine { output.formattedLines.joinToString("\n") }
+        this
+    }
+
+    fun logResult(block: () -> Result<R>): R = kotlin.runCatching {
         val result = block()
-        logLambda(true) { formatResult(result) }
+        logLine { formatResult(result) }
         result.getOrThrow()
     }.onFailure { ex ->
-        logLambda(true) { formatException(ex.toSingleLineString()) }
+        logLine { formatException(ex.toSingleLineString()) }
     }.getOrThrow()
-
-    @Deprecated("Use lambda variant", ReplaceWith("{ it }"))
-    fun logLast(result: Result<R>): R = logLastLambda { result }
 
     companion object {
         val DEFAULT: RenderingLogger<Any> = object : RenderingLogger<Any> {
-            override fun logLambda(trailingNewline: Boolean, block: () -> String) = block().let { TermUi.echo(it, trailingNewline) }
+            override fun render(trailingNewline: Boolean, block: () -> String) = block().let { TermUi.echo(it, trailingNewline) }
         }
 
         fun formatResult(result: Result<*>): String =

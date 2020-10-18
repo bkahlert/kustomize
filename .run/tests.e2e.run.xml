@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="All E2E Tests" type="JUnit" factoryName="JUnit">
+    <useClassPathOnly />
+    <option name="MAIN_CLASS_NAME" value="" />
+    <option name="METHOD_NAME" value="" />
+    <option name="TEST_OBJECT" value="tags" />
+    <option name="PARAMETERS" value="" />
+    <option name="TEST_SEARCH_SCOPE">
+      <value defaultName="wholeProject" />
+    </option>
+    <tag value="E2E" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

@@ -45,7 +45,7 @@ fun Patch.patch(img: Path, parentLogger: BlockRenderingLogger<Any>? = null) {
 fun BlockRenderingLogger<Any>.applyImgOperations(img: Path, patch: Patch) {
     val count = patch.imgOperations.size
     if (count == 0) {
-        logLine(META typed "IMG Operations: —")
+        logStatus { META typed "IMG Operations: —" }
         return
     }
 
@@ -59,12 +59,12 @@ fun BlockRenderingLogger<Any>.applyImgOperations(img: Path, patch: Patch) {
 fun BlockRenderingLogger<Any>.applyGuestfishAndFileSystemOperations(img: Path, patch: Patch): Any {
     val count = patch.guestfishOperations.size + patch.fileSystemOperations.size
     if (count == 0) {
-        logLine(META typed "File System Operations: —")
+        logStatus { META typed "File System Operations: —" }
         return 0
     }
 
-    return segment<Any, Any>("File System Operations", null) {
-        logLine(META typed "Starting Guestfish VM...")
+    return segment("File System Operations", null) {
+        logStatus { META typed "Starting Guestfish VM..." }
         val guestfish = Guestfish(img, this, this::class.qualifiedName + "." + String.random(16))
 
         val remainingGuestfishOperations = patch.guestfishOperations.toMutableList()
@@ -74,7 +74,7 @@ fun BlockRenderingLogger<Any>.applyGuestfishAndFileSystemOperations(img: Path, p
                 guestfish.run(op) // TODO
             }
         } else {
-            logLine(META typed "No Guestfish operations to run.")
+            logStatus { META typed "No Guestfish operations to run." }
         }
 
 
@@ -82,7 +82,7 @@ fun BlockRenderingLogger<Any>.applyGuestfishAndFileSystemOperations(img: Path, p
         if (guestPaths.isNotEmpty()) {
             guestfish.run(Guestfish.copyOutCommands(guestPaths))
         } else {
-            logLine(META typed "No files to extract.")
+            logStatus { META typed "No files to extract." }
         }
 
         val root = guestfish.guestRootOnHost
@@ -97,14 +97,14 @@ fun BlockRenderingLogger<Any>.applyGuestfishAndFileSystemOperations(img: Path, p
                 }
             }
         } else {
-            logLine(META typed "No files to patch.")
+            logStatus { META typed "No files to patch." }
         }
 
         val changedFiles = root.listFilesRecursively({ it.isFile }).map { root.relativize(it) }.toList()
         if (changedFiles.isNotEmpty()) {
             guestfish.run(Guestfish.copyInCommands(changedFiles))
         } else {
-            logLine(META typed "No changed files to copy back.")
+            logStatus { META typed "No changed files to copy back." }
         }
     }
 }
@@ -112,7 +112,7 @@ fun BlockRenderingLogger<Any>.applyGuestfishAndFileSystemOperations(img: Path, p
 fun BlockRenderingLogger<Any>.applyPrograms(img: Path, patch: Patch): Any {
     val count = patch.programs.size
     if (count == 0) {
-        logLine(META typed "Scripts: —")
+        logStatus { META typed "Scripts: —" }
         return 0
     }
 
@@ -215,15 +215,15 @@ class PathOperation(override val target: Path, val verifier: (Path) -> Any, val 
 
     override operator fun invoke(target: Path, log: BlockRenderingLogger<Any>) {
         log.miniSegment<Any, Any>(target.fileName.toString()) {
-            logLine(OUT typed termColors.yellow("Action needed? ..."))
+            logStatus { OUT typed termColors.yellow("Action needed? ...") }
             val result = runCatching { verifier.invoke(target) }
             if (result.isFailure) {
                 currentStatus = Running
-                logLine(OUT typed ((termColors.yellow + termColors.bold)(" Yes...")))
+                logStatus { OUT typed ((termColors.yellow + termColors.bold)(" Yes...")) }
 
                 handler.invoke(target)
 
-                logLine(OUT typed termColors.yellow("Verifying ..."))
+                logStatus { OUT typed termColors.yellow("Verifying ...") }
                 runCatching { verifier.invoke(target) }.onFailure {
                     currentStatus = Failure
                 }

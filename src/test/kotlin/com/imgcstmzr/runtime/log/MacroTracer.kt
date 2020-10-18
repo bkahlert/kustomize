@@ -17,7 +17,7 @@ inline fun <reified MR, reified mR> BlockRenderingLogger<MR>?._segment(
 ): mR = segment(f, null, false, null) {
     object : MacroTracer<mR> {
         override fun trace(input: String) {
-            this@segment.logLine(META typed input)
+            this@segment.logStatus { META typed input }
         }
 
         override fun <μR> MacroTracer<mR>.miniTrace(f: String, block: MiniTracer<μR>.() -> μR): μR =

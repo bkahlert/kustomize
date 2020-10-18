@@ -49,9 +49,9 @@ inline fun <reified T : OperatingSystem> Assertion.Builder<Path>.booted(
         var shuttingDown = false
 
         os.bootToUserSession("Booting to assert $this", this, logger) { output ->
-            logger.logLine(output, listOf(object : HasStatus {
+            logger.logStatus(items = listOf<HasStatus>(object : HasStatus {
                 override fun status(): String = if (shuttingDown) "shutting down" else "testing"
-            }))
+            })) { output }
             if (!shuttingDown) {
                 if (processor == null) processor = this@bootToUserSession.assertion(output)
                 if (processor != null) {

@@ -13,7 +13,7 @@ fun <R> SingleLineLogger<R>.microSequence(symbol: Grapheme, block: MicroTracer<R
             traces.add(input)
         }
     }).let(block)
-    logLine(OUT typed traces.joinToString(prefix = "($symbol ", separator = " ˃ ", postfix = ")"))
+    logStatus { OUT typed traces.joinToString(prefix = "($symbol ", separator = " ˃ ", postfix = ")") }
     return r
 }
 

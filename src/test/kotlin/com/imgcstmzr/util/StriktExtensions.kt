@@ -4,6 +4,7 @@ package com.imgcstmzr.util
 
 import com.bkahlert.koodies.string.CodePoint
 import com.bkahlert.koodies.string.Grapheme
+import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.LineSeparators.isMultiline
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.bkahlert.koodies.string.truncate
@@ -76,6 +77,14 @@ fun Assertion.Builder<String>.containsAtMost(value: String, limit: Int = 1) =
         if (actual <= limit) pass()
         else fail("but actually contains it ${limit}x")
     }
+
+fun <T : CharSequence> Assertion.Builder<T>.notContainsLineSeparator() =
+    assert("contains line separator") { value ->
+        val matchedSeparators = LineSeparators.filter { value.contains(it) }
+        if (matchedSeparators.isEmpty()) pass()
+        else fail("but the following have been found: $matchedSeparators")
+    }
+
 
 fun Assertion.Builder<String>.prefixes(value: String) =
     assert("prefixed by $value") { prefix ->

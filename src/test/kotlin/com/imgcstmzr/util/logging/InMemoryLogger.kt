@@ -54,7 +54,7 @@ class InMemoryLogger<T> private constructor(
     override fun toString(): String = finalizedDump(Result.success(Unit) as Result<Nothing>)
 
     override fun trace(input: String) {
-        log(input, true)
+        logLine { input }
     }
 
     override fun <MR> Tracer<T>.macroTrace(f: String, block: MacroTracer<MR>.() -> MR): MR {

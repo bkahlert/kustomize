@@ -29,7 +29,6 @@ import com.imgcstmzr.util.touch
 import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
@@ -43,13 +42,11 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
 import java.nio.file.Path
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
 @Execution(ExecutionMode.CONCURRENT)
 @ExtendWith(FixtureResolverExtension::class, OutputCaptureExtension::class)
-@Timeout(20, unit = TimeUnit.MINUTES)
 internal class PatchesKtTest {
 
     @Nested
@@ -113,7 +110,6 @@ internal class PatchesKtTest {
 
 
     @ExperimentalTime
-    @Timeout(20, unit = TimeUnit.MINUTES)
     @DockerRequired
     @Test
     internal fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite::class) img: Path, logger: InMemoryLogger<Any>) {

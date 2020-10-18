@@ -70,4 +70,3 @@ inline fun <reified mR, reified μR> BlockRenderingLogger<mR>?.miniTrace3(
     f: KFunction3<*, *, *, μR>,
     crossinline block: MiniTracer<μR>.() -> μR,
 ): μR = _segment(f.format(), block)
-

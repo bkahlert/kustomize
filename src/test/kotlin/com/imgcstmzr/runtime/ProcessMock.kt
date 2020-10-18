@@ -118,6 +118,7 @@ class ProcessMock(
         ) : this(inputs = inputs.map { Duration.ZERO to it }.toTypedArray(), baseDelayPerInput, byteArrayOutputStream, echoInput, logger)
 
         val terminated: Boolean get() = unreadCount == 0 || !processAlive
+        var closed = false
         internal var processAlive: Boolean = true
         var blockUntil: Long = System.currentTimeMillis()
         private val unread: MutableList<Pair<Duration, MutableList<Byte>>> = inputs.map { it.first to it.second.toByteArray().toMutableList() }.toMutableList()
@@ -155,6 +156,10 @@ class ProcessMock(
         }
 
         override fun available(): Int = logger.miniTrace(::available) {
+            if (closed) {
+                throw IOException("Closed.")
+            }
+
             if (handleAndReturnBlockingState()) {
                 trace("prompt is blocking")
                 return@miniTrace 0
@@ -165,7 +170,8 @@ class ProcessMock(
                 return@miniTrace 0
             }
             if (terminated) {
-                throw IOException("Backing buffer is depleted ➜ EOF reached.")
+                trace("Backing buffer is depleted ➜ EOF reached.")
+                return@miniTrace 0
             }
 
             val currentDelayedWord = unread.first()
@@ -181,6 +187,10 @@ class ProcessMock(
         }
 
         override fun read(): Int = logger.miniTrace(::read) {
+            if (closed) {
+                throw IOException("Closed.")
+            }
+
             while (handleAndReturnBlockingState()) {
                 trace("prompt is blocking")
             }
@@ -188,7 +198,8 @@ class ProcessMock(
             trace("${unreadCount.padded.yellow()} bytes unread")
 
             if (terminated) {
-                throw IOException("Backing buffer is depleted ➜ EOF reached.")
+                trace("Backing buffer is depleted ➜ EOF reached.")
+                return@miniTrace -1
             }
 
             val yetBlocked = blockUntil - System.currentTimeMillis()
@@ -236,6 +247,10 @@ class ProcessMock(
         }
 
         override fun read(b: ByteArray, off: Int, len: Int): Int {
+            if (terminated) {
+                return -1
+            }
+
             if (off or len or off + len or b.size - (off + len) < 0) {
                 throw IndexOutOfBoundsException()
             } else if (len == 0) {
@@ -249,7 +264,7 @@ class ProcessMock(
                 n += nread
                 if (n >= len) return n
                 // if not closed but no bytes available, return
-                if (!terminated && available() <= 0) return n
+                if (!closed && available() <= 0) return n
             }
         }
 
@@ -258,6 +273,10 @@ class ProcessMock(
                 trace("Input received: $text")
                 unread.removeFirst()
             }
+        }
+
+        override fun close() {
+            closed = true
         }
 
         override fun toString(): String = "$unreadCount bytes left"

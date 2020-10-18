@@ -8,7 +8,7 @@ package com.imgcstmzr.runtime.log
 //): MR = segment<*, MR>(f, null, false, null) {
 //    object : Tracer<MR> {
 //        override fun trace(input: String) {
-//            this@_segment?.logLine(META typed input)
+//            this@_segment?.logStatus { META typed input }
 //        }
 //
 //        override fun <mR> Tracer<MR>.macroTrace(f: String, block: MacroTracer<mR>.() -> mR): mR =

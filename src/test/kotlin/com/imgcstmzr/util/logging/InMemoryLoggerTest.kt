@@ -22,7 +22,7 @@ internal class InMemoryLoggerTest {
         val outputStream = ByteArrayOutputStream()
 
         val logger = InMemoryLogger<Unit>("caption", true, listOf(outputStream))
-        logger.log("abc", true)
+        logger.logLine { "abc" }
 
         expectThat(capturedOutput).isEmpty()
         expectThat(outputStream).asString()
@@ -35,7 +35,7 @@ internal class InMemoryLoggerTest {
         val outputStream = ByteArrayOutputStream()
 
         val logger = InMemoryLogger<Unit>("caption", true, listOf(outputStream))
-        logger.log("abc", true)
+        logger.logLine { "abc" }
 
         expectThat(logger.logged.removeEscapeSequences())
             .contains("caption")

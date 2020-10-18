@@ -2,8 +2,10 @@ package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.boolean.emoji
 import com.bkahlert.koodies.nio.NonBlockingReader
-import com.bkahlert.koodies.terminal.ANSI.EscapeSequences.termColors
+import com.bkahlert.koodies.terminal.ansi.Style.Companion.brightMagenta
+import com.bkahlert.koodies.terminal.ansi.Style.Companion.magenta
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
+import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.imgcstmzr.cli.TestCli
@@ -23,7 +25,6 @@ import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
-import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -31,7 +32,6 @@ import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
 import strikt.assertions.isTrue
-import java.util.concurrent.TimeUnit.MINUTES
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
@@ -121,7 +121,7 @@ class OperatingSystemsTest {
                 "leisure")
         }
 
-        @Timeout(1, unit = MINUTES)
+        @Slow
         @Execution(CONCURRENT)
         @TestFactory
         internal fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory<String?>): List<DynamicTest> = mapOf(
@@ -152,9 +152,9 @@ class OperatingSystemsTest {
                         reader.forEachLine { line ->
                             logger.miniTrace<String?, Unit>("read<<") {
                                 if (finished) {
-                                    trace(termColors.magenta(line.debug))
+                                    trace(line.debug.magenta())
                                 } else {
-                                    trace(termColors.brightMagenta(line.debug))
+                                    trace(line.debug.brightMagenta())
                                     trace("... processing")
                                     finished = !workflow.compute(runningOS, OUT typed line)
                                     if (finished) {
@@ -166,7 +166,7 @@ class OperatingSystemsTest {
                             }
                         }
                     }) {
-                        logger.logLastLambda { Result.failure(IllegalStateException("Deadlock")) }
+                        logger.logResult { Result.failure(IllegalStateException("Deadlock")) }
                         META.format("Unprocessed output: ${processMock.inputStream}")
                     }
 

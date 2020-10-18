@@ -2,6 +2,8 @@ package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.docker.toContainerName
 import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.terminal.ansi.Style.Companion.green
+import com.bkahlert.koodies.terminal.ascii.Kaomojis
 import com.bkahlert.koodies.unit.Mega
 import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.bytes
@@ -57,25 +59,25 @@ sealed class OperatingSystems : OperatingSystem {
                 val oneHundredMegaBytes = bytesPerStep.toZeroFilledByteArray()
                 when {
                     missing < 0.bytes -> {
-                        logLineLambda { ERR typed "Requested disk space is ${-missing} smaller than current size of ${img.fileName} (${img.size})." }
-                        logLineLambda { ERR typed "Decreasing an image's disk space is currently not supported." }
+                        logStatus { ERR typed "Requested disk space is ${-missing} smaller than current size of ${img.fileName} (${img.size})." }
+                        logStatus { ERR typed "Decreasing an image's disk space is currently not supported." }
                     }
                     missing == 0.bytes -> {
-                        logLineLambda { OUT typed "${img.fileName} is has already ${img.size}" }
+                        logStatus { OUT typed "${img.fileName} is has already ${img.size}" }
                     }
                     else -> {
                         miniSegment<Any, Size>("Progress:") {
-                            logLineLambda { OUT typed img.size.toString() }
+                            logStatus { OUT typed img.size.toString() }
                             while (missing > 0.bytes) {
                                 val write = if (missing < bytesPerStep) missing.toZeroFilledByteArray() else oneHundredMegaBytes
                                 img.toFile().appendBytes(write)
                                 missing -= write.size
-                                logLineLambda { OUT typed "⥅ ${img.size}" }
+                                logStatus { OUT typed "⥅ ${img.size}" }
                             }
                             img.size
                         }
 
-                        logLineLambda { OUT typed "Image Disk Space Successfully increased to " + img.size.toString() + ". Booting OS to finalize..." }
+                        logStatus { OUT typed "Image Disk Space Successfully increased to " + img.size.toString() + ". Booting OS to finalize..." }
 
                         val compileScript = compileScript("expand-root", "sudo raspi-config --expand-rootfs")
                         compileScript.bootRunStop("Resizing", this@RaspberryPiLite, img, this@segment)
@@ -106,7 +108,7 @@ sealed class OperatingSystems : OperatingSystem {
                     runningOS.process = this
                     if (startUp.isNotEmpty()) {
                         // setup / logging in
-                        logLine(output, startUp)
+                        logStatus(items = startUp) { output }
                         if (!startUp.compute(runningOS, output)) startUp.removeAt(0)
                     } else {
                         // running the actual programs by calling the passed processor
@@ -181,7 +183,7 @@ class RunningOS(
      * Logs the current execution status given the [output] and [unfinished].
      */
     fun status(output: Output, unfinished: List<Program>) {
-        renderer.logLine(output, if (shuttingDown) shuttingDownStatus else unfinished)
+        renderer.logStatus(items = if (shuttingDown) shuttingDownStatus else unfinished) { output }
     }
 
     @ExperimentalTime
@@ -206,7 +208,7 @@ class RunningOS(
     }
 
     var shuttingDown: Boolean by observable(false) { property, oldValue, newValue ->
-        renderer.logLine(META typed "shutdown invoked ($oldValue -> $newValue)")
+        renderer.logStatus { META typed "shutdown invoked ($oldValue -> $newValue)" }
     }
 }
 
@@ -275,12 +277,18 @@ interface OperatingSystem {
      * Creates a program to log [Credentials.username] in using [Credentials.password].
      */
     fun loginProgram(credentials: Credentials): Program {
+        fun RunningOS.enterUsername() {
+            input("${credentials.username}\r")
+        }
 
+        fun RunningOS.enterPassword() {
+            input("${credentials.password}\r")
+        }
         return Program(
             "login", { output -> "1/4: waiting for prompt" },
             "1/4: waiting for prompt" to { output ->
                 if (output.matches(loginPattern)) {
-                    input("${credentials.username}\r")
+                    enterUsername()
                     "2/4: confirm username"
                 } else "1/4: waiting for prompt"
             },
@@ -291,16 +299,19 @@ interface OperatingSystem {
             },
             "3/4: password..." to { output ->
                 if (output.matches(passwordPattern)) {
-                    input("${credentials.password}\r")
+                    enterPassword()
                     "4/4 confirm password"
                 } else "3/4: password..."
             },
             "4/4 confirm password" to { output ->
                 if (!output.matches(passwordPattern)) {
-                    "debug"
+                    "feedback"
                 } else "4/4 confirm password"
             },
-            "debug" to { output ->
+            "feedback" to { output ->
+                val message = "Logged in successfully ${Kaomojis.Proud.random()}".green()
+                input(": $message\r")
+                println(message)
 //                println("\n\n")
                 if (output.contains("Login incorrect")) println("Login incorrect seen")
 //                println(this.hi)

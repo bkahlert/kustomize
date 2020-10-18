@@ -89,7 +89,7 @@ class Guestfish(
      */
     fun run(guestfishOperation: GuestfishOperation) {
         if (guestfishOperation.commandCount == 0) {
-            logger.logLine(META typed "No commands specified to run inside ${imgPathOnHost.fileName}. Skipping.")
+            logger.logStatus { META typed "No commands specified to run inside ${imgPathOnHost.fileName}. Skipping." }
             return
         }
 
@@ -100,7 +100,7 @@ class Guestfish(
             val exitCode = execShellScript(workingDirectory = imgPathOnHost.parent,
                 lines = arrayOf(command),
                 outputProcessor = { output ->
-                    if (debug || output.type == ERR) logLine(output)
+                    if (debug || output.type == ERR) logStatus { output }
                 })
             check(exitCode == 0) {
                 "An error while running the following command inside $imgPathOnHost:\n$command\n" +
@@ -110,7 +110,7 @@ class Guestfish(
                 .filter { it.size > 2 }
                 .forEach {
                     val credentials = Credentials(it[1], it[2])
-                    logLine(META typed "Password of user ${credentials.username.quoted} updated.")
+                    logStatus { META typed "Password of user ${credentials.username.quoted} updated." }
                     OperatingSystems.credentials[imgPathOnHost] = credentials
                 }
             0

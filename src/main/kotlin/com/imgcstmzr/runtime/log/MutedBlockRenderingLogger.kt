@@ -10,9 +10,9 @@ open class MutedBlockRenderingLogger<R>(
     log: (String) -> Any = { },
 ) : BlockRenderingLogger<R>(caption, borderedOutput, interceptor, log) {
 
-    override fun logLambda(trailingNewline: Boolean, block: () -> String) {}
+    override fun render(trailingNewline: Boolean, block: () -> String) {}
 
-    override fun logLineLambda(items: List<HasStatus>, block: () -> Output) = this
+    override fun logStatus(items: List<HasStatus>, block: () -> Output) = this
 
-    override fun logLastLambda(block: () -> Result<R>): R = block().getOrThrow()
+    override fun logResult(block: () -> Result<R>): R = block().getOrThrow()
 }

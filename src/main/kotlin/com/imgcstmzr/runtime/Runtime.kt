@@ -62,18 +62,18 @@ fun <P : Program> Collection<P>.bootRunStop(
         val outputHistory = mutableListOf<Output>()
 
         watchdog = Watchdog(Duration.ofSeconds(45), repeating = true) {
-            this@segment.logLineLambda { ERR typed ("\n" + termColors.red("\nThe console seems to have halted... ${Kaomojis.Dogs.random()}")) }
-            this@segment.logLineLambda(listOf<HasStatus>(object : HasStatus {
+            this@segment.logStatus { ERR typed ("\n" + termColors.red("\nThe console seems to have halted... ${Kaomojis.Dogs.random()}")) }
+            this@segment.logStatus(listOf<HasStatus>(object : HasStatus {
                 override fun status(): String = Kaomojis.Dogs.random() + " ... console seems to have halted." // TODO
             })) {
                 META typed ("\nLast processed output was:\n" + outputHistory.joinToString("\n") {
                     it.unformatted.replaceNonPrintableCharacters()
                 })
             }
-            this@segment.logLineLambda(unfinishedPrograms) {
+            this@segment.logStatus(unfinishedPrograms) {
                 META typed ("\n" + "To help debugging, you can open a separate console and connect using:".cyan())
             }
-            this@segment.logLineLambda(unfinishedPrograms) {
+            this@segment.logStatus(unfinishedPrograms) {
                 META typed ("$".cyan() + " docker attach ...".cyan().bold() + "\n")
             }
         }

@@ -12,24 +12,24 @@ abstract class SingleLineLogger<R>(caption: CharSequence) : RenderingLogger<R> {
     }
 
     var strings: List<String>? by vetoable(listOf("$caption:"),
-        onChange = { property: KProperty<*>, oldValue: List<String>?, newValue: List<String>? -> oldValue != null })
+        onChange = { _: KProperty<*>, oldValue: List<String>?, _: List<String>? -> oldValue != null })
 
-    override fun logLambda(trailingNewline: Boolean, block: () -> String) {
+    abstract fun render(block: () -> String)
+
+    override fun render(trailingNewline: Boolean, block: () -> String) {
         val element = block()
         strings = strings?.plus(element)
     }
 
-    override fun logLineLambda(items: List<HasStatus>, block: () -> Output): RenderingLogger<R> {
+    override fun logStatus(items: List<HasStatus>, block: () -> Output): RenderingLogger<R> {
         strings = strings?.plus(block().formattedLines.joinToString(", "))
         if (items.isNotEmpty()) strings = strings?.plus(items.status().lines().joinToString(", ", "(", ")"))
         return this
     }
 
-    override fun logLastLambda(block: () -> Result<R>): R {
-        val returnValue = super.logLastLambda(block)
+    override fun logResult(block: () -> Result<R>): R {
+        val returnValue = super.logResult(block)
         render { strings?.joinToString(" ") ?: "" }
         return returnValue
     }
-
-    abstract fun render(block: () -> String)
 }
