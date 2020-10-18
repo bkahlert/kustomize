@@ -1,6 +1,7 @@
 package com.imgcstmzr.util
 
 import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.random
 import java.awt.datatransfer.MimeTypeParseException
 import java.io.BufferedInputStream
@@ -96,10 +97,27 @@ fun Path.toDataUri(): String {
 }
 
 
+/**
+ * Sets the content of this file as [text] encoded using UTF-8.
+ * If this file exists, it becomes overwritten.
+ *
+ * @param text text to write into file.
+ */
 fun Path.writeText(text: String): Unit = toFile().writeText(text)
 
+/**
+ * Appends [text] to the content of this file using UTF-8.
+ *
+ * @param text text to append to file.
+ */
 fun Path.appendText(text: String): Unit = toFile().appendText(text)
 
+/**
+ * Appends a new [line] to the content of this file using UTF-8.
+ *
+ * @param line line to append to file.
+ */
+fun Path.appendLine(line: String): Unit = appendText("$line${LineSeparators.LF}")
 
 /**
  * Returns the base name of the file described by this [Path].

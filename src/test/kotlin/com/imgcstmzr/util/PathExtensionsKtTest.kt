@@ -156,6 +156,22 @@ internal class PathExtensionsKtTest {
                 path.touch()
                 expectThat(path).hasContent("Test")
             }
+
+            @Test
+            internal fun `should append text to file`() {
+                val path = createTempFile().toPath()
+                path.appendText("text 1")
+                path.appendText("text 2")
+                expectThat(path).hasContent("text 1text 2")
+            }
+
+            @Test
+            internal fun `should append line to file`() {
+                val path = createTempFile().toPath()
+                path.appendLine("line 1")
+                path.appendLine("line 2")
+                expectThat(path).hasContent("line 1\nline 2\n")
+            }
         }
     }
 

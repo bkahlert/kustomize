@@ -1,6 +1,5 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.util.FixtureResolverExtension
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.containsContent
 import com.imgcstmzr.util.delete
@@ -12,7 +11,6 @@ import com.imgcstmzr.util.matches
 import com.imgcstmzr.util.mkdirs
 import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import strikt.api.expectCatching
@@ -24,7 +22,6 @@ import strikt.assertions.none
 import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
-@ExtendWith(FixtureResolverExtension::class)
 internal class UsernamePatchTest {
 
     @Test

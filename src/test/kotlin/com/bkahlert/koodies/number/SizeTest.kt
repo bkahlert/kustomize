@@ -102,7 +102,7 @@ internal class SizeTest {
 
         @ConcurrentTestFactory
         internal fun `should format fraction binary form`() = listOf(
-//            4_200.Gibi.bytes to "4.10 TiB",
+            4_200.Gibi.bytes to "4.10 TiB",
             420.Gibi.bytes to "420 GiB",
             42.Gibi.bytes to "42.0 GiB",
             4.2.Gibi.bytes to "4.20 GiB",
@@ -165,8 +165,8 @@ internal class SizeTest {
             42.Tebi.bytes to "44040192.0000 MiB",
             42.Gibi.bytes to "43008.0000 MiB",
             42.Mebi.bytes to "42.0000 MiB",
-//            52.Kibi.bytes to "0.1000 MiB",
-            42.Kibi.bytes to "0.0000 MiB",
+            52.Kibi.bytes to "0.0508 MiB",
+            42.Kibi.bytes to "0.0410 MiB",
             42.bytes to "0.0000 MiB",
         ).map { (size: Size, expected: String) ->
             val actual = size.toString(BinaryPrefix.Mebi, 4)
@@ -211,7 +211,7 @@ internal class SizeTest {
 
         @ConcurrentTestFactory
         internal fun `should format fraction decimal form`() = listOf(
-//            4_200.Giga.bytes to "4.20 TB",
+            4_200.Giga.bytes to "4.20 TB",
             420.Giga.bytes to "420 GB",
             42.Giga.bytes to "42.0 GB",
             4.2.Giga.bytes to "4.20 GB",
@@ -276,10 +276,10 @@ internal class SizeTest {
             42.Tera.bytes to "42000000.0000 MB",
             42.Giga.bytes to "42000.0000 MB",
             42.Mega.bytes to "42.0000 MB",
-//            520.hecto.bytes to "0.1000 MB", // ⛳️
-            420.hecto.bytes to "0.0000 MB", // 🌽
-//            52.kilo.bytes to "0.1000 MB",
-            42.kilo.bytes to "0.0000 MB",
+            520.hecto.bytes to "0.0520 MB", // ⛳️
+            420.hecto.bytes to "0.0420 MB", // 🌽
+            52.kilo.bytes to "0.0520 MB",
+            42.kilo.bytes to "0.0420 MB",
             42.bytes to "0.0000 MB",
         ).map { (size: Size, expected: String) ->
             val actual = size.toString(DecimalPrefix.Mega, 4)
@@ -302,7 +302,7 @@ internal class SizeTest {
 
         @Test
         internal fun `should format size human-readable (2^y)`() {
-            expectThat(tempFile.size.toString(BinaryPrefix::class)).isEqualTo("24.0 KiB")
+            expectThat(tempFile.size.toString(BinaryPrefix::class)).isEqualTo("24.4 KiB")
         }
     }
 

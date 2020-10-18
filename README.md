@@ -58,3 +58,10 @@ https://github.com/garthvh/ansible-raspi-playbooks/blob/master/tasks/tzdata.yml
 https://github.com/garthvh/ansible-raspi-playbooks/blob/master/tasks/internationalization.yml
 
 https://github.com/garthvh/ansible-raspi-playbooks/blob/master/playbooks/new-default.yml
+
+
+### Demo
+- `Size.kt`
+- `NonBlockingReader.kt`
+- `OperatingSystemTest.kt`
+- `PatchesKtTest.kt`

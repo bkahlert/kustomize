@@ -27,7 +27,6 @@ annotation class OS(
 )
 
 open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
-    // TODO write files to cleanup file to delete on restart
 
     override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =
         parameterContext.parameter.type.isAssignableFrom(Path::class.java)
@@ -44,6 +43,8 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
     }
 
     companion object {
+        val fixtureLog: (Path) -> Unit = FixtureLog(Paths.TEST.resolve("fixture.log"))
+
         private val cache = Cache(Paths.TEST.resolve("test"), maxConcurrentWorkingDirectories = 500)
         private fun cachedCopyOf(os: OperatingSystem?): Path {
             val name = os?.downloadUrl?.let { Path.of(it).baseName } ?: "imgcstmzr"
@@ -115,11 +116,12 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
             getStore(context).get(context.requiredTestInstance, Path::class.java)
 
         private fun saveReferenceForCleanup(context: ExtensionContext, img: Path) {
+            fixtureLog(img)
             getStore(context).put(context.requiredTestInstance, img)
         }
 
         private fun getStore(context: ExtensionContext): ExtensionContext.Store =
             context.getStore(ExtensionContext.Namespace.create(FixtureResolverExtension::class))
     }
-}
 
+}

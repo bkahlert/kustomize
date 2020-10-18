@@ -2,7 +2,7 @@ package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.docker.toContainerName
 import com.bkahlert.koodies.string.random
-import com.bkahlert.koodies.unit.Mebi
+import com.bkahlert.koodies.unit.Mega
 import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.bytes
 import com.bkahlert.koodies.unit.size
@@ -53,29 +53,29 @@ sealed class OperatingSystems : OperatingSystem {
         ): Any {
             return parentLogger.segment("Increasing Disk Space: ${img.size} ➜ $size", null) {
                 var missing = size - img.size
-                val bytesPerStep = 100.Mebi.bytes
-                val oneHundredMebiBytes = bytesPerStep.toZeroFilledByteArray()
+                val bytesPerStep = 100.Mega.bytes
+                val oneHundredMegaBytes = bytesPerStep.toZeroFilledByteArray()
                 when {
                     missing < 0.bytes -> {
-                        logLine(ERR typed "Requested disk space is ${-missing} smaller than current size of ${img.fileName} (${img.size}).")
-                        logLine(ERR typed "Decreasing an image's disk space is currently not supported.")
+                        logLineLambda { ERR typed "Requested disk space is ${-missing} smaller than current size of ${img.fileName} (${img.size})." }
+                        logLineLambda { ERR typed "Decreasing an image's disk space is currently not supported." }
                     }
                     missing == 0.bytes -> {
-                        logLine(OUT typed "${img.fileName} is has already ${img.size}")
+                        logLineLambda { OUT typed "${img.fileName} is has already ${img.size}" }
                     }
                     else -> {
                         miniSegment<Any, Size>("Progress:") {
-                            logLine(OUT typed img.size.toString())
+                            logLineLambda { OUT typed img.size.toString() }
                             while (missing > 0.bytes) {
-                                val write = if (missing < bytesPerStep) missing.toZeroFilledByteArray() else oneHundredMebiBytes
+                                val write = if (missing < bytesPerStep) missing.toZeroFilledByteArray() else oneHundredMegaBytes
                                 img.toFile().appendBytes(write)
                                 missing -= write.size
-                                logLine(OUT typed "${-missing}")
+                                logLineLambda { OUT typed "⥅ ${img.size}" }
                             }
                             img.size
                         }
 
-                        logLine(OUT typed "Image Disk Space Successfully increased to " + img.size.toString() + ". Booting OS to finalize...")
+                        logLineLambda { OUT typed "Image Disk Space Successfully increased to " + img.size.toString() + ". Booting OS to finalize..." }
 
                         val compileScript = compileScript("expand-root", "sudo raspi-config --expand-rootfs")
                         compileScript.bootRunStop("Resizing", this@RaspberryPiLite, img, this@segment)
@@ -91,7 +91,7 @@ sealed class OperatingSystems : OperatingSystem {
             processor: RunningOS.(Output) -> Any,
         ): Any {
             val cmd: String = startCommand(scenario, img.toFile())
-            val cmdRunner = CommandLineRunner(blocking = false)
+            val cmdRunner = CommandLineRunner(blocking = false) // TODO delete
 
             val credentials = credentials[img] ?: Credentials(defaultUsername, defaultPassword)
             val startUp: MutableList<Program> = mutableListOf(loginProgram(credentials))

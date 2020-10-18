@@ -12,7 +12,7 @@ import strikt.api.expectThat
 internal class BoxesTest {
     @Test
     internal fun `should render FAIL`(logger: InMemoryLogger<Unit>) {
-        logger.logLine(Output.Type.ERR typed Boxes.FAIL.toString())
+        logger.logLineLambda { Output.Type.ERR typed Boxes.FAIL.toString() }
         expectThat(logger).matches("""
             ╭─────╴should render FAIL{}
             │   

@@ -88,7 +88,7 @@ inline class Size(val bytes: BigDecimal) : Comparable<Size> {
                 val millionish = prefixes.first().basis.toBigDecimal().pow(2 * prefixes.first().baseExponent)
                 if (index == 0 && absNs >= prefixes.first().factor * millionish) scientific = true
                 val prefix = prefixes.getOrNull(index)
-                val value = bytes / prefix.factor
+                val value = bytes.divide(prefix.factor)
                 val formattedValue = when {
                     scientific -> value.scientificFormat
                     else -> {
@@ -111,7 +111,7 @@ inline class Size(val bytes: BigDecimal) : Comparable<Size> {
      */
     fun toString(unitPrefix: UnitPrefix, decimals: Int = 0): String {
         require(decimals >= 0) { "decimals must be not negative, but was $decimals" }
-        val number = bytes / unitPrefix.factor
+        val number = bytes.divide(unitPrefix.factor)
         val upperDetailLimit = 1e14.toBigDecimal()
         return when {
             number.abs() < upperDetailLimit -> number.formatToExactDecimals(decimals.coerceAtMost(12))
@@ -162,4 +162,4 @@ val Path.size: Size
             .fold(Size.ZERO) { size, path -> size + path.size }
     }
 
-fun Size.`in`(unit: UnitPrefix?) = bytes / (unit?.factor?.toBigDecimal() ?: BigDecimal.ONE)
+fun Size.`in`(unit: UnitPrefix?) = bytes.divide(unit?.factor?.toBigDecimal() ?: BigDecimal.ONE)

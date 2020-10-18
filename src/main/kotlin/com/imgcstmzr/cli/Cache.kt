@@ -124,7 +124,10 @@ private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
             if (destFile.exists) {
                 costlyProvidedFile.delete()
                 destFile
-            } else Files.move(costlyProvidedFile, destFile)
+            } else {
+                echo("Moving file to $destFile...", trailingNewline = false)
+                Files.move(costlyProvidedFile, destFile).also { echo(" Completed.") }
+            }
         }
     }
 
@@ -165,7 +168,10 @@ private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireVal
 
     companion object {
         fun requireValidName(dir: Path): String = kotlin.runCatching { WorkDirectoryName(dir.fileName.toString()).toString() }.getOrThrow()
-        fun isNameValid(name: String) = kotlin.runCatching { WorkDirectoryName(name).toString() }.isSuccess
+        fun isNameValid(name: String) = kotlin.runCatching {
+            val workDirectoryName = WorkDirectoryName(name)
+            workDirectoryName.toString()
+        }.isSuccess
 
         fun from(dir: Path, file: Path): WorkDirectory {
             val workDirectory = WorkDirectory(dir.resolve(WorkDirectoryName().toString()))

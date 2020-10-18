@@ -1,6 +1,8 @@
 package com.imgcstmzr.runtime.log
 
 import com.bkahlert.koodies.terminal.ANSI
+import com.bkahlert.koodies.terminal.ansi.Style.Companion.bold
+import com.bkahlert.koodies.terminal.ansi.Style.Companion.italic
 import com.imgcstmzr.process.Output
 import com.imgcstmzr.process.Output.Companion.format
 import com.imgcstmzr.runtime.HasStatus
@@ -25,10 +27,10 @@ abstract class SingleLineLogger<R>(caption: CharSequence) : RenderingLogger<R> {
 
     fun logLast(result: Result<R>): R {
         return kotlin.runCatching {
-            val message = ANSI.EscapeSequences.termColors.bold(
-                if (result.isSuccess) "✔" + if (result.getOrNull() === Unit) "" else " with ${result.getOrNull().debug}"
+            val message = (
+                if (result.isSuccess) "✔" + if (result.getOrNull() === Unit) "" else " returned".italic() + " ${result.getOrNull().debug}"
                 else ANSI.EscapeSequences.termColors.red("Failure: ${result.exceptionOrNull()}")
-            )
+                ).bold()
             val string: String = strings?.plus(message)?.joinToString(" ") ?: ""
             log(string, true)
             result.getOrThrow()

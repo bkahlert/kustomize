@@ -10,6 +10,7 @@ import com.bkahlert.koodies.string.truncateBy
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ANSI.EscapeSequences.termColors
 import com.bkahlert.koodies.terminal.ansi.Style.Companion.bold
+import com.bkahlert.koodies.terminal.ansi.Style.Companion.italic
 import com.bkahlert.koodies.terminal.ansi.Style.Companion.red
 import com.bkahlert.koodies.terminal.removeEscapeSequences
 import com.github.ajalt.clikt.output.TermUi
@@ -41,7 +42,7 @@ open class BlockRenderingLogger<R>(
         val renderedResult: String? = result.toSingleLineString()
         val message: String =
             if (result.isSuccess) {
-                val renderedSuccess = renderedResult?.let { "✔ with $it" } ?: "✔"
+                val renderedSuccess = renderedResult?.let { "✔ " + "returned".italic() + " $it" } ?: "✔"
                 if (borderedOutput) "│\n╰─────╴$renderedSuccess\n\n"
                 else "Completed: $renderedSuccess\n"
             } else {

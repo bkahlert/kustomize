@@ -8,6 +8,7 @@ import com.bkahlert.koodies.time.DateTimeFormatters.ISO8601_INSTANT
 import com.bkahlert.koodies.time.format
 import com.bkahlert.koodies.time.parseableInstant
 import com.bkahlert.koodies.unit.Gibi
+import com.bkahlert.koodies.unit.Giga
 import com.bkahlert.koodies.unit.bytes
 import com.imgcstmzr.patch.new.buildPatch
 import com.imgcstmzr.process.Guestfish
@@ -94,7 +95,7 @@ internal class PatchesKtTest {
           IMG Operations: —
           File System Operations: —
           Scripts: —
-         Completed: ✔
+         Completed: ✔ returned ❬0⫻1❭
         """.trimIndent())
     }
 
@@ -121,7 +122,7 @@ internal class PatchesKtTest {
 
         val fullyFleshedPatch = buildPatch("Try Everything Patch") {
             img {
-                resize(2.Gibi.bytes)
+                resize(2.Giga.bytes)
             }
             guestfish {
                 changePassword("pi", "po")
