@@ -6,7 +6,6 @@ import com.bkahlert.koodies.unit.Mebi
 import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.bytes
 import com.bkahlert.koodies.unit.size
-import com.github.ajalt.clikt.output.TermUi
 import com.imgcstmzr.process.CommandLineRunner
 import com.imgcstmzr.process.Output
 import com.imgcstmzr.process.Output.Type.ERR
@@ -21,7 +20,6 @@ import com.imgcstmzr.runtime.Program.Companion.compute
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.miniSegment
 import com.imgcstmzr.runtime.log.segment
-import com.imgcstmzr.util.debug
 import java.io.File
 import java.nio.file.Path
 import kotlin.properties.Delegates.observable
@@ -51,9 +49,9 @@ sealed class OperatingSystems : OperatingSystem {
         override fun increaseDiskSpace(
             size: Size,
             img: Path,
-            parentLogger: BlockRenderingLogger<Unit>?,
-        ) {
-            parentLogger.segment<Unit, Unit>("Increasing Disk Space: ${img.size} ➜ $size", null) {
+            parentLogger: BlockRenderingLogger<Any>?,
+        ): Any {
+            return parentLogger.segment("Increasing Disk Space: ${img.size} ➜ $size", null) {
                 var missing = size - img.size
                 val bytesPerStep = 100.Mebi.bytes
                 val oneHundredMebiBytes = bytesPerStep.toZeroFilledByteArray()
@@ -66,7 +64,7 @@ sealed class OperatingSystems : OperatingSystem {
                         logLine(OUT typed "${img.fileName} is has already ${img.size}")
                     }
                     else -> {
-                        miniSegment<Unit, Size>("Progress:") {
+                        miniSegment<Any, Size>("Progress:") {
                             logLine(OUT typed img.size.toString())
                             while (missing > 0.bytes) {
                                 val write = if (missing < bytesPerStep) missing.toZeroFilledByteArray() else oneHundredMebiBytes
@@ -89,9 +87,9 @@ sealed class OperatingSystems : OperatingSystem {
         override fun bootToUserSession(
             scenario: String,
             img: Path,
-            parentLogger: BlockRenderingLogger<Unit>?,
-            processor: RunningOS.(Output) -> Unit,
-        ) {
+            parentLogger: BlockRenderingLogger<Any>?,
+            processor: RunningOS.(Output) -> Any,
+        ): Any {
             val cmd: String = startCommand(scenario, img.toFile())
             val cmdRunner = CommandLineRunner(blocking = false)
 
@@ -115,7 +113,6 @@ sealed class OperatingSystems : OperatingSystem {
                         runningOS.processor(output)
                     }
                 }
-                TermUi.debug("Exit Code: ${runningProcess.blockExitCode}")
                 runningProcess.blockExitCode
             }
         }
@@ -150,15 +147,15 @@ sealed class OperatingSystems : OperatingSystem {
         override fun increaseDiskSpace(
             size: Size,
             img: Path,
-            parentLogger: BlockRenderingLogger<Unit>?,
-        ) = RaspberryPiLite.increaseDiskSpace(size, img, parentLogger)
+            parentLogger: BlockRenderingLogger<Any>?,
+        ): Any = RaspberryPiLite.increaseDiskSpace(size, img, parentLogger)
 
         override fun bootToUserSession(
             scenario: String,
             img: Path,
-            parentLogger: BlockRenderingLogger<Unit>?,
-            processor: RunningOS.(Output) -> Unit,
-        ): Unit = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
+            parentLogger: BlockRenderingLogger<Any>?,
+            processor: RunningOS.(Output) -> Any,
+        ): Any = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
     }
 }
 
@@ -238,8 +235,8 @@ interface OperatingSystem {
     fun increaseDiskSpace(
         size: Size,
         img: Path,
-        parentLogger: BlockRenderingLogger<Unit>?,
-    )
+        parentLogger: BlockRenderingLogger<Any>?,
+    ): Any
 
     /**
      * Boots the [OperatingSystem] on the [img] and performs the needed steps to get to the command prompt.
@@ -248,9 +245,9 @@ interface OperatingSystem {
     fun bootToUserSession(
         scenario: String,
         img: Path,
-        parentLogger: BlockRenderingLogger<Unit>? = null,
-        processor: RunningOS.(Output) -> Unit,
-    ): Unit
+        parentLogger: BlockRenderingLogger<Any>? = null,
+        processor: RunningOS.(Output) -> Any,
+    ): Any
 
     /**
      * Compiles a special script with a [name] that consists itself of multiple scripts
@@ -278,35 +275,69 @@ interface OperatingSystem {
      * Creates a program to log [Credentials.username] in using [Credentials.password].
      */
     fun loginProgram(credentials: Credentials): Program {
-        fun RunningOS.typeInCredentials(output: String, credentials: Credentials): String? =
-            when {
-                output.matches(loginPattern) -> {
-                    input("${credentials.username}\r")
-                    "2/2: password..."
-                }
-                output.matches(passwordPattern) -> {
-                    input("${credentials.password}\r")
-                    "debug"
-                }
-                else -> "1/2: waiting for prompt"
-            }
 
         return Program(
-            "login", { output -> "1/2: waiting for prompt" },
-            "1/2: waiting for prompt" to { output ->
-                typeInCredentials(output, credentials)
+            "login", { output -> "1/4: waiting for prompt" },
+            "1/4: waiting for prompt" to { output ->
+                if (output.matches(loginPattern)) {
+                    input("${credentials.username}\r")
+                    "2/4: confirm username"
+                } else "1/4: waiting for prompt"
             },
-            "2/2: password..." to { output ->
-                typeInCredentials(output, credentials)
+            "2/4: confirm username" to { output ->
+                if (!output.matches(loginPattern)) {
+                    "3/4: password..."
+                } else "2/4: confirm username"
+            },
+            "3/4: password..." to { output ->
+                if (output.matches(passwordPattern)) {
+                    input("${credentials.password}\r")
+                    "4/4 confirm password"
+                } else "3/4: password..."
+            },
+            "4/4 confirm password" to { output ->
+                if (!output.matches(passwordPattern)) {
+                    "debug"
+                } else "4/4 confirm password"
             },
             "debug" to { output ->
-                println("\n\n")
+//                println("\n\n")
                 if (output.contains("Login incorrect")) println("Login incorrect seen")
 //                println(this.hi)
                 null
             },
-        ).logging()
+        )//.logging()
     }
+//    fun loginProgram(credentials: Credentials): Program {
+//        fun RunningOS.typeInCredentials(output: String, credentials: Credentials): String? =
+//            when {
+//                output.matches(loginPattern) -> {
+//                    input("${credentials.username}\r")
+//                    "2/2: password..."
+//                }
+//                output.matches(passwordPattern) -> {
+//                    input("${credentials.password}\r")
+//                    "debug"
+//                }
+//                else -> "1/2: waiting for prompt"
+//            }
+//
+//        return Program(
+//            "login", { output -> "1/2: waiting for prompt" },
+//            "1/2: waiting for prompt" to { output ->
+//                typeInCredentials(output, credentials)
+//            },
+//            "2/2: password..." to { output ->
+//                typeInCredentials(output, credentials)
+//            },
+//            "debug" to { output ->
+//                println("\n\n")
+//                if (output.contains("Login incorrect")) println("Login incorrect seen")
+////                println(this.hi)
+//                null
+//            },
+//        )//.logging()
+//    }
 
 
 }

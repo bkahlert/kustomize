@@ -34,36 +34,36 @@ fun Patch.banner() { // TODO make use of it or delete
     echo("")
 }
 
-fun Patch.patch(img: Path, parentLogger: BlockRenderingLogger<Unit>? = null) {
-    parentLogger.segment<Unit, Unit>(name.toUpperCase(), null, borderedOutput = false) {
+fun Patch.patch(img: Path, parentLogger: BlockRenderingLogger<Any>? = null) {
+    parentLogger.segment<Any, Any>(name.toUpperCase(), null, borderedOutput = false) {
         applyImgOperations(img, this@patch)
         applyGuestfishAndFileSystemOperations(img, this@patch)
         applyPrograms(img, this@patch)
     }
 }
 
-fun BlockRenderingLogger<Unit>.applyImgOperations(img: Path, patch: Patch) {
+fun BlockRenderingLogger<Any>.applyImgOperations(img: Path, patch: Patch) {
     val count = patch.imgOperations.size
     if (count == 0) {
         logLine(META typed "IMG Operations: —")
         return
     }
 
-    segment<Unit, Unit>("IMG Operations ($count)", null, borderedOutput = false) {
+    segment<Any, Any>("IMG Operations ($count)", null, borderedOutput = false) {
         patch.imgOperations.onEachIndexed { index, op ->
             op(OperatingSystems.RaspberryPiLite, img, this)
         }
     }
 }
 
-fun BlockRenderingLogger<Unit>.applyGuestfishAndFileSystemOperations(img: Path, patch: Patch) {
+fun BlockRenderingLogger<Any>.applyGuestfishAndFileSystemOperations(img: Path, patch: Patch): Any {
     val count = patch.guestfishOperations.size + patch.fileSystemOperations.size
     if (count == 0) {
         logLine(META typed "File System Operations: —")
-        return
+        return 0
     }
 
-    segment<Unit, Unit>("File System Operations", null) {
+    return segment<Any, Any>("File System Operations", null) {
         logLine(META typed "Starting Guestfish VM...")
         val guestfish = Guestfish(img, this, this::class.qualifiedName + "." + String.random(16))
 
@@ -88,7 +88,7 @@ fun BlockRenderingLogger<Unit>.applyGuestfishAndFileSystemOperations(img: Path, 
         val root = guestfish.guestRootOnHost
         val filesToPatch = patch.fileSystemOperations.toMutableList() // TODO might need extra guestfish instance for correct indentation
         if (filesToPatch.isNotEmpty()) {
-            segment<Unit, Unit>("Patching files in ${root.fileName}", null) {
+            segment<Any, Any>("Patching files in ${root.fileName}", null) {
                 val unprocessedActions: MutableList<PathOperation> = filesToPatch
                 while (unprocessedActions.isNotEmpty()) {
                     val action = unprocessedActions.removeFirst()
@@ -109,18 +109,19 @@ fun BlockRenderingLogger<Unit>.applyGuestfishAndFileSystemOperations(img: Path, 
     }
 }
 
-fun BlockRenderingLogger<Unit>.applyPrograms(img: Path, patch: Patch) {
+fun BlockRenderingLogger<Any>.applyPrograms(img: Path, patch: Patch): Any {
     val count = patch.programs.size
     if (count == 0) {
         logLine(META typed "Scripts: —")
-        return
+        return 0
     }
 
-    segment<Unit, Unit>("Scripts", null) {
+    return segment<Any, Any>("Scripts", null) {
         val os = OperatingSystems.RaspberryPiLite
         patch.programs.onEachIndexed { index, op ->
             op.bootRunStop(scenario = op.name, os, img, this)
         }
+        patch.programs.size
     }
 }
 
@@ -140,7 +141,7 @@ interface Operation<TARGET> : HasStatus {
         operator fun invoke(label: String): String = formatter(label)
     }
 
-    operator fun invoke(target: TARGET, log: BlockRenderingLogger<Unit>)
+    operator fun invoke(target: TARGET, log: BlockRenderingLogger<Any>)
 
     val target: TARGET
 
@@ -159,7 +160,7 @@ interface Operation<TARGET> : HasStatus {
 //    }
 //}
 
-typealias ImgOperation = (OperatingSystem, Path, BlockRenderingLogger<Unit>?) -> Unit
+typealias ImgOperation = (OperatingSystem, Path, BlockRenderingLogger<Any>?) -> Any
 
 //class ImgInvocation(override val target: ImgInvocation) : Operation<ImgInvocation> {
 //
@@ -181,7 +182,7 @@ typealias ImgOperation = (OperatingSystem, Path, BlockRenderingLogger<Unit>?) ->
 //    override fun status(): String = currentStatus("Img preparation")
 //}
 
-//class GuestfishOperation(override val target: GuestfishCommandBuilder, val handler: GuestfishCommandBuilder.() -> Unit) : Operation<GuestfishCommandBuilder> {
+//class GuestfishOperation(override val target: GuestfishCommandBuilder, val handler: GuestfishCommandBuilder.() -> Any) : Operation<GuestfishCommandBuilder> {
 //
 //    class GuestfishCommandBuilder {
 //        val commands: MutableList<String> = mutableListOf()
@@ -208,12 +209,12 @@ typealias ImgOperation = (OperatingSystem, Path, BlockRenderingLogger<Unit>?) ->
 //    override fun status(): String = currentStatus("Guestfish preparation")
 //}
 
-class PathOperation(override val target: Path, val verifier: (Path) -> Unit, val handler: (Path) -> Unit) : Operation<Path> {
+class PathOperation(override val target: Path, val verifier: (Path) -> Any, val handler: (Path) -> Any) : Operation<Path> {
 
     override var currentStatus: Operation.Status = Ready
 
-    override operator fun invoke(target: Path, log: BlockRenderingLogger<Unit>) {
-        log.miniSegment<Unit, Unit>(target.fileName.toString()) {
+    override operator fun invoke(target: Path, log: BlockRenderingLogger<Any>) {
+        log.miniSegment<Any, Any>(target.fileName.toString()) {
             logLine(OUT typed termColors.yellow("Action needed? ..."))
             val result = runCatching { verifier.invoke(target) }
             if (result.isFailure) {
@@ -228,6 +229,7 @@ class PathOperation(override val target: Path, val verifier: (Path) -> Unit, val
                 }
             }
             currentStatus = Finished
+            currentStatus
         }
     }
 

@@ -27,6 +27,7 @@ internal class GuestfishMountPassthroughTest {
      * Experiment to [mount disk image to host using Guestfish](https://medium.com/@kumar_pravin/mount-disk-image-to-host-using-guestfish-d5f33c0297e0).
      */
     @TestFactory
+    @Execution(ExecutionMode.SAME_THREAD)
     internal fun `should provide access to filesystem`(@OS(DietPi::class, autoDelete = false) img: Path): List<DynamicTest> {
         val dockerImageName = "cmattoon/guestfish"
 

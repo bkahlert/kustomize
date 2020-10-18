@@ -164,9 +164,8 @@ class ProcessMock(
                 trace("${yetBlocked.milliseconds} to wait for next chunk")
                 return@miniTrace 0
             }
-            if (unread.isEmpty()) {
-                trace("Backing buffer is depleted.")
-                return@miniTrace 0
+            if (terminated) {
+                throw IOException("Backing buffer is depleted ➜ EOF reached.")
             }
 
             val currentDelayedWord = unread.first()
@@ -189,7 +188,7 @@ class ProcessMock(
             trace("${unreadCount.padded.yellow()} bytes unread")
 
             if (terminated) {
-                throw IOException("EOF reached.")
+                throw IOException("Backing buffer is depleted ➜ EOF reached.")
             }
 
             val yetBlocked = blockUntil - System.currentTimeMillis()

@@ -96,8 +96,6 @@ inline class Grapheme(val codePoints: List<CodePoint>) {
                 val parser = graphemesParser(tokens)
                 val tree: GraphemesContext = parser.graphemes()
                 ParseTreeWalker.DEFAULT.walk(listener, tree)
-            }.onFailure { x ->
-//                println(x)
             }
             return listener.results
         }

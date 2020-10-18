@@ -21,7 +21,7 @@ fun Assertion.Builder<Guestfish>.path(guestPath: Path): Assertion.Builder<Path> 
 }
 
 inline fun Assertion.Builder<Path>.mounted(
-    logger: BlockRenderingLogger<Unit>,
+    logger: BlockRenderingLogger<Any>,
     crossinline assertion: Assertion.Builder<Guestfish>.() -> Unit,
 ): Assertion.Builder<Path> {
     get("mounted") {
@@ -40,7 +40,7 @@ fun Assertion.Builder<String>.isEqualTo(expected: String) =
     }
 
 inline fun <reified T : OperatingSystem> Assertion.Builder<Path>.booted(
-    logger: BlockRenderingLogger<Unit>,
+    logger: BlockRenderingLogger<Any>,
     crossinline assertion: RunningOS.(Output) -> (Output) -> Boolean,
 ): Assertion.Builder<Path> {
     val os = T::class.objectInstance ?: error("Invalid OS")

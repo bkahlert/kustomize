@@ -34,7 +34,7 @@ class Watchdog(
     /**
      * Gets called after more time has passed between the start of this watchdog and/or two consecutive [reset] calls.
      */
-    val timedOut: RenderingLogger<*>.() -> Unit,
+    val timedOut: RenderingLogger<*>.() -> Any,
 ) {
     private val blockingQueue = LinkedBlockingQueue<Command>()
     private val thread = Thread {

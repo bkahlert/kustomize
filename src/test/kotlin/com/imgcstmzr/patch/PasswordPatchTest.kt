@@ -41,7 +41,7 @@ internal class PasswordPatchTest {
 
     @DockerRequired
     @Test
-    internal fun `should update shadow file correctly`(@OS(RaspberryPiLite::class) img: Path, logger: InMemoryLogger<Unit>) {
+    internal fun `should update shadow file correctly`(@OS(RaspberryPiLite::class) img: Path, logger: InMemoryLogger<Any>) {
         val passwordPath = "/etc/shadow"
         val username = RaspberryPiLite.defaultUsername
         val newPassword = "on-a-diet"
@@ -62,7 +62,7 @@ internal class PasswordPatchTest {
 
     @DockerRequired
     @Test
-    internal fun `should not be able to use old password`(@OS(RaspberryPiLite::class) img: Path, logger: InMemoryLogger<Unit>) {
+    internal fun `should not be able to use old password`(@OS(RaspberryPiLite::class) img: Path, logger: InMemoryLogger<Any>) {
         val passwordPatch = PasswordPatch(RaspberryPiLite.defaultUsername, "po", salt)
 
         passwordPatch.patch(img, logger)

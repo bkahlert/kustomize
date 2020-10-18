@@ -33,7 +33,7 @@ internal class UsernamePatchTest {
     }
 
     @Test
-    internal fun `should clean all files`(logger: InMemoryLogger<Unit>) {
+    internal fun `should clean all files`(logger: InMemoryLogger<Any>) {
         val root = prepare()
         val patch = UsernamePatch("pi", "ella")
 
@@ -47,7 +47,7 @@ internal class UsernamePatchTest {
     }
 
     @Test
-    internal fun `should finish if files are missing`(logger: InMemoryLogger<Unit>) {
+    internal fun `should finish if files are missing`(logger: InMemoryLogger<Any>) {
         val root = prepare().also { it.resolve("etc").delete() }
         val patch = UsernamePatch("pi", "ella")
         expectCatching {
@@ -58,7 +58,7 @@ internal class UsernamePatchTest {
     }
 
     @Test
-    internal fun `should not touch other files`(logger: InMemoryLogger<Unit>) {
+    internal fun `should not touch other files`(logger: InMemoryLogger<Any>) {
         val root = prepare().also { it.resolve("dont-touch-me").writeText("pi\npi\n") }
         val patch = UsernamePatch("pi", "ella")
 
@@ -70,7 +70,7 @@ internal class UsernamePatchTest {
     }
 
     @Test
-    internal fun `should not pull a single word apart`(logger: InMemoryLogger<Unit>) {
+    internal fun `should not pull a single word apart`(logger: InMemoryLogger<Any>) {
         val root = prepare()
         val patch = UsernamePatch("pi", "ella")
 

@@ -29,14 +29,14 @@ annotation class OS(
 open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
     // TODO write files to cleanup file to delete on restart
 
-    override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext?): Boolean =
+    override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =
         parameterContext.parameter.type.isAssignableFrom(Path::class.java)
 
-    override fun resolveParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext?): Any? {
+    override fun resolveParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Any? {
         val annotation = parameterContext.parameter.getAnnotation(OS::class.java)
         val os = annotation?.value?.objectInstance
         val autoDelete = annotation?.autoDelete ?: true
-        return cachedCopyOf(os).also { if (autoDelete) saveReferenceForCleanup(extensionContext ?: throw NoSuchElementException(), it) }
+        return cachedCopyOf(os).also { if (autoDelete) saveReferenceForCleanup(extensionContext, it) }
     }
 
     override fun afterEach(context: ExtensionContext) {

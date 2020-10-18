@@ -7,7 +7,7 @@ open class MutedBlockRenderingLogger<R>(
     caption: String = "",
     borderedOutput: Boolean = false,
     interceptor: (String) -> String? = { it },
-    log: (String) -> Unit = { },
+    log: (String) -> Any = { },
 ) : BlockRenderingLogger<R>(caption, borderedOutput, interceptor, log) {
 
     override fun logLambda(trailingNewline: Boolean, block: () -> String) {}

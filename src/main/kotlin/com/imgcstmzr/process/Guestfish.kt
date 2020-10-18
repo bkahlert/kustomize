@@ -33,7 +33,7 @@ class Guestfish(
      */
     private val imgPathOnHost: Path,
 
-    private val logger: BlockRenderingLogger<Unit>,
+    private val logger: BlockRenderingLogger<Any>,
 
     /**
      * Name to be used for the underlying Docker container. If a container with the same name exists, it will be stopped and removed.

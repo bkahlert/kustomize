@@ -24,7 +24,7 @@ open class BlockRenderingLogger<R>(
     private val caption: String,
     val borderedOutput: Boolean = false,
     val interceptor: (String) -> String? = { it },
-    val log: (String) -> Unit = { output: String ->
+    val log: (String) -> Any = { output: String ->
         TermUi.echo(output, trailingNewline = false)
     },
 ) : RenderingLogger<R> {

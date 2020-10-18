@@ -6,8 +6,10 @@ import com.imgcstmzr.process.Exec.Sync.execShellScript
 import com.imgcstmzr.process.Output.Type.META
 import com.imgcstmzr.util.isEqualToStringWise
 import com.imgcstmzr.util.logging.CapturedOutput
+import com.imgcstmzr.util.logging.OutputCaptureExtension
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.api.parallel.Isolated
@@ -20,6 +22,7 @@ import strikt.assertions.isTrue
 import java.util.Collections
 
 @Execution(ExecutionMode.CONCURRENT)
+@ExtendWith(OutputCaptureExtension::class)
 @Isolated // flaky OutputCapture
 internal class ExecTest {
 

@@ -8,13 +8,10 @@ import com.imgcstmzr.runtime.OperatingSystemMock
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.util.DockerRequired
-import com.imgcstmzr.util.FixtureResolverExtension
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.matches
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import strikt.api.expectThat
@@ -24,12 +21,10 @@ import strikt.assertions.isNotEqualTo
 import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
-@ExtendWith(FixtureResolverExtension::class)
 internal class ImgResizePatchTest {
 
     @Test
-    @Disabled
-    internal fun `should provide commands`(logger: InMemoryLogger<Unit>) {
+    internal fun `should provide commands`(logger: InMemoryLogger<Any>) {
         expectThat(ImgResizePatch(10.Mebi.bytes)).matches(imgOperationsAssertion = {
             hasSize(1)
             get { this[0] }.assert("") { op ->
@@ -40,10 +35,11 @@ internal class ImgResizePatchTest {
                     override fun increaseDiskSpace(
                         size: Size,
                         img: Path,
-                        parentLogger: BlockRenderingLogger<Unit>?,
-                    ) {
+                        parentLogger: BlockRenderingLogger<Any>?,
+                    ): Any {
                         this.size = size
                         this.img = img
+                        return size
                     }
                 }
                 val img = Path.of("foo")

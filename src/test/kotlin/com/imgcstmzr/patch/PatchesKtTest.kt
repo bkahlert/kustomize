@@ -76,7 +76,7 @@ internal class PatchesKtTest {
     }
 
     @Test
-    internal fun `should only log using specified logger`(img: Path, logger: InMemoryLogger<Unit>, capturedOutput: CapturedOutput) {
+    internal fun `should only log using specified logger`(img: Path, logger: InMemoryLogger<Any>, capturedOutput: CapturedOutput) {
         val nullPatch = buildPatch("No-Op Patch") {}
         nullPatch.patch(img, logger)
         expectThat(logger.logged.removeEscapeSequences()).isNotEmpty()
@@ -85,7 +85,7 @@ internal class PatchesKtTest {
 
     @Test
     internal fun `should log not bordered if specified`(img: Path, capturedOutput: CapturedOutput) {
-        val logger = InMemoryLogger<Unit>("not-bordered", false, emptyList())
+        val logger = InMemoryLogger<Any>("not-bordered", false, emptyList())
         val nullPatch = buildPatch("No-Op Patch") {}
         nullPatch.patch(img, logger)
         expectThat(logger.logged.removeEscapeSequences()).matches("""
@@ -100,7 +100,7 @@ internal class PatchesKtTest {
 
     @DockerRequired
     @Test
-    internal fun `should prepare root directory then patch and copy everything back`(img: Path, logger: InMemoryLogger<Unit>) {
+    internal fun `should prepare root directory then patch and copy everything back`(img: Path, logger: InMemoryLogger<Any>) {
         val sshPatch = SshPatch()
 
         sshPatch.patch(img, logger)
@@ -115,7 +115,7 @@ internal class PatchesKtTest {
     @Timeout(20, unit = TimeUnit.MINUTES)
     @DockerRequired
     @Test
-    internal fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite::class) img: Path, logger: InMemoryLogger<Unit>) {
+    internal fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite::class) img: Path, logger: InMemoryLogger<Any>) {
         val now = Instant.now()
         val nowString = ISO8601_INSTANT.format<Instant>(now)
 

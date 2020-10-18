@@ -26,8 +26,8 @@ fun Program.bootRunStop(
     scenario: String,
     os: OperatingSystem,
     img: Path,
-    parentLogger: BlockRenderingLogger<Unit>?,
-): Unit =
+    parentLogger: BlockRenderingLogger<Any>?,
+): Any =
     listOf(this).bootRunStop(scenario, os, img, parentLogger)
 
 
@@ -41,22 +41,24 @@ fun <P : Program> Collection<P>.bootRunStop(
     scenario: String,
     os: OperatingSystem,
     img: Path,
-    parentLogger: BlockRenderingLogger<Unit>?,
-) {
+    parentLogger: BlockRenderingLogger<Any>?,
+): Any {
     val unfinishedPrograms: MutableList<Program> = this.toMutableList()
     var watchdog: Watchdog? = null
-    return parentLogger.segment("Run ${unfinishedPrograms.size} programs on ${os.name}@${img.fileName}", null, additionalInterceptor = { originalMessage ->
-        watchdog?.reset()
-        originalMessage.removeEscapeSequences().takeIf { line ->
-            line.toLowerCase().contains("failed") || line.toLowerCase().contains("error")
-        }?.let { replace ->
-            return@let replace.mapLines { line ->
-                return@mapLines line.removeEscapeSequences().let {
-                    it.substringBefore(" ") + " " + ERR.format(it.substringAfter(" "))
+    return parentLogger.segment("Run ${unfinishedPrograms.size} programs on ${os.name}@${img.fileName}",
+        null,
+        additionalInterceptor = { originalMessage ->
+            watchdog?.reset()
+            originalMessage.removeEscapeSequences().takeIf { line ->
+                line.toLowerCase().contains("failed") || line.toLowerCase().contains("error")
+            }?.let { replace ->
+                return@let replace.mapLines { line ->
+                    return@mapLines line.removeEscapeSequences().let {
+                        it.substringBefore(" ") + " " + ERR.format(it.substringAfter(" "))
+                    }
                 }
-            }
-        } ?: originalMessage
-    }) {
+            } ?: originalMessage
+        }) {
         val outputHistory = mutableListOf<Output>()
 
         watchdog = Watchdog(Duration.ofSeconds(45), repeating = true) {

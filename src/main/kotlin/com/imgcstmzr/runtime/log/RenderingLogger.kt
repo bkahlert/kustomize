@@ -30,7 +30,7 @@ interface RenderingLogger<R> {
     fun logLine(output: Output = OUT typed "", items: List<HasStatus> = emptyList()): RenderingLogger<R> = logLineLambda(items = items) { output }
 
     companion object {
-        val DEFAULT: RenderingLogger<Unit> = object : RenderingLogger<Unit> {
+        val DEFAULT: RenderingLogger<Any> = object : RenderingLogger<Any> {
             override fun logLambda(trailingNewline: Boolean, block: () -> String) {
                 block().let { TermUi.echo(it, trailingNewline) }
             }

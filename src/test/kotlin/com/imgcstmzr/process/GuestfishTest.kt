@@ -53,7 +53,7 @@ internal class GuestfishTest {
 
     @Test
     @DockerRequired
-    internal fun `should copy file from img, skip non-existing and override one`(img: Path, logger: InMemoryLogger<Unit>) {
+    internal fun `should copy file from img, skip non-existing and override one`(img: Path, logger: InMemoryLogger<Any>) {
         val guestfish = Guestfish(img, logger).withRandomSuffix()
         guestfish.run(copyOutCommands(listOf(Path.of("/boot/cmdline.txt"), Path.of("/non/existing.txt"))))
         val dir = guestfish.guestRootOnHost
@@ -67,7 +67,7 @@ internal class GuestfishTest {
 
     @Test
     @DockerRequired
-    internal fun `should copy new file to img and overwrite a second one`(img: Path, logger: InMemoryLogger<Unit>) {
+    internal fun `should copy new file to img and overwrite a second one`(img: Path, logger: InMemoryLogger<Any>) {
         val guestfish = Guestfish(img, logger).withRandomSuffix()
         val exampleHtml = Path.of("/example.html")
         val exampleHtmlOnHost = guestfish.guestRootOnHost.asRootFor(exampleHtml).also { ClassPath.of("example.html").copyTo(it) }
@@ -86,7 +86,7 @@ internal class GuestfishTest {
 
     @Test
     @DockerRequired
-    internal fun `should change password`(@OS(DietPi::class) img: Path, logger: InMemoryLogger<Unit>) {
+    internal fun `should change password`(@OS(DietPi::class) img: Path, logger: InMemoryLogger<Any>) {
         val guestfish = Guestfish(img, logger).withRandomSuffix()
         val shadowPath = Path.of("/etc/shadow")
         val hostShadow = guestfish.guestRootOnHost.asRootFor(shadowPath)
@@ -97,7 +97,7 @@ internal class GuestfishTest {
 
     @Test
     @DockerRequired
-    internal fun `should update credentials password`(@OS(DietPi::class) img: Path, logger: InMemoryLogger<Unit>) {
+    internal fun `should update credentials password`(@OS(DietPi::class) img: Path, logger: InMemoryLogger<Any>) {
         val guestfish = Guestfish(img, logger).withRandomSuffix()
         val password = String.random()
 

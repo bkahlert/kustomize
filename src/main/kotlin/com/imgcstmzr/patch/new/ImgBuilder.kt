@@ -63,7 +63,7 @@ class PatchBuilder(
 @PatchDsl
 class ImgOperationsCollector(private val imgOperations: MutableList<ImgOperation>) {
     fun resize(size: Size) {
-        imgOperations += { os: OperatingSystem, path: Path, parentLogger: BlockRenderingLogger<Unit>? ->
+        imgOperations += { os: OperatingSystem, path: Path, parentLogger: BlockRenderingLogger<Any>? ->
             os.increaseDiskSpace(size,
                 path,
                 parentLogger)
@@ -80,7 +80,7 @@ class GuestfishOperationsCollector(private val guestfishOperations: MutableList<
 
 @PatchDsl
 class FileSystemOperationsCollector(private val pathOperations: MutableList<PathOperation>) {
-    fun edit(path: String, validator: (Path) -> Unit, operations: (Path) -> Unit) =
+    fun edit(path: String, validator: (Path) -> Any, operations: (Path) -> Any) =
         pathOperations.add(PathOperation(Path.of(path), validator, operations))
 }
 

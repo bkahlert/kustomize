@@ -161,7 +161,7 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
 
             exitProcess(0)
 
-            val logger = BlockRenderingLogger<Unit>("Project: $name")
+            val logger = BlockRenderingLogger<Any>("Project: $name")
 
             val guestfish = Guestfish(this, logger, "$name-guestfish")
             guestfish.run(copyOutCommands(listOf("/etc/hostname", "/boot/cmdline.txt", "/boot/config.txt").map(Path::of)))
