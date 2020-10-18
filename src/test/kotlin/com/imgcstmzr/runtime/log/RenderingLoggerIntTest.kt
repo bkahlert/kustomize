@@ -18,12 +18,12 @@ import strikt.assertions.contains
 import strikt.assertions.isSuccess
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class BlockRenderingLoggerTest {
+internal class RenderingLoggerIntTest {
 
     @Test
     internal fun `should log`(logger: InMemoryLogger<Unit>) {
-        logger.logLine(OUT typed "☎Σ⊂⊂(☉ω☉∩)")
-        logger.logLast(Result.success(Unit))
+        logger.logLineLambda { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+        logger.logLastLambda { Result.success(Unit) }
 
         expectThat(logger.logged).matches(
             """
@@ -37,15 +37,15 @@ internal class BlockRenderingLoggerTest {
 
     @Test
     internal fun `should allow single line logging`(logger: InMemoryLogger<Unit>) {
-        logger.logLine(OUT typed "☎Σ⊂⊂(☉ω☉∩)")
+        logger.logLineLambda { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logger.miniSegment<Unit, Unit>("mini") {
-            logLine(OUT typed "A")
-            logLine(OUT typed "bb")
-            logLine(OUT typed " ")
+            logLineLambda { OUT typed "A" }
+            logLineLambda { OUT typed "bb" }
+            logLineLambda { OUT typed " " }
         }
-        logger.logLine(OUT typed "☎Σ⊂⊂(☉ω☉∩)")
-        logger.logLine(OUT typed "☎Σ⊂⊂(☉ω☉∩)")
-        logger.logLast(Result.success(Unit))
+        logger.logLineLambda { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+        logger.logLineLambda { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+        logger.logLastLambda { Result.success(Unit) }
 
         expectThat(logger.logged).matches(
             """
@@ -62,16 +62,16 @@ internal class BlockRenderingLoggerTest {
 
     @Test
     internal fun `should allow nested logging`(logger: InMemoryLogger<String>) {
-        logger.logLine(OUT typed "outer 1")
-        logger.logLine(OUT typed "outer 2")
+        logger.logLineLambda { OUT typed "outer 1" }
+        logger.logLineLambda { OUT typed "outer 2" }
         logger.segment<String, Unit>("nested log", null) {
-            logLine(OUT typed "nested 1")
-            logLine(OUT typed "nested 2")
-            logLine(OUT typed "nested 3")
+            logLineLambda { OUT typed "nested 1" }
+            logLineLambda { OUT typed "nested 2" }
+            logLineLambda { OUT typed "nested 3" }
         }
-        logger.logLine(OUT typed "outer 3")
-        logger.logLine(OUT typed "outer 4")
-        logger.logLast(Result.success("end"))
+        logger.logLineLambda { OUT typed "outer 3" }
+        logger.logLineLambda { OUT typed "outer 4" }
+        logger.logLastLambda { Result.success("end") }
 
         expectThat(logger.logged).matches("""
                     ╭─────╴{}
@@ -151,29 +151,29 @@ internal class BlockRenderingLoggerTest {
             val label = if (borderedOutput) "bordered" else "not-bordered"
             val logger = loggerFactory.createLogger(label, borderedOutput = borderedOutput)
             dynamicTest("should allow complex layout—$label") {
-                logger.logLine(OUT typed "outer 1")
-                logger.logLine(OUT typed "outer 2")
+                logger.logLineLambda { OUT typed "outer 1" }
+                logger.logLineLambda { OUT typed "outer 2" }
                 logger.segment<Unit, Unit>("nested log") {
-                    logLine(OUT typed "nested 1")
+                    logLineLambda { OUT typed "nested 1" }
                     miniSegment<Unit, Unit>("mini segment") {
-                        logLine(ERR typed "12345")
-                        logLine(META typed "sample")
+                        logLineLambda { ERR typed "12345" }
+                        logLineLambda { META typed "sample" }
                     }
                     segment<Unit, Unit>("nested log") {
-                        logLine(OUT typed "nested 1")
+                        logLineLambda { OUT typed "nested 1" }
                         miniSegment<Unit, Unit>("mini segment") {
-                            logLine(ERR typed "12345")
-                            logLine(META typed "sample")
+                            logLineLambda { ERR typed "12345" }
+                            logLineLambda { META typed "sample" }
                         }
-                        logLine(OUT typed "nested 2")
-                        logLine(OUT typed "nested 3")
+                        logLineLambda { OUT typed "nested 2" }
+                        logLineLambda { OUT typed "nested 3" }
                     }
-                    logLine(OUT typed "nested 2")
-                    logLine(OUT typed "nested 3")
+                    logLineLambda { OUT typed "nested 2" }
+                    logLineLambda { OUT typed "nested 3" }
                 }
-                logger.logLine(OUT typed "outer 3")
-                logger.logLine(OUT typed "outer 4")
-                logger.logLast(Result.success(Unit))
+                logger.logLineLambda { OUT typed "outer 3" }
+                logger.logLineLambda { OUT typed "outer 4" }
+                logger.logLastLambda { Result.success(Unit) }
 
                 expectThat(logger.logged).matches(expectation)
             }
@@ -181,8 +181,8 @@ internal class BlockRenderingLoggerTest {
 
     @Test
     internal fun `should log status`(logger: InMemoryLogger<Unit>) {
-        logger.logLine(OUT typed "☎Σ⊂⊂(☉ω☉∩)", listOf(StringStatus("getting phone call")))
-        logger.logLast(Result.success(Unit))
+        logger.logLineLambda(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+        logger.logLastLambda { Result.success(Unit) }
 
         expectThat(logger.logged).matches(
             """
@@ -196,11 +196,11 @@ internal class BlockRenderingLoggerTest {
 
     @Test
     internal fun `should log status in same column`(logger: InMemoryLogger<Unit>) {
-        logger.logLine(OUT typed "☎Σ⊂⊂(☉ω☉∩)", listOf(StringStatus("getting phone call")))
+        logger.logLineLambda(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logger.segment<Unit, Unit>("nested", null) {
-            logLine(OUT typed "☎Σ⊂⊂(☉ω☉∩)", listOf(StringStatus("getting phone call")))
+            logLineLambda(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         }
-        logger.logLast(Result.success(Unit))
+        logger.logLastLambda { Result.success(Unit) }
 
         expectThat(logger.logged)
             .contains("│   ☎Σ⊂⊂(☉ω☉∩)                                                                                          ◀◀ getting phone call")
@@ -212,15 +212,15 @@ internal class BlockRenderingLoggerTest {
     @Test
     internal fun `should log exception`(logger: InMemoryLogger<String>) {
         kotlin.runCatching {
-            logger.logLine(OUT typed "outer 1")
-            logger.logLine(OUT typed "outer 2")
+            logger.logLineLambda { OUT typed "outer 1" }
+            logger.logLineLambda { OUT typed "outer 2" }
             logger.segment<String, Unit>("nested log", null) {
-                logLine(OUT typed "nested 1")
+                logLineLambda { OUT typed "nested 1" }
                 throw IllegalStateException("an exception")
             }
-            logger.logLine(OUT typed "☎Σ⊂⊂(☉ω☉∩)")
-            logger.logLine(OUT typed "☎Σ⊂⊂(☉ω☉∩)")
-            logger.logLast(Result.success("success"))
+            logger.logLineLambda { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+            logger.logLineLambda { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+            logger.logLastLambda { Result.success("success") }
         }
 
         expectThat(logger.logged).matches(
@@ -234,7 +234,7 @@ internal class BlockRenderingLoggerTest {
                     │   │{}
                     │   │   nested 1                                          {}                                      ▮▮
                     │   ϟ{}
-                    │   ╰─────╴Failure(nested log): java.lang.IllegalStateException: an exception @ ${BlockRenderingLoggerTest::class.qualifiedName}{}
+                    │   ╰─────╴Failure(nested log): java.lang.IllegalStateException: an exception @ ${RenderingLoggerIntTest::class.qualifiedName}{}
                     │{}
                     │   java.lang.IllegalStateException: an exception
                     │   	at {} 
@@ -243,8 +243,8 @@ internal class BlockRenderingLoggerTest {
 
     @Test
     internal fun `should simple log when closed twice`(logger: InMemoryLogger<Unit>) {
-        logger.logLast(Result.success(Unit))
-        logger.logLast(Result.success(Unit))
+        logger.logLastLambda { Result.success(Unit) }
+        logger.logLastLambda { Result.success(Unit) }
         expectThat(logger.logged)
             .containsAtMost("╰─────╴")
             .contains("✔")
@@ -254,17 +254,18 @@ internal class BlockRenderingLoggerTest {
     internal fun `should simply log multiple calls to logLast`(logger: InMemoryLogger<String>) {
         expectCatching {
             logger.miniSegment<String, Int>("close twice") {
-                logLast(Result.success(1))
-                logLast(Result.success(2))
+                logLineLambda { META typed "line" }
+                logLastLambda { Result.success(1) }
+                logLastLambda { Result.success(2) }
                 3
             }
         }.isSuccess()
         expectThat(logger.logged).matches("""
             ╭─────╴{}
             │   
-            ├─╴ close twice: ✔ with ❬1{}❭
-            ├─╴ close twice: ✔ with ❬2{}❭
-            ├─╴ close twice: ✔ with ❬3{}❭
+            ├─╴ close twice: line ✔ returned ❬1{}❭
+            ├─╴ close twice: line ✔ returned ❬1{}❭ ✔ returned ❬2{}❭
+            ├─╴ close twice: line ✔ returned ❬1{}❭ ✔ returned ❬2{}❭ ✔ returned ❬3{}❭
         """.trimIndent())
     }
 }

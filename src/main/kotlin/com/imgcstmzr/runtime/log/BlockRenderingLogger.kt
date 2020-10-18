@@ -77,15 +77,12 @@ open class BlockRenderingLogger<R>(
     @Deprecated("Use lambda variant", ReplaceWith("{ it }"))
     override fun logLine(output: Output, items: List<HasStatus>): BlockRenderingLogger<R> = logLineLambda(items = items) { output }
 
-    open fun logLastLambda(block: () -> Result<R>): R = block().let { result ->
+    override fun logLastLambda(block: () -> Result<R>): R = block().let { result ->
         kotlin.runCatching {
             log(getBlockEnd(result))
             result.getOrThrow()
         }.onFailure { log(it.format(), true) }.getOrThrow()
     }
-
-    @Deprecated("Use lambda variant", ReplaceWith("{ it }"))
-    fun logLast(result: Result<R>): R = logLastLambda { result }
 
     companion object {
 
@@ -150,18 +147,17 @@ inline fun <reified R1, reified R2> BlockRenderingLogger<R1>?.miniSegment(
 ): R2 = if (this == null) {
     val logger: SingleLineLogger<R2> =
         object : SingleLineLogger<R2>(caption) {
-            override fun logLambda(trailingNewline: Boolean, block: () -> String) {
+            override fun render(block: () -> String) {
             }
         }
-    kotlin.runCatching { block(logger) }.run { logger.logLast(this) }
+    kotlin.runCatching { block(logger) }.let { logger.logLastLambda { it } }
 } else {
     val logger: SingleLineLogger<R2> = object : SingleLineLogger<R2>(caption) {
-        override fun logLambda(trailingNewline: Boolean, block: () -> String) {
-            block().let { message ->
-                val logMessage = if (borderedOutput) "├─╴ " + message.bold() else " :" + message.bold()
-                this@miniSegment.logLambda(true) { logMessage }
-            }
+        override fun render(block: () -> String) {
+            val message = block()
+            val logMessage = if (borderedOutput) "├─╴ " + message.bold() else " :" + message.bold()
+            this@miniSegment.logLambda(true) { logMessage }
         }
     }
-    kotlin.runCatching { block(logger) }.let { logger.logLast(it) }
+    kotlin.runCatching { block(logger) }.let { logger.logLastLambda { it } }
 }

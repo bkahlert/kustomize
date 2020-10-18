@@ -65,3 +65,4 @@ https://github.com/garthvh/ansible-raspi-playbooks/blob/master/playbooks/new-def
 - `NonBlockingReader.kt`
 - `OperatingSystemTest.kt`
 - `PatchesKtTest.kt`
+- `RenderingLoggerIntTest.kt`
