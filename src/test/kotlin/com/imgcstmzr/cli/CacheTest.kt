@@ -1,10 +1,7 @@
 package com.imgcstmzr.cli
 
-import com.imgcstmzr.util.exists
 import com.imgcstmzr.util.hasContent
-import com.imgcstmzr.util.isDirectory
 import com.imgcstmzr.util.isInside
-import com.imgcstmzr.util.isWritable
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode

@@ -1,3 +1,4 @@
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 @Suppress("SpellCheckingInspection")
@@ -16,8 +17,11 @@ version = "1.0-SNAPSHOT"
 repositories {
     jcenter()
 }
+
 dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.0")
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.0")
+
     implementation("com.github.ajalt:clikt:2.8.0")
     implementation("com.github.ajalt:mordant:1.2.1")
     implementation("io.github.config4k:config4k:0.4.2")
@@ -93,6 +97,13 @@ allprojects {
         this@allprojects.tasks {
             val test = "test"(Test::class, createTestTypeConfigurer("Unit", "Integration", "E2E"))
         }
+    }
+
+    tasks.named("dependencyUpdates", DependencyUpdatesTask::class.java).configure {
+        checkForGradleUpdate = true
+        outputFormatter = "json"
+        outputDir = "build/dependencyUpdates"
+        reportfileName = "report"
     }
 }
 

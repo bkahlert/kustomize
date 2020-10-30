@@ -1,6 +1,7 @@
 package com.imgcstmzr.util
 
 import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.random
@@ -17,13 +18,6 @@ import java.nio.file.attribute.FileTime
 import java.time.Instant
 import java.util.Base64
 import kotlin.streams.toList
-
-val Path.exists: Boolean
-    get() = if (this is ClassPath) {
-        this.exists
-    } else {
-        toFile().exists()
-    }
 
 val Path.isReadable: Boolean
     get() = Files.isReadable(this)

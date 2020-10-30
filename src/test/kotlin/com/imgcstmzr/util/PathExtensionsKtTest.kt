@@ -37,38 +37,6 @@ import kotlin.time.seconds
 internal class PathExtensionsKtTest {
 
     @Nested
-    inner class Exists {
-
-        @Test
-        internal fun `should return true if path exists`() {
-            val path = File.createTempFile("what", "ever").toPath()
-            expectThat(path.exists).isTrue()
-        }
-
-
-        @Test
-        internal fun `should return true if classpath exists`() {
-            val path = ClassPath.of("config.txt")
-            expectThat(path.exists).isTrue()
-        }
-
-
-        @Test
-        internal fun `should return false if file is missing exists`() {
-            val path = File.createTempFile("what", "ever").toPath()
-            path.toFile().delete()
-            expectThat(path.exists).isFalse()
-        }
-
-
-        @Test
-        internal fun `should return false if classpath is missing`() {
-            val path = ClassPath.of("missing.txt")
-            expectThat(path.exists).isFalse()
-        }
-    }
-
-    @Nested
     inner class Executables {
 
         @Test

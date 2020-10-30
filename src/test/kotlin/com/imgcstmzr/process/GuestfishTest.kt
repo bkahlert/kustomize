@@ -27,10 +27,10 @@ import strikt.assertions.hasEntry
 import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class GuestfishTest {
+class GuestfishTest {
 
     @Test
-    internal fun `copy-in should make paths absolute if relative`() {
+    fun `copy-in should make paths absolute if relative`() {
         val commands = copyInCommands(listOf(Path.of("foo/bar"), Path.of("/bar/baz")))
         expectThat(commands).withCommands {
             containsExactly("copy-in /work/guestfish.shared/foo/bar /foo", "copy-in /work/guestfish.shared/bar/baz /bar")
@@ -38,7 +38,7 @@ internal class GuestfishTest {
     }
 
     @Test
-    internal fun `copy-out should make paths absolute if relative`() {
+    fun `copy-out should make paths absolute if relative`() {
         val commands = copyOutCommands(listOf(Path.of("foo/bar"), Path.of("/bar/baz")))
         expectThat(commands).withCommands {
             containsExactly(
@@ -50,7 +50,7 @@ internal class GuestfishTest {
 
     @Test
     @DockerRequired
-    internal fun `should copy file from img, skip non-existing and override one`(img: Path, logger: InMemoryLogger<Any>) {
+    fun `should copy file from img, skip non-existing and override one`(img: Path, logger: InMemoryLogger<Any>) {
         val guestfish = Guestfish(img, logger).withRandomSuffix()
         guestfish.run(copyOutCommands(listOf(Path.of("/boot/cmdline.txt"), Path.of("/non/existing.txt"))))
         val dir = guestfish.guestRootOnHost
@@ -64,7 +64,7 @@ internal class GuestfishTest {
 
     @Test
     @DockerRequired
-    internal fun `should copy new file to img and overwrite a second one`(img: Path, logger: InMemoryLogger<Any>) {
+    fun `should copy new file to img and overwrite a second one`(img: Path, logger: InMemoryLogger<Any>) {
         val guestfish = Guestfish(img, logger).withRandomSuffix()
         val exampleHtml = Path.of("/example.html")
         val exampleHtmlOnHost = guestfish.guestRootOnHost.asRootFor(exampleHtml).also { ClassPath.of("example.html").copyTo(it) }
@@ -83,7 +83,7 @@ internal class GuestfishTest {
 
     @Test
     @DockerRequired
-    internal fun `should change password`(@OS(DietPi::class) img: Path, logger: InMemoryLogger<Any>) {
+    fun `should change password`(@OS(DietPi::class) img: Path, logger: InMemoryLogger<Any>) {
         val guestfish = Guestfish(img, logger).withRandomSuffix()
         val shadowPath = Path.of("/etc/shadow")
         val hostShadow = guestfish.guestRootOnHost.asRootFor(shadowPath)
@@ -94,7 +94,7 @@ internal class GuestfishTest {
 
     @Test
     @DockerRequired
-    internal fun `should update credentials password`(@OS(DietPi::class) img: Path, logger: InMemoryLogger<Any>) {
+    fun `should update credentials password`(@OS(DietPi::class) img: Path, logger: InMemoryLogger<Any>) {
         val guestfish = Guestfish(img, logger).withRandomSuffix()
         val password = String.random()
 

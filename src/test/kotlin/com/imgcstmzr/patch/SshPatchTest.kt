@@ -1,7 +1,7 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.nio.file.exists
 import com.imgcstmzr.util.FixtureResolverExtension
-import com.imgcstmzr.util.exists
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.matches
 import com.imgcstmzr.util.single

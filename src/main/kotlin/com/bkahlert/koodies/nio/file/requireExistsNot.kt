@@ -1,6 +1,5 @@
 package com.bkahlert.koodies.nio.file
 
-import com.imgcstmzr.util.exists
 import java.nio.file.Path
 
 /**

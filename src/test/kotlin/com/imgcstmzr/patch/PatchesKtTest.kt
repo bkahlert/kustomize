@@ -1,6 +1,7 @@
 package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.test.strikt.hasSize
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
@@ -21,7 +22,6 @@ import com.imgcstmzr.util.DockerRequired
 import com.imgcstmzr.util.FixtureResolverExtension
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.copyToTempSiblingDirectory
-import com.imgcstmzr.util.exists
 import com.imgcstmzr.util.logging.CapturedOutput
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.OutputCaptureExtension

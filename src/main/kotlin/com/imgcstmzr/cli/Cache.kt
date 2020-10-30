@@ -1,5 +1,6 @@
 package com.imgcstmzr.cli
 
+import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.string.random
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.patch.ini.RegexElement
@@ -7,7 +8,6 @@ import com.imgcstmzr.process.ImageBuilder
 import com.imgcstmzr.process.ImageExtractor.extractImage
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.delete
-import com.imgcstmzr.util.exists
 import com.imgcstmzr.util.extension
 import com.imgcstmzr.util.isFile
 import com.imgcstmzr.util.joinToTruncatedString
