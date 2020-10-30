@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.terminal.ascii
 
+import com.bkahlert.koodies.string.repeat
 import com.imgcstmzr.process.Output
 import com.imgcstmzr.runtime.log.matches
 import com.imgcstmzr.util.logging.InMemoryLogger
@@ -20,6 +21,56 @@ internal class BoxesTest {
             │   ████▌▄▌▄▐▐▌█████
             │   ████▌▄▌▄▐▐▌▀████
             │   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+            │
+            ╰─────╴✔ 
+        """.trimIndent())
+    }
+
+    @Test
+    internal fun `should render sphere box`(logger: InMemoryLogger<Unit>) {
+        logger.logStatus { Output.Type.META typed Boxes.SPHERICAL("SPHERICAL").toString() }
+        expectThat(logger).matches("""
+            ╭─────╴should render sphere box{}
+            │   
+            │     █ ▉▕▊▕▋▕▌▕▍▕▎▕▏ ▏  ▏  ▕  ▕  ▏▕▎▕▍▕▌▕▋▕▊▕▉ █
+            │   █ ▉ ▊ ▋ ▌ ▍ ▎ ▏ ${'\u00A0'.repeat(3)}SPHERICAL${'\u00A0'.repeat(3)}  ▏ ▎ ▍ ▌ ▋ ▊ ▉ █
+            │     █ ▉▕▊▕▋▕▌▕▍▕▎▕▏ ▏  ▏  ▕  ▕  ▏▕▎▕▍▕▌▕▋▕▊▕▉ █
+            │
+            ╰─────╴✔ 
+        """.trimIndent())
+    }
+
+    @Test
+    internal fun `should render single line sphere box`(logger: InMemoryLogger<Unit>) {
+        logger.logStatus { Output.Type.META typed Boxes.SINGLE_LINE_SPHERICAL("SINGLE LINE SPHERICAL").toString() }
+        expectThat(logger).matches("""
+            ╭─────╴should render single line sphere box{}
+            │   
+            │    ▕  ▏ ▎ ▍ ▌ ▋ ▊ ▉ █ ▇ ▆ ▅ ▄ ▃ ▂ ▁  SINGLE LINE SPHERICAL  ▁ ▂ ▃ ▄ ▅ ▆ ▇ █ ▉ ▊ ▋ ▌ ▍ ▎ ▏ ▕  
+            │
+            ╰─────╴✔ 
+        """.trimIndent())
+    }
+
+    @Test
+    internal fun `should render wide pillars`(logger: InMemoryLogger<Unit>) {
+        logger.logStatus { Output.Type.META typed Boxes.WIDE_PILLARS("WIDE PILLARS").toString() }
+        expectThat(logger).matches("""
+            ╭─────╴should render wide pillars{}
+            │   
+            │   █ █ ▉▕▉ ▊▕▊▕▋ ▋▕▌ ▌ ▍▕▎ ▍ ▎▕▏ ▏ WIDE PILLARS  ▏ ▏▕▎ ▍ ▎▕▍ ▌ ▌▕▋ ▋▕▊▕▊ ▉▕▉ █ █
+            │
+            ╰─────╴✔ 
+        """.trimIndent())
+    }
+
+    @Test
+    internal fun `should render pillars`(logger: InMemoryLogger<Unit>) {
+        logger.logStatus { Output.Type.META typed Boxes.PILLARS("PILLARS").toString() }
+        expectThat(logger).matches("""
+            ╭─────╴should render pillars{}
+            │   
+            │   █ ▉ ▊ ▋ ▌ ▍ ▎ ▏ PILLARS  ▏ ▎ ▍ ▌ ▋ ▊ ▉ █
             │
             ╰─────╴✔ 
         """.trimIndent())

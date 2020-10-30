@@ -2,7 +2,8 @@
 
 package com.bkahlert.koodies.terminal.ascii
 
-import com.bkahlert.koodies.terminal.ANSI.EscapeSequences.termColors
+import com.bkahlert.koodies.string.repeat
+import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.colorize
 import kotlin.properties.PropertyDelegateProvider
 import kotlin.reflect.KProperty
@@ -80,7 +81,7 @@ object Kaomojis {
         fun withMagic(): String {
             val listOfNotNull: List<IntRange> = listOfNotNull(wand)
             return listOfNotNull.fold(template) { acc, intRange ->
-                acc.substring(0 until intRange.first) + termColors.colorize(acc.substring(intRange)) + acc.subSequence(intRange.last, acc.lastIndex + 1)
+                acc.substring(0 until intRange.first) + ANSI.termColors.colorize(acc.substring(intRange)) + acc.subSequence(intRange.last, acc.lastIndex + 1)
             }
         }
 
@@ -94,8 +95,9 @@ object Kaomojis {
     fun five(
         leftArm: IntRange? = null, rightArm: IntRange? = null, leftEye: IntRange? = null, rightEye: IntRange? = null, mouth: IntRange? = null,
         wand: IntRange? = null,
-    ): PropertyDelegateProvider<Kaomojis, Kaomoji> =
-        PropertyDelegateProvider { thisRef, property -> Kaomoji(property.name, leftArm, leftEye, rightEye, rightArm, mouth, wand) }
+    ): PropertyDelegateProvider<Kaomojis, Kaomoji> {
+        return PropertyDelegateProvider { thisRef, property -> Kaomoji(property.name, leftArm, leftEye, rightEye, rightArm, mouth, wand) }
+    }
 
     @Suppress("unused")
     val Wizards: List<CharSequence> = listOf(
@@ -108,6 +110,20 @@ object Kaomojis {
         "(⊃｡•́‿•̀｡)⊃━✿✿✿✿✿✿",
         "ଘ(੭ˊᵕˋ)੭* ੈ✩‧₊˚",
     )
+
+    /**
+     * Returns a thinking [Kaomoji] of the form:
+     *
+     * ```
+     *           ͚͔˱ ❨ ( something )
+     * (^～^) ˙
+     * ```
+     */
+    fun CharSequence.thinking(value: String): String {
+        val kaomoji = "$this ˙"
+        val thinkLine = ' '.repeat(kaomoji.length) + "${'\u00A0'.repeat(2)} ͚͔˱ ❨ ( $value )"
+        return "$thinkLine\n$kaomoji"
+    }
 
     @Suppress("unused")
     val Proud: List<CharSequence> = listOf(

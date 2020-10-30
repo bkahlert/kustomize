@@ -1,7 +1,7 @@
 package com.imgcstmzr.util.debug
 
 
-import com.bkahlert.koodies.terminal.removeEscapeSequences
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.util.asString
 import com.imgcstmzr.util.logging.CapturedOutput
@@ -41,19 +41,32 @@ internal class DebugTest {
     inner class DebugTests {
 
         var siblingTestRun = false
+        var siblingContainerRun = false
 
         @Order(1)
         @Test
         internal fun `should not run due to sibling @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
-            var siblingTestRun = false
+            siblingTestRun = true
             fail { "This test should have been disabled due to @Debug on sibling test." }
         }
 
-        @Order(2)
+
+        @Nested
+        inner class Container {
+            @Order(2)
+            @Test
+            internal fun `should not run due to sibling @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
+                siblingContainerRun = true
+                fail { "This test should have been disabled due to @Debug on sibling test." }
+            }
+        }
+
+        @Order(3)
         @Debug(includeInReport = false)
         @Test
         internal fun `should run (and check if non-@Debug) did not run`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
             expectThat(siblingTestRun).isFalse()
+            expectThat(siblingContainerRun).isFalse()
         }
     }
 

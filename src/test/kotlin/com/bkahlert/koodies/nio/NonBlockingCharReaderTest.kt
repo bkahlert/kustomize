@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.nio
 
 import com.bkahlert.koodies.number.times
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.green
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.magenta
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.green
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.terminal.ascii.Borders.SpikedOutward
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.bkahlert.koodies.test.junit.Slow

@@ -1,8 +1,7 @@
 package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.string.random
-import com.bkahlert.koodies.terminal.ANSI.EscapeSequences.term16Colors
-import com.bkahlert.koodies.terminal.ANSI.EscapeSequences.termColors
+import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.patch.Operation.Status.Failure
@@ -30,7 +29,7 @@ fun Patch.banner() { // TODO make use of it or delete
             Patch: $name
               img.raw: ${imgOperations.size}    img.fs: ${guestfishOperations.size}
               host.fs: ${fileSystemOperations.size}    img.run: ${programs.size}
-        """.trimIndent().wrapWithBorder(padding = 6, margin = 1, ansiCode = (term16Colors.bold + term16Colors.cyan)))
+        """.trimIndent().wrapWithBorder(padding = 6, margin = 1, ansiCode = (ANSI.termColors.bold + ANSI.termColors.cyan)))
     echo("")
 }
 
@@ -134,10 +133,10 @@ interface Operation<TARGET> : HasStatus {
     var currentStatus: Status
 
     enum class Status(private val formatter: (String) -> String) {
-        Ready({ label -> termColors.bold(label) }),
-        Running({ label -> termColors.bold(label) }),
-        Finished({ label -> termColors.strikethrough(label) }),
-        Failure({ label -> termColors.red(label + "XXTODO") });
+        Ready({ label -> ANSI.termColors.bold(label) }),
+        Running({ label -> ANSI.termColors.bold(label) }),
+        Finished({ label -> ANSI.termColors.strikethrough(label) }),
+        Failure({ label -> ANSI.termColors.red(label + "XXTODO") });
 
         operator fun invoke(label: String): String = formatter(label)
     }
@@ -216,15 +215,15 @@ class PathOperation(override val target: Path, val verifier: (Path) -> Any, val 
 
     override operator fun invoke(target: Path, log: BlockRenderingLogger<Any>) {
         log.miniSegment<Any, Any>(target.fileName.toString()) {
-            logStatus { OUT typed termColors.yellow("Action needed? ...") }
+            logStatus { OUT typed ANSI.termColors.yellow("Action needed? ...") }
             val result = runCatching { verifier.invoke(target) }
             if (result.isFailure) {
                 currentStatus = Running
-                logStatus { OUT typed ((termColors.yellow + termColors.bold)(" Yes...")) }
+                logStatus { OUT typed ((ANSI.termColors.yellow + ANSI.termColors.bold)(" Yes...")) }
 
                 handler.invoke(target)
 
-                logStatus { OUT typed termColors.yellow("Verifying ...") }
+                logStatus { OUT typed ANSI.termColors.yellow("Verifying ...") }
                 runCatching { verifier.invoke(target) }.onFailure {
                     currentStatus = Failure
                 }

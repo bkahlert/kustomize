@@ -1,7 +1,7 @@
 package com.imgcstmzr.util.logging
 
 
-import com.bkahlert.koodies.terminal.removeEscapeSequences
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.util.asString
 import com.imgcstmzr.util.debug.Debug

@@ -59,7 +59,6 @@ inline fun <reified T : Annotation> Optional<out Method>?.isA(): Boolean =
 inline fun <reified T : Annotation> Method?.isA(): Boolean =
     AnnotationSupport.isAnnotated(this!!, T::class.java)
 
-
 /**
  * Checks if current context is annotated with [A].
  */

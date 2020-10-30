@@ -1,10 +1,10 @@
 package com.bkahlert.koodies.unit
 
+import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.number.BigDecimalConstants
 import com.bkahlert.koodies.number.formatToExactDecimals
 import com.bkahlert.koodies.number.scientificFormat
 import com.bkahlert.koodies.number.toBigDecimal
-import com.imgcstmzr.util.exists
 import com.imgcstmzr.util.isDirectory
 import com.imgcstmzr.util.isSymlink
 import java.io.File
@@ -153,7 +153,7 @@ val Number.bytes: Size get() = if (this == 0) Size.ZERO else Size(toBigDecimal()
 
 val Path.size: Size
     get() {
-        require(exists) { "$this does not exist" }
+        requireExists()
         return if (!isDirectory) Files.size(this).bytes
         else (toFile().listFiles() ?: return Size.ZERO)
             .asSequence()

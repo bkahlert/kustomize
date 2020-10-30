@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.test.junit
 
-import com.bkahlert.koodies.terminal.ANSI.EscapeSequences.termColors
+import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ascii.Draw.Companion.draw
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.github.ajalt.clikt.output.TermUi.echo
@@ -44,30 +44,30 @@ class TestExecutionReporter : TestExecutionListener, TestWatcher {
                 val quantity =
                     if (nonConcurrentTestClasses.isEmpty()) "All" else "${allTestClasses.size - nonConcurrentTestClasses.size}/${allTestClasses.size}"
                 listOf(
-                    termColors.bold("Done. All tests passed within $timeNeeded"),
+                    ANSI.termColors.bold("Done. All tests passed within $timeNeeded"),
                     "$quantity test containers running in $CONCURRENT mode."
                 )
                     .joinToString("\n")
-                    .wrapWithBorder(padding = 2, margin = 1, ansiCode = termColors.green)
+                    .wrapWithBorder(padding = 2, margin = 1, ansiCode = ANSI.termColors.green)
                     .also { echo(it) }
             } else {
                 listOf(
-                    termColors.bold("Done. All tests passed within $timeNeeded"),
+                    ANSI.termColors.bold("Done. All tests passed within $timeNeeded"),
                     "",
-                    termColors.bold("Non-concurrent test classes: ") + format(nonConcurrentTestClasses),
+                    ANSI.termColors.bold("Non-concurrent test classes: ") + format(nonConcurrentTestClasses),
                     "",
-                    termColors.bold("Missing @Execution annotation: ") + format(notAnnotatedTestClasses),
+                    ANSI.termColors.bold("Missing @Execution annotation: ") + format(notAnnotatedTestClasses),
                 )
                     .joinToString("\n")
-                    .draw.border.double(padding = 2, margin = 1, ansiCode = termColors.yellow)
+                    .draw.border.double(padding = 2, margin = 1, ansiCode = ANSI.termColors.yellow)
                     .also { echo(it) }
             }
         } else {
             listOf(
-                termColors.bold("Done. BUT $failedTestsCount tests failed!"),
+                ANSI.termColors.bold("Done. BUT $failedTestsCount tests failed!"),
             )
                 .joinToString("\n")
-                .draw.border.spikedOutward(padding = 2, margin = 1, ansiCode = termColors.red)
+                .draw.border.spikedOutward(padding = 2, margin = 1, ansiCode = ANSI.termColors.red)
                 .also { echo(it) }
         }
     }
@@ -76,13 +76,13 @@ class TestExecutionReporter : TestExecutionListener, TestWatcher {
         val debugAnnotatedMethods = testPlan.allTestJavaMethods.withAnnotation<Debug> { debug -> debug.includeInReport }
         if (debugAnnotatedMethods.isNotEmpty()) {
             listOf(
-                termColors.bold("Attention!"),
+                ANSI.termColors.bold("Attention!"),
                 "You only see the results of the",
                 "${debugAnnotatedMethods.size} @${Debug::class.simpleName} annotated tests.",
-                termColors.bold("Don't forget to remove them."),
+                ANSI.termColors.bold("Don't forget to remove them."),
             )
                 .joinToString("\n")
-                .wrapWithBorder(padding = 2, margin = 1, ansiCode = termColors.yellow)
+                .wrapWithBorder(padding = 2, margin = 1, ansiCode = ANSI.termColors.yellow)
                 .also { echo(it) }
         }
     }

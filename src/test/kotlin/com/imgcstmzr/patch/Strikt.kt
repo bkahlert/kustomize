@@ -4,7 +4,7 @@ import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.process.Output
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.OperatingSystem
-import com.imgcstmzr.runtime.RunningOS
+import com.imgcstmzr.runtime.RunningOperatingSystem
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.quoted
@@ -41,7 +41,7 @@ fun Assertion.Builder<String>.isEqualTo(expected: String) =
 
 inline fun <reified T : OperatingSystem> Assertion.Builder<Path>.booted(
     logger: BlockRenderingLogger<Any>,
-    crossinline assertion: RunningOS.(Output) -> (Output) -> Boolean,
+    crossinline assertion: RunningOperatingSystem.(Output) -> (Output) -> Boolean,
 ): Assertion.Builder<Path> {
     val os = T::class.objectInstance ?: error("Invalid OS")
     get("booted $os") {

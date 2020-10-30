@@ -22,8 +22,9 @@ import org.apache.commons.compress.archivers.ArchiveEntry
 import org.apache.commons.compress.archivers.ArchiveInputStream
 import org.apache.commons.compress.archivers.ArchiveOutputStream
 import org.apache.commons.compress.archivers.ArchiveStreamFactory
+import java.io.IOException
 import java.nio.file.Path
-
+import com.bkahlert.koodies.io.TarArchiveGzCompressor.listArchive as tarGzListArchive
 
 /**
  * Provides (un-)archiving functionality for a range of archive formats.
@@ -40,7 +41,7 @@ object Archiver {
      */
     fun Path.archive(format: String = ArchiveStreamFactory.ZIP, destination: Path = addExtension(format)): Path =
         if (format == "tar.gz") {
-            tarGzip()
+            tarGzip(destination)
         } else {
             requireExists()
             destination.requireExistsNot()
@@ -71,7 +72,7 @@ object Archiver {
             ?: throw IllegalArgumentException("Cannot auto-detect the archive format due to missing file extension.")),
     ): Path =
         if ("$fileName".endsWith("tar.gz")) {
-            tarGunzip()
+            tarGunzip(destination)
         } else {
             requireExists()
             if (!destination.exists) destination.mkdirs()
@@ -85,21 +86,47 @@ object Archiver {
      */
     fun ArchiveInputStream.unarchiveTo(destination: Path) {
         var archiveEntry: ArchiveEntry?
-        while (nextEntry.also {
-                archiveEntry = it
-            } != null) {
-            val tarEntry: ArchiveEntry = archiveEntry ?: throw IllegalStateException()
+        while (nextEntry.also { archiveEntry = it } != null) {
             if (!canReadEntryData(archiveEntry)) {
                 echo("$archiveEntry makes use on unsupported features. Skipping.")
                 continue
             }
-            val path: Path = destination.resolve(tarEntry.name)
-            if (tarEntry.isDirectory) {
+            val path: Path = destination.resolve(archiveEntry!!.name)
+            if (archiveEntry!!.isDirectory) {
                 require(path.mkdirs().exists) { "$path could not be created." }
             } else {
                 require(path.parent.mkdirs().exists) { "${path.parent} could not be created." }
-                copyTo(path.also { it.delete() }.outputStream())
+                path.also { it.delete() }.outputStream().also { copyTo(it) }.also { it.close() }
             }
         }
+    }
+
+    /**
+     * Lists this archive input stream.
+     */
+    fun ArchiveInputStream.list(): List<ArchiveEntry> {
+        val archiveEntries = mutableListOf<ArchiveEntry>()
+        var archiveEntry: ArchiveEntry?
+        while (nextEntry.also { archiveEntry = it } != null) {
+            archiveEntries.add(archiveEntry!!)
+        }
+        return archiveEntries
+    }
+
+    /**
+     * Lists this archive without unarchiving it.
+     */
+    fun Path.listArchive(): List<ArchiveEntry> {
+        return kotlin.runCatching {
+            if ("$fileName".endsWith("tar.gz")) {
+                tarGzListArchive()
+            } else {
+                requireExists()
+                ArchiveStreamFactory().createArchiveInputStream(bufferedInputStream()).use { it.list() }
+            }
+        }.recover {
+            require(it !is IOException) { it }
+            throw it
+        }.getOrThrow()
     }
 }

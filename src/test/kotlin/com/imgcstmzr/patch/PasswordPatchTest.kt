@@ -1,6 +1,6 @@
 package com.imgcstmzr.patch
 
-import com.bkahlert.koodies.string.matches
+import com.bkahlert.koodies.string.matchesCurlyPattern
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.test.strikt.hasMatchingLine
 import com.imgcstmzr.process.Guestfish
@@ -48,7 +48,7 @@ internal class PasswordPatchTest {
         val passwordPatch = PasswordPatch(username, newPassword, salt)
         val userPassword = Guestfish(img, logger).copyOut(passwordPath).readAllLines().single { it.startsWith(username) }
         val userPasswordPattern = "$username:{}:{}:0:99999:7:::"
-        check(userPassword.matches(userPasswordPattern)) { "${userPassword.debug} does not match ${userPasswordPattern.debug}" }
+        check(userPassword.matchesCurlyPattern(userPasswordPattern)) { "${userPassword.debug} does not match ${userPasswordPattern.debug}" }
 
         passwordPatch.patch(img, logger)
 

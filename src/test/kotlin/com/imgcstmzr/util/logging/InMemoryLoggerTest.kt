@@ -1,7 +1,8 @@
 package com.imgcstmzr.util.logging
 
-import com.bkahlert.koodies.terminal.removeEscapeSequences
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.imgcstmzr.util.asString
+import org.apache.commons.io.output.ByteArrayOutputStream
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
@@ -11,7 +12,6 @@ import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.isEmpty
 import strikt.assertions.startsWith
-import java.io.ByteArrayOutputStream
 
 @Execution(ExecutionMode.CONCURRENT)
 @ExtendWith(OutputCaptureExtension::class)

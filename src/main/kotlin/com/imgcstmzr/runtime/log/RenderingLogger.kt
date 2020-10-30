@@ -1,10 +1,15 @@
 package com.imgcstmzr.runtime.log
 
 import com.bkahlert.koodies.exception.toSingleLineString
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.green
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.italic
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.red
+import com.bkahlert.koodies.string.prefixWith
+import com.bkahlert.koodies.string.truncateBy
+import com.bkahlert.koodies.terminal.ANSI
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.ansiAwareMapLines
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.green
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
+import com.bkahlert.koodies.terminal.ansi.AnsiFormats.italic
 import com.github.ajalt.clikt.output.TermUi
+import com.github.ajalt.mordant.AnsiCode
 import com.imgcstmzr.process.Output
 import com.imgcstmzr.process.Output.Type.ERR
 import com.imgcstmzr.process.Output.Type.OUT
@@ -24,7 +29,7 @@ interface RenderingLogger<R> {
     fun render(trailingNewline: Boolean, block: () -> String)
 
     fun logException(block: () -> Throwable): RenderingLogger<R> = block().let {
-        logLine { ERR.format(it.stackTraceToString()) }
+        render(true) { ERR.format(it.stackTraceToString()) }
         this
     }
 
@@ -39,16 +44,16 @@ interface RenderingLogger<R> {
     }
 
     fun logStatus(items: List<HasStatus> = emptyList(), block: () -> Output = { OUT typed "" }): RenderingLogger<R> = block().let { output ->
-        logLine { output.formattedLines.joinToString("\n") }
+        render(true) { output.formatted.lines().joinToString("\n") }
         this
     }
 
     fun logResult(block: () -> Result<R>): R = kotlin.runCatching {
         val result = block()
-        logLine { formatResult(result) }
+        render(true) { formatResult(result) }
         result.getOrThrow()
     }.onFailure { ex ->
-        logLine { formatException(ex.toSingleLineString()) }
+        render(true) { formatException(ex.toSingleLineString()) }
     }.getOrThrow()
 
     companion object {
@@ -62,5 +67,39 @@ interface RenderingLogger<R> {
         fun formatReturnValue(oneLiner: String?): String = oneLiner?.let { "✔ ".green() + "returned".italic() + " $it" } ?: "✔".green()
 
         fun formatException(oneLiner: String?): String = oneLiner?.let { "ϟ ".red() + "failed with ${it.red()}" } ?: "ϟ".red()
+
+        inline fun <R, R2> RenderingLogger<R>?.subLogger(
+            caption: String,
+            ansiCode: AnsiCode? = null,
+            borderedOutput: Boolean = (this as? BlockRenderingLogger)?.borderedOutput ?: false,
+            block: RenderingLogger<R2>.() -> R2,
+        ): R2 {
+            val logger: RenderingLogger<R2> =
+                when {
+                    this == null -> BlockRenderingLogger(
+                        caption = caption,
+                        borderedOutput = borderedOutput,
+                    )
+                    this is MutedBlockRenderingLogger -> MutedBlockRenderingLogger(
+                        caption = caption,
+                        borderedOutput = borderedOutput,
+                    )
+                    else -> ((this as? BlockRenderingLogger)?.prefix ?: "$this::").let { prefix ->
+                        val color = ansiCode ?: ANSI.termColors.black
+                        BlockRenderingLogger(
+                            caption = caption,
+                            borderedOutput = borderedOutput,
+                        ) { output ->
+                            val indentedOutput = output.ansiAwareMapLines {
+                                val truncateBy = color(it.truncateBy(prefix.length, minWhitespaceLength = 3))
+                                truncateBy.prefixWith(prefix)
+                            }
+                            logText { indentedOutput }
+                        }
+                    }
+                }
+            return kotlin.runCatching { block(logger) }.also { logger.logResult { it } }.getOrThrow()
+        }
     }
 }
+

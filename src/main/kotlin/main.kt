@@ -57,7 +57,7 @@ fun main() {
 
 @OptIn(ExperimentalValueSourceApi::class)
 class CliCommand : NoOpCliktCommand(
-    epilog = "((ε(*･ω･)_/${ANSI.EscapeSequences.termColors.colorize("ﾟ･.*･･｡☆")}",
+    epilog = "((ε(*･ω･)_/${ANSI.termColors.colorize("ﾟ･.*･･｡☆")}",
     name = "imgcstmzr",
     allowMultipleSubcommands = true,
     printHelpOnEmptyArgs = true,
@@ -87,7 +87,7 @@ class CliCommand : NoOpCliktCommand(
     override fun run() {
         configFile?.also {
             currentContext.valueSource.update(it)
-            echo((ANSI.EscapeSequences.termColors.cyan + ANSI.EscapeSequences.termColors.bold)("Using config (file: $it, name: $name, size: ${it.readText().length})"))
+            echo((ANSI.termColors.cyan + ANSI.termColors.bold)("Using config (file: $it, name: $name, size: ${it.readText().length})"))
         }
         echo("Checking $envFile for .env file")
         shared[Env::class] = Env(envFile.toPath())

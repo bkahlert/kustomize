@@ -1,12 +1,13 @@
 package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.nio.ClassPath
-import com.bkahlert.koodies.terminal.removeEscapeSequences
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.test.strikt.hasSize
-import com.bkahlert.koodies.test.strikt.matches
+import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.bkahlert.koodies.time.DateTimeFormatters.ISO8601_INSTANT
 import com.bkahlert.koodies.time.format
 import com.bkahlert.koodies.time.parseableInstant
+import com.bkahlert.koodies.time.sleep
 import com.bkahlert.koodies.unit.Gibi
 import com.bkahlert.koodies.unit.Giga
 import com.bkahlert.koodies.unit.bytes
@@ -15,7 +16,7 @@ import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.runtime.RunningOS
+import com.imgcstmzr.runtime.RunningOperatingSystem
 import com.imgcstmzr.util.DockerRequired
 import com.imgcstmzr.util.FixtureResolverExtension
 import com.imgcstmzr.util.OS
@@ -63,7 +64,7 @@ internal class PatchesKtTest {
         internal fun `should log bordered by default`(img: Path, capturedOutput: CapturedOutput) {
             val nullPatch = buildPatch("No-Op Patch") {}
             nullPatch.patch(img)
-            expectThat(capturedOutput.out.trim().removeEscapeSequences()).matches("""
+            expectThat(capturedOutput.out.trim().removeEscapeSequences()).matchesCurlyPattern("""
             Started: {}
              IMG Operations: —
              File System Operations: —
@@ -73,12 +74,16 @@ internal class PatchesKtTest {
         }
     }
 
-    @Test
-    internal fun `should only log using specified logger`(img: Path, logger: InMemoryLogger<Any>, capturedOutput: CapturedOutput) {
-        val nullPatch = buildPatch("No-Op Patch") {}
-        nullPatch.patch(img, logger)
-        expectThat(logger.logged.removeEscapeSequences()).isNotEmpty()
-        expectThat(capturedOutput.out.removeEscapeSequences()).isEmpty()
+    @Nested
+    @Isolated // flaky OutputCapture
+    inner class NoSystemOut {
+        @Test
+        internal fun `should only log using specified logger`(img: Path, logger: InMemoryLogger<Any>, capturedOutput: CapturedOutput) {
+            val nullPatch = buildPatch("No-Op Patch") {}
+            nullPatch.patch(img, logger)
+            expectThat(logger.logged.removeEscapeSequences()).isNotEmpty()
+            expectThat(capturedOutput.out.removeEscapeSequences()).isEmpty()
+        }
     }
 
     @Test
@@ -86,7 +91,7 @@ internal class PatchesKtTest {
         val logger = InMemoryLogger<Any>("not-bordered", false, emptyList())
         val nullPatch = buildPatch("No-Op Patch") {}
         nullPatch.patch(img, logger)
-        expectThat(logger.logged.removeEscapeSequences()).matches("""
+        expectThat(logger.logged.removeEscapeSequences()).matchesCurlyPattern("""
         Started: not-bordered
          Started: NO-OP PATCH
           IMG Operations: —
@@ -169,13 +174,13 @@ internal class PatchesKtTest {
             .hasSize(2.Gibi.bytes)
             .booted<RaspberryPiLite>(logger) {
                 command("chafa /home/pi/BKAHLERT.png --duration 5");
-                wait(5.seconds);
+                5.seconds.sleep();
                 { true }
             }
     }
 }
 
-inline fun <reified T : RunningOS> Builder<T>.command(input: String): DescribeableBuilder<String?> = get("running $input") {
+inline fun <reified T : RunningOperatingSystem> Builder<T>.command(input: String): DescribeableBuilder<String?> = get("running $input") {
     input(input)
     readLine()
 }
@@ -190,7 +195,7 @@ val <T : RunningOSX> Builder<T>.command: Builder<T>
     get() = get { this }
 
 inline fun <reified T : OperatingSystem, U : CharSequence> Builder<Path>.booted(
-    crossinline assertion: Builder<RunningOS>.() -> Unit,
+    crossinline assertion: Builder<RunningOperatingSystem>.() -> Unit,
 ): Builder<Path> {
     val os = T::class.objectInstance ?: error("Invalid OS")
     get("booted $os") {

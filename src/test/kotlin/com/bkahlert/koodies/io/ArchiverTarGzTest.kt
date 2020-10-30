@@ -1,15 +1,15 @@
 package com.bkahlert.koodies.io
 
 import com.bkahlert.koodies.io.Archiver.archive
+import com.bkahlert.koodies.io.Archiver.listArchive
 import com.bkahlert.koodies.io.Archiver.unarchive
-import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.io.PathFixtures.directoryWithTwoFiles
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.unit.size
 import com.imgcstmzr.util.Paths
-import com.imgcstmzr.util.copyTo
+import com.imgcstmzr.util.Paths.tempFile
 import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.hasSameFiles
-import com.imgcstmzr.util.mkdirs
 import com.imgcstmzr.util.removeExtension
 import com.imgcstmzr.util.renameTo
 import com.imgcstmzr.util.touch
@@ -29,7 +29,9 @@ internal class ArchiverTarGzTest {
     @ConcurrentTestFactory
     internal fun `should throw on missing source`() = listOf(
         { Paths.tempDir().also { it.delete() }.archive() },
-        { Paths.tempFile(extension = ".tar.gz").also { it.delete() }.unarchive() },
+        { tempFile(extension = ".tar.gz").also { it.delete() }.unarchive() },
+        { tempFile(extension = ".tar.gz").also { it.delete() }.listArchive() },
+        { tempFile(extension = ".tar.gz").also { it.writeText("crap") }.listArchive() },
     ).map { call ->
         DynamicTest.dynamicTest("$call") {
             expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
@@ -39,7 +41,7 @@ internal class ArchiverTarGzTest {
     @ConcurrentTestFactory
     internal fun `should throw on non-empty destination`() = listOf(
         { Paths.tempDir().also { it.removeExtension("tar.gz").touch().writeText("content") }.archive() },
-        { Paths.tempFile(extension = ".tar.gz").also { it.copyTo(it.removeExtension("tar.gz").mkdirs().resolve(it.fileName)) }.unarchive() },
+        { directoryWithTwoFiles().archive(destination = tempFile(extension = ".tar.gz")).unarchive() },
     ).map { call ->
         DynamicTest.dynamicTest("$call") {
             expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
@@ -48,9 +50,7 @@ internal class ArchiverTarGzTest {
 
     @Test
     internal fun `should tar-gzip and untar-gunzip`() {
-        val dir = Paths.tempDir()
-            .also { ClassPath("example.html").copyTo(it.resolve("example.html")) }
-            .also { ClassPath("config.txt").copyTo(it.resolve("sub-dir/config.txt")) }
+        val dir = directoryWithTwoFiles()
 
         val archivedDir = dir.archive()
         expectThat(archivedDir.size).isLessThan(dir.size)

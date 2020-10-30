@@ -12,7 +12,7 @@ object LineSeparators : Collection<String> {
     /**
      * Line break as used on Unix systems and modern Mac systems.
      *
-     * Representations: `\n`, ␊
+     * Representations: `\n`, ␊, ⏎
      *
      */
     const val LF: String = Unicode.lineFeed

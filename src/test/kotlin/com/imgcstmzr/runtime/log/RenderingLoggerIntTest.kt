@@ -1,11 +1,12 @@
 package com.imgcstmzr.runtime.log
 
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
-import com.bkahlert.koodies.test.strikt.matches
+import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.imgcstmzr.process.Output.Type.ERR
 import com.imgcstmzr.process.Output.Type.META
 import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.util.containsAtMost
+import com.imgcstmzr.util.debug.Debug
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.InMemoryLoggerFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest
@@ -22,13 +23,15 @@ internal class RenderingLoggerIntTest {
 
     @Test
     internal fun `should log`(logger: InMemoryLogger<Unit>) {
+        logger.logLine { "｀、ヽ｀ヽ｀、ヽ(ノ＞＜)ノ ｀、ヽ｀☂ヽ｀、ヽ" }
         logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logger.logResult { Result.success(Unit) }
 
-        expectThat(logger.logged).matches(
+        expectThat(logger.logged).matchesCurlyPattern(
             """
                     ╭─────╴{}
                     │{}
+                    │   ｀、ヽ｀ヽ｀、ヽ(ノ＞＜)ノ ｀、ヽ｀☂ヽ｀、ヽ
                     │   ☎Σ⊂⊂(☉ω☉∩)                                            {}                                      ▮▮
                     │{}
                     ╰─────╴✔{}
@@ -47,7 +50,7 @@ internal class RenderingLoggerIntTest {
         logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logger.logResult { Result.success(Unit) }
 
-        expectThat(logger.logged).matches(
+        expectThat(logger.logged).matchesCurlyPattern(
             """
                     ╭─────╴{}
                     │{}
@@ -60,6 +63,7 @@ internal class RenderingLoggerIntTest {
                 """.trimIndent())
     }
 
+    @Debug
     @Test
     internal fun `should allow nested logging`(logger: InMemoryLogger<String>) {
         logger.logStatus { OUT typed "outer 1" }
@@ -73,7 +77,7 @@ internal class RenderingLoggerIntTest {
         logger.logStatus { OUT typed "outer 4" }
         logger.logResult { Result.success("end") }
 
-        expectThat(logger.logged).matches("""
+        expectThat(logger.logged).matchesCurlyPattern("""
                     ╭─────╴{}
                     │{}
                     │   outer 1                                               {}                                      ▮▮
@@ -100,7 +104,7 @@ internal class RenderingLoggerIntTest {
             ╭─────╴{}
             │{}
             │   outer 1                                               {}                                      ▮▮
-            │   outer 2                                               {}                                      ▮▮
+            │   outer 2{}
             │{}
             │   ╭─────╴nested log
             │   │{}
@@ -129,7 +133,7 @@ internal class RenderingLoggerIntTest {
         false to """
             Started: {}
              outer 1                                                  {}                                      ▮▮
-             outer 2                                                  {}                                      ▮▮
+             outer 2
              Started: nested log{}
               nested 1                                                {}                                      ▮▮
               :mini segment: 12345 sample ✔{}
@@ -152,7 +156,7 @@ internal class RenderingLoggerIntTest {
             val logger = loggerFactory.createLogger(label, borderedOutput = borderedOutput)
             dynamicTest("should allow complex layout—$label") {
                 logger.logStatus { OUT typed "outer 1" }
-                logger.logStatus { OUT typed "outer 2" }
+                logger.logLine { "outer 2" }
                 logger.segment<Unit, Unit>("nested log") {
                     logStatus { OUT typed "nested 1" }
                     miniSegment<Unit, Unit>("mini segment") {
@@ -175,7 +179,7 @@ internal class RenderingLoggerIntTest {
                 logger.logStatus { OUT typed "outer 4" }
                 logger.logResult { Result.success(Unit) }
 
-                expectThat(logger.logged).matches(expectation)
+                expectThat(logger.logged).matchesCurlyPattern(expectation)
             }
         }
 
@@ -184,7 +188,7 @@ internal class RenderingLoggerIntTest {
         logger.logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logger.logResult { Result.success(Unit) }
 
-        expectThat(logger.logged).matches(
+        expectThat(logger.logged).matchesCurlyPattern(
             """
                     ╭─────╴{}
                     │{}
@@ -223,7 +227,7 @@ internal class RenderingLoggerIntTest {
             logger.logResult { Result.success("success") }
         }
 
-        expectThat(logger.logged).matches(
+        expectThat(logger.logged).matchesCurlyPattern(
             """
                     ╭─────╴{}
                     │{}
@@ -246,12 +250,12 @@ internal class RenderingLoggerIntTest {
         logger.logResult { Result.success(Unit) }
         logger.logResult { Result.success(Unit) }
         expectThat(logger.logged)
-            .containsAtMost("╰─────╴")
+            .containsAtMost("╰─────╴", 1)
             .contains("✔")
     }
 
     @Test
-    internal fun `should simply log multiple calls to logLast`(logger: InMemoryLogger<String>) {
+    internal fun `should simply log multiple calls to logResult`(logger: InMemoryLogger<String>) {
         expectCatching {
             logger.miniSegment<String, Int>("close twice") {
                 logStatus { META typed "line" }
@@ -260,7 +264,7 @@ internal class RenderingLoggerIntTest {
                 3
             }
         }.isSuccess()
-        expectThat(logger.logged).matches("""
+        expectThat(logger.logged).matchesCurlyPattern("""
             ╭─────╴{}
             │   
             ├─╴ close twice: line ✔ returned ❬1{}❭

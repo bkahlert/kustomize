@@ -23,7 +23,7 @@ open class OperatingSystemMock(
         scenario: String,
         img: Path,
         parentLogger: BlockRenderingLogger<Any>?,
-        processor: RunningOS.(Output) -> Any,
+        processor: RunningOperatingSystem.(Output) -> Any,
     ): Any {
         error(::bootToUserSession.name + " not implemented in mock")
     }

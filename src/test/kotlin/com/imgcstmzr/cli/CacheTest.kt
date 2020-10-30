@@ -15,9 +15,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class CacheTest {
+class CacheTest {
     @Test
-    internal fun `should instantiate in user home by default`() {
+    fun `should instantiate in user home by default`() {
         val cache = Cache()
 
         expectThat(cache)
@@ -28,7 +28,7 @@ internal class CacheTest {
     }
 
     @Test
-    internal fun `should instantiate in provided directory`() {
+    fun `should instantiate in provided directory`() {
         val tempDir = createTempDir().toPath()
 
         val cache = Cache(tempDir)
@@ -37,7 +37,7 @@ internal class CacheTest {
     }
 
     @Test
-    internal fun `should provide a retrieved copy`() {
+    fun `should provide a retrieved copy`() {
         val cache = Cache(createTempDir().toPath())
         val path = prepareTestImgZip()
 
@@ -51,7 +51,7 @@ internal class CacheTest {
     }
 
     @Test
-    internal fun `should only retrieve copy once`() {
+    fun `should only retrieve copy once`() {
         val cache = Cache(createTempDir().toPath())
         val path = prepareTestImgZip()
         var providerCalls = 0

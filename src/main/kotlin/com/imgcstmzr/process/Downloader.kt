@@ -1,8 +1,10 @@
 package com.imgcstmzr.process
 
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.process.Exec.Sync.execShellScript
+import com.imgcstmzr.process.Exec.Async.startShellScript
 import com.imgcstmzr.runtime.OperatingSystem
+import com.imgcstmzr.util.checkSingleFile
+import com.imgcstmzr.util.cleanUp
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -13,8 +15,8 @@ object Downloader {
         val temp = Files.createTempDirectory("imgcstmzr")
         echo("Downloading ${filename ?: url} to $temp...", trailingNewline = false)
 
-        execShellScript {
-            line("for i in", (1..retries).joinToString(" "), "; do")
+        startShellScript {
+            !"for i in ${(1..retries).joinToString(" ")} ; do"
             command(
                 "wget",
                 "-q --show-progress --progress=bar:force",
@@ -31,12 +33,9 @@ object Downloader {
                 url,
                 "&& break",
             )
-            line("done")
-        }
+            !"done"
+        }.waitForCompletion()
 
-        val file = temp.toFile()?.listFiles()?.firstOrNull()?.toPath() ?: throw IllegalStateException("Failed to download $url.")
-        echo(" Completed.")
-        return file
+        return temp.checkSingleFile { "Failed to download $url." }.cleanUp("?").also { echo(" Completed.") }
     }
 }
-

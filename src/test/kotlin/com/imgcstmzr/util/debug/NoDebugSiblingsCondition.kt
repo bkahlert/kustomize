@@ -1,7 +1,7 @@
 package com.imgcstmzr.util.debug
 
-import com.bkahlert.koodies.test.junit.hasDebugSiblings
-import com.bkahlert.koodies.test.junit.isDebug
+import com.bkahlert.koodies.test.junit.anyDebugTest
+import com.bkahlert.koodies.test.junit.isA
 import com.bkahlert.koodies.test.junit.testName
 import com.imgcstmzr.util.quoted
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
@@ -21,8 +21,8 @@ class NoDebugSiblingsCondition : ExecutionCondition {
         disabled("Test ${testName.quoted} skipped due to existing @${Debug::class.simpleName} annotation on another test.")
 
     override fun evaluateExecutionCondition(context: ExtensionContext): ConditionEvaluationResult =
-        when (context.hasDebugSiblings) {
-            true -> when (context.isDebug) {
+        when (context.anyDebugTest && context.testMethod.isPresent) {
+            true -> when (context.element.isA<Debug>()) {
                 true -> context.getEnabledDueToDebugAnnotation()
                 else -> context.getDisabledDueToSiblingDebugAnnotation()
             }

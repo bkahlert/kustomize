@@ -13,13 +13,13 @@ internal class MapLinesKtTest {
 
     @Test
     internal fun `should transform single line`() {
-        expectThat("AB".mapLines(transform)).isEqualTo("ABBA")
+        expectThat("AB".mapLines(ignoreTrailingSeparator = true, transform)).isEqualTo("ABBA")
     }
 
     @Test
     internal fun `should transform multi line`() {
         @Suppress("SpellCheckingInspection")
-        expectThat("AB\nBA".mapLines(transform)).isEqualTo("ABBA\nBAAB")
+        expectThat("AB\nBA".mapLines(ignoreTrailingSeparator = true, transform)).isEqualTo("ABBA\nBAAB")
     }
 
     @Test
@@ -35,5 +35,11 @@ internal class MapLinesKtTest {
     @Test
     internal fun `should map empty string and keep trailing line`() {
         expectThat("\n".mapLines { "X" }).isEqualTo("X\n")
+    }
+
+    @Test
+    internal fun `should map trailing empty line if not ignored`() {
+        expectThat("\n".mapLines(ignoreTrailingSeparator = false) { "X" }).isEqualTo("X\nX")
+
     }
 }

@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.terminal.ascii
 
 import com.bkahlert.koodies.terminal.ANSI
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ascii.Draw.Companion.draw
-import com.bkahlert.koodies.terminal.removeEscapeSequences
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.util.containsOnlyCharacters
 import org.junit.jupiter.api.DynamicTest.dynamicTest
@@ -20,10 +20,10 @@ internal class BordersTest {
             val matrix = border.matrix
             listOf(
                 dynamicTest("${border.name}\n$matrix") {
-                    val staticallyRendered = border.name.wrapWithBorder(matrix, 2, 4, ANSI.EscapeSequences.term256Colors.hsv(270, 50, 50))
+                    val staticallyRendered = border.name.wrapWithBorder(matrix, 2, 4, ANSI.termColors.hsv(270, 50, 50))
 
                     val memberFun = "".draw.border::class.members.single { it.name == border.name.decapitalize() }
-                    val renderedMember = memberFun.call(border.name.draw.border, 2, 4, ANSI.EscapeSequences.term256Colors.hsv(270, 50, 50))
+                    val renderedMember = memberFun.call(border.name.draw.border, 2, 4, ANSI.termColors.hsv(270, 50, 50))
 
                     expectThat(staticallyRendered)
                         .isEqualTo(renderedMember.toString())

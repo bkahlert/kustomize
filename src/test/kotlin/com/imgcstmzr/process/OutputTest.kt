@@ -1,8 +1,8 @@
 package com.imgcstmzr.process
 
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.gray
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.italic
-import com.bkahlert.koodies.terminal.removeEscapeSequences
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.gray
+import com.bkahlert.koodies.terminal.ansi.AnsiFormats.italic
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.process.Output.Type.META
 import org.junit.jupiter.api.DynamicTest.dynamicTest
@@ -17,11 +17,12 @@ internal class OutputTest {
 
     @ConcurrentTestFactory
     internal fun `should leave content untouched`() = listOf("someone's output", "")
-        .flatMap { rawOutput ->
+        .flatMap { sample ->
             Output.Type.values().map { type ->
-                dynamicTest("$rawOutput + $type") {
-                    val string = (type typed rawOutput).toString()
-                    expectThat(string.removeEscapeSequences<CharSequence>()).isEqualTo(rawOutput)
+                dynamicTest("$sample + $type") {
+                    val message = "$sample of type $type"
+                    val string = (type typed message).toString().also { println(it) }
+                    expectThat(string.removeEscapeSequences<CharSequence>()).isEqualTo(message)
                 }
             }
         }

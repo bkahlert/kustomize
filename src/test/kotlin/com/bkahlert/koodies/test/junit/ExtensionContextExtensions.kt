@@ -1,7 +1,6 @@
 package com.bkahlert.koodies.test.junit
 
 import com.bkahlert.koodies.string.random
-import com.bkahlert.koodies.terminal.removeEscapeSequences
 import com.imgcstmzr.util.debug.Debug
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
@@ -23,15 +22,9 @@ fun ExtensionContext.element(tester: AnnotatedElement.() -> Boolean) = element.m
 val ExtensionContext.testName: String
     get() :String {
         val separator = " ➜ "
-        val name = element.map { parent.map { it.testName }.orElse("") + separator + dekotliniestDisplayName }.orElse("")
+        val name = element.map { parent.map { it.testName }.orElse("") + separator + displayName }.orElse("")
         return if (name.startsWith(separator)) name.substring(separator.length) else name
     }
-
-/**
- * Returns a JUnit display name with the
- */
-val ExtensionContext.dekotliniestDisplayName: String
-    get() = displayName.removeEscapeSequences().substringBeforeLast("$")
 
 /**
  * Contains an ID valid for the whole test plan run.
@@ -48,22 +41,53 @@ val ExtensionContext.uniqueName
         "unknown $this"
     } + " - " + String.random(8)
 
-val ExtensionContext.hasDebugChildren: Boolean
-    get() = testClass.children.any { it.isA<Debug>() }
+val ExtensionContext.anyDebugTest: Boolean
+    get() = allTests.any { it.isA<Debug>() }
 
-val ExtensionContext.hasDebugSiblings: Boolean
-    get() = testMethod.siblings.any { it.isA<Debug>() }
+/**
+ * The container of this test method.
+ */
+val ExtensionContext.ancestor get() = testMethod.orElse(null)?.declaringClass
 
-val ExtensionContext.isDebug: Boolean
-    get() = testMethod.isDebug
+/**
+ * Contains the ancestor's tests.
+ */
+private val ExtensionContext.allTests: List<Method>
+    get() {
+        val root = ancestors.lastOrNull() ?: testClass.orElse(null)
+        return root?.descendentContainers?.flatMap {
+            it.declaredMethods.toList()
+        } ?: emptyList()
+    }
 
-val Optional<Method>?.isDebug get() = this?.orElse(null).isDebug
+/**
+ * Contains the ancestors, that is this test's parent container, the parent's parent container, ... up to the root.
+ */
+val ExtensionContext.ancestors: List<Class<*>>
+    get() {
+        var ancestor = ancestor
+        val containerClasses: MutableList<Class<*>> = mutableListOf()
+        while (ancestor != null) {
+            containerClasses.add(ancestor)
+            ancestor = ancestor.declaringClass
+        }
+        return containerClasses
+    }
+
+/**
+ * Contains the ancestors, that is this test's parent container, the parent's parent container, ... up to the root.
+ */
+val Class<*>.descendentContainers: List<Class<*>>
+    get() = mutableListOf(this) + declaredClasses.flatMap { it.descendentContainers }
+
+
+/**
+ * Whether this [Method] is a [Test].
+ */
 val Optional<Method>?.isTest get() = this?.orElse(null).isTest
-val Method?.isDebug get() = this.isA<Debug>()
-val Method?.isTest get() = this.isA<Test>() || this.isA<TestFactory>() || this.isA<TestTemplate>()
 
-val Optional<Class<*>>.children
-    get() = orElse(null)?.declaredMethods?.filter { it.isTest }?.toList() ?: emptyList()
+/**
+ * Whether this [Method] is a [Test].
+ */
+val Method?.isTest get() = isA<Test>() || isA<TestFactory>() || isA<TestTemplate>()
 
-val Optional<Method>.siblings
-    get() = orElse(null)?.declaringClass?.declaredMethods?.filter { it.isTest }?.toList() ?: emptyList()

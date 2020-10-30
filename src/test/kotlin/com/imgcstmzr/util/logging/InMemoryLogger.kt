@@ -5,11 +5,11 @@ import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
 import com.bkahlert.koodies.string.TruncationStrategy.MIDDLE
 import com.bkahlert.koodies.string.padStartFixedLength
 import com.bkahlert.koodies.string.prefixLinesWith
-import com.bkahlert.koodies.terminal.removeEscapeSequences
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
+import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.tracing.MacroTracer
 import com.bkahlert.koodies.tracing.Tracer
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
-import com.imgcstmzr.util.Now
 import org.apache.commons.io.output.TeeOutputStream
 import java.io.OutputStream
 import kotlin.reflect.KCallable
@@ -18,7 +18,7 @@ import kotlin.reflect.KFunction1
 import kotlin.reflect.KFunction2
 import kotlin.reflect.KFunction3
 
-class InMemoryLogger<T> private constructor(
+open class InMemoryLogger<T> private constructor(
     caption: String,
     borderedOutput: Boolean = false,
     private val outputStream: TeeOutputStream,
@@ -29,7 +29,7 @@ class InMemoryLogger<T> private constructor(
     borderedOutput = borderedOutput,
     log = { message: String ->
         val time = Thread.currentThread().name.padStartFixedLength(30, strategy = MIDDLE) + ":" + " ${Now.passedSince(start)}".padStartFixedLength(7)
-        outputStream.write(message.prefixLinesWith("$time: ").toByteArray())
+        outputStream.write(message.prefixLinesWith(prefix = "$time: ").toByteArray())
         captured.add(message.withoutTrailingLineSeparator)
     }
 ), Tracer<T> {

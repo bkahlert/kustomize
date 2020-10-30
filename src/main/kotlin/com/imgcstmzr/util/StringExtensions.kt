@@ -1,9 +1,11 @@
 package com.imgcstmzr.util
 
+import com.bkahlert.koodies.boolean.emoji
 import com.bkahlert.koodies.string.Unicode
+import com.bkahlert.koodies.string.asString
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.brightCyan
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.gray
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightCyan
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.gray
 
 private val boxDrawings by lazy { Regex.escape(Unicode.boxDrawings.joinToString("")) }
 private val specialCharacterPattern by lazy { Regex("[^\\p{Print}\\p{IsPunctuation}$boxDrawings]") }
@@ -15,11 +17,16 @@ inline val CharSequence?.quoted: String get() = this.wrap("\"")
 inline val CharSequence?.singleQuoted: String get() = this.wrap("'")
 inline val CharSequence?.debug: String
     get() = if (this == null) null.wrap("❬".brightCyan(), "❭".brightCyan())
-    else toString().replaceNonPrintableCharacters().wrap("❬".brightCyan(), "⫻".brightCyan() + "${this.length}".gray() + "❭".brightCyan())
+    else toString().also {
+        if (it.asString().contains("/var/folders/hh")) {
+            println("NOW nOW nOW")
+        }
+    }.replaceNonPrintableCharacters().wrap("❬".brightCyan(), "⫻".brightCyan() + "${this.length}".gray() + "❭".brightCyan())
 inline val <T> Iterable<T>?.debug: String get() = this?.joinToString("") { it.toString().debug }.debug
 inline val List<Byte>?.debug: String get() = this?.toByteArray()?.let { bytes: ByteArray -> String(bytes) }.debug
 inline val Char?.debug: String get() = this.toString().replaceNonPrintableCharacters().wrap("❬", "❭")
 inline val Byte?.debug: String get() = this?.let { byte: Byte -> "❬$byte=${byte.toChar().toString().replaceNonPrintableCharacters()}❭" } ?: "❬null❭"
+inline val Boolean?.debug: String get() = emoji
 inline val Any?.debug: String
     get() =
         when (this) {

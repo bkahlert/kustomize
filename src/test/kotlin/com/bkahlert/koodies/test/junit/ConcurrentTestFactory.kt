@@ -4,7 +4,8 @@ import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 
-@TestFactory @Execution(ExecutionMode.CONCURRENT)
+@Execution(ExecutionMode.CONCURRENT)
+@TestFactory
 @Target(
     AnnotationTarget.ANNOTATION_CLASS,
     AnnotationTarget.FUNCTION,

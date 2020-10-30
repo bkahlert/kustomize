@@ -1,17 +1,17 @@
 package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.string.Grapheme
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.magenta
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.yellow
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
+import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.tracing.MiniTracer
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.microTrace
 import com.imgcstmzr.runtime.log.miniTrace
-import com.imgcstmzr.util.Now
 import com.imgcstmzr.util.debug
+import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.commons.io.output.TeeOutputStream
 import java.io.BufferedInputStream
-import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream

@@ -2,7 +2,7 @@ package com.imgcstmzr.util
 
 import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.string.random
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.cyan
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.process.Downloader.download
@@ -10,7 +10,10 @@ import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.process.GuestfishOperation
 import com.imgcstmzr.process.Output.Type.META
 import com.imgcstmzr.runtime.OperatingSystem
+import com.imgcstmzr.runtime.OperatingSystemImage
+import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
 import com.imgcstmzr.runtime.OperatingSystemMock
+import com.imgcstmzr.util.logging.OutputCaptureExtension.Companion.isCapturingOutput
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
@@ -30,14 +33,14 @@ annotation class OS(
 open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
 
     override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =
-        parameterContext.parameter.type.isAssignableFrom(Path::class.java)
+        parameterContext.parameter.type.isAssignableFrom(OperatingSystemImage::class.java)
 
     override fun resolveParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Any? {
         val annotation = parameterContext.parameter.getAnnotation(OS::class.java)
-        val os = annotation?.value?.objectInstance
+        val operatingSystem: OperatingSystem = annotation?.value?.objectInstance ?: OperatingSystemMock()
         val autoDelete = annotation?.autoDelete ?: true
-        echo("Provisioning an IMG copy of ${os.name.cyan()}")
-        return cachedCopyOf(os).also { if (autoDelete) saveReferenceForCleanup(extensionContext, it) }
+        if (!extensionContext.isCapturingOutput()) echo("Provisioning an image containing ${operatingSystem.name.cyan()} (${operatingSystem.directoryName})")
+        return operatingSystem.getCopy().also { if (autoDelete) saveReferenceForCleanup(extensionContext, it) }
     }
 
     override fun afterEach(context: ExtensionContext) {
@@ -46,11 +49,11 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
 
     companion object {
         val fixtureLog: (Path) -> Unit = FixtureLog(Paths.TEST.resolve("fixture.log"))
-        val OperatingSystem?.name get() = this?.downloadUrl?.let { Path.of(it).baseName } ?: "imgcstmzr"
+        val OperatingSystem.directoryName get() = downloadUrl?.let { Path.of(it).baseName } ?: "imgcstmzr"
 
         private val cache = Cache(Paths.TEST.resolve("test"), maxConcurrentWorkingDirectories = 500)
-        private fun cachedCopyOf(os: OperatingSystem?): Path =
-            cache.provideCopy(os.name, false) { os?.download() ?: prepareImg("cmdline.txt", "config.txt") }
+        private fun OperatingSystem.getCopy(): OperatingSystemImage =
+            this based cache.provideCopy(directoryName, false) { kotlin.runCatching { download() }.getOrElse { prepareImg("cmdline.txt", "config.txt") } }
 
         /**
          * Dynamically creates a raw image with two partitions containing the given [files].
@@ -109,7 +112,7 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
                     }, comparator = Comparator.reverseOrder())
                 }
                 ?.onEach { imgDirectoryBasedCopy ->
-                    echo("Deleting $imgDirectoryBasedCopy")
+                    if (!context.isCapturingOutput()) echo("Deleting $imgDirectoryBasedCopy")
                     imgDirectoryBasedCopy.delete(true)
                 }
         }

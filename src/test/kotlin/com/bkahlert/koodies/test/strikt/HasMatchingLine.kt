@@ -6,4 +6,4 @@ import strikt.assertions.any
 import java.nio.file.Path
 
 fun <T : Path> Assertion.Builder<T>.hasMatchingLine(curlyPattern: String) =
-    get("lines") { readAllLines() }.any { matches(curlyPattern) }
+    get("lines") { readAllLines() }.any { matchesCurlyPattern(curlyPattern) }

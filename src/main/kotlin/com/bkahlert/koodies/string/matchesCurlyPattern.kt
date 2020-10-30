@@ -8,19 +8,19 @@ package com.bkahlert.koodies.string
  * @sample Samples.singleLineMatches
  * @sample Samples.multiLineMatches
  */
-fun <T : CharSequence> T.matches(curlyPattern: String, placeholder: String = "{}"): Boolean =
+fun <T : CharSequence> T.matchesCurlyPattern(curlyPattern: String, placeholder: String = "{}"): Boolean =
     this.matches(Regex(curlyPattern.split(placeholder).joinToString(".*") { Regex.escape(it) }))
 
 
 private object Samples {
-    val singleLineMatches = "this is a test".matches("this is a {}")
+    val singleLineMatches = "this is a test".matchesCurlyPattern("this is a {}")
     val multiLineMatches =
         """
             Executing [sh, -c, >&1 echo "test output"
             >&2 echo "test error"] in /Users/bkahlert/Development/com.imgcstmzr.
             Started Process[pid=72692, exitValue=0]
             Process[pid=72692, exitValue=0] stopped with exit code 0
-        """.trimIndent().matches("""
+        """.trimIndent().matchesCurlyPattern("""
             Executing [sh, -c, >&1 echo "test output"
             >&2 echo "test error"] in {}
             Started Process[pid={}, exitValue={}]

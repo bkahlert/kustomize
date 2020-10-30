@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.shell
 
-import com.bkahlert.koodies.test.strikt.matches
+import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -20,7 +20,7 @@ internal class HereDocKtTest {
     @Test
     internal fun `should create here document using HERE- prefix and line feed by default`() {
         val hereDoc = listOf("line 1", "line 2").toHereDoc()
-        expectThat(hereDoc).matches("""
+        expectThat(hereDoc).matchesCurlyPattern("""
             <<HERE-{}
             line 1
             line 2
@@ -31,7 +31,7 @@ internal class HereDocKtTest {
     @Test
     internal fun `should accept empty list`() {
         val hereDoc = listOf<String>().toHereDoc()
-        expectThat(hereDoc).matches("""
+        expectThat(hereDoc).matchesCurlyPattern("""
             <<HERE-{}
             HERE-{}
         """.trimIndent())
@@ -42,7 +42,7 @@ internal class HereDocKtTest {
         @Test
         internal fun `for Array`() {
             val hereDoc = arrayOf("line 1", "line 2").toHereDoc()
-            expectThat(hereDoc).matches("""
+            expectThat(hereDoc).matchesCurlyPattern("""
             <<HERE-{}
             line 1
             line 2
@@ -53,7 +53,7 @@ internal class HereDocKtTest {
         @Test
         internal fun `for Iterable`() {
             val hereDoc = listOf("line 1", "line 2").asIterable().toHereDoc()
-            expectThat(hereDoc).matches("""
+            expectThat(hereDoc).matchesCurlyPattern("""
             <<HERE-{}
             line 1
             line 2

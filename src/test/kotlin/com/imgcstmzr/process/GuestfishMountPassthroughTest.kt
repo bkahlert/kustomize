@@ -1,9 +1,9 @@
 package com.imgcstmzr.process
 
 import com.bkahlert.koodies.shell.toHereDoc
+import com.bkahlert.koodies.string.lines
 import com.bkahlert.koodies.string.random
-import com.bkahlert.koodies.terminal.ANSI
-import com.github.ajalt.clikt.output.TermUi.echo
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.imgcstmzr.process.Guestfish.Companion.SHARED_DIRECTORY_NAME
 import com.imgcstmzr.runtime.OperatingSystems.DietPi
 import com.imgcstmzr.util.FixtureResolverExtension
@@ -86,11 +86,13 @@ internal class GuestfishMountPassthroughTest {
                     )
                         .toHereDoc("HERE-" + String.random(8).toUpperCase()))
                 }
-                Exec.Sync.execCommand(command = "docker exec -i ${img.fileName} bash -c " + listOf(
-                    "ls",
-                    "umount $mountDir/$SHARED_DIRECTORY_NAME",
-                ).joinToString("\n"), workingDirectory = imgDir) {
-                }.also { echo(ANSI.EscapeSequences.termColors.magenta("Result #1: $result\nResult #2: $it")) }
+                Exec.Async.startShellScript(workingDirectory = imgDir) {
+                    !"docker exec -i ${img.fileName} bash -c ".plus(listOf(
+                        "ls",
+                        "umount $mountDir/$SHARED_DIRECTORY_NAME",
+                    ).lines())
+                }.waitForCompletion().let { "Result #1: $result\nResult #2: $it".magenta() }
+                result
             },
 //            "multiline I" to { img: Path ->
 //                val imgDir = img.parent
@@ -121,7 +123,7 @@ internal class GuestfishMountPassthroughTest {
         ).map { (name, experiment) ->
             dynamicTest(name) {
                 val result = experiment(img.copyToTempSiblingDirectory())
-                check(result == 0) { "An error while running the following command inside $img" }
+                check(result.exitValue() == 0) { "An error while running the following command inside $img" }
             }
         }.toList()
     }

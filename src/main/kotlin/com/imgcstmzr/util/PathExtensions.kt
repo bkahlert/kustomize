@@ -1,6 +1,7 @@
 package com.imgcstmzr.util
 
 import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.random
 import java.awt.datatransfer.MimeTypeParseException
@@ -134,6 +135,25 @@ val Path.baseName: String get() = fileNameParts.first
 val Path.extension: String? get() = fileNameParts.second
 
 /**
+ * Adds [extension] to this [Path].
+ *
+ * Example: `Path.of("/path/file.foo").addExtension("bar")` returns path `/path/file.foo.bar`.
+ */
+fun Path.addExtension(extension: String): Path = "$fileName.$extension".let { parent?.resolve(it) ?: Path.of(it) }
+
+/**
+ * Removes [extension] from this [Path].
+ *
+ * Example: `Path.of("/path/file.foo.bar").removeExtension("bar")` returns path `/path/file.foo`.
+ *
+ * @throws IllegalArgumentException if the [extension] to be removed is not present
+ */
+fun Path.removeExtension(extension: String): Path {
+    require("$fileName".endsWith(".$extension")) { "$this must end with .$extension" }
+    return "$fileName".dropLast(extension.length + 1).let { parent?.resolve(it) ?: Path.of(it) }
+}
+
+/**
  * Returns the name of the file described by this [Path] with a replaced [extension].
  * If no extension is present, it will be added.
  */
@@ -178,6 +198,36 @@ fun Path.copyTo(dest: Path, createDirectories: Boolean = true): Path =
         if (createDirectories) Files.createDirectories(dest.parent)
         Files.copy(this, dest)
     }
+
+fun Path.moveTo(dest: Path, createDirectories: Boolean = true): Path =
+    if (this is ClassPath) {
+        throw IllegalArgumentException("$this is a ${ClassPath::class.simpleName} which is read-only and therefore cannot be moved (but copied).")
+    } else {
+        if (createDirectories) Files.createDirectories(dest.parent)
+        Files.move(this, dest)
+    }
+
+fun Path.renameTo(fileName: String): Path =
+    if (this is ClassPath) {
+        throw IllegalArgumentException("$this is a ${ClassPath::class.simpleName} which is read-only and therefore cannot be renamed.")
+    } else {
+        requireExists()
+        toFile().let {
+            val destination = File(it.parent, fileName)
+            it.renameTo(destination)
+            destination.toPath()
+        }
+    }
+
+/**
+ * Cleans up this path by removing the [delimiter] from the [Path.getFileName].
+ *
+ * The removal itself takes place by renaming the corresponding file system resource.
+ */
+fun Path.cleanUp(delimiter: String): Path = "$fileName".let {
+    if (it.contains(delimiter)) renameTo(it.substringBefore(delimiter))
+    else this
+}
 
 fun Path.copyToDirectory(dest: Path, createDirectories: Boolean = true): Path {
     require(dest.isDirectory || !dest.exists) { "$dest must be a directory" }
@@ -246,3 +296,14 @@ fun Path.delete(recursively: Boolean = false) {
         if (exists) toFile().delete()
     }
 }
+
+/**
+ * Requires this path to be a directory and contain exactly one file which
+ * will be returned.
+ *
+ * @throws IllegalArgumentException with [lazyMessage] if not a single file was found
+ */
+fun Path.checkSingleFile(lazyMessage: () -> Any): Path = toFile().listFiles()?.let {
+    check(it.size == 1, lazyMessage)
+    it.first().toPath()
+} ?: throw IllegalStateException("${lazyMessage()}")

@@ -2,13 +2,14 @@
 
 package com.imgcstmzr.util
 
+import com.bkahlert.koodies.nio.file.listRecursively
 import com.bkahlert.koodies.string.CodePoint
 import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.LineSeparators.isMultiline
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.bkahlert.koodies.string.truncate
-import com.bkahlert.koodies.terminal.removeEscapeSequences
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.Size
 import com.imgcstmzr.patch.ImgOperation
@@ -20,6 +21,7 @@ import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
 import strikt.assertions.hasSize
+import strikt.assertions.isDirectory
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -62,11 +64,11 @@ fun <T : CharSequence> Assertion.Builder<T>.isEqualToByteWise(other: CharSequenc
 
 fun Assertion.Builder<*>.isEqualToStringWise(other: Any?, removeAnsi: Boolean = true) =
     assert("have same toString value") { value ->
-        val thisString = value.toString().let { if (removeAnsi) it.removeEscapeSequences<CharSequence>() else it }
-        val otherString = other.toString().let { if (removeAnsi) it.removeEscapeSequences<CharSequence>() else it }
-        when (thisString == otherString) {
+        val actualString = value.toString().let { if (removeAnsi) it.removeEscapeSequences<CharSequence>() else it }
+        val expectedString = other.toString().let { if (removeAnsi) it.removeEscapeSequences<CharSequence>() else it }
+        when (actualString == expectedString) {
             true -> pass()
-            else -> fail("was $otherString instead of $thisString.")
+            else -> fail("was $actualString instead of $expectedString.")
         }
     }
 
@@ -182,6 +184,25 @@ fun Assertion.Builder<Pair<Path, Path>>.haveEqualContent() =
                     "Content #1:\n" + String(firstContent).replaceNonPrintableCharacters() + "\n" +
                     "Content #2:\n" + String(lastContent).replaceNonPrintableCharacters() + "\n")
         }
+    }
+
+fun Assertion.Builder<Path>.hasSameFiles(other: Path) =
+    assert("has same files as ${other.quoted}") { actual ->
+        expectThat(actual).containsAllFiles(other)
+        expectThat(other).containsAllFiles(actual)
+    }
+
+
+fun Assertion.Builder<Path>.containsAllFiles(other: Path) =
+    assert("contains all files as ${other.quoted}") { actual ->
+        expectThat(actual).isDirectory()
+        expectThat(other).isDirectory()
+        other.listRecursively().filter { it.isFile }.forEach { otherPath ->
+            val relativePath = other.relativize(otherPath)
+            val actualPath = actual.resolve(relativePath)
+            expectThat(actualPath).hasEqualContent(otherPath)
+        }
+        pass()
     }
 
 fun Assertion.Builder<Path>.isInside(path: Path) =

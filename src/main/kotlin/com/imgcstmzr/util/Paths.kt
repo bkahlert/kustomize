@@ -5,6 +5,7 @@ import com.bkahlert.koodies.unit.size
 import java.nio.file.Path
 
 object Paths {
+    fun tempDir(base: String = String.random(), extension: String = ".tmp"): Path = createTempDir(base, extension).toPath()
     fun tempFile(base: String = String.random(), extension: String = ".txt"): Path = createTempFile(base, extension).toPath()
 
     val WORKING_DIRECTORY: Path = Path.of("").toAbsolutePath()

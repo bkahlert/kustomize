@@ -1,12 +1,13 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.string.mapLines
+import com.bkahlert.koodies.process.Processes
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
-import com.bkahlert.koodies.terminal.ANSI.EscapeSequences.termColors
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.bold
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.cyan
+import com.bkahlert.koodies.terminal.ANSI
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.ansiAwareMapLines
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
+import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ascii.Kaomojis
-import com.bkahlert.koodies.terminal.removeEscapeSequences
 import com.imgcstmzr.process.Output
 import com.imgcstmzr.process.Output.Type.ERR
 import com.imgcstmzr.process.Output.Type.META
@@ -52,8 +53,8 @@ fun <P : Program> Collection<P>.bootRunStop(
             originalMessage.removeEscapeSequences().takeIf { line ->
                 line.toLowerCase().contains("failed") || line.toLowerCase().contains("error")
             }?.let { replace ->
-                return@let replace.mapLines { line ->
-                    return@mapLines line.removeEscapeSequences().let {
+                return@let replace.ansiAwareMapLines { line ->
+                    return@ansiAwareMapLines line.removeEscapeSequences().let {
                         it.substringBefore(" ") + " " + ERR.format(it.substringAfter(" "))
                     }
                 }
@@ -62,13 +63,14 @@ fun <P : Program> Collection<P>.bootRunStop(
         val outputHistory = mutableListOf<Output>()
 
         watchdog = Watchdog(Duration.ofSeconds(45), repeating = true) {
-            this@segment.logStatus { ERR typed ("\n" + termColors.red("\nThe console seems to have halted... ${Kaomojis.Dogs.random()}")) }
+            this@segment.logStatus { ERR typed ("\n" + ANSI.termColors.red("\nThe console seems to have halted... ${Kaomojis.Dogs.random()}")) }
             this@segment.logStatus(listOf<HasStatus>(object : HasStatus {
                 override fun status(): String = Kaomojis.Dogs.random() + " ... console seems to have halted." // TODO
             })) {
-                META typed ("\nLast processed output was:\n" + outputHistory.joinToString("\n") {
+                META typed ("\nPID: ${Processes.mostRecentChild.pid()}\n" + outputHistory.joinToString("\n" +
+                    "\nLast processed output was:\n" + outputHistory.joinToString("\n") {
                     it.unformatted.replaceNonPrintableCharacters()
-                })
+                }))
             }
             this@segment.logStatus(unfinishedPrograms) {
                 META typed ("\n" + "To help debugging, you can open a separate console and connect using:".cyan())
@@ -76,6 +78,7 @@ fun <P : Program> Collection<P>.bootRunStop(
             this@segment.logStatus(unfinishedPrograms) {
                 META typed ("$".cyan() + " docker attach ...".cyan().bold() + "\n")
             }
+            Processes.mostRecentChild.destroy() // TODO kill
         }
 
         os.bootToUserSession(scenario, img, this) { output ->

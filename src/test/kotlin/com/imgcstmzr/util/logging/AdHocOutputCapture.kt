@@ -2,7 +2,7 @@ package com.imgcstmzr.util.logging
 
 import com.bkahlert.koodies.collections.withNegativeIndices
 import com.imgcstmzr.util.logging.OutputCapture.Companion.splitOutput
-import java.io.ByteArrayOutputStream
+import org.apache.commons.io.output.ByteArrayOutputStream
 import java.io.OutputStream
 import java.io.PrintStream
 

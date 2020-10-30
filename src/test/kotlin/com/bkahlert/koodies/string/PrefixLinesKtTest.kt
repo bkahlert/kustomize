@@ -10,16 +10,25 @@ import strikt.assertions.isEqualTo
 internal class PrefixLinesKtTest {
     @Test
     internal fun `should add prefix to each line`() {
-        expectThat("12345     12345\nsnake    snake".prefixLinesWith("ab ")).isEqualTo("ab 12345     12345\nab snake    snake")
+        val prefixedLines = "12345     12345\nsnake    snake".prefixLinesWith(ignoreTrailingSeparator = true, "ab ")
+        expectThat(prefixedLines).isEqualTo("ab 12345     12345\nab snake    snake")
     }
 
     @Test
     internal fun `should do nothing on empty prefix`() {
-        expectThat("12345     12345\nsnake    snake".prefixLinesWith("")).isEqualTo("12345     12345\nsnake    snake")
+        val prefixedLines = "12345     12345\nsnake    snake".prefixLinesWith(ignoreTrailingSeparator = true, "")
+        expectThat(prefixedLines).isEqualTo("12345     12345\nsnake    snake")
     }
 
     @Test
     internal fun `should keep trailing new line`() {
-        expectThat("12345     12345\nsnake    snake\n".prefixLinesWith("ab ")).isEqualTo("ab 12345     12345\nab snake    snake\n")
+        val prefixedLines = "12345     12345\nsnake    snake\n".prefixLinesWith(ignoreTrailingSeparator = true, "ab ")
+        expectThat(prefixedLines).isEqualTo("ab 12345     12345\nab snake    snake\n")
+    }
+
+    @Test
+    internal fun `should prefix trailing new line if not ignored`() {
+        val prefixedLines = "12345     12345\nsnake    snake\n".prefixLinesWith(ignoreTrailingSeparator = false, "ab ")
+        expectThat(prefixedLines).isEqualTo("ab 12345     12345\nab snake    snake\nab ")
     }
 }

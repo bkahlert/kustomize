@@ -15,4 +15,6 @@ open class MutedBlockRenderingLogger<R>(
     override fun logStatus(items: List<HasStatus>, block: () -> Output) = this
 
     override fun logResult(block: () -> Result<R>): R = block().getOrThrow()
+
+    override fun toString(): String = "MutedBlockRenderingLogger()"
 }

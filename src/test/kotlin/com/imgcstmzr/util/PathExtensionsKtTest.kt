@@ -3,6 +3,8 @@ package com.imgcstmzr.util
 import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
+import com.bkahlert.koodies.test.strikt.hasSize
+import com.bkahlert.koodies.unit.bytes
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import strikt.api.expectCatching
 import strikt.api.expectThat
+import strikt.assertions.contains
 import strikt.assertions.exists
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
@@ -22,6 +25,7 @@ import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import strikt.assertions.isRegularFile
 import strikt.assertions.isTrue
+import strikt.assertions.message
 import java.io.File
 import java.io.IOException
 import java.nio.file.Path
@@ -122,6 +126,30 @@ internal class PathExtensionsKtTest {
                 dynamicTest("$path should be filename.test") {
                     expectThat(Path.of(path).fileNameWithExtension("test")).isEqualTo("filename.test")
                 }
+            )
+        }
+
+        @ConcurrentTestFactory
+        internal fun `append and remove extension`() = listOf(
+            "filename" to "filename.test",
+            "my/path/filename" to "my/path/filename.test",
+            "/my/path/filename" to "/my/path/filename.test",
+            "filename.foo" to "filename.foo.test",
+            "my/path/filename.foo" to "my/path/filename.foo.test",
+            "/my/path/filename.foo" to "/my/path/filename.foo.test",
+        ).flatMap { (path, expected) ->
+            listOf(
+                dynamicTest("$path with appended extension \"test\" should be $expected") {
+                    expectThat(Path.of(path).addExtension("test")).isEqualTo(Path.of(expected))
+                },
+
+                dynamicTest("$expected with extension \"test\" removed should be $path") {
+                    expectThat(Path.of(expected).removeExtension("test")).isEqualTo(Path.of(path))
+                },
+
+                dynamicTest("removing extension \"baz\" from $expected should throw") {
+                    expectCatching { Path.of(expected).removeExtension("baz") }.isFailure().isA<IllegalArgumentException>()
+                },
             )
         }
     }
@@ -408,6 +436,80 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
     }
 
     @Nested
+    inner class Move {
+
+        val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
+        fun tempFile() = File.createTempFile(tempFilePrefix, ".txt").also { it.writeBytes(ByteArray(10)); it.deleteOnExit() }.toPath()
+
+        @Test
+        internal fun `should copy file if destination not exists`() {
+            val deletedFile = File.createTempFile(tempFilePrefix, ".txt").also { it.delete() }.toPath()
+            val tempFile = tempFile()
+            tempFile.moveTo(deletedFile)
+            expectThat(deletedFile).get { readAllBytes().size }.isEqualTo(10)
+            expectThat(tempFile).not { exists() }
+        }
+
+        @Test
+        internal fun `should throw on missing file`() {
+            val deletedFile = File.createTempFile(tempFilePrefix, ".txt").also { it.delete() }.toPath()
+            expectCatching { deletedFile.moveTo(tempFile()) }.isFailure().isA<IOException>()
+        }
+    }
+
+    @Nested
+    inner class Rename {
+
+        val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
+        val tempFile = File.createTempFile(tempFilePrefix, ".txt").also { it.writeBytes(ByteArray(10)); it.deleteOnExit() }.toPath()
+
+        @Test
+        internal fun `should rename file if destination not exists`() {
+            val renamedFilename = String.random()
+            val renamedFile = tempFile.renameTo("${renamedFilename}.txt")
+            expectThat(tempFile).not { exists() }
+            expectThat(renamedFile).exists().get { readAllBytes().size }.isEqualTo(10)
+        }
+
+        @Test
+        internal fun `should throw on missing file`() {
+            val deletedFile = File.createTempFile(tempFilePrefix, ".txt").also { it.delete() }.toPath()
+            expectCatching { deletedFile.renameTo("filename") }.isFailure().isA<IllegalArgumentException>()
+        }
+
+        @Test
+        internal fun `should throw on classpath file`() {
+            expectCatching { ClassPath("cmdline.txt").renameTo("filename") }.isFailure().isA<IllegalArgumentException>()
+        }
+    }
+
+    @Nested
+    inner class Cleanup {
+
+        val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
+        fun getTempFile(additionalSuffix: String) = File.createTempFile(tempFilePrefix, ".txt$additionalSuffix")
+            .also { it.writeBytes(ByteArray(10)); it.deleteOnExit() }.toPath()
+
+        @Test
+        internal fun `should rename file if trailing dirt`() {
+            val file = getTempFile("?x")
+            val cleanedFile = file.cleanUp("?")
+            expectThat(file).not { exists() }
+            expectThat(cleanedFile)
+                .exists()
+                .hasSize(10.bytes)
+                .get { fileName.toString() }.not { contains("?") }
+        }
+
+        @Test
+        internal fun `should not rename file without trailing dirt`() {
+            val file = getTempFile("?x")
+            val cleanedFile = file.cleanUp("#")
+            expectThat(cleanedFile).exists().isEqualTo(file)
+        }
+    }
+
+    @Nested
     inner class Temp {
 
         val prefix = String.random(4)
@@ -468,6 +570,29 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
                 .and { tempSiblingCopy.delete() }
                 .get { parent }
                 .isEmptyDirectory()
+        }
+    }
+
+    @Nested
+    inner class CheckSingleFile {
+        @Test
+        internal fun `should return single file`() {
+            val dir = Paths.tempFile().copyToTempSiblingDirectory().parent
+            expectThat(dir.checkSingleFile { "File not found." }).isInside(dir)
+        }
+
+        @Test
+        internal fun `should throw on missing file`() {
+            val dir = Paths.tempFile().copyToTempSiblingDirectory().also { it.delete() }.parent
+            expectCatching { dir.checkSingleFile { "File not found." } }.isFailure().isA<IllegalStateException>()
+                .message.assert("") { expectThat(it).isEqualTo("File not found.") }
+        }
+
+        @Test
+        internal fun `should throw on too many files`() {
+            val dir = Paths.tempFile().copyToTempSiblingDirectory().also { it.parent.resolve("second.file").touch() }.parent
+            expectCatching { dir.checkSingleFile { "File not found." } }.isFailure().isA<IllegalStateException>()
+                .message.assert("") { expectThat(it).isEqualTo("File not found.") }
         }
     }
 }

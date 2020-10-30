@@ -10,10 +10,12 @@ import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
  *
  * If this string has a trailing line that trailing line is left unchanged.
  */
-fun String.mapLines(transform: (String) -> String): String {
+fun String.mapLines(ignoreTrailingSeparator: Boolean = true, transform: (String) -> String): String {
     val trailingLineBreak = trailingLineSeparator
     val prefixedLines = withoutTrailingLineSeparator.lines().joinToString("\n") { line ->
         transform(line)
     }
-    return prefixedLines + (trailingLineBreak ?: "")
+    return prefixedLines + (trailingLineBreak?.let {
+        trailingLineBreak + (if (!ignoreTrailingSeparator) transform("") else "")
+    } ?: "")
 }

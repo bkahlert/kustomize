@@ -1,10 +1,12 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.docker.toContainerName
-import com.bkahlert.koodies.string.indent
+import com.bkahlert.koodies.docker.Docker.toContainerName
+import com.bkahlert.koodies.process.Processes
+import com.bkahlert.koodies.string.LineSeparators.LF
 import com.bkahlert.koodies.string.random
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.green
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.green
 import com.bkahlert.koodies.terminal.ascii.Kaomojis
+import com.bkahlert.koodies.terminal.ascii.Kaomojis.thinking
 import com.bkahlert.koodies.unit.Mega
 import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.bytes
@@ -12,23 +14,23 @@ import com.bkahlert.koodies.unit.size
 import com.imgcstmzr.process.CommandLineRunner
 import com.imgcstmzr.process.Output
 import com.imgcstmzr.process.Output.Type.ERR
-import com.imgcstmzr.process.Output.Type.META
 import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.process.RunningProcess
-import com.imgcstmzr.process.alive
-import com.imgcstmzr.process.enter
+import com.imgcstmzr.process.checkAlive
 import com.imgcstmzr.process.input
 import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
 import com.imgcstmzr.runtime.Program.Companion.compute
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
+import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.miniSegment
 import com.imgcstmzr.runtime.log.segment
+import com.imgcstmzr.util.debug
 import java.io.File
 import java.nio.file.Path
 import kotlin.properties.Delegates.observable
-import kotlin.streams.toList
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
+import kotlin.time.milliseconds
 
 // TODO rename to Booter
 sealed class OperatingSystems : OperatingSystem {
@@ -92,20 +94,25 @@ sealed class OperatingSystems : OperatingSystem {
             scenario: String,
             img: Path,
             parentLogger: BlockRenderingLogger<Any>?,
-            processor: RunningOS.(Output) -> Any,
+            processor: RunningOperatingSystem.(Output) -> Any,
         ): Any {
             val cmd: String = startCommand(scenario, img.toFile())
-            val cmdRunner = CommandLineRunner(blocking = false) // TODO delete
+            val cmdRunner = CommandLineRunner() // TODO delete
 
             val credentials = credentials[img] ?: Credentials(defaultUsername, defaultPassword)
             val startUp: MutableList<Program> = mutableListOf(loginProgram(credentials))
 
             return parentLogger.segment(scenario, null) {
-                val runningOS = RunningOS(this@segment)
-                val runningProcess: RunningProcess = cmdRunner.startProcessAndWaitForCompletion(
+                lateinit var runningProcess: RunningProcess
+                val runningOS = object : RunningOperatingSystem() {
+                    override val logger: RenderingLogger<*> = this@segment
+                    override var process: Process = runningProcess
+                }
+
+                runningProcess = cmdRunner.startProcessAndWaitForCompletion(
                     directory = Path.of("/bin"),
                     shellScript = "sh -c '$cmd'",
-                    outputRedirect = ProcessBuilder.Redirect.PIPE,
+//                    test = cmd
                 ) { output ->
                     runningOS.process = this
                     if (startUp.isNotEmpty()) {
@@ -117,7 +124,7 @@ sealed class OperatingSystems : OperatingSystem {
                         runningOS.processor(output)
                     }
                 }
-                runningProcess.blockExitCode
+                runningProcess.blockingExitCode
             }
         }
 
@@ -158,22 +165,120 @@ sealed class OperatingSystems : OperatingSystem {
             scenario: String,
             img: Path,
             parentLogger: BlockRenderingLogger<Any>?,
-            processor: RunningOS.(Output) -> Any,
+            processor: RunningOperatingSystem.(Output) -> Any,
+        ): Any = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
+    }
+
+    /**
+     * [Tiny Core](http://tinycorelinux.net/ports.html)
+     */
+    object TinyCore : OperatingSystems() {
+        override val name: String = "Tiny Core"
+        override val downloadUrl: String = "http://tinycorelinux.net/12.x/armv6/releases/RPi/piCore-12.0.zip"
+        override val defaultUsername: String = "tc"
+        override val defaultPassword: String = "piCore"
+
+        override fun increaseDiskSpace(
+            size: Size,
+            img: Path,
+            parentLogger: BlockRenderingLogger<Any>?,
+        ): Any = RaspberryPiLite.increaseDiskSpace(size, img, parentLogger)
+
+        override fun bootToUserSession(
+            scenario: String,
+            img: Path,
+            parentLogger: BlockRenderingLogger<Any>?,
+            processor: RunningOperatingSystem.(Output) -> Any,
+        ): Any = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
+    }
+
+    /**
+     * [Arch Linux ARM](https://archlinuxarm.org/platforms/armv6/raspberry-pi)
+     */
+    object ArchLinuxArm : OperatingSystems() {
+        override val name: String = "Arch Linux ARM"
+        override val downloadUrl: String = "http://os.archlinuxarm.org/os/ArchLinuxARM-rpi-latest.tar.gz"
+        override val defaultUsername: String = "alarm" // root
+        override val defaultPassword: String = "alarm" // root
+
+        override fun increaseDiskSpace(
+            size: Size,
+            img: Path,
+            parentLogger: BlockRenderingLogger<Any>?,
+        ): Any = RaspberryPiLite.increaseDiskSpace(size, img, parentLogger)
+
+        override fun bootToUserSession(
+            scenario: String,
+            img: Path,
+            parentLogger: BlockRenderingLogger<Any>?,
+            processor: RunningOperatingSystem.(Output) -> Any,
+        ): Any = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
+    }
+
+    /**
+     * [RISC OS](https://www.riscosopen.org/content/downloads/raspberry-pi)
+     *
+     * Size: ~5MB
+     */
+    object RiscOs : OperatingSystems() {
+        override val name: String = "RISC OS"
+        override val downloadUrl: String = "https://www.riscosopen.org/zipfiles/platform/raspberry-pi/BCM2835.5.24.zip?1544451169"
+        override val defaultUsername: String = ""
+        override val defaultPassword: String = ""
+
+        override fun increaseDiskSpace(
+            size: Size,
+            img: Path,
+            parentLogger: BlockRenderingLogger<Any>?,
+        ): Any = RaspberryPiLite.increaseDiskSpace(size, img, parentLogger)
+
+        override fun bootToUserSession(
+            scenario: String,
+            img: Path,
+            parentLogger: BlockRenderingLogger<Any>?,
+            processor: RunningOperatingSystem.(Output) -> Any,
+        ): Any = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
+    }
+
+    /**
+     * [RISC OS Pico RC5](https://www.riscosopen.org/content/downloads/raspberry-pi)
+     *
+     * Size: ~2MB
+     */
+    object RiscOsPicoRc5 : OperatingSystems() {
+        override val name: String = "RISC OS Pico RC5"
+        override val downloadUrl: String = "https://www.riscosopen.org/zipfiles/platform/raspberry-pi/Pico.5.zip"
+        override val defaultUsername: String = ""
+        override val defaultPassword: String = ""
+
+        override fun increaseDiskSpace(
+            size: Size,
+            img: Path,
+            parentLogger: BlockRenderingLogger<Any>?,
+        ): Any = RaspberryPiLite.increaseDiskSpace(size, img, parentLogger)
+
+        override fun bootToUserSession(
+            scenario: String,
+            img: Path,
+            parentLogger: BlockRenderingLogger<Any>?,
+            processor: RunningOperatingSystem.(Output) -> Any,
         ): Any = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
     }
 }
 
 
-class RunningOS(
-    val renderer: BlockRenderingLogger<*>,
-    var process: Process? = null,
+abstract class RunningOperatingSystem(
     val shutdownCommand: String = "sudo shutdown -h now",
 ) {
+    abstract val logger: RenderingLogger<*>
+    abstract val process: Process
+
     /**
      * Forwards the [values] to the OS running process.
      */
-    fun input(vararg values: String) {
-        process.alive().input(*values)
+    @OptIn(ExperimentalTime::class)
+    fun input(vararg values: String, delay: Duration = 10.milliseconds) {
+        process.checkAlive().input(*values, delay = delay).also { feedback("Entered ${values.joinToString { it.debug }}") }
     }
 
     /**
@@ -181,8 +286,9 @@ class RunningOS(
      * to the OS running process.
      */
     fun feedback(value: String) {
-        renderer.logLine { value }
+        logger.logLine { LF + Kaomojis.Proud.random().thinking(value.capitalize().green()) + LF }
     }
+
 
     val shuttingDownStatus: List<HasStatus> = listOf(object : HasStatus {
         override fun status(): String = "shutting down"
@@ -192,34 +298,32 @@ class RunningOS(
      * Logs the current execution status given the [output] and [unfinished].
      */
     fun status(output: Output, unfinished: List<Program>) {
-        renderer.logStatus(items = if (shuttingDown) shuttingDownStatus else unfinished) { output }
-    }
-
-    @ExperimentalTime
-    fun wait(duration: Duration) {
-        Thread.sleep(duration.toLongMilliseconds())
+        logger.logStatus(items = if (shuttingDown) shuttingDownStatus else unfinished) { output }
     }
 
     fun command(input: String) {
-        input("$input\r")
+        input(input)
     }
 
     /**
      * Initiates the systems immediate shutdown.
      */
     fun shutdown() {
-        process.alive().enter(shutdownCommand)
+        input(shutdownCommand)
         shuttingDown = true
     }
 
     fun kill() {
-        println("All Processes: " + ProcessHandle.allProcesses().toList())
-        process?.destroyForcibly()
+        feedback("Kill invoked")
+        process.destroyForcibly()
     }
 
     var shuttingDown: Boolean by observable(false) { _, oldValue, newValue ->
-        renderer.logStatus { META typed "shutdown invoked ($oldValue -> $newValue)" }
+        feedback("Shutdown invoked")
     }
+
+    override fun toString(): String =
+        "RunningOperatingSystem(renderer=${logger.javaClass}, process=$process, shutdownCommand='$shutdownCommand', shuttingDownStatus=$shuttingDownStatus)"
 }
 
 /**
@@ -258,7 +362,7 @@ interface OperatingSystem {
         scenario: String,
         img: Path,
         parentLogger: BlockRenderingLogger<Any>? = null,
-        processor: RunningOS.(Output) -> Any,
+        processor: RunningOperatingSystem.(Output) -> Any,
     ): Any
 
     /**
@@ -286,76 +390,97 @@ interface OperatingSystem {
     /**
      * Creates a program to log [Credentials.username] in using [Credentials.password].
      */
-    fun loginProgram(credentials: Credentials): Program {
-        fun RunningOS.enterUsername() {
+    @OptIn(ExperimentalTime::class) fun loginProgram(credentials: Credentials): Program {
+        fun RunningOperatingSystem.enterUsername() {
             input("${credentials.username}\r")
         }
 
-        fun RunningOS.enterPassword() {
-            input("${credentials.password}\r")
+        fun RunningOperatingSystem.enterPassword() {
+            input("${credentials.password}\r", delay = 500.milliseconds)
         }
 
         var pwLineExpectationFailed = 0
         return Program(
             "login", { output -> "1/4: waiting for prompt" },
             "1/4: waiting for prompt" to { output ->
-                if (output.matches(loginPattern)) {
-                    enterUsername()
-                    "2/4: confirm username"
-                } else "1/4: waiting for prompt"
+                when {
+                    output.matches(loginPattern) -> {
+                        enterUsername()
+                        "2/4: confirm username"
+                    }
+                    else -> "1/4: waiting for prompt"
+                }
             },
             "2/4: confirm username" to { output ->
-                if (!output.matches(loginPattern)) {
-                    "3/4: password..."
-                } else "2/4: confirm username"
+                when {
+                    !output.matches(loginPattern) -> {
+                        "3/4: password..."
+                    }
+                    else -> "2/4: confirm username"
+                }
             },
             "3/4: password..." to { output ->
-                if (output.matches(passwordPattern) || pwLineExpectationFailed % 5 == 1) {
-                    enterPassword()
-                    "4/4 confirm password"
-                } else {
-                    pwLineExpectationFailed++
-                    "3/4: password..."
+                when {
+                    output.matches(passwordPattern) || pwLineExpectationFailed % 5 == 2 -> {
+                        enterPassword()
+                        "4/4 confirm password"
+                    }
+                    else -> {
+                        pwLineExpectationFailed++
+                        "3/4: password..."
+                    }
                 }
             },
             "4/4 confirm password" to { output ->
-                if (!output.matches(passwordPattern)) {
-                    feedback("${output.indent}Logged in successfully ${Kaomojis.Proud.random()}".green())
-                    null
-                } else "4/4 confirm password"
+                when {
+                    listOf("'TAB'", "'ENTER'", "<Ok>").any { output.contains(it, ignoreCase = true) } -> {
+                        input("\t\t\t\t\t", delay = 500.milliseconds)
+                        println(Processes.mostRecentChild.pid())
+                        "4/4 confirm password"
+                    }
+                    output.matches(loginPattern) -> {
+                        "1/4: waiting for prompt"
+                    }
+                    output.matches(passwordPattern) -> {
+                        "3/4: password..."
+                    }
+                    output.matches(readyPattern) -> {
+                        feedback("Logged in successfully")
+                        null
+                    }
+                    else -> "4/4 confirm password"
+                }
             },
-        )//.logging()
+        )
     }
-//    fun loginProgram(credentials: Credentials): Program {
-//        fun RunningOS.typeInCredentials(output: String, credentials: Credentials): String? =
-//            when {
-//                output.matches(loginPattern) -> {
-//                    input("${credentials.username}\r")
-//                    "2/2: password..."
-//                }
-//                output.matches(passwordPattern) -> {
-//                    input("${credentials.password}\r")
-//                    "debug"
-//                }
-//                else -> "1/2: waiting for prompt"
-//            }
-//
-//        return Program(
-//            "login", { output -> "1/2: waiting for prompt" },
-//            "1/2: waiting for prompt" to { output ->
-//                typeInCredentials(output, credentials)
-//            },
-//            "2/2: password..." to { output ->
-//                typeInCredentials(output, credentials)
-//            },
-//            "debug" to { output ->
-//                println("\n\n")
-//                if (output.contains("Login incorrect")) println("Login incorrect seen")
-////                println(this.hi)
-//                null
-//            },
-//        )//.logging()
-//    }
 
 
+    /**
+     * Creates a program to shutdown immediately.
+     */
+    fun shutdownProgram(): Program {
+        fun RunningOperatingSystem.invokeShutdown() {
+            input("sudo shutdown -h now")
+        }
+
+        return Program(
+            "shutdown",
+            { output ->
+                invokeShutdown()
+                "shutting down"
+            },
+            "shutting down" to { output ->
+                when {
+                    output.matches(readyPattern) -> {
+                        invokeShutdown()
+                        "shutting down"
+                    }
+                    output.isNotBlank() -> {
+                        "shutting down"
+                    }
+                    else -> null
+                }
+            },
+        )
+    }
 }

@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.terminal.ansi
 
-import com.bkahlert.koodies.terminal.removeEscapeSequences
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import kotlin.text.contains as containsRegex
 
 /**

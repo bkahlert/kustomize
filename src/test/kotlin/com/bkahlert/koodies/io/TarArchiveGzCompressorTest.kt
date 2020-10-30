@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.io
 
+import com.bkahlert.koodies.io.TarArchiveGzCompressor.listArchive
 import com.bkahlert.koodies.io.TarArchiveGzCompressor.tarGunzip
 import com.bkahlert.koodies.io.TarArchiveGzCompressor.tarGzip
-import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.unit.size
 import com.imgcstmzr.util.Paths
@@ -20,6 +20,7 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
 import strikt.api.expectThat
+import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.isA
 import strikt.assertions.isFailure
 import strikt.assertions.isLessThan
@@ -47,13 +48,13 @@ internal class TarArchiveGzCompressorTest {
     }
 
     @Test
-    internal fun `should tar-gzip and untar-gunzip`() {
-        val dir = Paths.tempDir()
-            .also { ClassPath("example.html").copyTo(it.resolve("example.html")) }
-            .also { ClassPath("config.txt").copyTo(it.resolve("sub-dir/config.txt")) }
+    internal fun `should tar-gzip listArchive and untar-gunzip`() {
+        val dir = PathFixtures.directoryWithTwoFiles()
 
         val archivedDir = dir.tarGzip()
         expectThat(archivedDir.size).isLessThan(dir.size)
+
+        expectThat(archivedDir.listArchive().map { it.name }).containsExactlyInAnyOrder("example.html", "sub-dir/", "sub-dir/config.txt")
 
         val renamedDir = dir.renameTo("${dir.fileName}-renamed")
 

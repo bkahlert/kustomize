@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.terminal.ascii
 
 import com.bkahlert.koodies.string.repeat
-import com.bkahlert.koodies.terminal.removeEscapeSequences
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import kotlin.math.ceil
 import kotlin.math.floor
 

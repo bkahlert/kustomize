@@ -1,11 +1,11 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.concurrent.startAsDaemon
 import com.bkahlert.koodies.nio.NonBlockingReader
 import com.bkahlert.koodies.string.lines
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
-import com.bkahlert.koodies.thread.startAsDaemon
 import com.bkahlert.koodies.tracing.MiniTracer
 import com.imgcstmzr.process.input
 import com.imgcstmzr.runtime.ProcessExitMock.Companion.immediateExit
@@ -14,6 +14,7 @@ import com.imgcstmzr.runtime.ProcessMock.SlowInputStream.Companion.prompt
 import com.imgcstmzr.runtime.log.miniTrace
 import com.imgcstmzr.util.isEqualToByteWise
 import com.imgcstmzr.util.logging.InMemoryLogger
+import org.apache.commons.io.output.ByteArrayOutputStream
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -31,7 +32,6 @@ import strikt.assertions.isGreaterThan
 import strikt.assertions.isLessThan
 import strikt.assertions.isLessThanOrEqualTo
 import strikt.assertions.isTrue
-import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime

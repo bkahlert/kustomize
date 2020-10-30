@@ -2,7 +2,6 @@ package com.imgcstmzr.util.logging
 
 import com.bkahlert.koodies.test.junit.allTests
 import com.bkahlert.koodies.test.junit.isA
-import com.bkahlert.koodies.test.junit.isDebug
 import com.bkahlert.koodies.test.junit.uniqueName
 import com.imgcstmzr.util.debug.Debug
 import org.junit.jupiter.api.extension.AfterEachCallback
@@ -46,11 +45,19 @@ class InMemoryLoggerResolver : ParameterResolver, AfterEachCallback, TestExecuti
     }
 
     private fun ExtensionContext.createLogger(suffix: String? = null, borderedOutput: Boolean, parameterContext: ParameterContext): InMemoryLogger<Unit> =
-        InMemoryLogger<Unit>(
+        object : InMemoryLogger<Unit>(
             caption = uniqueName + if (suffix != null) "::$suffix" else "",
             borderedOutput = borderedOutput,
             outputStreams = if (isVerbose || parameterContext.isVerbose) listOf(System.out) else emptyList()
-        ).also { store().put(element, it) }
+        ) {
+            private var resultLogged = false
+            override fun logResult(block: () -> Result<Unit>) {
+                if (!resultLogged) {
+                    super.logResult(block)
+                    resultLogged = true
+                }
+            }
+        }.also { store().put(element, it) }
 
     override fun afterEach(extensionContext: ExtensionContext) {
         val logger: InMemoryLogger<*>? = extensionContext.store().get(extensionContext.element, InMemoryLogger::class.java)
@@ -65,6 +72,6 @@ class InMemoryLoggerResolver : ParameterResolver, AfterEachCallback, TestExecuti
     }
 
     private fun ExtensionContext.store(): ExtensionContext.Store = getStore(create(InMemoryLoggerResolver::class.java))
-    private val ExtensionContext.isVerbose: Boolean get() = isDebug || testCount == 1
+    private val ExtensionContext.isVerbose: Boolean get() = element.isA<Debug>() || testCount == 1
     private val ParameterContext.isVerbose: Boolean get() = parameter.isA<Debug>()
 }

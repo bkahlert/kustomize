@@ -17,6 +17,16 @@ by dictOf("unicode.dict.tsv"
     operator fun get(codePoint: Int): CodePoint = CodePoint(codePoint)
 
     /**
+     * [ESCAPE](https://codepoints.net/U+001B)
+     */
+    const val escape = '\u001B'
+
+    /**
+     * [CONTROL SEQUENCE INTRODUCER](https://codepoints.net/U+009B)
+     */
+    const val controlSequenceIntroducer = '\u009B'
+
+    /**
      * [CARRIAGE RETURN (CR)](https://codepoints.net/U+000D)
      */
     const val carriageReturn = "\r"

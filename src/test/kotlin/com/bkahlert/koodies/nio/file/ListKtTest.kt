@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.nio.file
 
-import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.io.PathFixtures
 import com.imgcstmzr.util.Paths
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -16,9 +16,7 @@ import java.nio.file.NotDirectoryException
 internal class ListKtTest {
     @Test
     internal fun `should only list entries in current directory`() {
-        val dir = Paths.tempDir()
-            .also { ClassPath("example.html").copyTo(it.resolve("example.html")) }
-            .also { ClassPath("config.txt").copyTo(it.resolve("sub-dir/config.txt")) }
+        val dir = PathFixtures.directoryWithTwoFiles()
         expectThat(dir.list().toList()).containsExactly(dir.resolve("sub-dir"), dir.resolve("example.html"))
     }
 

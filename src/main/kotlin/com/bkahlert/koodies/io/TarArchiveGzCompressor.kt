@@ -1,6 +1,7 @@
 package com.bkahlert.koodies.io
 
 import com.bkahlert.koodies.io.Archiver.addToArchive
+import com.bkahlert.koodies.io.Archiver.list
 import com.bkahlert.koodies.io.Archiver.unarchiveTo
 import com.bkahlert.koodies.nio.bufferedInputStream
 import com.bkahlert.koodies.nio.file.requireEmpty
@@ -11,6 +12,7 @@ import com.imgcstmzr.util.addExtension
 import com.imgcstmzr.util.exists
 import com.imgcstmzr.util.mkdirs
 import com.imgcstmzr.util.removeExtension
+import org.apache.commons.compress.archivers.ArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
@@ -48,5 +50,17 @@ object TarArchiveGzCompressor {
             TarArchiveInputStream(gzipInput).use { it.unarchiveTo(destination) }
         }
         return destination
+    }
+
+    /**
+     * Lists this archive without unarchiving it.
+     */
+    fun Path.listArchive(): List<ArchiveEntry> {
+        requireExists()
+        var archiveEntries: List<ArchiveEntry> = emptyList()
+        GzipCompressorInputStream(bufferedInputStream()).use { gzipInput ->
+            TarArchiveInputStream(gzipInput).use { archiveEntries = it.list() }
+        }
+        return archiveEntries
     }
 }

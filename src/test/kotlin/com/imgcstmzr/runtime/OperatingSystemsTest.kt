@@ -2,8 +2,8 @@ package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.boolean.emoji
 import com.bkahlert.koodies.nio.NonBlockingReader
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.brightMagenta
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.magenta
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightMagenta
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
@@ -16,6 +16,7 @@ import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.runtime.ProcessExitMock.Companion.computing
 import com.imgcstmzr.runtime.ProcessExitMock.Companion.immediateSuccess
 import com.imgcstmzr.runtime.ProcessMock.SlowInputStream.Companion.prompt
+import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.miniTrace
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.logging.InMemoryLogger
@@ -144,7 +145,10 @@ class OperatingSystemsTest {
                         processExit = { immediateSuccess() },
                         logger = logger,
                     )
-                    val runningOS = RunningOS(logger, processMock)
+                    val runningOS = object : RunningOperatingSystem() {
+                        override val logger: RenderingLogger<*> = logger
+                        override var process: Process = processMock
+                    }
                     val reader = NonBlockingReader(processMock.inputStream, timeout = nonBlockingReaderTimeout, logger = logger)
 
                     assertTimeoutPreemptively(1.minutes, {
@@ -182,7 +186,10 @@ class OperatingSystemsTest {
             val scriptContent = TestCli.cmd.scripts["the-basics"] ?: throw NoSuchElementException("Could not load program")
             val script = os.compileSetupScript("test", scriptContent)[1].logging()
             val processMock = ProcessMock(logger = logger, processExit = { computing() })
-            val runningOS = RunningOS(logger, processMock)
+            val runningOS = object : RunningOperatingSystem() {
+                override val logger: RenderingLogger<*> = logger
+                override var process: Process = processMock
+            }
 
             assertTimeoutPreemptively(100.seconds, {
                 var running = true

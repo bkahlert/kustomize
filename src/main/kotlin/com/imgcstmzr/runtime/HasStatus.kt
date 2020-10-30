@@ -11,9 +11,9 @@ interface HasStatus {
     fun status(): String
 
     companion object {
-        private val pauseSymbol = ANSI.EscapeSequences.termColors.gray("▮▮")
-        private val playSymbol = ANSI.EscapeSequences.termColors.gray("◀")
-        private val fastForwardSymbol = ANSI.EscapeSequences.termColors.green("◀◀")
+        private val pauseSymbol = ANSI.termColors.gray("▮▮")
+        private val playSymbol = ANSI.termColors.gray("◀")
+        private val fastForwardSymbol = ANSI.termColors.green("◀◀")
 
         /**
          * Default implementation to render the status of a [List] of [HasStatus] instances.
@@ -22,8 +22,8 @@ interface HasStatus {
             if (size == 0) return pauseSymbol
             return joinToTruncatedString("  $playSymbol ", "$fastForwardSymbol ",
                 truncated = "…",
-                transform = { element -> ANSI.EscapeSequences.termColors.bold(element.status()) },
-                transformEnd = { lastElement -> ANSI.EscapeSequences.termColors.gray(lastElement.status()) })
+                transform = { element -> ANSI.termColors.bold(element.status()) },
+                transformEnd = { lastElement -> ANSI.termColors.gray(lastElement.status()) })
         }
 
         /**
@@ -33,8 +33,8 @@ interface HasStatus {
             if (size == 0) return pauseSymbol
             return joinToTruncatedString("  $playSymbol ", "$fastForwardSymbol ",
                 truncated = "…",
-                transform = { element -> ANSI.EscapeSequences.termColors.bold(element) },
-                transformEnd = { lastElement -> ANSI.EscapeSequences.termColors.gray(lastElement) })
+                transform = { element -> ANSI.termColors.bold(element) },
+                transformEnd = { lastElement -> ANSI.termColors.gray(lastElement) })
         }
     }
 }

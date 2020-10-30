@@ -2,6 +2,7 @@ package com.bkahlert.koodies.terminal.ascii
 
 import com.bkahlert.koodies.string.lines
 import com.bkahlert.koodies.string.repeat
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ascii.Borders.Block
 import com.bkahlert.koodies.terminal.ascii.Borders.Double
 import com.bkahlert.koodies.terminal.ascii.Borders.Heavy
@@ -10,7 +11,6 @@ import com.bkahlert.koodies.terminal.ascii.Borders.Light
 import com.bkahlert.koodies.terminal.ascii.Borders.LightDotted
 import com.bkahlert.koodies.terminal.ascii.Borders.Rounded
 import com.bkahlert.koodies.terminal.ascii.Borders.SpikedOutward
-import com.bkahlert.koodies.terminal.removeEscapeSequences
 import com.github.ajalt.mordant.AnsiCode
 
 

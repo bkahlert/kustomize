@@ -1,5 +1,7 @@
 package com.imgcstmzr.util.logging
 
+import com.bkahlert.koodies.concurrent.synchronized
+
 /**
  * A capture session that captures [System.out] and [System.err].
  */
@@ -8,7 +10,7 @@ open class SystemCapture {
     private val out: PrintStreamCapture
     private val err: PrintStreamCapture
 
-    private val capturedStrings: MutableList<CapturedString> = ArrayList()
+    private val capturedStrings: MutableList<CapturedString> = arrayListOf<CapturedString>().synchronized()
 
     init {
         out = PrintStreamCapture(System.out) { string: String -> captureOut(string) }

@@ -32,9 +32,9 @@ class OutputCaptureExtension : BeforeAllCallback, AfterAllCallback, BeforeEachCa
         context.getOutputCapture().pop()
     }
 
-    private fun ExtensionContext.getOutputCapture() = getStore<OutputCaptureExtension>().getSingleton<OutputCapture>()
-
     companion object {
+        fun ExtensionContext.isCapturingOutput(): Boolean = getOutputCapture().isCapturing
+        private fun ExtensionContext.getOutputCapture() = getStore<OutputCaptureExtension>().getSingleton<OutputCapture>()
 
         inline fun <reified T : Any> ExtensionContext.Store.getSingleton() =
             getOrComputeIfAbsent(T::class.java)

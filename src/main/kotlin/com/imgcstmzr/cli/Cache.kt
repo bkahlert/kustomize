@@ -3,7 +3,8 @@ package com.imgcstmzr.cli
 import com.bkahlert.koodies.string.random
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.patch.ini.RegexElement
-import com.imgcstmzr.process.Unarchiver.unarchive
+import com.imgcstmzr.process.ImageBuilder
+import com.imgcstmzr.process.ImageExtractor.extractImage
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.exists
@@ -56,7 +57,7 @@ private class ProjectDirectory(parentDir: Path, dirName: String, private val reu
     private val rawDir = SingleFileDirectory(dir, "raw")
 
     private fun workDirs(): List<WorkDirectory> {
-        val listFiles: Array<File> = file.listFiles { dir, name ->
+        val listFiles: Array<File> = file.listFiles { _, name ->
             WorkDirectory.isNameValid(name)
         } ?: return emptyList()
 
@@ -96,10 +97,10 @@ private class ProjectDirectory(parentDir: Path, dirName: String, private val reu
 
         val img = rawDir.requireSingle {
             val downloadedFile = downloadDir.requireSingle(provider)
-            downloadedFile.takeIf { it.extension == "img" } ?: unarchive(downloadedFile)
+            downloadedFile.extractImage { ImageBuilder.buildFrom(it) }
         }
 
-        return WorkDirectory.from(dir, img).getSingle { it.extension == "img" } ?: throw NoSuchElementException()
+        return WorkDirectory.from(dir, img).getSingle { it.extension.equals("img", ignoreCase = true) } ?: throw NoSuchElementException()
     }
 }
 

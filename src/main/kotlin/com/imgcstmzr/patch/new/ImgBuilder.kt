@@ -9,7 +9,7 @@ import com.imgcstmzr.process.GuestfishOperation
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.Program
-import com.imgcstmzr.runtime.RunningOS
+import com.imgcstmzr.runtime.RunningOperatingSystem
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import java.nio.file.Path
 
@@ -87,8 +87,8 @@ class FileSystemOperationsCollector(private val pathOperations: MutableList<Path
 class ProgramsBuilder(private val programs: MutableList<Program>) {
     fun program(
         purpose: String,
-        initialState: RunningOS.(String) -> String?,
-        vararg states: Pair<String, RunningOS.(String) -> String?>,
+        initialState: RunningOperatingSystem.(String) -> String?,
+        vararg states: Pair<String, RunningOperatingSystem.(String) -> String?>,
     ) {
         programs += Program(purpose, initialState, *states)
     }

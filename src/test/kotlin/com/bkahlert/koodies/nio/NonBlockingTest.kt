@@ -23,7 +23,7 @@ import kotlin.time.seconds
 /**
  * Tests mainly JLine functionality / findings / working patterns.
  */
-@ExperimentalTime
+@OptIn(ExperimentalTime::class)
 @Execution(ExecutionMode.CONCURRENT)
 class NonBlockingTest {
 

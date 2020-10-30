@@ -18,6 +18,8 @@ internal class OutputCapture : CapturedOutput {
         synchronized(monitor) { systemCaptures.removeLast().release() }
     }
 
+    val isCapturing: Boolean get() = systemCaptures.isNotEmpty()
+
     override val all: String get() = getFilteredCapture { type: Type? -> true }
     override val allLines: List<String> by withNegativeIndices { splitOutput(all) }
 

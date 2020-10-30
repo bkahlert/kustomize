@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.io
 
+import com.bkahlert.koodies.io.PathFixtures.directoryWithTwoFiles
 import com.bkahlert.koodies.io.TarArchiver.tar
 import com.bkahlert.koodies.io.TarArchiver.untar
-import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.unit.size
 import com.imgcstmzr.util.Paths
@@ -48,9 +48,7 @@ internal class TarArchiverTest {
 
     @Test
     internal fun `should tar and untar`() {
-        val dir = Paths.tempDir()
-            .also { ClassPath("example.html").copyTo(it.resolve("example.html")) }
-            .also { ClassPath("config.txt").copyTo(it.resolve("sub-dir/config.txt")) }
+        val dir = directoryWithTwoFiles()
 
         val archivedDir = dir.tar()
         expectThat(archivedDir.size).isGreaterThan(dir.size)

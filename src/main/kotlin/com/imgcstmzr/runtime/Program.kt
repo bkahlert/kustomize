@@ -1,10 +1,12 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.string.TruncationStrategy.MIDDLE
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.bold
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.cyan
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.gray
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.red
+import com.bkahlert.koodies.string.truncate
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.gray
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
+import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.process.Output
@@ -13,7 +15,7 @@ import com.imgcstmzr.util.quoted
 
 /**
  * Instances of this class can interact with a process based on a state machine for the given [name].
- * Or in other words: A [Program] does not run in a [RunningOS] but on it, like somehow a human interacts with his machine.
+ * Or in other words: A [Program] does not run in a [RunningOperatingSystem] but on it, like somehow a human interacts with his machine.
  *
  * The workflow is as follows:
  * 1. The handler of the [initialState] is called whenever the [Process] generates an output.
@@ -25,14 +27,14 @@ import com.imgcstmzr.util.quoted
  */
 class Program(
     val name: String,
-    private val initialState: RunningOS.(String) -> String?,
-    private val states: List<Pair<String, RunningOS.(String) -> String?>>,
+    private val initialState: RunningOperatingSystem.(String) -> String?,
+    private val states: List<ProgramState>,
 ) : HasStatus {
 
     constructor(
         purpose: String,
-        initialState: RunningOS.(String) -> String?,
-        vararg states: Pair<String, RunningOS.(String) -> String?>,
+        initialState: RunningOperatingSystem.(String) -> String?,
+        vararg states: ProgramState,
     ) : this(purpose, initialState, states.toList())
 
     private var logging = false
@@ -43,10 +45,10 @@ class Program(
     val halted: Boolean
         get() = !initiating && state == null
 
-    private val stateMachine: Map<String, RunningOS.(String) -> String?> = states.associate { it }
+    private val stateMachine: Map<String, RunningOperatingSystem.(String) -> String?> = states.associate { it }
     private var stateHistory: MutableList<HistoryElement> = mutableListOf()
 
-    private fun handler(): RunningOS.(String) -> String? {
+    private fun handler(): RunningOperatingSystem.(String) -> String? {
         if (initiating) {
             initiating = false
             return initialState
@@ -57,9 +59,9 @@ class Program(
         return stateMachine[state] ?: throw IllegalStateException("Unknown state $state. Available: ${stateMachine.keys}. History: $stateHistory")
     }
 
-    fun compute(runningOS: RunningOS, output: Output): Boolean {
+    fun compute(runningOperatingSystem: RunningOperatingSystem, output: Output): Boolean {
         val oldState = state
-        state = handler().invoke(runningOS, output.unformatted)
+        state = handler().invoke(runningOperatingSystem, output.unformatted)
         val historyElement = HistoryElement(oldState, output, state)
         if (logging) TermUi.debug("$name execution step #${stateHistory.size}: $historyElement")
         stateHistory.add(historyElement)
@@ -72,7 +74,7 @@ class Program(
         override fun toString(): String = when (oldState) {
             null -> " ▶️ $leftBracket$newState$rightBracket"
             else -> {
-                val visualizedOutput = if (output.isBlank) '\u2400' else output.raw.replaceNonPrintableCharacters().cyan()
+                val visualizedOutput = if (output.isBlank) '\u2400' else output.output.replaceNonPrintableCharacters().cyan()
                 when (newState) {
                     oldState -> "$leftBracket$oldState$rightBracket 🔁 $visualizedOutput"
                     null -> " ⏹️ "
@@ -106,8 +108,8 @@ class Program(
          *
          * @return `true` if the calculation is ongoing; otherwise return `false`
          */
-        fun Collection<Program>.compute(runningOS: RunningOS, output: Output): Boolean =
-            this.firstOrNull()?.compute(runningOS, output) ?: false
+        fun Collection<Program>.compute(runningOperatingSystem: RunningOperatingSystem, output: Output): Boolean =
+            this.firstOrNull()?.compute(runningOperatingSystem, output) ?: false
 
         private fun stateName(index: Int, commands: Array<out String>): String {
             val commandLine = commands[index]
@@ -152,20 +154,55 @@ class Program(
             if (it.size == 1) null to it[0] else it[0] to it[1]
         }
 
-        fun fromScript(name: String, readyPattern: Regex, vararg commands: String): Program = Program(
-            name.removePrefix(":").trim(),
-            { output -> if (commands.isEmpty()) null else stateName(0, commands) },
-            commands.mapIndexed { index, command ->
+        fun fromScript(name: String, readyPattern: Regex, vararg commands: String): Program {
+            val completionState: ProgramState = commands.completionState(readyPattern)
+
+            val states: List<ProgramState> = commands.flatMapIndexed { index, command ->
                 val currentStateName: String = stateName(index, commands)
-                val nextStateName: String? = if (index + 1 < commands.size) stateName(index + 1, commands) else null
-                val step: RunningOS.(String) -> String? = { output: String ->
+                val currentCompletionStateName: String = stateName(index, commands) + "…"
+                val nextStateName: String? =
+                    if (index + 1 < commands.size) stateName(index + 1, commands)
+                    else completionState.first
+
+                val step: RunningOperatingSystem.(String) -> String? = { output: String ->
                     if (output.matches(readyPattern)) {
                         input("$command\r")
-                        nextStateName
+                        currentCompletionStateName
                     } else currentStateName
                 }
-                currentStateName to step
+
+                val completionStep: RunningOperatingSystem.(String) -> String? = { output: String ->
+                    if (output.matches(readyPattern)) {
+                        nextStateName
+                    } else currentCompletionStateName
+                }
+
+                listOf(
+                    currentStateName to step,
+                    currentCompletionStateName to completionStep,
+                )
+            }.plusElement(completionState)
+
+            return Program(
+                name = name.removePrefix(":").trim(),
+                initialState = { output -> if (commands.isEmpty()) null else stateName(0, commands) },
+                states = states
+            )
+        }
+
+        /**
+         * Returns the [ProgramState] to awaits the current command finish execution
+         * by skipping the [Output] until [readyPattern] is matched.
+         */
+        private fun Array<out String>.completionState(readyPattern: Regex): ProgramState =
+            "waiting for ${last().truncate(strategy = MIDDLE)} to finish".let { stateName ->
+                stateName to { output: String ->
+                    if (output.matches(readyPattern)) {
+                        null
+                    } else stateName
+                }
             }
-        )
     }
 }
+
+typealias ProgramState = Pair<String, RunningOperatingSystem.(String) -> String?>

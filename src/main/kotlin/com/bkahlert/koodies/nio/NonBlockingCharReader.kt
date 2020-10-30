@@ -6,8 +6,8 @@ import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
 import com.imgcstmzr.runtime.log.miniSegment
 import com.imgcstmzr.util.debug
+import org.apache.commons.io.output.ByteArrayOutputStream
 import org.jline.utils.NonBlocking
-import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.Reader
@@ -64,4 +64,6 @@ class NonBlockingCharReader(
         kotlin.runCatching { reader?.close() }
         reader = null
     }
+
+    override fun toString(): String = "NonBlockingCharReader(inputStream=$inputStream, timeout=$timeout, charset=$charset, reader=$reader)"
 }

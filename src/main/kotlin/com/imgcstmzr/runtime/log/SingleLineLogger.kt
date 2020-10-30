@@ -22,7 +22,7 @@ abstract class SingleLineLogger<R>(caption: CharSequence) : RenderingLogger<R> {
     }
 
     override fun logStatus(items: List<HasStatus>, block: () -> Output): RenderingLogger<R> {
-        strings = strings?.plus(block().formattedLines.joinToString(", "))
+        strings = strings?.plus(block().formatted.lines().joinToString(", "))
         if (items.isNotEmpty()) strings = strings?.plus(items.status().lines().joinToString(", ", "(", ")"))
         return this
     }
