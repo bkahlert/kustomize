@@ -124,7 +124,7 @@ sealed class OperatingSystems : OperatingSystem {
                         runningOS.processor(output)
                     }
                 }
-                runningProcess.blockingExitCode
+                runningProcess.waitForCompletion().exitCode
             }
         }
 

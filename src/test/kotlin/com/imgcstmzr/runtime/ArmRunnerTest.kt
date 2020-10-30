@@ -17,7 +17,6 @@ import strikt.assertions.any
 import strikt.assertions.contains
 import strikt.assertions.isEqualTo
 import strikt.assertions.isTrue
-import java.nio.file.Path
 import kotlin.reflect.KFunction
 import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
@@ -70,27 +69,7 @@ class ArmRunnerTest {
 
         expectThat(exitCode).isEqualTo(0)
         expectThat(logger.logged).contains("@@(@@@)")
-        expectThat(logger.logged.lines().takeLast(10))
-            .any { contains("shutting down") }
-            .any { contains("reboot: System halted") }
-    }
-
-    //    @Debug // TODO
-    @Test
-    fun `should boot and run alpine`(@OS(RaspberryPiLite::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
-
-        val exitCode = ArmRunner.run(
-            name = name(ArmRunnerTest::`should boot and run alpine`),
-            osImage = OperatingSystemImage(OperatingSystems.ArchLinuxArm,
-                Path.of("/Users/bkahlert/.imgcstmzr.test/test/ArchLinuxARM-rpi-latest.tar/download/ArchLinuxARM-rpi-latest.tar.gz.img")),
-            logger = logger,
-            programs = arrayOf(
-                osImage.compileScript("demo train", "sudo apt-get install -y -m sl", "sl"),
-            ))
-
-        expectThat(exitCode).isEqualTo(0)
-        expectThat(logger.logged).contains("@@(@@@)")
-        expectThat(logger.logged.lines().takeLast(10))
+        expectThat(logger.logged.lines().takeLast(20))
             .any { contains("shutting down") }
             .any { contains("reboot: System halted") }
     }
@@ -100,7 +79,6 @@ class ArmRunnerTest {
     fun tearDown() {
         Docker.remove(name(ArmRunnerTest::`should boot`), forcibly = true)
         Docker.remove(name(ArmRunnerTest::`should boot and run program in user session`), forcibly = true)
-        Docker.remove(name(ArmRunnerTest::`should boot and run alpine`), forcibly = true)
     }
 
     private fun name(test: KFunction<Any>) = ArmRunnerTest::class.simpleName + "-" + test.name

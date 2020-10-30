@@ -86,13 +86,13 @@ object ArmRunner {
                 OUT -> logStatus(items = unfinished) { output }
                 ERR -> {
                     println("Err in ArmRunner occurred: $output")
-//                    logException { // TODO
-//                        RuntimeException(output.unformatted)
-//                    }
+                    //                    logException { // TODO
+                    //                        RuntimeException(output.unformatted)
+                    //                    }
                 }
             }
             if (!unfinished.compute(this, output)) unfinished.takeIf { it.isNotEmpty() }?.removeAt(0)
             0
-        }.blockingExitCode
+        }.waitForCompletion().exitCode
     }
 }

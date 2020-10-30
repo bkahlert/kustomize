@@ -123,7 +123,7 @@ class ExecTest {
             startAsDaemon(2.seconds) {
                 process.destroy()
             }
-            process.blockingExitCode
+            process.waitForCompletion()
             expectThat(output).containsExactlyInAnyOrder("test out", "test err")
         }.let { expectThat(it).isLessThanOrEqualTo(2.5.seconds) }
     }
@@ -142,7 +142,7 @@ class ExecTest {
                         >&2 echo "test err"
                     """.trimIndent()
             }
-            process.blockingExitCode
+            process.waitForCompletion()
             expectThat(ranAfterProcessTermination).isTrue()
         }.let { expectThat(it).isLessThanOrEqualTo(2.5.seconds) }
     }
@@ -167,7 +167,7 @@ class ExecTest {
             startAsDaemon(2.seconds) {
                 process.destroy()
             }
-            process.blockingExitCode
+            process.waitForCompletion()
             expectThat(ranAfterProcessTermination).isTrue()
         }.let { expectThat(it).isLessThanOrEqualTo(2.5.seconds) }
     }

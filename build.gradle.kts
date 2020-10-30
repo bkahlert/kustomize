@@ -15,18 +15,24 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     jcenter()
-    mavenCentral()
 }
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.0")
-    implementation("org.slf4j:slf4j-simple:2.0.0-alpha1")
     implementation("com.github.ajalt:clikt:2.8.0")
     implementation("com.github.ajalt:mordant:1.2.1")
     implementation("io.github.config4k:config4k:0.4.2")
-    implementation("org.apache.maven.shared:maven-shared-utils:3.3.3")
-    implementation("com.tunnelvisionlabs:antlr4-runtime:4.7.4") // grapheme parsing
-    implementation("com.tunnelvisionlabs:antlr4-perf-testsuite:4.7.4")
+    implementation("org.slf4j:slf4j-simple:2.0.0-alpha1")
+
+    implementation("commons-io:commons-io:2.8.0")
+    implementation("org.apache.commons:commons-compress:1.20")
+    implementation("org.apache.commons:commons-exec:1.3")
+    implementation("org.codehaus.plexus:plexus-utils:3.3.0")
     implementation("org.jline:jline-reader:3.16.0")
+
+    @Suppress("SpellCheckingInspection")
+    implementation("com.tunnelvisionlabs:antlr4-runtime:4.7.4") // grapheme parsing
+    @Suppress("SpellCheckingInspection")
+    implementation("com.tunnelvisionlabs:antlr4-perf-testsuite:4.7.4")
 
     testImplementation(platform("org.junit:junit-bom:5.7.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")

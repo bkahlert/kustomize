@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
  * Declares a requirement on Docker.
  * If no Docker is available this test is skipped.
  */
-@Execution(ExecutionMode.SAME_THREAD) // TODO
+@Execution(ExecutionMode.CONCURRENT)
 @E2E
 @Timeout(15, unit = TimeUnit.MINUTES)
 @Retention(AnnotationRetention.RUNTIME)

@@ -81,11 +81,7 @@ abstract class RunningProcess : Process() {
      * Whether this [Process] failed, that is, returned with an exit value other than `0`.
      */
     val failed: Boolean
-        get() = result.isCancelled && blockingExitCode != 0
-
-    @Deprecated("waitForCompletion also provides the logged I/O", ReplaceWith("waitForCompletion().exitCode"))
-    val blockingExitCode: Int
-        get() = result.get().exitCode
+        get() = result.isCancelled && waitForCompletion().exitCode != 0
 
     /**
      * Causes the current thread to wait, if necessary, until the
