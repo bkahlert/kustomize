@@ -1,5 +1,6 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.string.TruncationStrategy.MIDDLE
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.bkahlert.koodies.string.truncate
@@ -9,7 +10,6 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.process.Output
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.quoted
 
@@ -59,22 +59,22 @@ class Program(
         return stateMachine[state] ?: throw IllegalStateException("Unknown state $state. Available: ${stateMachine.keys}. History: $stateHistory")
     }
 
-    fun compute(runningOperatingSystem: RunningOperatingSystem, output: Output): Boolean {
+    fun compute(runningOperatingSystem: RunningOperatingSystem, IO: IO): Boolean {
         val oldState = state
-        state = handler().invoke(runningOperatingSystem, output.unformatted)
-        val historyElement = HistoryElement(oldState, output, state)
+        state = handler().invoke(runningOperatingSystem, IO.unformatted)
+        val historyElement = HistoryElement(oldState, IO, state)
         if (logging) TermUi.debug("$name execution step #${stateHistory.size}: $historyElement")
         stateHistory.add(historyElement)
         return state != null
     }
 
-    private data class HistoryElement(private val oldState: String?, private val output: Output, private val newState: String?) {
+    private data class HistoryElement(private val oldState: String?, private val IO: IO, private val newState: String?) {
         val leftBracket = "〘"
         val rightBracket = "〙"
         override fun toString(): String = when (oldState) {
             null -> " ▶️ $leftBracket$newState$rightBracket"
             else -> {
-                val visualizedOutput = if (output.isBlank) '\u2400' else output.output.replaceNonPrintableCharacters().cyan()
+                val visualizedOutput = if (IO.isBlank) '\u2400' else IO.text.replaceNonPrintableCharacters().cyan()
                 when (newState) {
                     oldState -> "$leftBracket$oldState$rightBracket 🔁 $visualizedOutput"
                     null -> " ⏹️ "
@@ -108,8 +108,8 @@ class Program(
          *
          * @return `true` if the calculation is ongoing; otherwise return `false`
          */
-        fun Collection<Program>.compute(runningOperatingSystem: RunningOperatingSystem, output: Output): Boolean =
-            this.firstOrNull()?.compute(runningOperatingSystem, output) ?: false
+        fun Collection<Program>.compute(runningOperatingSystem: RunningOperatingSystem, IO: IO): Boolean =
+            this.firstOrNull()?.compute(runningOperatingSystem, IO) ?: false
 
         private fun stateName(index: Int, commands: Array<out String>): String {
             val commandLine = commands[index]
@@ -166,7 +166,7 @@ class Program(
 
                 val step: RunningOperatingSystem.(String) -> String? = { output: String ->
                     if (output.matches(readyPattern)) {
-                        input("$command\r")
+                        enter("$command\r")
                         currentCompletionStateName
                     } else currentStateName
                 }
@@ -192,7 +192,7 @@ class Program(
 
         /**
          * Returns the [ProgramState] to awaits the current command finish execution
-         * by skipping the [Output] until [readyPattern] is matched.
+         * by skipping the [IO] until [readyPattern] is matched.
          */
         private fun Array<out String>.completionState(readyPattern: Regex): ProgramState =
             "waiting for ${last().truncate(strategy = MIDDLE)} to finish".let { stateName ->

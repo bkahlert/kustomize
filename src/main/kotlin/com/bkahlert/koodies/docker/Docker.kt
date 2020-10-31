@@ -1,13 +1,13 @@
 package com.bkahlert.koodies.docker
 
+import com.bkahlert.koodies.concurrent.process.Exec
+import com.bkahlert.koodies.concurrent.process.Exec.Async.startShellScript
+import com.bkahlert.koodies.concurrent.process.Exec.Sync.checkIfOutputContains
+import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.regex.RegexBuilder
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.time.sleep
-import com.imgcstmzr.process.Exec
-import com.imgcstmzr.process.Exec.Async.startShellScript
-import com.imgcstmzr.process.Exec.Sync.checkIfOutputContains
-import com.imgcstmzr.process.Output
-import com.imgcstmzr.process.RunningProcess
 import java.nio.file.Path
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
@@ -40,7 +40,7 @@ object Docker {
         volumes: Map<Path, Path> = emptyMap(),
         image: String,
         args: List<String> = emptyList(),
-        outputProcessor: (DockerProcess.(Output) -> Unit)? = null,
+        outputProcessor: (DockerProcess.(IO) -> Unit)? = null,
     ): DockerProcess {
         val containerName = name.toContainerName()
         var runningProcess: RunningProcess = RunningProcess.nullRunningProcess

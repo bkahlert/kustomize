@@ -2,7 +2,12 @@ package com.bkahlert.koodies.string
 
 import com.bkahlert.koodies.collections.Dictionary
 import com.bkahlert.koodies.collections.dictOf
+import com.bkahlert.koodies.number.ApproximationMode
+import com.bkahlert.koodies.number.`%+`
 import java.net.URL
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import kotlin.streams.toList
 
 object Unicode : Dictionary<Long, String>
@@ -15,6 +20,11 @@ by dictOf("unicode.dict.tsv"
      * Returns the [CodePoint] with the specified index.
      */
     operator fun get(codePoint: Int): CodePoint = CodePoint(codePoint)
+
+    /**
+     * Returns this character's [Unicode name](https://unicode.org/charts/charindex.html).
+     */
+    val Char.unicodeName: String get() = Unicode[this.toLong()]
 
     /**
      * [ESCAPE](https://codepoints.net/U+001B)
@@ -131,9 +141,42 @@ by dictOf("unicode.dict.tsv"
     val Char.replacementSymbol: Char? get() = controlCharacters[this]
 
     /**
-     * Returns this character's [Unicode name](https://unicode.org/charts/charindex.html).
+     * Unicode emojis as specified by the [Unicode® Technical Standard #51](https://unicode.org/reports/tr51/) 🤓
      */
-    val Char.unicodeName: String get() = Unicode[this.toLong()]
+    object Emojis {
+        private val fullHourClocks = listOf("🕛", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚").toIndexMap()
+        private val halfHourClocks = listOf("🕧", "🕜", "🕝", "🕞", "🕟", "🕠", "🕡", "🕢", "🕣", "🕤", "🕥", "🕦").toIndexMap()
+        private fun List<String>.toIndexMap() = mapIndexed { index, clock -> index to clock }.toMap()
+
+        /**
+         * A dictionary that maps integers to a clock emoji that shows the corresponding full hour, e.g. `3` will return a "3 o'clock"/🕒 emoji.
+         *
+         * The dictionary applies the [rem] operation. Consequently all multiples of 12 of a certain hour (e.g. `15` will return a "3 o'clock"/🕒 emoji)
+         * will also return the corresponding hour.
+         */
+        object FullHoursDictionary {
+            operator fun get(key: Int): String = fullHourClocks[key `%+` fullHourClocks.size] ?: error("Missing clock in dictionary")
+        }
+
+        /**
+         * A dictionary that maps integers to a clock emoji that shows the corresponding next half hour, e.g. `3` will return a "3:30 o'clock"/🕞 emoji.
+         *
+         * This dictionary applies the [rem] operation. Consequently all multiples of 12 of a certain hour (e.g. `15` will return a "3:30 o'clock"/🕞 emoji)
+         * will also return the corresponding next half hour.
+         */
+        object HalfHoursDictionary {
+            operator fun get(key: Int): String = halfHourClocks[key `%+` halfHourClocks.size] ?: error("Missing clock in dictionary")
+        }
+
+        fun Instant.asEmoji(approximationMode: ApproximationMode = ApproximationMode.Ceil): String {
+            val zonedDateTime: ZonedDateTime = atZone(ZoneId.systemDefault())
+            val hour = zonedDateTime.hour
+            val minute = zonedDateTime.minute
+            val closest = (approximationMode.calc(minute.toDouble(), 30.0) / 30.0).toInt()
+            return listOf(FullHoursDictionary[hour - 1], HalfHoursDictionary[hour - 1], FullHoursDictionary[hour])[closest]
+        }
+    }
+
 }
 
 private fun URL.loadTabSeparatedValues(skipLines: Long) = openStream().bufferedReader().lines().skip(skipLines).map { row ->

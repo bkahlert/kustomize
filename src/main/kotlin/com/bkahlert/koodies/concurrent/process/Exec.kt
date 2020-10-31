@@ -1,10 +1,11 @@
-package com.imgcstmzr.process
+package com.bkahlert.koodies.concurrent.process
 
-import com.imgcstmzr.process.Exec.Async.startShellScript
-import com.imgcstmzr.process.Output.Type.ERR
-import com.imgcstmzr.process.Output.Type.META
-import com.imgcstmzr.process.Output.Type.OUT
-import com.imgcstmzr.process.RunningProcess.Companion.nullRunningProcess
+import com.bkahlert.koodies.concurrent.process.Exec.Async.startShellScript
+import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
+import com.bkahlert.koodies.concurrent.process.IO.Type.META
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.RunningProcess.Companion.nullRunningProcess
+import com.imgcstmzr.process.RunningProcessProvidingCommandLineUtil
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.Paths.WORKING_DIRECTORY
 import com.imgcstmzr.util.appendText
@@ -13,6 +14,7 @@ import com.imgcstmzr.util.quoted
 import org.codehaus.plexus.util.cli.Commandline
 import java.io.InputStream
 import java.nio.file.Path
+import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
 /**
@@ -97,7 +99,7 @@ object Exec {
             env: Map<String, String> = emptyMap(),
             runAfterProcessTermination: (() -> Unit)? = null,
             inputStream: InputStream? = null,
-            outputProcessor: (RunningProcess.(Output) -> Unit)? = null,
+            outputProcessor: (RunningProcess.(IO) -> Unit)? = null,
             init: ShellScript.() -> Unit,
         ): RunningProcess {
             val shellScript = ShellScript()
@@ -121,7 +123,7 @@ object Exec {
          */
         private fun startShellScript(
             inputStream: InputStream? = null,
-            outputProcessor: (RunningProcess.(Output) -> Unit)? = null,
+            outputProcessor: (RunningProcess.(IO) -> Unit)? = null,
             vararg lines: String,
             workingDirectory: Path = WORKING_DIRECTORY,
             env: Map<String, String> = emptyMap(),
@@ -150,17 +152,17 @@ object Exec {
             env: Map<String, String> = emptyMap(),
             runAfterProcessTermination: (() -> Unit)? = null,
             inputStream: InputStream? = InputStream.nullInputStream(),
-            outputProcessor: (RunningProcess.(Output) -> Unit)? = { line -> println(line) },
+            outputProcessor: (RunningProcess.(IO) -> Unit)? = { line -> println(line) },
         ): RunningProcess {
             val commandline = commandLine(command, arguments, workingDirectory, env)
             outputProcessor?.let { it(nullRunningProcess, META typed "Executing $commandline") }
             lateinit var runningProcess: RunningProcess
             return RunningProcessProvidingCommandLineUtil.executeCommandLineAsCallable(
                 commandLine = commandline,
-                systemIn = inputStream,
-                systemOut = { line -> outputProcessor?.let { it(runningProcess, OUT typed line) } },
-                systemErr = { line -> outputProcessor?.let { it(runningProcess, ERR typed line) } },
-                timeoutInSeconds = 0,
+                inputProvider = inputStream,
+                systemOutProcessor = { line -> outputProcessor?.let { it(runningProcess, OUT typed line) } },
+                systemErrProcessor = { line -> outputProcessor?.let { it(runningProcess, ERR typed line) } },
+                timeout = Duration.ZERO,
                 runAfterProcessTermination = runAfterProcessTermination,
             ).also { runningProcess = it }
         }

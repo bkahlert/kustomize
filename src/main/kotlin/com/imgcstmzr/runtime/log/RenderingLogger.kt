@@ -1,5 +1,8 @@
 package com.imgcstmzr.runtime.log
 
+import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.exception.toSingleLineString
 import com.bkahlert.koodies.string.prefixWith
 import com.bkahlert.koodies.string.truncateBy
@@ -10,9 +13,6 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.italic
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.mordant.AnsiCode
-import com.imgcstmzr.process.Output
-import com.imgcstmzr.process.Output.Type.ERR
-import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.runtime.HasStatus
 
 /**
@@ -43,7 +43,7 @@ interface RenderingLogger<R> {
         this
     }
 
-    fun logStatus(items: List<HasStatus> = emptyList(), block: () -> Output = { OUT typed "" }): RenderingLogger<R> = block().let { output ->
+    fun logStatus(items: List<HasStatus> = emptyList(), block: () -> IO = { OUT typed "" }): RenderingLogger<R> = block().let { output ->
         render(true) { output.formatted.lines().joinToString("\n") }
         this
     }

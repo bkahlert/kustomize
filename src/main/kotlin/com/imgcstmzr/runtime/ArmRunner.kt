@@ -1,14 +1,14 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
+import com.bkahlert.koodies.concurrent.process.IO.Type.IN
+import com.bkahlert.koodies.concurrent.process.IO.Type.META
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.docker.Docker
 import com.bkahlert.koodies.docker.DockerProcess
 import com.bkahlert.koodies.terminal.ANSI
-import com.imgcstmzr.process.Output
-import com.imgcstmzr.process.Output.Type.ERR
-import com.imgcstmzr.process.Output.Type.IN
-import com.imgcstmzr.process.Output.Type.META
-import com.imgcstmzr.process.Output.Type.OUT
-import com.imgcstmzr.process.RunningProcess
 import com.imgcstmzr.runtime.Program.Companion.compute
 import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
@@ -31,7 +31,7 @@ object ArmRunner {
 
     /**
      * Starts a [DockerProcess] with [name] that boots the [osImage].
-     * All [Output] is passed to the [outputProcessor] which has an instance
+     * All [IO] is passed to the [outputProcessor] which has an instance
      * of [RunningOperatingSystem] as its receiver. The [RunningOperatingSystem]
      * also forwards all logging calls to [logger].
      */
@@ -39,7 +39,7 @@ object ArmRunner {
         name: String,
         osImage: OperatingSystemImage,
         logger: RenderingLogger<T>? = null,
-        outputProcessor: (RunningOperatingSystem.(Output) -> Any)? = null,
+        outputProcessor: (RunningOperatingSystem.(IO) -> Any)? = null,
     ): DockerProcess {
         var runningProcess: RunningProcess = RunningProcess.nullRunningProcess
         val runningOperatingSystem = object : RunningOperatingSystem() {
@@ -52,8 +52,8 @@ object ArmRunner {
             image = DOCKER_IMAGE,
             args = emptyList(),
             outputProcessor = outputProcessor?.let {
-                { output: Output ->
-                    it(runningOperatingSystem, output)
+                { IO: IO ->
+                    it(runningOperatingSystem, IO)
                 }
             }).also { runningProcess = it }
     }

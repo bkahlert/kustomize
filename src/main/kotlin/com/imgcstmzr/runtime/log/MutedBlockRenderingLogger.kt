@@ -1,6 +1,6 @@
 package com.imgcstmzr.runtime.log
 
-import com.imgcstmzr.process.Output
+import com.bkahlert.koodies.concurrent.process.IO
 import com.imgcstmzr.runtime.HasStatus
 
 open class MutedBlockRenderingLogger<R>(
@@ -12,7 +12,7 @@ open class MutedBlockRenderingLogger<R>(
 
     override fun render(trailingNewline: Boolean, block: () -> String) {}
 
-    override fun logStatus(items: List<HasStatus>, block: () -> Output) = this
+    override fun logStatus(items: List<HasStatus>, block: () -> IO) = this
 
     override fun logResult(block: () -> Result<R>): R = block().getOrThrow()
 

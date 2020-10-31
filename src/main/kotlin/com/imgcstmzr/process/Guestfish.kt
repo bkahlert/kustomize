@@ -1,13 +1,14 @@
 package com.imgcstmzr.process
 
+import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
+import com.bkahlert.koodies.concurrent.process.IO.Type.META
+import com.bkahlert.koodies.docker.Docker
+import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.string.match
 import com.bkahlert.koodies.string.random
-import com.bkahlert.koodies.terminal.ansi.Style.Companion.bold
+import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.github.ajalt.clikt.output.TermUi
-import com.imgcstmzr.process.Exec.Sync.execShellScript
-import com.imgcstmzr.process.Output.Type.ERR
-import com.imgcstmzr.process.Output.Type.META
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
@@ -16,7 +17,6 @@ import com.imgcstmzr.runtime.log.miniSegment
 import com.imgcstmzr.runtime.log.segment
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.asRootFor
-import com.imgcstmzr.util.exists
 import com.imgcstmzr.util.quoted
 import com.imgcstmzr.util.withExtension
 import java.nio.file.Path
@@ -55,36 +55,6 @@ class Guestfish(
     private val imgPathOnDocker = DOCKER_MOUNT_ROOT.resolve(imgPathOnHost.fileName)
 
     /**
-     * Constructs a command that starts a Guestfish Docker container with the given [imgPathOnHost] mounted and mapped.
-     *
-     * The command stops and removes any existing Guestfish Docker container with the same [containerName].
-     */
-    private fun imgMountingDockerCmd(vararg appArguments: String): String {
-        val volumes = mapOf(
-            imgPathOnHost to imgPathOnDocker,
-            imgPathOnHost.parent.resolve(SHARED_DIRECTORY_NAME) to GUEST_ROOT_ON_DOCKER,
-        )
-
-        return dockerCmd(
-            containerName,
-            volumes,
-            "--rw",
-            "--add $imgPathOnDocker",
-            "--mount /dev/sda2:/",
-            "--mount /dev/sda1:/boot",
-            *appArguments,
-        )
-    }
-
-    /**
-     * Constructs a command that starts a Guestfish Docker container that runs the given [guestfishOperation] on [imgPathOnHost].
-     *
-     * The command stops and removes any existing Guestfish Docker container with the same [containerName].
-     */
-    private fun commandApplyingDockerCmd(guestfishOperation: GuestfishOperation): String =
-        imgMountingDockerCmd((guestfishOperation + shutdownOperation).asHereDoc())
-
-    /**
      * Runs the given [guestfishOperation] on a [Guestfish] instance with [imgPathOnHost] mounted.
      */
     fun run(guestfishOperation: GuestfishOperation) {
@@ -95,17 +65,30 @@ class Guestfish(
 
         val caption = "Running ${imgPathOnHost.fileName} ${guestfishOperation.summary} "
         val block: RenderingLogger<Unit>.() -> Unit = {
-            val command = commandApplyingDockerCmd(guestfishOperation)
-            require(imgPathOnHost.exists) { "imgcstmzr.img".wrapWithBorder(padding = 20, margin = 20) }
-            val exitCode = execShellScript(workingDirectory = imgPathOnHost.parent,
-                lines = arrayOf(command),
-                outputProcessor = { output ->
-                    if (debug || output.type == ERR) logStatus { output }
-                })
-            check(exitCode == 0) {
-                "An error while running the following command inside $imgPathOnHost:\n$command\n" +
+            require(imgPathOnHost.exists) { "Error running Guestfish: $imgPathOnHost does not exist.".wrapWithBorder() }
+
+            check(Docker.run(
+                name = containerName,
+                volumes = mapOf(
+                    imgPathOnHost to imgPathOnDocker,
+                    imgPathOnHost.parent.resolve(SHARED_DIRECTORY_NAME) to GUEST_ROOT_ON_DOCKER,
+                ),
+                image = IMAGE_NAME,
+                args = listOf(
+                    "--rw",
+                    "--add $imgPathOnDocker",
+                    "--mount /dev/sda2:/",
+                    "--mount /dev/sda1:/boot",
+                    (guestfishOperation + shutdownOperation).asHereDoc(),
+                ),
+            ) { output ->
+                if (debug || output.type == ERR) logStatus { output }
+            }.waitForCompletion().exitCode == 0) {
+                "An error while running the following command inside $imgPathOnHost:\n${TODO()}\n" +
                     "To debug you could try: docker exec -it ${imgPathOnHost.fileName} bash".bold()
             }
+
+//            val exitCode = execShellScript(workingDirectory = imgPathOnHost.parent, // TODO working directory necessity test
             guestfishOperation.commands.map { it.match("""! perl -i.{} -pe 's|(?<={}:)[^:]*|crypt("{}","\\\${'$'}6\\\${'$'}{}\\\${'$'}")|e' {}/shadow""") }
                 .filter { it.size > 2 }
                 .forEach {
@@ -199,14 +182,13 @@ class Guestfish(
         /**
          * Executes the given [operation] on a [Guestfish] instance with just [volumes] mounted.
          */
-        fun execute(containerName: String, volumes: Map<Path, Path>, operation: GuestfishOperation, debug: Boolean = false): Int {
-            val cmd = dockerCmd(containerName, volumes, appArguments = arrayOf("--", (operation + shutdownOperation).asHereDoc()))
-            val exitCode = runProcess(cmd, processor = { output ->
+        fun execute(containerName: String, volumes: Map<Path, Path>, operation: GuestfishOperation, debug: Boolean = false): Int =
+            Docker.run(name = containerName,
+                volumes = volumes,
+                image = IMAGE_NAME,
+                args = listOf("--", (operation + shutdownOperation).asHereDoc())) { output ->
                 if (debug || output.type == ERR) TermUi.echo(output)
-            }).blockExitCode
-            check(exitCode == 0) { "An error while running the following command inside $containerName:\n$cmd" }
-            return exitCode
-        }
+            }.waitForCompletion().exitCode.also { check(it == 0) }
     }
 }
 

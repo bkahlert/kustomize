@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.nio
 
+import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.string.random
-import com.imgcstmzr.process.Output.Type.META
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
 import com.imgcstmzr.runtime.log.miniSegment

@@ -1,7 +1,7 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.unit.Size
-import com.imgcstmzr.process.Output
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import java.nio.file.Path
 
@@ -23,7 +23,7 @@ open class OperatingSystemMock(
         scenario: String,
         img: Path,
         parentLogger: BlockRenderingLogger<Any>?,
-        processor: RunningOperatingSystem.(Output) -> Any,
+        processor: RunningOperatingSystem.(IO) -> Any,
     ): Any {
         error(::bootToUserSession.name + " not implemented in mock")
     }

@@ -1,5 +1,8 @@
 package com.imgcstmzr.runtime.log
 
+import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.IO.Companion.format
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.exception.toSingleLineString
 import com.bkahlert.koodies.nullable.letIfSet
 import com.bkahlert.koodies.string.prefixLinesWith
@@ -14,9 +17,6 @@ import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.italic
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.mordant.AnsiCode
-import com.imgcstmzr.process.Output
-import com.imgcstmzr.process.Output.Companion.format
-import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.HasStatus.Companion.status
 
@@ -58,7 +58,7 @@ open class BlockRenderingLogger<R>(
     }
 
     override fun logException(block: () -> Throwable): RenderingLogger<R> = block().let {
-        render(true) { Output.Type.ERR.format(it.stackTraceToString()).prefixLinesWith(ignoreTrailingSeparator = false, prefix) }
+        render(true) { IO.Type.ERR.format(it.stackTraceToString()).prefixLinesWith(ignoreTrailingSeparator = false, prefix) }
         this
     }
 
@@ -68,7 +68,7 @@ open class BlockRenderingLogger<R>(
         this
     }
 
-    override fun logStatus(items: List<HasStatus>, block: () -> Output): BlockRenderingLogger<R> = block().let { output ->
+    override fun logStatus(items: List<HasStatus>, block: () -> IO): BlockRenderingLogger<R> = block().let { output ->
         if (output.unformatted.isNotBlank()) {
             val currentPrefix = prefix
             output.formatted.lines().forEachIndexed { index, line ->

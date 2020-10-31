@@ -1,16 +1,16 @@
 package com.imgcstmzr.process
 
+import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.Mebi
 import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.bytes
 import com.bkahlert.koodies.unit.size
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.util.asEmoji
 import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.removeExtension
 import java.nio.file.Path
-import java.time.Instant
 import kotlin.math.ceil
 import kotlin.math.round
 
@@ -59,7 +59,7 @@ object ImageBuilder {
         require(ratios.first().second == FileSystemType.FAT) { "Currently only ${FileSystemType.FAT} is supported as the boot partition." }
 
         require(freeSpaceRatio >= 0) { "Free space ration must be at least 0.0" }
-        echo(Output.Type.META typed Instant.now().asEmoji() + " Preparing raw image using the content of $bootDirectory. This takes a moment...")
+        echo(IO.Type.META typed Now.emoji + " Preparing raw image using the content of $bootDirectory. This takes a moment...")
         val hostDirectory = bootDirectory.parent
         val addFilesCommand: String = "-tar-in ${Guestfish.DOCKER_MOUNT_ROOT.resolve(bootDirectory.fileName)} / compress:gzip"
 
@@ -94,7 +94,7 @@ object ImageBuilder {
             )),
             debug = true,
         )
-        echo(Output.Type.META typed "Finished test img creation.")
+        echo(IO.Type.META typed "Finished test img creation.")
         return hostDirectory.resolve(imgName)
     }
 

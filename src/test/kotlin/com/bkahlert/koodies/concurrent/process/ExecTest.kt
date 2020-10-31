@@ -1,16 +1,17 @@
-package com.imgcstmzr.process
+package com.bkahlert.koodies.concurrent.process
 
+import com.bkahlert.koodies.concurrent.process.Exec.Async.startShellScript
+import com.bkahlert.koodies.concurrent.process.Exec.Sync.evalShellScript
+import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
+import com.bkahlert.koodies.concurrent.process.IO.Type.IN
+import com.bkahlert.koodies.concurrent.process.IO.Type.META
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.startAsDaemon
 import com.bkahlert.koodies.concurrent.synchronized
 import com.bkahlert.koodies.test.strikt.containsExactlyInSomeOrder
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.bkahlert.koodies.time.sleep
-import com.imgcstmzr.process.Exec.Async.startShellScript
-import com.imgcstmzr.process.Exec.Sync.evalShellScript
-import com.imgcstmzr.process.Output.Type.ERR
-import com.imgcstmzr.process.Output.Type.IN
-import com.imgcstmzr.process.Output.Type.META
-import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.util.isEqualToStringWise
 import com.imgcstmzr.util.logging.CapturedOutput
 import com.imgcstmzr.util.logging.OutputCaptureExtension
@@ -69,8 +70,8 @@ class ExecTest {
 
         @Test
         fun `should process without logging to System out or in`(output: CapturedOutput) {
-            val redirectedOutput = Collections.synchronizedList(mutableListOf<Output>())
-            val outputProcessor: RunningProcess.(Output) -> Unit = { redirectedOutput.add(it) }
+            val redirectedOutput = Collections.synchronizedList(mutableListOf<IO>())
+            val outputProcessor: RunningProcess.(IO) -> Unit = { redirectedOutput.add(it) }
 
             startShellScript(outputProcessor = outputProcessor) { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.waitForCompletion()
 
@@ -80,8 +81,8 @@ class ExecTest {
 
         @Test
         fun `should format merged output`(output: CapturedOutput) {
-            val redirectedOutput = Collections.synchronizedList(mutableListOf<Output>())
-            val outputProcessor: RunningProcess.(Output) -> Unit = { redirectedOutput.add(it) }
+            val redirectedOutput = Collections.synchronizedList(mutableListOf<IO>())
+            val outputProcessor: RunningProcess.(IO) -> Unit = { redirectedOutput.add(it) }
 
             startShellScript(outputProcessor = outputProcessor) { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.waitForCompletion()
 
@@ -235,7 +236,7 @@ class ExecTest {
         5.5.seconds.sleep()
         process.destroy()
 
-        val (exitCode, io) = process.waitForCompletion()
+        val (exitCode, io, _, _, _, _) = process.waitForCompletion()
         expectThat(exitCode).isEqualTo(143)
         expectThat(io).containsExactlyInSomeOrder {
             +(OUT typed "test out") + (ERR typed "test err")
@@ -271,7 +272,9 @@ class ExecTest {
        
                     sleep 1
                 """.trimIndent()
-        }.also { it.enter("test in") }
+        }.also {
+            it.enter("test in")
+        }
 
         val (_, io) = process.waitForCompletion()
 

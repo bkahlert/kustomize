@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.test.strikt
 
-import com.bkahlert.koodies.boolean.emoji
+import com.bkahlert.koodies.boolean.asEmoji
 import com.bkahlert.koodies.functional.compositionOf
 import com.bkahlert.koodies.string.LineSeparators.isMultiline
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
@@ -36,7 +36,7 @@ fun <T : CharSequence> Assertion.Builder<T>.matchesCurlyPattern(
         if (processedActual.lines().size == processedPattern.lines().size) {
             val analysis = processedActual.lines().zip(processedPattern.lines()).joinToString("\n\n") { (actualLine, patternLine) ->
                 val lineMatches = actualLine.matchesCurlyPattern(patternLine)
-                lineMatches.emoji + "   <-\t${actualLine.debug}\nmatch?\t${patternLine.debug}"
+                lineMatches.asEmoji + "   <-\t${actualLine.debug}\nmatch?\t${patternLine.debug}"
             }
             fail(description = "\nbut was: ${if (curlyPattern.isMultiline) "\n$processedActual" else processedActual}\nAnalysis:\n$analysis")
         } else {

@@ -1,9 +1,10 @@
 package com.bkahlert.koodies.docker
 
+import com.bkahlert.koodies.concurrent.process.CompletedProcess
+import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.time.poll
-import com.imgcstmzr.process.CompletedProcess
-import com.imgcstmzr.process.RunningProcess
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeoutException
 import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
 import kotlin.time.seconds
@@ -29,6 +30,8 @@ class DockerProcess(
     private fun cleanUp(forcibly: Boolean) {
         stop()
         remove(forcibly)
-        100.milliseconds.poll { !isRunning }.forAtMost(10.seconds)
+        100.milliseconds.poll { !isRunning }.forAtMost(10.seconds) {
+            throw TimeoutException("Could not clean up $this within $it.")
+        }
     }
 }

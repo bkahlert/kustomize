@@ -1,5 +1,8 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
+import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.process.Processes
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.bkahlert.koodies.terminal.ANSI
@@ -8,9 +11,6 @@ import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequenc
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ascii.Kaomojis
-import com.imgcstmzr.process.Output
-import com.imgcstmzr.process.Output.Type.ERR
-import com.imgcstmzr.process.Output.Type.META
 import com.imgcstmzr.runtime.Program.Companion.compute
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.segment
@@ -60,7 +60,7 @@ fun <P : Program> Collection<P>.bootRunStop(
                 }
             } ?: originalMessage
         }) {
-        val outputHistory = mutableListOf<Output>()
+        val outputHistory = mutableListOf<IO>()
 
         watchdog = Watchdog(Duration.ofSeconds(45), repeating = true) {
             this@segment.logStatus { ERR typed ("\n" + ANSI.termColors.red("\nThe console seems to have halted... ${Kaomojis.Dogs.random()}")) }

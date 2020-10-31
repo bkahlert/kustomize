@@ -1,5 +1,7 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.concurrent.process.IO.Type.META
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
@@ -10,8 +12,6 @@ import com.imgcstmzr.patch.Operation.Status.Ready
 import com.imgcstmzr.patch.Operation.Status.Running
 import com.imgcstmzr.patch.new.Patch
 import com.imgcstmzr.process.Guestfish
-import com.imgcstmzr.process.Output.Type.META
-import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystems

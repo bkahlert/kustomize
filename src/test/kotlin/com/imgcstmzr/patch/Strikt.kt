@@ -1,7 +1,7 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.concurrent.process.IO
 import com.imgcstmzr.process.Guestfish
-import com.imgcstmzr.process.Output
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.RunningOperatingSystem
@@ -41,11 +41,11 @@ fun Assertion.Builder<String>.isEqualTo(expected: String) =
 
 inline fun <reified T : OperatingSystem> Assertion.Builder<Path>.booted(
     logger: BlockRenderingLogger<Any>,
-    crossinline assertion: RunningOperatingSystem.(Output) -> (Output) -> Boolean,
+    crossinline assertion: RunningOperatingSystem.(IO) -> (IO) -> Boolean,
 ): Assertion.Builder<Path> {
     val os = T::class.objectInstance ?: error("Invalid OS")
     get("booted $os") {
-        var processor: ((Output) -> Boolean)? = null
+        var processor: ((IO) -> Boolean)? = null
         var shuttingDown = false
 
         os.bootToUserSession("Booting to assert $this", this, logger) { output ->

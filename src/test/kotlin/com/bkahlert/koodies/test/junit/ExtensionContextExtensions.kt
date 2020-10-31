@@ -1,7 +1,6 @@
 package com.bkahlert.koodies.test.junit
 
 import com.bkahlert.koodies.string.random
-import com.imgcstmzr.util.debug.Debug
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.TestTemplate
@@ -41,9 +40,6 @@ val ExtensionContext.uniqueName
         "unknown $this"
     } + " - " + String.random(8)
 
-val ExtensionContext.anyDebugTest: Boolean
-    get() = allTests.any { it.isA<Debug>() }
-
 /**
  * The container of this test method.
  */
@@ -52,7 +48,7 @@ val ExtensionContext.ancestor get() = testMethod.orElse(null)?.declaringClass
 /**
  * Contains the ancestor's tests.
  */
-private val ExtensionContext.allTests: List<Method>
+val ExtensionContext.allTests: List<Method>
     get() {
         val root = ancestors.lastOrNull() ?: testClass.orElse(null)
         return root?.descendentContainers?.flatMap {

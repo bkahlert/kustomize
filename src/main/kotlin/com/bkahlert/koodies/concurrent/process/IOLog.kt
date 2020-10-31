@@ -1,9 +1,9 @@
-package com.imgcstmzr.process
+package com.bkahlert.koodies.concurrent.process
 
+import com.bkahlert.koodies.concurrent.process.IO.Type
 import com.bkahlert.koodies.concurrent.synchronized
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.LineSeparators.lines
-import com.imgcstmzr.process.Output.Type
 import org.apache.commons.io.output.ByteArrayOutputStream
 import kotlin.collections.Map.Entry
 
@@ -19,12 +19,12 @@ class IOLog {
      * **Important:** Only complete lines can be accessed as this is considered to be the only safe way
      * to have non-corrupted data (e.g. split characters).
      */
-    val logged: List<Output> get() = log
+    val logged: List<IO> get() = log
 
     /**
      * Contains the currently logged I/O. See [logged] for more details.
      */
-    private val log = mutableListOf<Output>().synchronized()
+    private val log = mutableListOf<IO>().synchronized()
 
     /**
      * Contains not yet fully logged I/O, that is, data not yet terminated by one of the [LineSeparators].
@@ -32,7 +32,7 @@ class IOLog {
     private val incompleteLines: MutableMap<Type, ByteArrayOutputStream> = mutableMapOf()
 
     /**
-     * Adds [content] with the specified [Output.Type] to the [IOLog].
+     * Adds [content] with the specified [IO.Type] to the [IOLog].
      *
      * [content] does not have to be *complete* in any way (like a complete line) but also be provided
      * in chunks of any size. The I/O will be correctly reconstructed and can be accessed using [logged].
@@ -53,7 +53,7 @@ class IOLog {
     /**
      * Helper to thread-safely
      */
-    private fun MutableList<Output>.add(justCompletedLines: Entry<Type, ByteArrayOutputStream>) {
+    private fun MutableList<IO>.add(justCompletedLines: Entry<Type, ByteArrayOutputStream>) {
         synchronized(this) {
             val completedLines = justCompletedLines.value.removeCompletedLines()
             log.addAll(justCompletedLines.key typed completedLines)

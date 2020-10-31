@@ -1,12 +1,12 @@
 package com.imgcstmzr.runtime.log
 
+import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
+import com.bkahlert.koodies.concurrent.process.IO.Type.META
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
+import com.bkahlert.koodies.test.junit.debug.Debug
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
-import com.imgcstmzr.process.Output.Type.ERR
-import com.imgcstmzr.process.Output.Type.META
-import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.util.containsAtMost
-import com.imgcstmzr.util.debug.Debug
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.InMemoryLoggerFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest

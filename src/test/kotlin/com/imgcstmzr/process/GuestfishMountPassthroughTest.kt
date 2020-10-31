@@ -1,5 +1,6 @@
 package com.imgcstmzr.process
 
+import com.bkahlert.koodies.concurrent.process.Exec
 import com.bkahlert.koodies.shell.toHereDoc
 import com.bkahlert.koodies.string.lines
 import com.bkahlert.koodies.string.random

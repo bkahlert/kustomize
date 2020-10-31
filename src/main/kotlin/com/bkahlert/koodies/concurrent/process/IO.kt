@@ -1,5 +1,7 @@
-package com.imgcstmzr.process
+package com.bkahlert.koodies.concurrent.process
 
+import com.bkahlert.koodies.concurrent.process.IO.Type
+import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.string.asString
 import com.bkahlert.koodies.string.mapLines
 import com.bkahlert.koodies.terminal.ANSI
@@ -13,42 +15,40 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.dim
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.italic
-import com.imgcstmzr.process.Output.Type
-import com.imgcstmzr.process.Output.Type.ERR
 
+// TODO make sealed class and refactor types to inherited IOs
 /**
- * Instances are [output] output with a certain [Type].
+ * Instances are [text] output with a certain [Type].
  */
-data class Output(
-    // TODO rename to IO
+data class IO(
     /**
-     * Contains the originally encountered [Output].
+     * Contains the originally encountered [IO].
      */
-    val output: String,
+    val text: String,
     /**
-     * Contains the [Type] of this [Output].
+     * Contains the [Type] of this [IO].
      */
     val type: Type,
-) : CharSequence by output {
+) : CharSequence by text {
 
     /**
-     * Contains this [output] with all [ANSI] escape sequences removed.
+     * Contains this [text] with all [ANSI] escape sequences removed.
      */
     @Suppress("SpellCheckingInspection")
-    val unformatted: String by lazy { output.removeEscapeSequences<CharSequence>() }
+    val unformatted: String by lazy { text.removeEscapeSequences<CharSequence>() }
 
     /**
-     * Contains this [output] with the format of it's [type] applied.
+     * Contains this [text] with the format of it's [type] applied.
      */
-    val formatted: String by lazy { type.format(output) }
+    val formatted: String by lazy { type.format(text) }
 
     /**
-     * Splits this [Output] into separate lines while keeping the ANSI formatting intact.
+     * Splits this [IO] into separate lines while keeping the ANSI formatting intact.
      */
-    fun lines(): List<Output> = output.ansiAwareLineSequence().map { type typed it }.toList()
+    fun lines(): List<IO> = text.ansiAwareLineSequence().map { type typed it }.toList()
 
     /**
-     * Whether this [output] (ignoring eventually existing [ANSI] escape sequences)
+     * Whether this [text] (ignoring eventually existing [ANSI] escape sequences)
      * is blank (≝ is empty or consists of nothing but whitespaces).
      */
     val isBlank: Boolean = unformatted.isBlank()
@@ -63,7 +63,7 @@ data class Output(
     }
 
     /**
-     * Classifier for different types of [Output].
+     * Classifier for different types of [IO].
      */
     enum class Type(
         @Suppress("unused") private val symbol: String,
@@ -73,47 +73,47 @@ data class Output(
         val format: (String) -> String,
     ) {
         /**
-         * An [Output] that represents information about a [Process].
+         * An [IO] that represents information about a [Process].
          */
         META("𝕄", { value -> value.ansiAwareMapLines { it.gray().italic() } }),
 
         /**
-         * An [Output] (of another process) serving as an input.
+         * An [IO] (of another process) serving as an input.
          */
         IN("𝕀", { value -> value.ansiAwareMapLines { it.brightBlue().dim().italic() } }),
 
         /**
-         * An [Output] that is neither [META], [IN] nor [ERR].
+         * An [IO] that is neither [META], [IN] nor [ERR].
          */
         OUT("𝕆", { value -> value.ansiAwareMapLines { it.yellow() } }),
 
         /**
-         * An [Output] that represents a errors.
+         * An [IO] that represents a errors.
          */
         ERR("𝔼", { value -> value.removeEscapeSequences().mapLines { it.red().bold() } }) {
             /**
-             * Factory to classify an [ERR] [Output].
+             * Factory to classify an [ERR] [IO].
              */
-            infix fun typed(value: Result<*>): Output {
+            infix fun typed(value: Result<*>): IO {
                 require(value.isFailure)
                 val message = value.exceptionOrNull()?.stackTraceToString() ?: throw IllegalStateException("Exception was unexpectedly null")
-                return Output(message, ERR)
+                return IO(message, ERR)
             }
         };
 
         /**
-         * Instance representing an empty [Output].
+         * Instance representing an empty [IO].
          */
-        private val empty: Output by lazy { Output("", this) }
+        private val empty: IO by lazy { IO("", this) }
 
         /**
-         * Factory to classify different [Type]s of [Output].
+         * Factory to classify different [Type]s of [IO].
          */
-        infix fun typed(value: CharSequence?): Output = if (value?.isEmpty() == true) empty else Output(value?.asString() ?: "❔", this)
+        infix fun typed(value: CharSequence?): IO = if (value?.isEmpty() == true) empty else IO(value?.asString() ?: "❔", this)
 
         /**
-         * Factory to classify different [Type]s of [Output]s.
+         * Factory to classify different [Type]s of [IO]s.
          */
-        infix fun <T : CharSequence> typed(value: Iterable<T>): List<Output> = value.map { typed(it) }
+        infix fun <T : CharSequence> typed(value: Iterable<T>): List<IO> = value.map { typed(it) }
     }
 }

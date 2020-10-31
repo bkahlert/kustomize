@@ -1,14 +1,15 @@
 package com.imgcstmzr.util
 
+import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
+import com.bkahlert.koodies.time.Now
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.process.Downloader.download
 import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.process.GuestfishOperation
-import com.imgcstmzr.process.Output.Type.META
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
@@ -19,7 +20,6 @@ import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
 import java.nio.file.Path
-import java.time.Instant.now
 import kotlin.annotation.AnnotationRetention.RUNTIME
 import kotlin.reflect.KClass
 
@@ -60,7 +60,7 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
          */
         private fun prepareImg(vararg files: String): Path {
             val basename = "imgcstmzr"
-            echo(META typed now().asEmoji() + " Preparing test img with files ${files.joinToString(", ")}. This takes a moment...")
+            echo(META typed Now.emoji + " Preparing test img with files ${files.joinToString(", ")}. This takes a moment...")
             val hostDir = Paths.TEST.resolve(basename + String.random(4)).mkdirs()
             val copyFileCommands: List<String> = files.map {
                 ClassPath.of(it).copyTo(hostDir.resolve(it))

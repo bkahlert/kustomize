@@ -9,7 +9,7 @@ package com.bkahlert.koodies.boolean
  * @sample Samples.emoji.falseValue
  * @sample Samples.emoji.nullValue
  */
-val Boolean?.emoji: String
+val Boolean?.asEmoji: String
     inline get() = when (this) {
         true -> "✅"
         false -> "❌"
@@ -19,15 +19,15 @@ val Boolean?.emoji: String
 private object Samples {
     object emoji {
         fun trueValue() {
-            true.emoji
+            true.asEmoji
         }
 
         fun falseValue() {
-            false.emoji
+            false.asEmoji
         }
 
         fun nullValue() {
-            null.emoji
+            null.asEmoji
         }
     }
 }

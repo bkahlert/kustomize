@@ -1,8 +1,8 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.concurrent.process.IO
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.github.ajalt.mordant.TermColors
-import com.imgcstmzr.process.Output
 import com.imgcstmzr.runtime.Watchdog.Command.RESET
 import com.imgcstmzr.runtime.Watchdog.Command.STOP
 import com.imgcstmzr.runtime.log.RenderingLogger
@@ -47,7 +47,7 @@ class Watchdog(
                         lastEvent = RESET
                     }
                     STOP -> {
-                        renderingLogger.logStatus { Output.Type.META typed "Watchdog stopped." }
+                        renderingLogger.logStatus { IO.Type.META typed "Watchdog stopped." }
                         lastEvent = STOP
                         return@Thread
                     }

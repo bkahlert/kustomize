@@ -1,7 +1,7 @@
 package com.imgcstmzr.runtime.log
 
+import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.string.Grapheme
-import com.imgcstmzr.process.Output
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -13,13 +13,13 @@ internal class MicroTracerKtTest {
     @Test
     internal fun `should micro seq`(logger: InMemoryLogger<Unit>) {
         logger.miniSegment<Unit, Unit>("segment") {
-            logStatus { Output.Type.OUT typed "@" }
+            logStatus { IO.Type.OUT typed "@" }
             microSequence(Grapheme("🤠")) {
                 trace("a")
                 trace("")
                 trace("b c")
             }
-            logStatus { Output.Type.OUT typed "@" }
+            logStatus { IO.Type.OUT typed "@" }
         }
 
         expectThat(logger).matches("""

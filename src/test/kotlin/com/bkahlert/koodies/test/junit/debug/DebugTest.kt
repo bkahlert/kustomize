@@ -1,8 +1,8 @@
-package com.imgcstmzr.util.debug
+package com.bkahlert.koodies.test.junit.debug
 
 
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
-import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.util.asString
 import com.imgcstmzr.util.logging.CapturedOutput
 import com.imgcstmzr.util.logging.InMemoryLogger

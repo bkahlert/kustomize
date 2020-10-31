@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.terminal.ascii
 
+import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.string.repeat
-import com.imgcstmzr.process.Output
 import com.imgcstmzr.runtime.log.matches
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
@@ -13,7 +13,7 @@ import strikt.api.expectThat
 internal class BoxesTest {
     @Test
     internal fun `should render FAIL`(logger: InMemoryLogger<Unit>) {
-        logger.logStatus { Output.Type.ERR typed Boxes.FAIL.toString() }
+        logger.logStatus { IO.Type.ERR typed Boxes.FAIL.toString() }
         expectThat(logger).matches("""
             ╭─────╴should render FAIL{}
             │   
@@ -28,7 +28,7 @@ internal class BoxesTest {
 
     @Test
     internal fun `should render sphere box`(logger: InMemoryLogger<Unit>) {
-        logger.logStatus { Output.Type.META typed Boxes.SPHERICAL("SPHERICAL").toString() }
+        logger.logStatus { IO.Type.META typed Boxes.SPHERICAL("SPHERICAL").toString() }
         expectThat(logger).matches("""
             ╭─────╴should render sphere box{}
             │   
@@ -42,7 +42,7 @@ internal class BoxesTest {
 
     @Test
     internal fun `should render single line sphere box`(logger: InMemoryLogger<Unit>) {
-        logger.logStatus { Output.Type.META typed Boxes.SINGLE_LINE_SPHERICAL("SINGLE LINE SPHERICAL").toString() }
+        logger.logStatus { IO.Type.META typed Boxes.SINGLE_LINE_SPHERICAL("SINGLE LINE SPHERICAL").toString() }
         expectThat(logger).matches("""
             ╭─────╴should render single line sphere box{}
             │   
@@ -54,7 +54,7 @@ internal class BoxesTest {
 
     @Test
     internal fun `should render wide pillars`(logger: InMemoryLogger<Unit>) {
-        logger.logStatus { Output.Type.META typed Boxes.WIDE_PILLARS("WIDE PILLARS").toString() }
+        logger.logStatus { IO.Type.META typed Boxes.WIDE_PILLARS("WIDE PILLARS").toString() }
         expectThat(logger).matches("""
             ╭─────╴should render wide pillars{}
             │   
@@ -66,7 +66,7 @@ internal class BoxesTest {
 
     @Test
     internal fun `should render pillars`(logger: InMemoryLogger<Unit>) {
-        logger.logStatus { Output.Type.META typed Boxes.PILLARS("PILLARS").toString() }
+        logger.logStatus { IO.Type.META typed Boxes.PILLARS("PILLARS").toString() }
         expectThat(logger).matches("""
             ╭─────╴should render pillars{}
             │   

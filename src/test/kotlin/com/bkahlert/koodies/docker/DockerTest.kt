@@ -1,11 +1,11 @@
 package com.bkahlert.koodies.docker
 
+import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.synchronized
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.time.poll
-import com.imgcstmzr.process.Output
-import com.imgcstmzr.process.Output.Type.OUT
-import com.imgcstmzr.process.enter
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.DietPi
 import com.imgcstmzr.runtime.OperatingSystems.RiscOsPicoRc5
@@ -14,6 +14,7 @@ import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -175,8 +176,7 @@ internal class DockerTest {
             internal fun `should stop started container`(@OS(DietPi::class) osImage: OperatingSystemImage) {
                 val dockerProcess = run(testName(IsRunning::`should stop started container`), osImage)
                 kotlin.runCatching {
-                    100.milliseconds.poll { dockerProcess.isRunning }.forAtMost(5.seconds)
-                    expectThat(dockerProcess.isRunning).isTrue()
+                    100.milliseconds.poll { dockerProcess.isRunning }.forAtMost(5.seconds) { fail("timed out") }
 
                     dockerProcess.stop()
 
@@ -212,7 +212,7 @@ internal class DockerTest {
     @OptIn(ExperimentalTime::class)
     @Test
     internal fun `should not produce incorrect empty lines`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
-        val output = mutableListOf<Output>().synchronized()
+        val output = mutableListOf<IO>().synchronized()
         val dockerProcess = run(testName(DockerTest::`should not produce incorrect empty lines`), osImage) { output.add(it) }
         kotlin.runCatching {
             val startTime = System.currentTimeMillis()
@@ -229,7 +229,7 @@ internal class DockerTest {
 }
 
 @Suppress("SpellCheckingInspection")
-private fun run(name: String, osImage: OperatingSystemImage, outputProcessor: (DockerProcess.(Output) -> Unit)? = null): DockerProcess {
+private fun run(name: String, osImage: OperatingSystemImage, outputProcessor: (DockerProcess.(IO) -> Unit)? = null): DockerProcess {
     return Docker.run(
         name,
         volumes = listOf(osImage.toAbsolutePath() to Path.of("/sdcard/filesystem.img")).toMap(),
@@ -248,7 +248,7 @@ fun Docker.run(
     volumes: Map<Path, Path> = emptyMap(),
     image: String,
     args: List<String> = emptyList(),
-    outputProcessor: (DockerProcess.(Output) -> Unit)? = null,
+    outputProcessor: (DockerProcess.(IO) -> Unit)? = null,
 ): DockerProcess = Docker.run(
     name = DockerTest::class.simpleName + "-" + test.name,
     volumes = volumes,

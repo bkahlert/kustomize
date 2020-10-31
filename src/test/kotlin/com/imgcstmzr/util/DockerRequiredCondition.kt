@@ -2,9 +2,9 @@ package com.imgcstmzr.util
 
 import com.bkahlert.koodies.docker.Docker
 import com.bkahlert.koodies.terminal.ascii.Boxes.Companion.wrapWithBox
+import com.bkahlert.koodies.test.junit.debug.Debug
 import com.bkahlert.koodies.test.junit.isAnnotated
 import com.bkahlert.koodies.test.junit.testName
-import com.imgcstmzr.util.debug.Debug
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ConditionEvaluationResult.disabled
 import org.junit.jupiter.api.extension.ConditionEvaluationResult.enabled

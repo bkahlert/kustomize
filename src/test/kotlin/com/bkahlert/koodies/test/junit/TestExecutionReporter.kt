@@ -3,8 +3,8 @@ package com.bkahlert.koodies.test.junit
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ascii.Draw.Companion.draw
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
+import com.bkahlert.koodies.test.junit.debug.Debug
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.util.debug.Debug
 import org.junit.jupiter.api.extension.TestWatcher
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT

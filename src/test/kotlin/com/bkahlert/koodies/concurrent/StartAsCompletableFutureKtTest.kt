@@ -10,6 +10,7 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isGreaterThan
 import strikt.assertions.isLessThan
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
@@ -17,11 +18,15 @@ import kotlin.time.milliseconds
 
 @Execution(CONCURRENT)
 class StartAsCompletableFutureKtTest {
+
+    private val executor = Executors.newCachedThreadPool()
+
     @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
     fun `should start immediately`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsCompletableFuture() },
         "postfix form" to { finished: AtomicBoolean -> startAsCompletableFuture() { finished.set(true) } },
+        "executor form" to { finished: AtomicBoolean -> executor.startAsCompletableFuture() { finished.set(true) } },
     ).map { (caption, exec) ->
         DynamicTest.dynamicTest(caption) {
             val finished = AtomicBoolean(false)
@@ -39,6 +44,7 @@ class StartAsCompletableFutureKtTest {
     fun `should start delayed`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsCompletableFuture(500.milliseconds) },
         "postfix form" to { finished: AtomicBoolean -> startAsCompletableFuture(500.milliseconds) { finished.set(true) } },
+        "executor form" to { finished: AtomicBoolean -> executor.startAsCompletableFuture(500.milliseconds) { finished.set(true) } },
     ).map { (caption, exec) ->
         DynamicTest.dynamicTest(caption) {
             val finished = AtomicBoolean(false)
@@ -56,6 +62,7 @@ class StartAsCompletableFutureKtTest {
     fun `should block until value is returned`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true); "Hello World" }.startAsCompletableFuture() },
         "postfix form" to { finished: AtomicBoolean -> startAsCompletableFuture { finished.set(true); "Hello World" } },
+        "executor form" to { finished: AtomicBoolean -> executor.startAsCompletableFuture { finished.set(true); "Hello World" } },
     ).map { (caption: String, exec: (AtomicBoolean) -> CompletableFuture<String>) ->
         DynamicTest.dynamicTest(caption) {
             val finished = AtomicBoolean(false)

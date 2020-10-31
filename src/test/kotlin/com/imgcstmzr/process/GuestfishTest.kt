@@ -2,6 +2,7 @@ package com.imgcstmzr.process
 
 import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.test.junit.debug.Debug
 import com.imgcstmzr.process.Guestfish.Companion.changePasswordCommand
 import com.imgcstmzr.process.Guestfish.Companion.copyInCommands
 import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
@@ -50,8 +51,8 @@ class GuestfishTest {
 
     @Test
     @DockerRequired
-    fun `should copy file from img, skip non-existing and override one`(img: Path, logger: InMemoryLogger<Any>) {
-        val guestfish = Guestfish(img, logger).withRandomSuffix()
+    fun `should copy file from img, skip non-existing and override one`(img: Path, logger: InMemoryLogger<Any>, @Debug debug: Boolean) {
+        val guestfish = Guestfish(img, logger, debug = debug).withRandomSuffix()
         guestfish.run(copyOutCommands(listOf(Path.of("/boot/cmdline.txt"), Path.of("/non/existing.txt"))))
         val dir = guestfish.guestRootOnHost
 

@@ -1,28 +1,14 @@
 package com.imgcstmzr.util.logging
 
-import com.bkahlert.koodies.test.junit.allTests
-import com.bkahlert.koodies.test.junit.isA
+import com.bkahlert.koodies.test.junit.Verbosity.Companion.isVerbose
 import com.bkahlert.koodies.test.junit.uniqueName
-import com.imgcstmzr.util.debug.Debug
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace.create
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
-import org.junit.platform.launcher.TestExecutionListener
-import org.junit.platform.launcher.TestPlan
 
-class InMemoryLoggerResolver : ParameterResolver, AfterEachCallback, TestExecutionListener {
-
-    companion object {
-        // Hack but wouldn't know how else to get the number of tests
-        // in order to activate logging.
-        var testCount: Int? = null
-    }
-
-    override fun testPlanExecutionStarted(testPlan: TestPlan) {
-        testCount = testPlan.allTests.size
-    }
+class InMemoryLoggerResolver : ParameterResolver, AfterEachCallback {
 
     override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean = parameterContext.parameter.type.let {
         when {
@@ -72,6 +58,4 @@ class InMemoryLoggerResolver : ParameterResolver, AfterEachCallback, TestExecuti
     }
 
     private fun ExtensionContext.store(): ExtensionContext.Store = getStore(create(InMemoryLoggerResolver::class.java))
-    private val ExtensionContext.isVerbose: Boolean get() = element.isA<Debug>() || testCount == 1
-    private val ParameterContext.isVerbose: Boolean get() = parameter.isA<Debug>()
 }

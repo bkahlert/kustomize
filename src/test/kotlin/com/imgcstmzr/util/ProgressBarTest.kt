@@ -1,12 +1,12 @@
 package com.imgcstmzr.util
 
+import com.bkahlert.koodies.concurrent.process.Exec.Async.startShellScript
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.concurrent.startAsDaemon
 import com.bkahlert.koodies.process.Processes
 import com.bkahlert.koodies.test.junit.Slow
 import com.github.ajalt.clikt.output.TermUi
-import com.imgcstmzr.process.Exec.Async.startShellScript
-import com.imgcstmzr.process.Output.Type.OUT
-import com.imgcstmzr.process.RunningProcess
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode

@@ -1,4 +1,4 @@
-package com.imgcstmzr.util.debug
+package com.bkahlert.koodies.test.junit.debug
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution

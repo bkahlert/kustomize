@@ -1,6 +1,6 @@
 package com.imgcstmzr.util
 
-import com.bkahlert.koodies.boolean.emoji
+import com.bkahlert.koodies.boolean.asEmoji
 import com.bkahlert.koodies.string.Unicode
 import com.bkahlert.koodies.string.asString
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
@@ -26,7 +26,7 @@ inline val <T> Iterable<T>?.debug: String get() = this?.joinToString("") { it.to
 inline val List<Byte>?.debug: String get() = this?.toByteArray()?.let { bytes: ByteArray -> String(bytes) }.debug
 inline val Char?.debug: String get() = this.toString().replaceNonPrintableCharacters().wrap("❬", "❭")
 inline val Byte?.debug: String get() = this?.let { byte: Byte -> "❬$byte=${byte.toChar().toString().replaceNonPrintableCharacters()}❭" } ?: "❬null❭"
-inline val Boolean?.debug: String get() = emoji
+inline val Boolean?.debug: String get() = asEmoji
 inline val Any?.debug: String
     get() =
         when (this) {

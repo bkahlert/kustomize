@@ -1,10 +1,10 @@
 package com.imgcstmzr.util.logging
 
 
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
-import com.imgcstmzr.process.Output.Type.OUT
+import com.bkahlert.koodies.test.junit.debug.Debug
 import com.imgcstmzr.util.asString
-import com.imgcstmzr.util.debug.Debug
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith

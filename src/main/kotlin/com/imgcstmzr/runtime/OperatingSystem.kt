@@ -1,5 +1,10 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.RunningProcess
+import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.docker.Docker.toContainerName
 import com.bkahlert.koodies.process.Processes
 import com.bkahlert.koodies.string.LineSeparators.LF
@@ -12,12 +17,6 @@ import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.bytes
 import com.bkahlert.koodies.unit.size
 import com.imgcstmzr.process.CommandLineRunner
-import com.imgcstmzr.process.Output
-import com.imgcstmzr.process.Output.Type.ERR
-import com.imgcstmzr.process.Output.Type.OUT
-import com.imgcstmzr.process.RunningProcess
-import com.imgcstmzr.process.checkAlive
-import com.imgcstmzr.process.input
 import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
 import com.imgcstmzr.runtime.Program.Companion.compute
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
@@ -94,7 +93,7 @@ sealed class OperatingSystems : OperatingSystem {
             scenario: String,
             img: Path,
             parentLogger: BlockRenderingLogger<Any>?,
-            processor: RunningOperatingSystem.(Output) -> Any,
+            processor: RunningOperatingSystem.(IO) -> Any,
         ): Any {
             val cmd: String = startCommand(scenario, img.toFile())
             val cmdRunner = CommandLineRunner() // TODO delete
@@ -165,7 +164,7 @@ sealed class OperatingSystems : OperatingSystem {
             scenario: String,
             img: Path,
             parentLogger: BlockRenderingLogger<Any>?,
-            processor: RunningOperatingSystem.(Output) -> Any,
+            processor: RunningOperatingSystem.(IO) -> Any,
         ): Any = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
     }
 
@@ -188,7 +187,7 @@ sealed class OperatingSystems : OperatingSystem {
             scenario: String,
             img: Path,
             parentLogger: BlockRenderingLogger<Any>?,
-            processor: RunningOperatingSystem.(Output) -> Any,
+            processor: RunningOperatingSystem.(IO) -> Any,
         ): Any = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
     }
 
@@ -211,7 +210,7 @@ sealed class OperatingSystems : OperatingSystem {
             scenario: String,
             img: Path,
             parentLogger: BlockRenderingLogger<Any>?,
-            processor: RunningOperatingSystem.(Output) -> Any,
+            processor: RunningOperatingSystem.(IO) -> Any,
         ): Any = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
     }
 
@@ -236,7 +235,7 @@ sealed class OperatingSystems : OperatingSystem {
             scenario: String,
             img: Path,
             parentLogger: BlockRenderingLogger<Any>?,
-            processor: RunningOperatingSystem.(Output) -> Any,
+            processor: RunningOperatingSystem.(IO) -> Any,
         ): Any = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
     }
 
@@ -261,7 +260,7 @@ sealed class OperatingSystems : OperatingSystem {
             scenario: String,
             img: Path,
             parentLogger: BlockRenderingLogger<Any>?,
-            processor: RunningOperatingSystem.(Output) -> Any,
+            processor: RunningOperatingSystem.(IO) -> Any,
         ): Any = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
     }
 }
@@ -277,8 +276,13 @@ abstract class RunningOperatingSystem(
      * Forwards the [values] to the OS running process.
      */
     @OptIn(ExperimentalTime::class)
-    fun input(vararg values: String, delay: Duration = 10.milliseconds) {
-        process.checkAlive().input(*values, delay = delay).also { feedback("Entered ${values.joinToString { it.debug }}") }
+    fun enter(vararg values: String, delay: Duration = 10.milliseconds) {
+        if (process.isAlive) {
+            process.enter(*values, delay = delay)
+            feedback("Entered ${values.joinToString { it.debug }}")
+        } else {
+            feedback("Process $process is not alive.")
+        }
     }
 
     /**
@@ -295,21 +299,21 @@ abstract class RunningOperatingSystem(
     })
 
     /**
-     * Logs the current execution status given the [output] and [unfinished].
+     * Logs the current execution status given the [IO] and [unfinished].
      */
-    fun status(output: Output, unfinished: List<Program>) {
-        logger.logStatus(items = if (shuttingDown) shuttingDownStatus else unfinished) { output }
+    fun status(IO: IO, unfinished: List<Program>) {
+        logger.logStatus(items = if (shuttingDown) shuttingDownStatus else unfinished) { IO }
     }
 
     fun command(input: String) {
-        input(input)
+        enter(input)
     }
 
     /**
      * Initiates the systems immediate shutdown.
      */
     fun shutdown() {
-        input(shutdownCommand)
+        enter(shutdownCommand)
         shuttingDown = true
     }
 
@@ -362,7 +366,7 @@ interface OperatingSystem {
         scenario: String,
         img: Path,
         parentLogger: BlockRenderingLogger<Any>? = null,
-        processor: RunningOperatingSystem.(Output) -> Any,
+        processor: RunningOperatingSystem.(IO) -> Any,
     ): Any
 
     /**
@@ -392,11 +396,11 @@ interface OperatingSystem {
      */
     @OptIn(ExperimentalTime::class) fun loginProgram(credentials: Credentials): Program {
         fun RunningOperatingSystem.enterUsername() {
-            input("${credentials.username}\r")
+            enter("${credentials.username}\r")
         }
 
         fun RunningOperatingSystem.enterPassword() {
-            input("${credentials.password}\r", delay = 500.milliseconds)
+            enter("${credentials.password}\r", delay = 500.milliseconds)
         }
 
         var pwLineExpectationFailed = 0
@@ -434,7 +438,7 @@ interface OperatingSystem {
             "4/4 confirm password" to { output ->
                 when {
                     listOf("'TAB'", "'ENTER'", "<Ok>").any { output.contains(it, ignoreCase = true) } -> {
-                        input("\t\t\t\t\t", delay = 500.milliseconds)
+                        enter("\t\t\t\t\t", delay = 500.milliseconds)
                         println(Processes.mostRecentChild.pid())
                         "4/4 confirm password"
                     }
@@ -460,7 +464,7 @@ interface OperatingSystem {
      */
     fun shutdownProgram(): Program {
         fun RunningOperatingSystem.invokeShutdown() {
-            input("sudo shutdown -h now")
+            enter("sudo shutdown -h now")
         }
 
         return Program(

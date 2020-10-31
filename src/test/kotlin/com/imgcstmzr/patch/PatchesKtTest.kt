@@ -147,12 +147,12 @@ internal class PatchesKtTest {
                     "printing .imgcstmzr.created",
                     { "init" },
                     "init" to { read ->
-                        input("sudo cat /root/.imgcstmzr.created")
+                        enter("sudo cat /root/.imgcstmzr.created")
                         "chafa"
                     },
                     "chafa" to { read ->
                         if (RaspberryPiLite.readyPattern.matches(read)) {
-                            input("sudo apt install -y -m chafa")
+                            enter("sudo apt install -y -m chafa")
                             "chafa-install"
                         } else "chafa"
                     },
@@ -161,7 +161,7 @@ internal class PatchesKtTest {
                         else "chafa-install"
                     },
                     "logo" to {
-                        input("chafa /home/pi/BKAHLERT.png")
+                        enter("chafa /home/pi/BKAHLERT.png")
                         null
                     }
                 )
@@ -181,7 +181,7 @@ internal class PatchesKtTest {
 }
 
 inline fun <reified T : RunningOperatingSystem> Builder<T>.command(input: String): DescribeableBuilder<String?> = get("running $input") {
-    input(input)
+    enter(input)
     readLine()
 }
 

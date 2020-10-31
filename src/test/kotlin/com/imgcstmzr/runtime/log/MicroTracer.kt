@@ -1,9 +1,9 @@
 package com.imgcstmzr.runtime.log
 
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.tracing.MicroTracer
 import com.bkahlert.koodies.tracing.MiniTracer
-import com.imgcstmzr.process.Output.Type.OUT
 
 
 fun <R> SingleLineLogger<R>.microSequence(symbol: Grapheme, block: MicroTracer<R>.() -> R): R {

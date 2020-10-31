@@ -1,6 +1,8 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.boolean.emoji
+import com.bkahlert.koodies.boolean.asEmoji
+import com.bkahlert.koodies.concurrent.process.IO.Type.META
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.nio.NonBlockingReader
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightMagenta
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
@@ -9,8 +11,6 @@ import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.imgcstmzr.cli.TestCli
-import com.imgcstmzr.process.Output.Type.META
-import com.imgcstmzr.process.Output.Type.OUT
 import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.runtime.ProcessExitMock.Companion.computing
@@ -73,7 +73,7 @@ class OperatingSystemsTest {
             )
         ).flatMap { (expected, values) ->
             values.map {
-                dynamicTest(expected.emoji + " $it") {
+                dynamicTest(expected.asEmoji + " $it") {
                     expectThat(RaspberryPiLite.loginPattern.matches(it)).isEqualTo(expected)
                 }
             }
@@ -103,7 +103,7 @@ class OperatingSystemsTest {
             )
         ).flatMap { (expected, values) ->
             values.map {
-                dynamicTest(expected.emoji + " $it") {
+                dynamicTest(expected.asEmoji + " $it") {
                     expectThat(RaspberryPiLite.readyPattern.matches(it)).isEqualTo(expected)
                 }
             }

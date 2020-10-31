@@ -1,6 +1,7 @@
 package com.bkahlert.koodies.nio
 
-import com.bkahlert.koodies.boolean.emoji
+import com.bkahlert.koodies.boolean.asEmoji
+import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.LineSeparators.CR
 import com.bkahlert.koodies.string.LineSeparators.LF
@@ -8,7 +9,6 @@ import com.bkahlert.koodies.string.LineSeparators.hasTrailingLineSeparator
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.time.Now
-import com.imgcstmzr.process.Output.Type.META
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
 import com.imgcstmzr.runtime.log.miniSegment
@@ -133,7 +133,7 @@ class NonBlockingReader(
     override fun toString(): String = listOf(
         "unfinishedLine" to unfinishedLine.debug,
         "complete?" to "${linePotentiallyComplete.debug}/${lineComplete.debug}",
-        "lastRead" to "${lastRead.debug} (␍? ${(lastRead == CR).emoji})",
+        "lastRead" to "${lastRead.debug} (␍? ${(lastRead == CR).asEmoji})",
         "justRead" to "${justRead.debug} (␊? ${(justRead == LF).debug})",
         "␍␊?" to justReadCRLF.debug,
         "lastReadLine" to lastReadLine.debug,
