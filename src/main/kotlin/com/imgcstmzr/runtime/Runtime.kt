@@ -3,7 +3,7 @@ package com.imgcstmzr.runtime
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
-import com.bkahlert.koodies.process.Processes
+import com.bkahlert.koodies.concurrent.process.Processes
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.ansiAwareMapLines

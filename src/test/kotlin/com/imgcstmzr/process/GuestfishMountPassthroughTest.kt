@@ -1,6 +1,6 @@
 package com.imgcstmzr.process
 
-import com.bkahlert.koodies.concurrent.process.Exec
+import com.bkahlert.koodies.concurrent.process.Processes
 import com.bkahlert.koodies.shell.toHereDoc
 import com.bkahlert.koodies.string.lines
 import com.bkahlert.koodies.string.random
@@ -73,7 +73,7 @@ internal class GuestfishMountPassthroughTest {
                 val imgDir = img.parent
                 val mountDir = Path.of("/work")
                 val mountImg = mountDir.resolve(img.fileName)
-                val result = Exec.Async.startShellScript(workingDirectory = imgDir) {
+                val result = Processes.startShellScript(workingDirectory = imgDir) {
                     line("docker run --privileged --name ${img.fileName} --rm -i --volume $imgDir:$mountDir --volume $img:$mountImg $dockerImageName -x " + listOf(
                         "add $mountImg format:raw",
                         "run",
@@ -87,7 +87,7 @@ internal class GuestfishMountPassthroughTest {
                     )
                         .toHereDoc("HERE-" + String.random(8).toUpperCase()))
                 }
-                Exec.Async.startShellScript(workingDirectory = imgDir) {
+                Processes.startShellScript(workingDirectory = imgDir) {
                     !"docker exec -i ${img.fileName} bash -c ".plus(listOf(
                         "ls",
                         "umount $mountDir/$SHARED_DIRECTORY_NAME",

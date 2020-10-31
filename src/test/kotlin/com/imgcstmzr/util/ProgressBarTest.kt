@@ -1,10 +1,10 @@
 package com.imgcstmzr.util
 
-import com.bkahlert.koodies.concurrent.process.Exec.Async.startShellScript
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.Processes
+import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
 import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.concurrent.startAsDaemon
-import com.bkahlert.koodies.process.Processes
 import com.bkahlert.koodies.test.junit.Slow
 import com.github.ajalt.clikt.output.TermUi
 import org.junit.jupiter.api.Test

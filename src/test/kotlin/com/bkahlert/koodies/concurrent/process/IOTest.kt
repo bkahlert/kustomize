@@ -16,7 +16,7 @@ import strikt.assertions.isEqualTo
 class IOTest {
 
     @ConcurrentTestFactory
-    fun `should leave content untouched`() = listOf("someone's output", "")
+    fun `should leave content untouched`() = listOf("IO", "")
         .flatMap { sample ->
             IO.Type.values().map { type ->
                 dynamicTest("$sample + $type") {

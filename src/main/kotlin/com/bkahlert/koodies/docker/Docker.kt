@@ -1,9 +1,9 @@
 package com.bkahlert.koodies.docker
 
-import com.bkahlert.koodies.concurrent.process.Exec
-import com.bkahlert.koodies.concurrent.process.Exec.Async.startShellScript
-import com.bkahlert.koodies.concurrent.process.Exec.Sync.checkIfOutputContains
 import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.Processes
+import com.bkahlert.koodies.concurrent.process.Processes.checkIfOutputContains
+import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
 import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.regex.RegexBuilder
 import com.bkahlert.koodies.string.random
@@ -26,13 +26,13 @@ object Docker {
      * Whether a Docker container with the given [name] is running.
      */
     fun isContainerRunning(name: String): Boolean =
-        Exec.Sync.evalShellScript { !"""docker ps --no-trunc --filter "name=$name"""" }.output.lines().drop(1).size == 1
+        Processes.evalShellScript { !"""docker ps --no-trunc --filter "name=$name"""" }.output.lines().drop(1).size == 1
 
     /**
      * Whether a Docker container—no matter if it's running or not—exists.
      */
     fun exists(name: String): Boolean =
-        Exec.Sync.evalShellScript { !"""docker ps --no-trunc --filter "name=$name" --all""" }.output.lines().drop(1).size == 1
+        Processes.evalShellScript { !"""docker ps --no-trunc --filter "name=$name" --all""" }.output.lines().drop(1).size == 1
 
     @Suppress("SpellCheckingInspection")
     fun run(

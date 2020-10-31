@@ -17,11 +17,11 @@ class AdHocOutputCapture : CapturedOutput {
     private var oldOut: PrintStream? = null
     private var oldErr: PrintStream? = null
 
-    private fun startCapturing(out: PrintStream, err: PrintStream) {
+    private fun startCapturing(redirect: Boolean = false, out: PrintStream = System.out, err: PrintStream = System.err) {
         oldOut = out
         oldErr = err
-        System.setOut(TeePrintStream(out, outStream, allStream))
-        System.setErr(TeePrintStream(err, errStream, allStream))
+        System.setOut(TeePrintStream(if (redirect) OutputStream.nullOutputStream() else out, outStream, allStream))
+        System.setErr(TeePrintStream(if (redirect) OutputStream.nullOutputStream() else err, errStream, allStream))
     }
 
     private fun stopCapturing() {
@@ -29,13 +29,11 @@ class AdHocOutputCapture : CapturedOutput {
         System.setErr(oldErr)
     }
 
-    fun runCapturing(runnable: () -> Unit) {
-        startCapturing(System.out, System.err)
-        try {
-            runnable()
-        } finally {
-            stopCapturing()
-        }
+    fun <T> runCapturing(redirect: Boolean = false, runnable: () -> T): T {
+        startCapturing(redirect, System.out, System.err)
+        val result = runnable.runCatching { invoke() }
+        stopCapturing()
+        return result.getOrThrow()
     }
 
     override val all: String get() = allStream.toString()
@@ -74,10 +72,10 @@ class AdHocOutputCapture : CapturedOutput {
          *
          * @return the captured output
          */
-        fun capture(runnable: () -> Unit): CapturedOutput {
+        fun <T> capture(redirect: Boolean = false, runnable: () -> T): Pair<T, CapturedOutput> {
             val capture = AdHocOutputCapture()
-            capture.runCapturing(runnable)
-            return capture
+            val returnValue = capture.runCapturing(redirect, runnable)
+            return returnValue to capture
         }
     }
 

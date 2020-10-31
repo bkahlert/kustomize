@@ -1,11 +1,11 @@
 package com.bkahlert.koodies.concurrent.process
 
-import com.bkahlert.koodies.concurrent.process.Exec.Async.startShellScript
-import com.bkahlert.koodies.concurrent.process.Exec.Sync.evalShellScript
 import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.IN
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.Processes.evalShellScript
+import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.startAsDaemon
 import com.bkahlert.koodies.concurrent.synchronized
@@ -35,7 +35,7 @@ import kotlin.time.measureTime
 import kotlin.time.seconds
 
 @Execution(ExecutionMode.CONCURRENT)
-class ExecTest {
+class ProcessesTest {
 
     @Nested
     @ExtendWith(OutputCaptureExtension::class)
@@ -44,22 +44,22 @@ class ExecTest {
 
         @Test
         fun `should assert present string`() {
-            expectThat(Exec.Sync.checkIfOutputContains("echo 'this is a test'", "Test", caseSensitive = false)).isTrue()
+            expectThat(Processes.checkIfOutputContains("echo 'this is a test'", "Test", caseSensitive = false)).isTrue()
         }
 
         @Test
         fun `should assert missing string`() {
-            expectThat(Exec.Sync.checkIfOutputContains("echo 'this is a test'", "Missing", caseSensitive = false)).isFalse()
+            expectThat(Processes.checkIfOutputContains("echo 'this is a test'", "Missing", caseSensitive = false)).isFalse()
         }
 
         @Test
         fun `should assert present string case-sensitive`() {
-            expectThat(Exec.Sync.checkIfOutputContains("echo 'this is a test'", "test", caseSensitive = true)).isTrue()
+            expectThat(Processes.checkIfOutputContains("echo 'this is a test'", "test", caseSensitive = true)).isTrue()
         }
 
         @Test
         fun `should assert missing string case-sensitive`() {
-            expectThat(Exec.Sync.checkIfOutputContains("echo 'this is a test'", "Test", caseSensitive = true)).isFalse()
+            expectThat(Processes.checkIfOutputContains("echo 'this is a test'", "Test", caseSensitive = true)).isFalse()
         }
     }
 

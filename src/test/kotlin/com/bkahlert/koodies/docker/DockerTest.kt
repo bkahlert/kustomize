@@ -30,12 +30,12 @@ import kotlin.time.seconds
 
 @DockerRequired
 @Execution(CONCURRENT)
-internal class DockerTest {
+class DockerTest {
     @Nested
     inner class Lifecycle {
         @OptIn(ExperimentalTime::class)
         @Test
-        internal fun `should start docker and pass arguments`() {
+        fun `should start docker and pass arguments`() {
             var outputProcessed = false
             val dockerProcess = Docker.run(testName(Lifecycle::`should start docker and pass arguments`), emptyMap(), "busybox", listOf("echo 'test'")) {
                 if (it.type == OUT && it.unformatted == "test") {
@@ -55,7 +55,7 @@ internal class DockerTest {
 
         @OptIn(ExperimentalTime::class)
         @Test
-        internal fun `should start docker and process input`() {
+        fun `should start docker and process input`() {
             var outputProcessed = false
             val dockerProcess = Docker.run(testName(Lifecycle::`should start docker and process input`), emptyMap(), "busybox") {
                 if (it.type == OUT && it.unformatted == "test") {
@@ -78,7 +78,7 @@ internal class DockerTest {
 
         @OptIn(ExperimentalTime::class)
         @Test
-        internal fun `should start docker and process output`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
+        fun `should start docker and process output`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
             var outputProcessed = false
             val dockerProcess = run(testName(Lifecycle::`should start docker and process output`), osImage) { if (it.type == OUT) outputProcessed = true }
 
@@ -95,7 +95,7 @@ internal class DockerTest {
 
         @OptIn(ExperimentalTime::class)
         @Slow @Test
-        internal fun `should start docker and process output produced by own input`(logger: InMemoryLogger<*>) {
+        fun `should start docker and process output produced by own input`(logger: InMemoryLogger<*>) {
             val output = mutableListOf<String>().synchronized()
             val roundtrips = 3
             val dockerProcess = Docker.run(testName(Lifecycle::`should start docker and process output produced by own input`), emptyMap(), "busybox") {
@@ -126,7 +126,7 @@ internal class DockerTest {
         inner class IsRunning {
             @OptIn(ExperimentalTime::class)
             @Test
-            internal fun `should return false on not yet started container container`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
+            fun `should return false on not yet started container container`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
                 val dockerProcess = run(testName(IsRunning::`should return false on not yet started container container`), osImage)
                 kotlin.runCatching {
                     expectThat(dockerProcess.isRunning).isFalse()
@@ -135,7 +135,7 @@ internal class DockerTest {
 
             @OptIn(ExperimentalTime::class)
             @Test
-            internal fun `should return true on running container`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
+            fun `should return true on running container`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
                 val dockerProcess = run(testName(IsRunning()::`should return true on running container`), osImage)
                 kotlin.runCatching {
                     val startTime = System.currentTimeMillis()
@@ -151,7 +151,7 @@ internal class DockerTest {
             @Slow
             @OptIn(ExperimentalTime::class)
             @Test
-            internal fun `should return false on completed container`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
+            fun `should return false on completed container`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
                 val dockerProcess = run(testName(IsRunning::`should return false on completed container`), osImage)
                 kotlin.runCatching {
                     val startTime = System.currentTimeMillis()
@@ -173,7 +173,7 @@ internal class DockerTest {
 
             @OptIn(ExperimentalTime::class)
             @Test
-            internal fun `should stop started container`(@OS(DietPi::class) osImage: OperatingSystemImage) {
+            fun `should stop started container`(@OS(DietPi::class) osImage: OperatingSystemImage) {
                 val dockerProcess = run(testName(IsRunning::`should stop started container`), osImage)
                 kotlin.runCatching {
                     100.milliseconds.poll { dockerProcess.isRunning }.forAtMost(5.seconds) { fail("timed out") }
@@ -188,7 +188,7 @@ internal class DockerTest {
         @Slow
         @OptIn(ExperimentalTime::class)
         @Test
-        internal fun `should remove docker container after completion`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
+        fun `should remove docker container after completion`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
             val dockerProcess = run(testName(Lifecycle::`should remove docker container after completion`), osImage)
             kotlin.runCatching {
                 val startTime = System.currentTimeMillis()
@@ -211,7 +211,7 @@ internal class DockerTest {
 
     @OptIn(ExperimentalTime::class)
     @Test
-    internal fun `should not produce incorrect empty lines`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
+    fun `should not produce incorrect empty lines`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
         val output = mutableListOf<IO>().synchronized()
         val dockerProcess = run(testName(DockerTest::`should not produce incorrect empty lines`), osImage) { output.add(it) }
         kotlin.runCatching {
