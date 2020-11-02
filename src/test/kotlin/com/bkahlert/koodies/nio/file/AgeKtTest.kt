@@ -14,10 +14,10 @@ import kotlin.time.milliseconds
 import kotlin.time.minutes
 
 @Execution(CONCURRENT)
-internal class AgeKtTest {
+class AgeKtTest {
     @OptIn(ExperimentalTime::class)
     @Test
-    internal fun `should read age`() {
+    fun `should read age`() {
         expectThat(Paths.tempFile().deleteOnExit().age)
             .isLessThan(100.milliseconds)
             .isGreaterThan(Duration.ZERO)
@@ -25,7 +25,7 @@ internal class AgeKtTest {
 
     @OptIn(ExperimentalTime::class)
     @Test
-    internal fun `should save age`() {
+    fun `should save age`() {
         val file = Paths.tempFile().deleteOnExit()
         file.age = 20.minutes
         expectThat(file.age)

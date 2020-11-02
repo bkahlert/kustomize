@@ -13,16 +13,16 @@ import strikt.api.expectThat
 import strikt.assertions.hasSize
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class UsbOnTheGoPatchTest {
+class UsbOnTheGoPatchTest {
 
     @Test
-    internal fun `should not do anything but patch files n+2 times`() {
+    fun `should not do anything but patch files n+2 times`() {
         val nModules = (1..4).map { index -> "module-$index" }
         expectThat(UsbOnTheGoPatch(nModules)).matches(fileSystemOperationsAssertion = { hasSize(nModules.size + 2) })
     }
 
     @Test
-    internal fun `should patch configtxt and cmdlinetxt file`(logger: InMemoryLogger<Any>) {
+    fun `should patch configtxt and cmdlinetxt file`(logger: InMemoryLogger<Any>) {
         val root = FixtureResolverExtension.prepareSharedDirectory()
             .also { expectThat(it).get { resolve("boot/cmdline.txt") }.not { this.containsContent("g_ether,g_webcam") } }
         val usbOnTheGoPatch = UsbOnTheGoPatch(listOf("foo", "bar"))
@@ -36,7 +36,7 @@ internal class UsbOnTheGoPatchTest {
     }
 
     @Test
-    internal fun `should not patch twice`(logger: InMemoryLogger<Any>) {
+    fun `should not patch twice`(logger: InMemoryLogger<Any>) {
         val root = FixtureResolverExtension.prepareSharedDirectory()
         val usbOnTheGoPatch = UsbOnTheGoPatch(listOf("foo", "bar"))
 

@@ -8,14 +8,14 @@ import strikt.api.expectThat
 import strikt.assertions.isNullOrBlank
 
 @Execution(CONCURRENT)
-internal class MatchingSuffixKtTest {
+class MatchingSuffixKtTest {
     @Test
-    internal fun `should find matching suffix`() {
+    fun `should find matching suffix`() {
         expectThat("Prom!§\$%&/())pt".matchingSuffix("pt", "/())pt", "om", "&/())p")).isEqualTo("/())pt")
     }
 
     @Test
-    internal fun `should not find non-matching suffix`() {
+    fun `should not find non-matching suffix`() {
         expectThat("Prompt!".matchingSuffix("abc", "def")).isNullOrBlank()
     }
 }

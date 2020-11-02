@@ -32,7 +32,7 @@ open class SystemCapture {
         synchronized(monitor) { capturedStrings.add(CapturedString(OutputCapture.Type.ERR, string)) }
     }
 
-    internal fun append(builder: StringBuilder, filter: (OutputCapture.Type) -> Boolean) {
+    fun append(builder: StringBuilder, filter: (OutputCapture.Type) -> Boolean) {
         synchronized(monitor) {
             capturedStrings
                 .asSequence()

@@ -11,10 +11,10 @@ import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class CharRangesTest {
+class CharRangesTest {
 
     @ConcurrentTestFactory
-    internal fun `alphanumeric contains`() = listOf(
+    fun `alphanumeric contains`() = listOf(
         CharRanges.`a-z` to
             (listOf('a', 'b', 'c') to
                 listOf('A', '1', '$')),

@@ -8,30 +8,30 @@ import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 
 @Execution(CONCURRENT)
-internal class IndentKtTest {
+class IndentKtTest {
     @Test
-    internal fun `should return indent`() {
+    fun `should return indent`() {
         val whitespaces = Unicode.whitespaces.filter { it.isWhitespace() }.joinToString("")
         expectThat("${whitespaces}X".indent).isEqualTo(whitespaces)
     }
 
     @Test
-    internal fun `should return 0 on no indention`() {
+    fun `should return 0 on no indention`() {
         expectThat("X".indent).isEmpty()
     }
 
     @Test
-    internal fun `should return 0 on blank string`() {
+    fun `should return 0 on blank string`() {
         expectThat(" ".indent).isEqualTo(" ")
     }
 
     @Test
-    internal fun `should return 0 on empty string`() {
+    fun `should return 0 on empty string`() {
         expectThat("".indent).isEmpty()
     }
 
     @Test
-    internal fun `should return indentation of first line`() {
+    fun `should return indentation of first line`() {
         expectThat("   3\n  2\n    4\n".indent).isEqualTo("   ")
     }
 }

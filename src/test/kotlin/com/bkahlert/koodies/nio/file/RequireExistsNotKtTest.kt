@@ -10,14 +10,14 @@ import strikt.assertions.isA
 import strikt.assertions.isFailure
 
 @Execution(CONCURRENT)
-internal class RequireExistsNotKtTest {
+class RequireExistsNotKtTest {
     @Test
-    internal fun `should throw if exists`() {
+    fun `should throw if exists`() {
         expectCatching { Paths.tempDir().requireExistsNot() }.isFailure().isA<IllegalArgumentException>()
     }
 
     @Test
-    internal fun `should not throw if not exists`() {
+    fun `should not throw if not exists`() {
         Paths.tempDir().also { it.delete() }.requireExistsNot()
     }
 }

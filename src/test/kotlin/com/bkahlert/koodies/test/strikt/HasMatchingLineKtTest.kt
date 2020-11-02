@@ -8,21 +8,21 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 
 @Execution(CONCURRENT)
-internal class HasMatchingLineKtTest {
+class HasMatchingLineKtTest {
     @Test
-    internal fun `matches path with one matching line`() {
+    fun `matches path with one matching line`() {
         val path = Paths.tempFile().also { it.writeText("abc\nadc\naop\n") }
         expectThat(path).hasMatchingLine("a{}c")
     }
 
     @Test
-    internal fun `matches path with multiple matching line`() {
+    fun `matches path with multiple matching line`() {
         val path = Paths.tempFile().also { it.writeText("abc\nadc\naop\n") }
         expectThat(path).hasMatchingLine("a{}")
     }
 
     @Test
-    internal fun `matches path with no matching line`() {
+    fun `matches path with no matching line`() {
         val path = Paths.tempFile().also { it.writeText("abc\nadc\naop\n") }
         expectThat(path).not { hasMatchingLine("xyz") }
     }

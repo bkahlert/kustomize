@@ -9,9 +9,9 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 
 @Execution(CONCURRENT)
-internal class MicroTracerKtTest {
+class MicroTracerKtTest {
     @Test
-    internal fun `should micro seq`(logger: InMemoryLogger<Unit>) {
+    fun `should micro seq`(logger: InMemoryLogger<Unit>) {
         logger.miniSegment<Unit, Unit>("segment") {
             logStatus { IO.Type.OUT typed "@" }
             microSequence(Grapheme("🤠")) {
@@ -32,7 +32,7 @@ internal class MicroTracerKtTest {
     }
 
     @Test
-    internal fun `should micro trace`(logger: InMemoryLogger<Unit>) {
+    fun `should micro trace`(logger: InMemoryLogger<Unit>) {
         logger.miniTrace(::`should micro trace`) {
             trace("X")
             microTrace<Unit>(Grapheme("🤠")) {

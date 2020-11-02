@@ -28,7 +28,7 @@ import strikt.assertions.isFailure
 import strikt.assertions.isNull
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class IniDocumentTest {
+class IniDocumentTest {
 
     @Suppress("SpellCheckingInspection") val rawDocument = """
         # http://rpf.io/configtxt
@@ -59,7 +59,7 @@ internal class IniDocumentTest {
         """.trimIndent()
 
     @ConcurrentTestFactory
-    internal fun fragment(): List<DynamicTest> = listOf(
+    fun fragment(): List<DynamicTest> = listOf(
         """
             dtparam=audio=on
         """.trimIndent() to listOf(::KeyLine),

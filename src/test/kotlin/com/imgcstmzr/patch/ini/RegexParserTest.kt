@@ -15,7 +15,7 @@ import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class RegexParserTest {
+class RegexParserTest {
 
     val regexParser = RegexParser(
         "margin" to "\\s*",
@@ -217,12 +217,12 @@ internal class RegexParserTest {
         val parsedElement = regexParser.parseSingle(" key='value'")
 
         @Test
-        internal fun `should render as unchanged`() {
+        fun `should render as unchanged`() {
             expectThat(parsedElement.toString()).isEqualTo(" key='value'")
         }
 
         @Test
-        internal fun `should be equal if input was the same`() {
+        fun `should be equal if input was the same`() {
             expectThat(parsedElement).isEqualTo(regexParser.parseSingle(" key='value'"))
         }
     }
@@ -233,13 +233,13 @@ internal class RegexParserTest {
         val parsedElements = regexParser.parseAll(" key='value'\na=b")
 
         @Test
-        internal fun `should render as unchanged`() {
+        fun `should render as unchanged`() {
 
             expectThat(parsedElements.toString()).isEqualTo(" key='value'\na=b")
         }
 
         @Test
-        internal fun `should be equal if input was the same`() {
+        fun `should be equal if input was the same`() {
             expectThat(parsedElements).isEqualTo(regexParser.parseAll(" key='value'\na=b"))
         }
     }

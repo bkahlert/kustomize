@@ -10,22 +10,22 @@ import strikt.assertions.isTrue
 
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class PairwiseAllKtTest {
+class PairwiseAllKtTest {
 
     @Test
-    internal fun `should success on matching size all filters`() {
+    fun `should success on matching size all filters`() {
         expectThat(listOf("A", "B").pairwiseAll({ it == "A" }, { it.length < 10 })).isTrue()
         expectThat(arrayOf("A", "B").pairwiseAll({ it == "A" }, { it.length < 10 })).isTrue()
     }
 
     @Test
-    internal fun `should fail on size mismatch`() {
+    fun `should fail on size mismatch`() {
         expectThat(listOf("A", "B").pairwiseAll({ it == "A" })).isFalse()
         expectThat(arrayOf("A", "B").pairwiseAll({ it == "A" })).isFalse()
     }
 
     @Test
-    internal fun `should fail on negative filter result`() {
+    fun `should fail on negative filter result`() {
         expectThat(listOf("A", "B").pairwiseAll({ it == "A" }, { it == "A" })).isFalse()
         expectThat(arrayOf("A", "B").pairwiseAll({ it == "A" }, { it == "A" })).isFalse()
     }

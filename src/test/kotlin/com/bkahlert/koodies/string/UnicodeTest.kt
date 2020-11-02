@@ -18,12 +18,12 @@ import strikt.assertions.startsWith
 import java.time.Instant
 
 @Execution(CONCURRENT)
-internal class UnicodeTest {
+class UnicodeTest {
     @Nested
     inner class Get {
 
         @ConcurrentTestFactory
-        internal fun `should return code point`() = listOf(
+        fun `should return code point`() = listOf(
             133 to nextLine,
             119594 to Tetragrams.Purity.toString(),
         ).flatMap { (codePoint, expected) ->

@@ -12,10 +12,10 @@ import strikt.api.expectThat
 import strikt.assertions.exists
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class SshPatchTest {
+class SshPatchTest {
 
     @Test
-    internal fun `should create ssh file`(logger: InMemoryLogger<Any>) {
+    fun `should create ssh file`(logger: InMemoryLogger<Any>) {
         val root = FixtureResolverExtension.prepareSharedDirectory().also { expectThat(it).get { resolve("boot/ssh") }.not { exists() } }
         val sshPatch = SshPatch()
         expectThat(sshPatch).matches(fileSystemOperationsAssertion = {

@@ -8,20 +8,20 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 
 @Execution(CONCURRENT)
-internal class InvokeKtTest {
+class InvokeKtTest {
 
     @Nested
     inner class WithNonNullableReturnType {
 
         @Test
-        internal fun `should apply f if set`() {
+        fun `should apply f if set`() {
             @Suppress("RedundantNullableReturnType")
             val f: ((String) -> String)? = { it + it }
             expectThat(f("a")).isEqualTo("aa")
         }
 
         @Test
-        internal fun `should return unchanged argument if f is unset`() {
+        fun `should return unchanged argument if f is unset`() {
             @Suppress("RedundantNullableReturnType")
             val f: ((String) -> String)? = null
             expectThat(f("a")).isEqualTo("a")
@@ -32,21 +32,21 @@ internal class InvokeKtTest {
     inner class WithNullableReturnType {
 
         @Test
-        internal fun `should return result of applied f if non-null returned`() {
+        fun `should return result of applied f if non-null returned`() {
             @Suppress("RedundantNullableReturnType")
             val f: ((String) -> String?)? = { it + it }
             expectThat("a".let(f)).isEqualTo("aa")
         }
 
         @Test
-        internal fun `should return unchanged argument if null returned`() {
+        fun `should return unchanged argument if null returned`() {
             @Suppress("RedundantNullableReturnType")
             val f: ((String) -> String?)? = { null }
             expectThat("a".let(f)).isEqualTo("a")
         }
 
         @Test
-        internal fun `should return unchanged argument if f is unset`() {
+        fun `should return unchanged argument if f is unset`() {
             @Suppress("RedundantNullableReturnType")
             val f: ((String) -> String)? = null
             expectThat("a".let(f)).isEqualTo("a")

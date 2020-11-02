@@ -28,9 +28,9 @@ import strikt.assertions.isLessThan
 import java.nio.file.Path
 
 @Execution(CONCURRENT)
-internal class GzCompressorTest {
+class GzCompressorTest {
     @ConcurrentTestFactory
-    internal fun `should throw on missing source`() = listOf(
+    fun `should throw on missing source`() = listOf(
         { Paths.tempFile().also { it.delete() }.gzip() },
         { Paths.tempFile(extension = ".gz").also { it.delete() }.gunzip() },
     ).map { call ->
@@ -40,7 +40,7 @@ internal class GzCompressorTest {
     }
 
     @ConcurrentTestFactory
-    internal fun `should throw on existing destination`() = listOf(
+    fun `should throw on existing destination`() = listOf(
         { Paths.tempFile().also { it.copyTo(it.addExtension("gz")) }.gzip() },
         { Paths.tempFile(extension = ".gz").also { it.copyTo(it.removeExtension("gz")) }.gunzip() },
     ).map { call ->
@@ -50,7 +50,7 @@ internal class GzCompressorTest {
     }
 
     @Test
-    internal fun `should gzip and gunzip`() {
+    fun `should gzip and gunzip`() {
         val file: Path = ClassPath("example.html").copyToTempFile()
         file.requireNotEmpty()
 

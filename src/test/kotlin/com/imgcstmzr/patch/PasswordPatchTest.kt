@@ -28,12 +28,12 @@ import kotlin.time.ExperimentalTime
 @ExperimentalTime
 @Execution(ExecutionMode.CONCURRENT)
 @ExtendWith(FixtureResolverExtension::class)
-internal class PasswordPatchTest {
+class PasswordPatchTest {
 
     val salt = String.random(32)
 
     @Test
-    internal fun `should provide password change command`() {
+    fun `should provide password change command`() {
         val passwordPatch = PasswordPatch("pi", "po", salt)
         val expected = Guestfish.changePasswordCommand("pi", "po", salt)
         expectThat(passwordPatch).matches(guestfishOperationsAssertion = { containsExactly(expected) })
@@ -41,7 +41,7 @@ internal class PasswordPatchTest {
 
     @DockerRequired
     @Test
-    internal fun `should update shadow file correctly`(@OS(RaspberryPiLite::class) img: Path, logger: InMemoryLogger<Any>) {
+    fun `should update shadow file correctly`(@OS(RaspberryPiLite::class) img: Path, logger: InMemoryLogger<Any>) {
         val passwordPath = "/etc/shadow"
         val username = RaspberryPiLite.defaultUsername
         val newPassword = "on-a-diet"
@@ -62,7 +62,7 @@ internal class PasswordPatchTest {
 
     @DockerRequired
     @Test
-    internal fun `should not be able to use old password`(@OS(RaspberryPiLite::class) img: Path, logger: InMemoryLogger<Any>) {
+    fun `should not be able to use old password`(@OS(RaspberryPiLite::class) img: Path, logger: InMemoryLogger<Any>) {
         val passwordPatch = PasswordPatch(RaspberryPiLite.defaultUsername, "po", salt)
 
         passwordPatch.patch(img, logger)

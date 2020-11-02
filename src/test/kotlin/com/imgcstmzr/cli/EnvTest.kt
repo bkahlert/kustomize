@@ -14,7 +14,7 @@ import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
 @Isolated // flaky OutputCapture
-internal class EnvTest {
+class EnvTest {
 
     @Test
     fun `should read env file`() {

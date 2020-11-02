@@ -17,16 +17,16 @@ import strikt.assertions.isTrue
 import java.nio.file.Files
 
 @Execution(CONCURRENT)
-internal class IsEmptyKtTest {
+class IsEmptyKtTest {
     @Nested
     inner class WithFile {
         @Test
-        internal fun `should return true on empty`() {
+        fun `should return true on empty`() {
             expectThat(Paths.tempFile().isEmpty).isTrue()
         }
 
         @Test
-        internal fun `should return false on non-empty`() {
+        fun `should return false on non-empty`() {
             expectThat(ClassPath("example.html").copyToTempFile().isEmpty).isFalse()
         }
     }
@@ -34,23 +34,23 @@ internal class IsEmptyKtTest {
     @Nested
     inner class WithDirectory {
         @Test
-        internal fun `should return true on empty`() {
+        fun `should return true on empty`() {
             expectThat(Paths.tempDir().isEmpty).isTrue()
         }
 
         @Test
-        internal fun `should return false on non-empty`() {
+        fun `should return false on non-empty`() {
             expectThat(Paths.tempDir().parent.isEmpty).isFalse()
         }
     }
 
     @Test
-    internal fun `should throw on missing`() {
+    fun `should throw on missing`() {
         expectCatching { Paths.tempFile().also { it.delete() }.isEmpty }.isFailure().isA<IllegalArgumentException>()
     }
 
     @Test
-    internal fun `should throw in different type`() {
+    fun `should throw in different type`() {
         @Suppress("BlockingMethodInNonBlockingContext")
         expectCatching { Files.createSymbolicLink(Paths.tempFile().also { it.delete() }, Paths.tempFile()).isEmpty }
     }

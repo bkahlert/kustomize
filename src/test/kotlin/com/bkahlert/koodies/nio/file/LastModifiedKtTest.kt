@@ -14,10 +14,10 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.minutes
 
 @Execution(CONCURRENT)
-internal class LastModifiedKtTest {
+class LastModifiedKtTest {
     @OptIn(ExperimentalTime::class)
     @Test
-    internal fun `should read last modified`() {
+    fun `should read last modified`() {
         expectThat(Paths.tempFile().deleteOnExit().lastModified.toInstant())
             .isLessThan(Now.plus(1.minutes))
             .isGreaterThan(Now.minus(1.minutes))
@@ -25,7 +25,7 @@ internal class LastModifiedKtTest {
 
     @OptIn(ExperimentalTime::class)
     @Test
-    internal fun `should write last modified`() {
+    fun `should write last modified`() {
         val file = Paths.tempFile().deleteOnExit()
         file.lastModified = FileTime.from(Now.minus(20.minutes))
         expectThat(file.lastModified.toInstant())

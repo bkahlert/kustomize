@@ -30,7 +30,7 @@ class NonBlockingTest {
     @Nested
     inner class NonBlockingInputStream {
         @Test
-        internal fun `should produce same byte sequence as ByteArrayInputStream`() {
+        fun `should produce same byte sequence as ByteArrayInputStream`() {
             val input = "A𝌪𝌫𝌬𝌭𝌮Z"
             val nonBlockingInputStream =
                 NonBlocking.nonBlocking(::`should produce same byte sequence as ByteArrayInputStream`.toString(), input.byteInputStream())
@@ -41,7 +41,7 @@ class NonBlockingTest {
     @Nested
     inner class NonBlockingInputStreamReader {
         @Test
-        internal fun `should produce same byte sequence as ByteArrayInputStreamReader`() {
+        fun `should produce same byte sequence as ByteArrayInputStreamReader`() {
             val input = "A𝌪𝌫𝌬𝌭𝌮Z"
             val linesExpected = input.byteInputStream().reader(Charsets.UTF_8).readLines()
             val linesActual = NonBlocking.nonBlocking(::`should produce same byte sequence as ByteArrayInputStreamReader`.toString(),
@@ -52,7 +52,7 @@ class NonBlockingTest {
 
         @ExperimentalTime
         @Test
-        internal fun `should read no non-BEM unicode extremely slow input streams`(logger: InMemoryLogger<String?>) {
+        fun `should read no non-BEM unicode extremely slow input streams`(logger: InMemoryLogger<String?>) {
             val input = "A𝌪\n𝌫\n𝌬𝌭𝌮\nZ"
             val inputStream = ProcessMock.SlowInputStream(0.seconds to input, baseDelayPerInput = 1.seconds, logger = logger)
             val reader = NonBlocking.nonBlocking(String.random(), NonBlocking.nonBlocking(String.random(), BufferedInputStream(inputStream)), Charsets.UTF_8)
@@ -62,7 +62,7 @@ class NonBlockingTest {
 
         @ExperimentalTime
         @Test
-        internal fun `should read no non-BEM unicode extremely slow input streams if buffered`(logger: InMemoryLogger<String?>) {
+        fun `should read no non-BEM unicode extremely slow input streams if buffered`(logger: InMemoryLogger<String?>) {
             val input = "A𝌪\n𝌫\n𝌬𝌭𝌮\nZ"
             val inputStream = ProcessMock.SlowInputStream(0.seconds to input, baseDelayPerInput = 1.seconds, logger = logger)
             val reader =
@@ -74,7 +74,7 @@ class NonBlockingTest {
 
         @ExperimentalTime
         @Test
-        internal fun `should be equally readable like any other byte input stream`(logger: InMemoryLogger<String?>) {
+        fun `should be equally readable like any other byte input stream`(logger: InMemoryLogger<String?>) {
             val input = "A𝌪\n𝌫\n𝌬𝌭𝌮\nZ"
             val inputStream = ProcessMock.SlowInputStream(0.seconds to input, baseDelayPerInput = 10.seconds, logger = logger)
 

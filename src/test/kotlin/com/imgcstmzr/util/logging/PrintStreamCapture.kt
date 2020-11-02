@@ -6,7 +6,7 @@ import java.util.function.Consumer
 /**
  * A [PrintStream] implementation that captures written strings.
  */
-internal class PrintStreamCapture(val parent: PrintStream, copy: Consumer<String>) :
+class PrintStreamCapture(val parent: PrintStream, copy: Consumer<String>) :
     PrintStream(OutputStreamCapture(getSystemStream(parent), copy)) {
 
     companion object {

@@ -30,13 +30,13 @@ import strikt.assertions.isNullOrEmpty
 import strikt.assertions.isTrue
 
 @Execution(CONCURRENT)
-internal class LineSeparatorsTest {
+class LineSeparatorsTest {
 
     @Nested
     inner class Multiline {
 
         @ConcurrentTestFactory
-        internal fun `should detect multilines`() = listOf(
+        fun `should detect multilines`() = listOf(
             "\n", "a\r\nb", "b\ra\nc", "sss\r",
         ).map { input ->
             dynamicTest("in ${input.debug}") {
@@ -45,7 +45,7 @@ internal class LineSeparatorsTest {
         }
 
         @ConcurrentTestFactory
-        internal fun `should detect single line`() = listOf(
+        fun `should detect single line`() = listOf(
             "", "b", "bds sd sd sds dac"
         ).map { input ->
             dynamicTest("in ${input.debug}") {
@@ -55,17 +55,17 @@ internal class LineSeparatorsTest {
     }
 
     @Test
-    internal fun `should provide MAX_LENGTH`() {
+    fun `should provide MAX_LENGTH`() {
         expectThat(LineSeparators.MAX_LENGTH).isEqualTo(2)
     }
 
     @Test
-    internal fun `should iterate all line breaks in order`() {
+    fun `should iterate all line breaks in order`() {
         expectThat(LineSeparators.joinToString(" ") { "($it)" }).isEqualTo("(\r\n) (\n) (\r) (${LineSeparators.LS}) (${LineSeparators.PS}) (${LineSeparators.NL})")
     }
 
     @ConcurrentTestFactory
-    internal fun `all line separators`() = LineSeparators.map { lineSeparator ->
+    fun `all line separators`() = LineSeparators.map { lineSeparator ->
         dynamicContainer(lineSeparator.replaceNonPrintableCharacters(), listOf(
             dynamicTest("should return itself") {
                 expectThat(lineSeparator).isEqualTo(lineSeparator)

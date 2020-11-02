@@ -3,7 +3,7 @@ package com.imgcstmzr.util.logging
 import com.bkahlert.koodies.collections.withNegativeIndices
 
 
-internal class OutputCapture : CapturedOutput {
+class OutputCapture : CapturedOutput {
     companion object {
         fun splitOutput(output: String): List<String> = output.lines().dropLastWhile { it.isBlank() }
     }

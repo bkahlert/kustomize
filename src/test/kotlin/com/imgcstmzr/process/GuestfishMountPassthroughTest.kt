@@ -22,14 +22,14 @@ import java.nio.file.Path
 @ExtendWith(FixtureResolverExtension::class)
 @Execution(ExecutionMode.SAME_THREAD)
 @Disabled
-internal class GuestfishMountPassthroughTest {
+class GuestfishMountPassthroughTest {
 
     /**
      * Experiment to [mount disk image to host using Guestfish](https://medium.com/@kumar_pravin/mount-disk-image-to-host-using-guestfish-d5f33c0297e0).
      */
     @TestFactory
     @Execution(ExecutionMode.SAME_THREAD)
-    internal fun `should provide access to filesystem`(@OS(DietPi::class, autoDelete = false) img: Path): List<DynamicTest> {
+    fun `should provide access to filesystem`(@OS(DietPi::class, autoDelete = false) img: Path): List<DynamicTest> {
         val dockerImageName = "cmattoon/guestfish"
 
         return listOf(

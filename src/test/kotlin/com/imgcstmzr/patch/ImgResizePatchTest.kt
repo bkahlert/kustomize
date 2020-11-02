@@ -21,10 +21,10 @@ import strikt.assertions.isNotEqualTo
 import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class ImgResizePatchTest {
+class ImgResizePatchTest {
 
     @Test
-    internal fun `should provide commands`(logger: InMemoryLogger<Any>) {
+    fun `should provide commands`(logger: InMemoryLogger<Any>) {
         expectThat(ImgResizePatch(10.Mebi.bytes)).matches(imgOperationsAssertion = {
             hasSize(1)
             get { this[0] }.assert("") { op ->
@@ -52,7 +52,7 @@ internal class ImgResizePatchTest {
 
     @Test
     @DockerRequired
-    internal fun `should increase size`(@OS(RaspberryPiLite::class) img: Path) {
+    fun `should increase size`(@OS(RaspberryPiLite::class) img: Path) {
         val oldSize = img.size
         val newSize = img.size + 10.Mebi.bytes
         val patch = ImgResizePatch(newSize)

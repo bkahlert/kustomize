@@ -10,19 +10,19 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 
 @Execution(CONCURRENT)
-internal class AnsiStylesTest {
+class AnsiStylesTest {
     @Test
-    internal fun `should style echo`() {
+    fun `should style echo`() {
         expectThat("echo".echo()).isEqualTo("·<❮❰❰❰ echo ❱❱❱❯>·")
     }
 
     @Test
-    internal fun `should style saying`() {
+    fun `should style saying`() {
         expectThat("saying".saying()).isEqualTo("͔˱❮❰( saying")
     }
 
     @Test
-    internal fun `should style tag`() {
+    fun `should style tag`() {
         expectThat("tag".tag()).isEqualTo("【tag】")
     }
 }

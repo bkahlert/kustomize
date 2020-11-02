@@ -7,40 +7,40 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class TruncateToKtTest {
+class TruncateToKtTest {
     @Test
-    internal fun `should remove whitespaces from the right`() {
+    fun `should remove whitespaces from the right`() {
         expectThat("a   b   c".truncateTo(6)).isEqualTo("a  b c")
     }
 
     @Test
-    internal fun `should use whitespaces on the right`() {
+    fun `should use whitespaces on the right`() {
         expectThat("a   b   c    ".truncateTo(10)).isEqualTo("a   b   c ")
     }
 
     @Test
-    internal fun `should use single whitespace on the right`() {
+    fun `should use single whitespace on the right`() {
         expectThat("a   b   c ".truncateTo(9)).isEqualTo("a   b   c")
     }
 
     @Test
-    internal fun `should not merge words`() {
+    fun `should not merge words`() {
         expectThat("a   b   c".truncateTo(0)).isEqualTo("a b c")
     }
 
     @Test
-    internal fun `should consider all unicode whitespaces`() {
+    fun `should consider all unicode whitespaces`() {
         val allWhitespaces = Unicode.whitespaces.joinToString("")
         expectThat("a ${allWhitespaces}b".truncateTo(0)).isEqualTo("a b")
     }
 
     @Test
-    internal fun `should leave area before startIndex unchanged`() {
+    fun `should leave area before startIndex unchanged`() {
         expectThat("a   b   c".truncateTo(0, startIndex = 5)).isEqualTo("a   b c")
     }
 
     @Test
-    internal fun `should leave whitespace sequence below minimal length unchanged`() {
+    fun `should leave whitespace sequence below minimal length unchanged`() {
         expectThat("a      b   c".truncateTo(9, minWhitespaceLength = 3)).isEqualTo("a   b   c")
     }
 }

@@ -8,7 +8,7 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(CONCURRENT)
-internal class CountMatchesKtTest {
+class CountMatchesKtTest {
     @Test
     fun `should find all matches`() {
         expectThat(RegularExpressions.urlRegex.countMatches(htmlLinkList)).isEqualTo(14)

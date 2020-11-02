@@ -9,16 +9,16 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class HereDocKtTest {
+class HereDocKtTest {
 
     @Test
-    internal fun `should create here document using given prefix and line separator`() {
+    fun `should create here document using given prefix and line separator`() {
         val hereDoc = listOf("line 1", "line 2").toHereDoc("MY-PREFIX", "␤")
         expectThat(hereDoc).isEqualTo("<<MY-PREFIX␤line 1␤line 2␤MY-PREFIX")
     }
 
     @Test
-    internal fun `should create here document using HERE- prefix and line feed by default`() {
+    fun `should create here document using HERE- prefix and line feed by default`() {
         val hereDoc = listOf("line 1", "line 2").toHereDoc()
         expectThat(hereDoc).matchesCurlyPattern("""
             <<HERE-{}
@@ -29,7 +29,7 @@ internal class HereDocKtTest {
     }
 
     @Test
-    internal fun `should accept empty list`() {
+    fun `should accept empty list`() {
         val hereDoc = listOf<String>().toHereDoc()
         expectThat(hereDoc).matchesCurlyPattern("""
             <<HERE-{}
@@ -40,7 +40,7 @@ internal class HereDocKtTest {
     @Nested
     inner class Support {
         @Test
-        internal fun `for Array`() {
+        fun `for Array`() {
             val hereDoc = arrayOf("line 1", "line 2").toHereDoc()
             expectThat(hereDoc).matchesCurlyPattern("""
             <<HERE-{}
@@ -51,7 +51,7 @@ internal class HereDocKtTest {
         }
 
         @Test
-        internal fun `for Iterable`() {
+        fun `for Iterable`() {
             val hereDoc = listOf("line 1", "line 2").asIterable().toHereDoc()
             expectThat(hereDoc).matchesCurlyPattern("""
             <<HERE-{}

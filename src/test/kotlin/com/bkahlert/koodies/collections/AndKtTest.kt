@@ -7,9 +7,9 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(CONCURRENT)
-internal class AndKtTest {
+class AndKtTest {
     @Test
-    internal fun `should create list`() {
+    fun `should create list`() {
         expectThat("first" and "second").isEqualTo(listOf("first", "second"))
     }
 }

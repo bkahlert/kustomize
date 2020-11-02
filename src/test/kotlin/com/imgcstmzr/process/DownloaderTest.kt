@@ -14,39 +14,39 @@ import strikt.assertions.isA
 import strikt.assertions.isFailure
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class DownloaderTest {
+class DownloaderTest {
 
     @Test
-    internal fun `should download OS`() {
+    fun `should download OS`() {
         val path = OperatingSystemMock(downloadUrl = "https://file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg").download()
         expectThat(path).hasSize(102117.bytes)
     }
 
     @Test
-    internal fun `should throw on missing OS downloadUri`() {
+    fun `should throw on missing OS downloadUri`() {
         expectCatching { OperatingSystemMock().download() }.isFailure().isA<IllegalArgumentException>()
     }
 
     @Test
-    internal fun `should download file with explicit protocol`() {
+    fun `should download file with explicit protocol`() {
         val path = download("https://file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg")
         expectThat(path).hasSize(102117.bytes)
     }
 
     @Test
-    internal fun `should download file without explicit protocol`() {
+    fun `should download file without explicit protocol`() {
         val path = download("file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg")
         expectThat(path).hasSize(102117.bytes)
     }
 
     @Test
-    internal fun `should use server side provided name without query or hash`() {
+    fun `should use server side provided name without query or hash`() {
         val path = download("https://file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg?abc=def#hij")
         expectThat(path.fileName).isEqualToStringWise("file_example_JPG_100kB.jpg")
     }
 
     @Test
-    internal fun `should throw on error`() {
+    fun `should throw on error`() {
         expectCatching { download("protocol--------/uploads/2017/10/file_example_JPG_100kB.jpg") }
             .isFailure().isA<IllegalStateException>()
     }

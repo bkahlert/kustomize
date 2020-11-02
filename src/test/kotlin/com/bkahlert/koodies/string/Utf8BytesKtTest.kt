@@ -8,9 +8,9 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(CONCURRENT)
-internal class Utf8BytesKtTest {
+class Utf8BytesKtTest {
     @Test
-    internal fun `should have same size as UTF-8 byte array`() {
+    fun `should have same size as UTF-8 byte array`() {
         val string = "【\uD83E\uDDDA\uD83C\uDFFF\u200D♀️〗"
         expectThat(string.utf8Bytes)
             .isEqualTo(string.toByteArray(Charsets.UTF_8).size.bytes)

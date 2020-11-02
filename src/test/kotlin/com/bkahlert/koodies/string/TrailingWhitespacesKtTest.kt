@@ -8,26 +8,26 @@ import strikt.assertions.hasLength
 import strikt.assertions.isEqualTo
 
 @Execution(CONCURRENT)
-internal class TrailingWhitespacesKtTest {
+class TrailingWhitespacesKtTest {
 
     @Test
-    internal fun `should find single whitespace`() {
+    fun `should find single whitespace`() {
         expectThat("abc ".trailingWhitespaces).isEqualTo(" ")
     }
 
     @Test
-    internal fun `should find untypical whitespaces`() {
+    fun `should find untypical whitespaces`() {
         expectThat(Unicode.whitespaces.joinToString("").trailingWhitespaces).hasLength(1)
     }
 
     @Test
-    internal fun `should only last whitespace`() {
+    fun `should only last whitespace`() {
         expectThat("abc  ".trailingWhitespaces).isEqualTo(" ")
     }
 
 
     @Test
-    internal fun `should not find non trailing whitespaces`() {
+    fun `should not find non trailing whitespaces`() {
         expectThat("abc  x".trailingWhitespaces).isEqualTo("")
     }
 }

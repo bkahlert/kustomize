@@ -9,10 +9,10 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class BorderTest {
+class BorderTest {
 
     @ConcurrentTestFactory
-    internal fun `should border centered text`(): List<DynamicTest> {
+    fun `should border centered text`(): List<DynamicTest> {
         val string = """
                    foo
               bar baz
@@ -33,7 +33,7 @@ internal class BorderTest {
     }
 
     @ConcurrentTestFactory
-    internal fun `should border centered text with padding and margin`(): List<DynamicTest> {
+    fun `should border centered text with padding and margin`(): List<DynamicTest> {
         val string = """
                    foo
               bar baz

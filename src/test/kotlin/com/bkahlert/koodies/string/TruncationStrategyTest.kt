@@ -11,13 +11,13 @@ import strikt.assertions.hasLength
 import strikt.assertions.isEqualTo
 
 @Execution(CONCURRENT)
-internal class TruncationStrategyTest {
+class TruncationStrategyTest {
 
     @Nested
     inner class StartTruncation {
 
         @ConcurrentTestFactory
-        internal fun `should truncate`() = listOf(
+        fun `should truncate`() = listOf(
             "APrettyLongClassNameThatMightBeTooBigForTheAvailableSpace" to "…AvailableSpace",
             "A pretty long sentence works, too." to "…ce works, too.",
         ).flatMap { (input, expected) ->
@@ -34,7 +34,7 @@ internal class TruncationStrategyTest {
         }
 
         @Test
-        internal fun `should not truncate if not needed`() {
+        fun `should not truncate if not needed`() {
             val actual = "Too short".truncate(strategy = TruncationStrategy.START)
             expectThat(actual).isEqualTo("Too short")
         }
@@ -44,7 +44,7 @@ internal class TruncationStrategyTest {
     inner class MiddleTruncation {
 
         @ConcurrentTestFactory
-        internal fun `should truncate`() = listOf(
+        fun `should truncate`() = listOf(
             "APrettyLongClassNameThatMightBeTooBigForTheAvailableSpace" to "APretty…leSpace",
             "A pretty long sentence works, too." to "A prett…s, too.",
         ).flatMap { (input, expected) ->
@@ -61,7 +61,7 @@ internal class TruncationStrategyTest {
         }
 
         @Test
-        internal fun `should not truncate if not needed`() {
+        fun `should not truncate if not needed`() {
             val actual = "Too short".truncate(strategy = TruncationStrategy.MIDDLE)
             expectThat(actual).isEqualTo("Too short")
         }
@@ -71,7 +71,7 @@ internal class TruncationStrategyTest {
     inner class EndTruncation {
 
         @ConcurrentTestFactory
-        internal fun `should truncate`() = listOf(
+        fun `should truncate`() = listOf(
             "APrettyLongClassNameThatMightBeTooBigForTheAvailableSpace" to "APrettyLongCla…",
             "A pretty long sentence works, too." to "A pretty long …",
         ).flatMap { (input, expected) ->
@@ -88,14 +88,14 @@ internal class TruncationStrategyTest {
         }
 
         @Test
-        internal fun `should not truncate if not needed`() {
+        fun `should not truncate if not needed`() {
             val actual = "Too short".truncate(strategy = TruncationStrategy.END)
             expectThat(actual).isEqualTo("Too short")
         }
     }
 
     @Test
-    internal fun `should truncate to max 15 at the end of the string using ellipsis`() {
+    fun `should truncate to max 15 at the end of the string using ellipsis`() {
         expectThat("APrettyLongClassNameThatMightBeTooBigForTheAvailableSpace".truncate()).isEqualTo("APrettyLongCla…")
     }
 }

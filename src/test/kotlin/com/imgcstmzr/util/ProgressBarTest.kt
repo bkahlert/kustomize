@@ -16,11 +16,11 @@ import kotlin.streams.asSequence
 
 @Isolated
 @Execution(ExecutionMode.CONCURRENT)
-internal class ProgressBarTest {
+class ProgressBarTest {
 
     @Slow
     @Test
-    internal fun `should show progress bar`() {
+    fun `should show progress bar`() {
         startShellScript(
             workingDirectory = Path.of("").toAbsolutePath().resolve("src/main/resources"),
             outputProcessor = { if (it.type == OUT) println(System.out) }) { !"progressbar.sh" }

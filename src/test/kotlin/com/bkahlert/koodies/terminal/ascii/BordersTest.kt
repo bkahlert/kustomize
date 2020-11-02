@@ -12,10 +12,10 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class BordersTest {
+class BordersTest {
 
     @ConcurrentTestFactory
-    internal fun `should provide extended member function with corresponding names to serve as an overview`() =
+    fun `should provide extended member function with corresponding names to serve as an overview`() =
         Borders.values().flatMap { border: Borders ->
             val matrix = border.matrix
             listOf(

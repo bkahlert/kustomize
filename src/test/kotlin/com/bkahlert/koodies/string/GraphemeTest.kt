@@ -19,31 +19,31 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class GraphemeTest {
+class GraphemeTest {
 
     @Test
-    internal fun `should be instantiatable from CodePoints`() {
+    fun `should be instantiatable from CodePoints`() {
         val subject = Grapheme(listOf(CodePoint("2"), CodePoint("\u20E3")))
         expectThat(subject).asString().isEqualTo("2⃣")
     }
 
     @Test
-    internal fun `should be instantiatable from CharSequence`() {
+    fun `should be instantiatable from CharSequence`() {
         expectThat(Grapheme("2⃣")).asString().isEqualTo("2⃣")
     }
 
     @Test
-    internal fun `should throw on empty string`() {
+    fun `should throw on empty string`() {
         expectCatching { Grapheme("") }.isFailure().isA<IllegalArgumentException>()
     }
 
     @Test
-    internal fun `should throw on multi grapheme string`() {
+    fun `should throw on multi grapheme string`() {
         expectCatching { Grapheme("1⃣2⃣") }.isFailure().isA<IllegalArgumentException>()
     }
 
     @ConcurrentTestFactory
-    internal fun using() = listOf(
+    fun using() = listOf(
         "\u0041" to 1, // A
         "\uD83E\uDD13" to 1, // 🤓
         "ᾷ" to 1, // 3 code points
@@ -81,7 +81,7 @@ internal class GraphemeTest {
     }
 
     @Test
-    internal fun `should return nth grapheme`() {
+    fun `should return nth grapheme`() {
         val string = "vᾷ⚡⚡⚡⚡"
         expectThat(string).get {
             listOf(
@@ -96,12 +96,12 @@ internal class GraphemeTest {
     }
 
     @Test
-    internal fun `should provide sequence`() {
+    fun `should provide sequence`() {
         expectThat("웃유♋⌚⌛⚡𝌿☯✡☪".asGraphemeSequence().map { it.toString() }.toList()).containsExactly("웃", "유", "♋", "⌚", "⌛", "⚡", "𝌿", "☯", "✡", "☪")
     }
 
     @Test
-    internal fun `should throw n+1th grapheme`() {
+    fun `should throw n+1th grapheme`() {
         expectCatching { "웃유♋⌚⌛⚡☯✡☪".let { it.getGrapheme(it.getGraphemeCount()) } }.isFailure().isA<StringIndexOutOfBoundsException>()
     }
 

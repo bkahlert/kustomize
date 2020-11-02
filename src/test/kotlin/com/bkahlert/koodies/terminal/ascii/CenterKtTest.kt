@@ -9,10 +9,10 @@ import strikt.assertions.isEqualTo
 
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class CenterKtTest {
+class CenterKtTest {
 
     @Test
-    internal fun `should center text`() {
+    fun `should center text`() {
         val string = """
                    foo
               bar baz
@@ -25,7 +25,7 @@ internal class CenterKtTest {
     }
 
     @Test
-    internal fun `should center string collection`() {
+    fun `should center string collection`() {
         val string = listOf("     foo", "  bar baz ")
         val actual = string.center('X')
         expectThat(actual).containsExactly("XXfooXX", "bar baz")

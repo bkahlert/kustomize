@@ -25,9 +25,9 @@ import strikt.assertions.isFailure
 import strikt.assertions.isLessThan
 
 @Execution(CONCURRENT)
-internal class ArchiverTarGzTest {
+class ArchiverTarGzTest {
     @ConcurrentTestFactory
-    internal fun `should throw on missing source`() = listOf(
+    fun `should throw on missing source`() = listOf(
         { Paths.tempDir().also { it.delete() }.archive() },
         { tempFile(extension = ".tar.gz").also { it.delete() }.unarchive() },
         { tempFile(extension = ".tar.gz").also { it.delete() }.listArchive() },
@@ -39,7 +39,7 @@ internal class ArchiverTarGzTest {
     }
 
     @ConcurrentTestFactory
-    internal fun `should throw on non-empty destination`() = listOf(
+    fun `should throw on non-empty destination`() = listOf(
         { Paths.tempDir().also { it.removeExtension("tar.gz").touch().writeText("content") }.archive() },
         { directoryWithTwoFiles().archive(destination = tempFile(extension = ".tar.gz")).unarchive() },
     ).map { call ->
@@ -49,7 +49,7 @@ internal class ArchiverTarGzTest {
     }
 
     @Test
-    internal fun `should tar-gzip and untar-gunzip`() {
+    fun `should tar-gzip and untar-gunzip`() {
         val dir = directoryWithTwoFiles()
 
         val archivedDir = dir.archive()

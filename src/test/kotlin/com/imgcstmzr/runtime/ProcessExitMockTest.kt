@@ -14,9 +14,9 @@ import kotlin.time.milliseconds
 
 @OptIn(ExperimentalTime::class)
 @Execution(CONCURRENT)
-internal class ProcessExitMockTest {
+class ProcessExitMockTest {
     @Test
-    internal fun `should provide exit code immediately`() {
+    fun `should provide exit code immediately`() {
         val processExit = ProcessExitMock.immediateExit(42)
 
         val exitCode = processExit()
@@ -25,7 +25,7 @@ internal class ProcessExitMockTest {
     }
 
     @Test
-    internal fun `should delay exit`() {
+    fun `should delay exit`() {
         val exitDelay = 50.milliseconds
         val start = System.currentTimeMillis()
         val processExit = ProcessExitMock.delayedExit(42, exitDelay)
@@ -37,7 +37,7 @@ internal class ProcessExitMockTest {
     }
 
     @Test
-    internal fun `should return true on sufficient calculation time`() {
+    fun `should return true on sufficient calculation time`() {
         val exitDelay = 50.milliseconds
         val processExit = ProcessExitMock.delayedExit(42, exitDelay)
 
@@ -47,7 +47,7 @@ internal class ProcessExitMockTest {
     }
 
     @Test
-    internal fun `should return false on insufficient calculation time`() {
+    fun `should return false on insufficient calculation time`() {
         val exitDelay = 50.milliseconds
         val processExit = ProcessExitMock.delayedExit(42, exitDelay)
 
@@ -57,7 +57,7 @@ internal class ProcessExitMockTest {
     }
 
     @Test
-    internal fun `should never finish on deadlock`() {
+    fun `should never finish on deadlock`() {
         val processExit = ProcessExitMock.deadLock()
         expectThat(processExit.delay).isEqualTo(Duration.INFINITE)
     }

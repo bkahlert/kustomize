@@ -7,7 +7,7 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class DictionaryTest {
+class DictionaryTest {
 
     private val dict = dictOf(
         "known" to 42,
@@ -15,12 +15,12 @@ internal class DictionaryTest {
     ) { _ -> Int.MAX_VALUE }
 
     @Test
-    internal fun `should get value on match`() {
+    fun `should get value on match`() {
         expectThat(dict["known"]).isEqualTo(42)
     }
 
     @Test
-    internal fun `should get default on mismatch`() {
+    fun `should get default on mismatch`() {
         expectThat(dict["unknown"]).isEqualTo(Int.MAX_VALUE)
     }
 }

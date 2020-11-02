@@ -24,9 +24,9 @@ import strikt.assertions.isA
 import strikt.assertions.isFailure
 
 @Execution(CONCURRENT)
-internal class ArchiverTest {
+class ArchiverTest {
     @ConcurrentTestFactory
-    internal fun `should throw on missing source`() = listOf(
+    fun `should throw on missing source`() = listOf(
         { Paths.tempDir().also { it.delete() }.archive() },
         { Paths.tempFile(extension = ".zip").also { it.delete() }.unarchive() },
         { Paths.tempFile(extension = ".tar.gz").also { it.delete() }.listArchive() },
@@ -38,7 +38,7 @@ internal class ArchiverTest {
     }
 
     @ConcurrentTestFactory
-    internal fun `should throw on non-empty destination`() = listOf(
+    fun `should throw on non-empty destination`() = listOf(
         { Paths.tempDir().also { it.removeExtension("zip").touch().writeText("content") }.archive() },
         { Paths.tempFile(extension = ".zip").also { it.copyTo(it.removeExtension("zip").mkdirs().resolve(it.fileName)) }.unarchive() },
     ).map { call ->
@@ -48,7 +48,7 @@ internal class ArchiverTest {
     }
 
     @Test
-    internal fun `should archive and unarchive`() {
+    fun `should archive and unarchive`() {
         val dir = PathFixtures.directoryWithTwoFiles()
 
         val archivedDir = dir.archive()

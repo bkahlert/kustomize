@@ -7,9 +7,9 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(CONCURRENT)
-internal class AsStringKtTest {
+class AsStringKtTest {
     @Test
-    internal fun `should produce same byte string as toString`() {
+    fun `should produce same byte string as toString`() {
         val string = "【\uD83E\uDDDA\uD83C\uDFFF\u200D♀️〗"
         expectThat(StringBuilder(string).asString()).isEqualTo(string)
     }

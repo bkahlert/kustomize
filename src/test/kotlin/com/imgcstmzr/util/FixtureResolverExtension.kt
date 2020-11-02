@@ -115,18 +115,18 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
         }
 
         private fun deleteImgRelatedDirectories(context: ExtensionContext) {
-            loadImg(context)
-                ?.let {
-                    val imgDirectory = it.parent
-                    val imgDirectoryContainer = imgDirectory.parent
-                    imgDirectoryContainer.listFilesRecursively({ other ->
-                        other.toString().startsWith(imgDirectory.toString())
-                    }, comparator = Comparator.reverseOrder())
-                }
-                ?.onEach { imgDirectoryBasedCopy ->
-                    if (!context.isCapturingOutput()) echo("Deleting $imgDirectoryBasedCopy")
-                    imgDirectoryBasedCopy.delete(true)
-                }
+//            loadImg(context)
+//                ?.let {
+//                    val imgDirectory = it.parent
+//                    val imgDirectoryContainer = imgDirectory.parent
+//                    imgDirectoryContainer.listFilesRecursively({ other ->
+//                        other.toString().startsWith(imgDirectory.toString())
+//                    }, comparator = Comparator.reverseOrder())
+//                }
+//                ?.onEach { imgDirectoryBasedCopy ->
+//                    if (!context.isCapturingOutput()) echo("Deleting $imgDirectoryBasedCopy")
+//                    imgDirectoryBasedCopy.delete(true)
+//                }
         }
 
         private fun loadImg(context: ExtensionContext): Path? =

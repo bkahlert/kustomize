@@ -11,12 +11,12 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.startsWith
 
 @Execution(CONCURRENT)
-internal class ToSingleLineStringKtTest {
+class ToSingleLineStringKtTest {
     @Nested
     inner class AThrowable {
 
         @Test
-        internal fun `should format as a single line`() {
+        fun `should format as a single line`() {
             val actual = RuntimeException("test").toSingleLineString() ?: ""
             expectThat(actual).startsWith("java.lang.RuntimeException: test @ com.bkahlert.koodies.exception.ToSingleLineStringKtTest")
             expectThat(actual.lines()).hasSize(1)
@@ -30,7 +30,7 @@ internal class ToSingleLineStringKtTest {
         inner class WithValue {
 
             @Test
-            internal fun `should format as a single line`() {
+            fun `should format as a single line`() {
                 val actual = Result.success("good").toSingleLineString() ?: ""
                 expectThat(actual.removeEscapeSequences()).isEqualTo("❬good⫻4❭")
                 expectThat(actual.lines()).hasSize(1)
@@ -42,7 +42,7 @@ internal class ToSingleLineStringKtTest {
         inner class WithException {
 
             @Test
-            internal fun `should format as a single line`() {
+            fun `should format as a single line`() {
                 val actual = Result.failure<String>(RuntimeException("test")).toSingleLineString() ?: ""
                 expectThat(actual).startsWith("java.lang.RuntimeException: test @ com.bkahlert.koodies.exception.ToSingleLineStringKtTest")
                 expectThat(actual.lines()).hasSize(1)

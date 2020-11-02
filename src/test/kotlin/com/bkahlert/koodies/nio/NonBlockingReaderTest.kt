@@ -9,6 +9,6 @@ import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalTime::class)
 @Execution(CONCURRENT)
-internal class NonBlockingReaderTest : SharedReaderTest({ inputStream: InputStream, timeout: Duration, logger: BlockRenderingLogger<String?>? ->
+class NonBlockingReaderTest : SharedReaderTest({ inputStream: InputStream, timeout: Duration, logger: BlockRenderingLogger<String?>? ->
     NonBlockingReader(inputStream = inputStream, timeout = timeout, logger = logger, blockOnEmptyLine = false)
 })

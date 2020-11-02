@@ -19,7 +19,7 @@ import strikt.assertions.isFailure
 
 @Execution(ExecutionMode.CONCURRENT)
 @ExtendWith(OutputCaptureExtension::class)
-internal class InMemoryLoggerResolverTest {
+class InMemoryLoggerResolverTest {
 
     @Isolated // flaky OutputCapture
     @Nested
@@ -30,7 +30,7 @@ internal class InMemoryLoggerResolverTest {
 
             @Debug(includeInReport = false)
             @Test
-            internal fun `should log to console automatically with @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
+            fun `should log to console automatically with @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
                 logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
 
                 expectThat(logger.logged).asString().contains("☎Σ⊂⊂(☉ω☉∩)")
@@ -43,7 +43,7 @@ internal class InMemoryLoggerResolverTest {
 
             @Debug(includeInReport = false)
             @Test
-            internal fun `should log to console automatically with @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
+            fun `should log to console automatically with @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
                 logger.logStatus { OUT typed "(*｀へ´*)" }
 
                 expectCatching { logger.logResult { Result.failure(IllegalStateException("test")) } }
@@ -61,7 +61,7 @@ internal class InMemoryLoggerResolverTest {
         inner class SuccessTests {
 
             @Test
-            internal fun `should not automatically log to console without @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
+            fun `should not automatically log to console without @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
                 logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
 
                 expectThat(logger.logged).asString().contains("☎Σ⊂⊂(☉ω☉∩)")
@@ -73,7 +73,7 @@ internal class InMemoryLoggerResolverTest {
         inner class FailureTests {
 
             @Test
-            internal fun `should not catch exceptions`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
+            fun `should not catch exceptions`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
                 logger.logStatus { OUT typed "(*｀へ´*)" }
 
                 expectCatching { logger.logResult { Result.failure(IllegalStateException("test")) } }

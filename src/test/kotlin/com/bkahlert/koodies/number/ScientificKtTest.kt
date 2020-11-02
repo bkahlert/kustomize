@@ -9,9 +9,9 @@ import strikt.api.expectThat
 import java.math.BigDecimal
 
 @Execution(CONCURRENT)
-internal class ScientificKtTest {
+class ScientificKtTest {
     @ConcurrentTestFactory
-    internal fun `should format scientifically`() = listOf(
+    fun `should format scientifically`() = listOf(
         "0.00000085" to "8.50e-7",
         "0.000002" to "2.00e-6",
         "0.0000001" to "1.00e-7",
@@ -33,7 +33,7 @@ internal class ScientificKtTest {
     }
 
     @ConcurrentTestFactory
-    internal fun `should format to exact decimals`() = listOf(
+    fun `should format to exact decimals`() = listOf(
         "0.00000085" to "0.0000008500",
         "0.000002" to "0.0000020000",
         "0.0000001" to "0.0000001000",
@@ -55,7 +55,7 @@ internal class ScientificKtTest {
     }
 
     @ConcurrentTestFactory
-    internal fun `should format up to decimals`() = listOf(
+    fun `should format up to decimals`() = listOf(
         "0.00000085" to "0.0000009",
         "0.000002" to "0.000002",
         "0.0000001" to "0.0000001",

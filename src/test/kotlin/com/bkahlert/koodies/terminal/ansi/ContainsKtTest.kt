@@ -9,10 +9,10 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class ContainsKtTest {
+class ContainsKtTest {
 
     @ConcurrentTestFactory
-    internal fun `NOT ignoring case AND NOT ignoring ANSI`() = listOf(
+    fun `NOT ignoring case AND NOT ignoring ANSI`() = listOf(
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  OK") to true,
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  ok") to false,
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[  OK") to false,
@@ -35,7 +35,7 @@ internal class ContainsKtTest {
     }
 
     @ConcurrentTestFactory
-    internal fun `NOT ignoring case AND ignoring ANSI`() = listOf(
+    fun `NOT ignoring case AND ignoring ANSI`() = listOf(
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  OK") to true,
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  ok") to false,
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[  OK") to true,
@@ -52,7 +52,7 @@ internal class ContainsKtTest {
     }
 
     @ConcurrentTestFactory
-    internal fun `ignoring case AND NOT ignoring ANSI`() = listOf(
+    fun `ignoring case AND NOT ignoring ANSI`() = listOf(
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  OK") to true,
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  ok") to true,
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[  OK") to false,
@@ -69,7 +69,7 @@ internal class ContainsKtTest {
     }
 
     @ConcurrentTestFactory
-    internal fun `ignoring case AND ignoring ANSI`() = listOf(
+    fun `ignoring case AND ignoring ANSI`() = listOf(
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  OK") to true,
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  ok") to true,
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[  OK") to true,

@@ -19,19 +19,19 @@ import kotlin.time.milliseconds
 import kotlin.time.seconds
 
 @Execution(CONCURRENT)
-internal class SleepKtTest {
+class SleepKtTest {
     @Test
-    internal fun `should sleep on positive duration`() {
+    fun `should sleep on positive duration`() {
         expectThat(measureTime { 1.seconds.sleep() }).isGreaterThan(900.milliseconds).isLessThan(1100.milliseconds)
     }
 
     @Test
-    internal fun `should not sleep on zero duration`() {
+    fun `should not sleep on zero duration`() {
         expectThat(measureTime { Duration.ZERO.sleep() }).isLessThanOrEqualTo(100.milliseconds)
     }
 
     @Test
-    internal fun `should not sleep on negative duration`() {
+    fun `should not sleep on negative duration`() {
         expectCatching { measureTime { (-1).seconds.sleep() } }.isFailure().isA<IllegalArgumentException>()
     }
 }

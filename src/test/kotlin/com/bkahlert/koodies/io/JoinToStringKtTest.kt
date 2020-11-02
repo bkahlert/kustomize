@@ -10,9 +10,9 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 
 @Execution(CONCURRENT)
-internal class JoinToStringKtTest {
+class JoinToStringKtTest {
     @Test
-    internal fun `should join byte arrays to string`() {
+    fun `should join byte arrays to string`() {
         val buffer = ByteArray(1024)
         var read = 0
         val byteArrays = mutableListOf<ByteArray>()

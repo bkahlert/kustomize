@@ -10,8 +10,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class DateTimeFormatterTest {
-    internal val localDate = LocalDate.parse("2010-09-20")
+class DateTimeFormatterTest {
+    val localDate = LocalDate.parse("2010-09-20")
 
     private class Foo
     private class Bar
@@ -24,17 +24,17 @@ internal class DateTimeFormatterTest {
     @Nested
     inner class Formatting {
         @Test
-        internal fun `should format using fallback on missing type`() {
+        fun `should format using fallback on missing type`() {
             expectThat(formatter.format(localDate)).isEqualTo("2010-09-20")
         }
 
         @Test
-        internal fun `should format using fallback on no match`() {
+        fun `should format using fallback on no match`() {
             expectThat(formatter.format<Foo>(localDate)).isEqualTo("2010-09-20")
         }
 
         @Test
-        internal fun `should format using responsible formatter on match`() {
+        fun `should format using responsible formatter on match`() {
             expectThat(formatter.format<Bar>(localDate)).isEqualTo("2010=09=20")
         }
     }
@@ -42,17 +42,17 @@ internal class DateTimeFormatterTest {
     @Nested
     inner class Parsing {
         @Test
-        internal fun `should parse using fallback on missing type`() {
+        fun `should parse using fallback on missing type`() {
             expectThat(formatter.parse<LocalDate, Any>("2010-09-20")).isEqualTo(localDate)
         }
 
         @Test
-        internal fun `should parse using fallback on no match`() {
+        fun `should parse using fallback on no match`() {
             expectThat(formatter.parse<LocalDate, Foo>("2010-09-20")).isEqualTo(localDate)
         }
 
         @Test
-        internal fun `should parse using responsible formatter on match`() {
+        fun `should parse using responsible formatter on match`() {
             expectThat(formatter.parse<LocalDate, Bar>("2010=09=20")).isEqualTo(localDate)
         }
     }

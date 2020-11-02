@@ -16,15 +16,15 @@ import strikt.assertions.isEqualTo
 import java.nio.file.Path
 
 @Execution(CONCURRENT)
-internal class ImageExtractorTest {
+class ImageExtractorTest {
     @Test
-    internal fun `should return already extracted image`() {
+    fun `should return already extracted image`() {
         val img = Paths.tempFile(extension = ".img").also { it.writeText("Dummy image") }
         expectThat(img.extractImage { it }).isEqualTo(img)
     }
 
     @Test
-    internal fun `should extract image on single match`() {
+    fun `should extract image on single match`() {
         val dir = Paths.tempDir()
             .also { it.resolve("some.img").also { it.writeText("img file") } }
             .also { it.resolve("other.file").also { it.writeText("other file") } }
@@ -33,7 +33,7 @@ internal class ImageExtractorTest {
     }
 
     @Test
-    internal fun `should extract largest image on multiple matches`() {
+    fun `should extract largest image on multiple matches`() {
         val dir = Paths.tempDir()
             .also { it.resolve("a.img").also { it.writeText("small") } }
             .also { it.resolve("b.img").also { it.writeText("the largest among the img files") } }
@@ -43,7 +43,7 @@ internal class ImageExtractorTest {
     }
 
     @Test
-    internal fun `should build image on missing image`() {
+    fun `should build image on missing image`() {
         val zipFile = Paths.tempDir()
             .also { it.resolve("cmdline.txt").also { it.writeText("console=serial0,115200 console=tty1 ...") } }
             .also { it.resolve("boot").mkdirs() }

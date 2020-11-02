@@ -7,9 +7,9 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(CONCURRENT)
-internal class AsSystemResourceUrlKtTest {
+class AsSystemResourceUrlKtTest {
     @Test
-    internal fun `should resolve to valid URL`() {
+    fun `should resolve to valid URL`() {
         expectThat("cmdline.txt".asSystemResourceUrl().readBytes().size).isEqualTo(169)
     }
 }

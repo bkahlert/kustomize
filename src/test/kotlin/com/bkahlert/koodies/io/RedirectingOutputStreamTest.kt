@@ -9,9 +9,9 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 
 @Execution(CONCURRENT)
-internal class RedirectingOutputStreamTest {
+class RedirectingOutputStreamTest {
     @Test
-    internal fun `should redirect`() {
+    fun `should redirect`() {
         val text = ClassPath("Macbeth - Chapter I.txt").readAll()
         val captured = mutableListOf<ByteArray>()
         text.byteInputStream().copyTo(RedirectingOutputStream { captured.add(it) })
@@ -19,7 +19,7 @@ internal class RedirectingOutputStreamTest {
     }
 
     @Test
-    internal fun `should redirect non latin`() {
+    fun `should redirect non latin`() {
         val text = ClassPath("Journey to the West - Introduction.txt").readAll()
         val captured = mutableListOf<ByteArray>()
         text.byteInputStream().copyTo(RedirectingOutputStream { captured.add(it) })

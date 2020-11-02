@@ -8,9 +8,9 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import java.util.concurrent.atomic.AtomicLong
 
 @Execution(CONCURRENT)
-internal class StartAsCoroutineKtTest {
+class StartAsCoroutineKtTest {
     @Test
-    internal fun `should run`() {
+    fun `should run`() {
         println("Start")
 
 // Start a coroutine

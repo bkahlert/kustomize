@@ -9,10 +9,10 @@ import strikt.api.expectThat
 import strikt.assertions.isGreaterThanOrEqualTo
 
 @Execution(CONCURRENT)
-internal class KaomojisTest {
+class KaomojisTest {
 
     @ConcurrentTestFactory
-    internal fun `should create random Kaomoji`() = (0 until 10).map { i ->
+    fun `should create random Kaomoji`() = (0 until 10).map { i ->
         val kaomoji = Kaomojis.random()
         dynamicTest(kaomoji) {
             expectThat(kaomoji).get { codePoints().count() }.isGreaterThanOrEqualTo(3)
@@ -20,7 +20,7 @@ internal class KaomojisTest {
     }
 
     @ConcurrentTestFactory
-    internal fun `should create random Kaomoji from`() = Kaomojis.Generator.values().map { category ->
+    fun `should create random Kaomoji from`() = Kaomojis.Generator.values().map { category ->
         dynamicContainer(category.name, (0 until 10).map { i ->
             val kaomoji = category.random()
             dynamicTest(kaomoji) {
@@ -30,7 +30,7 @@ internal class KaomojisTest {
     }
 
     @ConcurrentTestFactory
-    internal fun `should create random dogs`() = (0 until 10).map { i ->
+    fun `should create random dogs`() = (0 until 10).map { i ->
         val kaomoji = Kaomojis.Dogs.random()
         dynamicTest(kaomoji) {
             expectThat(kaomoji).get { length }.isGreaterThanOrEqualTo(5)
@@ -38,7 +38,7 @@ internal class KaomojisTest {
     }
 
     @ConcurrentTestFactory
-    internal fun `should create random wizards`() = (0 until 10).map { i ->
+    fun `should create random wizards`() = (0 until 10).map { i ->
         val kaomoji = Kaomojis.`(＃￣_￣)o︠・━・・━・━━・━☆`.random()
         dynamicTest(kaomoji) {
             expectThat(kaomoji).get { length }.isGreaterThanOrEqualTo(5)

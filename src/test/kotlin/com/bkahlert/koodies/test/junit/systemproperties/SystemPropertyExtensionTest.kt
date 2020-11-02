@@ -16,7 +16,7 @@ import strikt.assertions.isTrue
 
 @Execution(SAME_THREAD)
 @TestMethodOrder(OrderAnnotation::class)
-internal class SystemPropertyExtensionTest {
+class SystemPropertyExtensionTest {
 
     companion object {
         const val testProperty = "SystemPropertyExtensionTest"
@@ -25,12 +25,12 @@ internal class SystemPropertyExtensionTest {
     var test1DidRun = false
 
     @BeforeAll
-    internal fun prepare() {
+    fun prepare() {
         System.setProperty(testProperty, "important system value")
     }
 
     @AfterAll
-    internal fun cleanup() {
+    fun cleanup() {
         System.clearProperty(testProperty)
     }
 
@@ -40,7 +40,7 @@ internal class SystemPropertyExtensionTest {
         SystemProperty(name = "foo", value = "bar"),
         SystemProperty(name = "testProperty", value = "baz")
     )
-    internal fun `should set system property`() {
+    fun `should set system property`() {
         expectThat(test1DidRun).isFalse()
         expectThat(System.getProperty("foo")).isEqualTo("bar")
         test1DidRun = true
@@ -48,7 +48,7 @@ internal class SystemPropertyExtensionTest {
 
     @Order(2)
     @Test
-    internal fun `should restore system property`() {
+    fun `should restore system property`() {
         expectThat(test1DidRun).isTrue()
         expectThat(System.getProperty("foo")).isNull()
         expectThat(System.getProperty(testProperty)).isEqualTo("important system value")

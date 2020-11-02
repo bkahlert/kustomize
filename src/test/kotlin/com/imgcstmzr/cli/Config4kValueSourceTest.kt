@@ -10,7 +10,7 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class Config4kValueSourceTest {
+class Config4kValueSourceTest {
 
     val config4kValueSource = Config4kValueSource.proxy().also {
         it.update(javaClass.getResource("/sample.conf"))
@@ -18,14 +18,14 @@ internal class Config4kValueSourceTest {
 
     @ExperimentalValueSourceApi
     @Test
-    internal fun `should load simple property`() {
+    fun `should load simple property`() {
         val values = config4kValueSource.getValues(TestCli.ctx, TestCli.cmd.os)
         expectThat(values).isEqualTo(listOf(Invocation(listOf("RASPBERRY_PI_OS_LITE"))))
     }
 
     @ExperimentalValueSourceApi
     @Test
-    internal fun `should load complex property`() {
+    fun `should load complex property`() {
         val values = config4kValueSource.getValues(TestCli.ctx, TestCli.cmd.scripts_)
         expectThat(values).isEqualTo(listOf(Invocation(listOf("the-basics=\n" + """
             sudo -i

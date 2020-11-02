@@ -27,11 +27,11 @@ import kotlin.time.toJavaDuration
 
 @OptIn(ExperimentalTime::class)
 @Disabled
-internal abstract class SharedReaderTest(val readerFactory: (InputStream, Duration, BlockRenderingLogger<String?>?) -> Reader) {
+abstract class SharedReaderTest(val readerFactory: (InputStream, Duration, BlockRenderingLogger<String?>?) -> Reader) {
 
     @Slow
     @RepeatedTest(10)
-    internal fun `should not block`(logger: InMemoryLogger<String?>) {
+    fun `should not block`(logger: InMemoryLogger<String?>) {
         val slowInputStream = ProcessMock.SlowInputStream("Hel", "lo\n", "World!\n",
             baseDelayPerInput = 1.seconds,
             logger = logger)
@@ -64,7 +64,7 @@ internal abstract class SharedReaderTest(val readerFactory: (InputStream, Durati
 
     @Slow
     @RepeatedTest(3)
-    internal fun `should read characters that are represented by two chars`(logger: InMemoryLogger<String?>) {
+    fun `should read characters that are represented by two chars`(logger: InMemoryLogger<String?>) {
         val slowInputStream = ProcessMock.SlowInputStream("𝌪𝌫𝌬𝌭𝌮", "𝌯𝌰\n", "𝌱𝌲𝌳𝌴𝌵\n",
             baseDelayPerInput = 1.seconds,
             logger = logger)
@@ -97,7 +97,7 @@ internal abstract class SharedReaderTest(val readerFactory: (InputStream, Durati
     }
 
     @Test
-    internal fun `should never have trailing line separators`(logger: InMemoryLogger<String?>) {
+    fun `should never have trailing line separators`(logger: InMemoryLogger<String?>) {
         val slowInputStream = ProcessMock.SlowInputStream("Hel", "lo\n\n\n\n\n", "World!\n",
             baseDelayPerInput = 1.seconds,
             logger = logger)
@@ -113,7 +113,7 @@ internal abstract class SharedReaderTest(val readerFactory: (InputStream, Durati
 
 
     @Test
-    internal fun `should not repeat line on split CRLF`(logger: InMemoryLogger<String?>) {
+    fun `should not repeat line on split CRLF`(logger: InMemoryLogger<String?>) {
         val slowInputStream = ProcessMock.SlowInputStream("Hello\r", "\nWorld",
             baseDelayPerInput = 1.seconds,
             logger = logger)
@@ -135,7 +135,7 @@ internal abstract class SharedReaderTest(val readerFactory: (InputStream, Durati
         val inputStream = { bootLog.resourceAsStream() ?: throw IllegalStateException() }
 
         @Test
-        internal fun `should quickly read boot sequence using custom forEachLine`(logger: InMemoryLogger<String?>) {
+        fun `should quickly read boot sequence using custom forEachLine`(logger: InMemoryLogger<String?>) {
             val reader = readerFactory(inputStream(), 1.seconds, logger)
 
             val read = mutableListOf<String>()
@@ -148,7 +148,7 @@ internal abstract class SharedReaderTest(val readerFactory: (InputStream, Durati
         }
 
         @Test
-        internal fun `should quickly read boot sequence using foreign forEachLine`(logger: InMemoryLogger<String?>) {
+        fun `should quickly read boot sequence using foreign forEachLine`(logger: InMemoryLogger<String?>) {
             val reader = readerFactory(inputStream(), 1.seconds, logger)
 
             assertTimeoutPreemptively(8.seconds.toJavaDuration()) {

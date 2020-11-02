@@ -30,7 +30,7 @@ class ContainsExactlyInSomeOrderKtTest {
         }
 
         @Test
-        internal fun `should assert using builder`() {
+        fun `should assert using builder`() {
             expectThat(list).containsExactlyInSomeOrder {
                 +"1"
                 +"2.b" + "2.a"
@@ -54,7 +54,7 @@ class ContainsExactlyInSomeOrderKtTest {
         }
 
         @Test
-        internal fun `should not assert using builder`() {
+        fun `should not assert using builder`() {
             expectCatching {
                 expectThat(list).containsExactlyInSomeOrder {
                     +"3"

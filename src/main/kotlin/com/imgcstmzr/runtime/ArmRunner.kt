@@ -1,6 +1,5 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.concurrent.process.CompletedProcess
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.IN
@@ -78,7 +77,7 @@ object ArmRunner {
         osImage: OperatingSystemImage,
         logger: RenderingLogger<Any>,
         vararg programs: Program,
-    ): CompletedProcess = logger.subLogger<Any, CompletedProcess>("$osImage", ansiCode = ANSI.termColors.cyan) {
+    ): Int = logger.subLogger<Any, Int>("$osImage", ansiCode = ANSI.termColors.cyan) {
         val unfinished: MutableList<Program> = mutableListOf(
             osImage.loginProgram(OperatingSystems.Companion.Credentials(osImage.defaultUsername, osImage.defaultPassword)),/*.logging()*/
             *programs,
@@ -98,6 +97,6 @@ object ArmRunner {
             }
             if (!unfinished.compute(this, output)) unfinished.takeIf { it.isNotEmpty() }?.removeAt(0)
             0
-        }.waitForCompletion()
+        }.waitForExitCode(0).exitCode
     }
 }

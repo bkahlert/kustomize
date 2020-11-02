@@ -21,12 +21,12 @@ import java.io.IOException
 import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class ClassPathTest {
+class ClassPathTest {
 
     data class Spec(val exists: Boolean, val resource: String, val size: Int?)
 
     @ConcurrentTestFactory
-    internal fun `fulfills specification`() = listOf(
+    fun `fulfills specification`() = listOf(
         "cmdline.txt" to Spec(true, "cmdline.txt", 169),
         "/cmdline.txt" to Spec(true, "cmdline.txt", 169),
         "i-dont-exist" to Spec(false, "i-dont-exist", null),

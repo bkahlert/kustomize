@@ -14,13 +14,13 @@ import kotlin.time.measureTime
 import kotlin.time.milliseconds
 
 @Execution(CONCURRENT)
-internal class StartAsThreadKtTest {
+class StartAsThreadKtTest {
 
     // can't check if not daemon as it might be inherited from parent thread
 
     @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
-    internal fun `should start immediately`() = listOf(
+    fun `should start immediately`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsThread() },
         "postfix form" to { finished: AtomicBoolean -> startAsThread() { finished.set(true) } },
     ).map { (caption, exec) ->
@@ -37,7 +37,7 @@ internal class StartAsThreadKtTest {
 
     @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
-    internal fun `should start delayed`() = listOf(
+    fun `should start delayed`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsThread(500.milliseconds) },
         "postfix form" to { finished: AtomicBoolean -> startAsThread(500.milliseconds) { finished.set(true) } },
     ).map { (caption, exec) ->

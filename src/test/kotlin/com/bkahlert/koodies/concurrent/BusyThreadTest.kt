@@ -8,9 +8,9 @@ import strikt.api.expectThat
 import strikt.assertions.isGreaterThan
 
 @Execution(CONCURRENT)
-internal class BusyThreadTest {
+class BusyThreadTest {
     @Test
-    internal fun `should not stop until asked`(tracer: InMemoryLogger<*>) {
+    fun `should not stop until asked`(tracer: InMemoryLogger<*>) {
         val thread = BusyThread(tracer)
 
         val start = System.currentTimeMillis()

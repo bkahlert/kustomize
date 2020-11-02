@@ -49,12 +49,12 @@ class OperatingSystemsTest {
         val os = RaspberryPiLite
 
         @Test
-        internal fun `should provide working url`() {
+        fun `should provide working url`() {
             expectThat(os.downloadUrl).isEqualTo("https://downloads.raspberrypi.org/raspios_lite_armhf_latest")
         }
 
         @ConcurrentTestFactory
-        internal fun `should detect login line`() = mapOf(
+        fun `should detect login line`() = mapOf(
             true to listOf(
                 "raspberrypi login: ",
                 "raspberry-pi login:",
@@ -80,7 +80,7 @@ class OperatingSystemsTest {
         }
 
         @ConcurrentTestFactory
-        internal fun `should detect ready line`() = mapOf(
+        fun `should detect ready line`() = mapOf(
             true to listOf(
                 "pi@raspberrypi:~$",
                 "pi@raspberry-pi:~$",
@@ -110,7 +110,7 @@ class OperatingSystemsTest {
         }
 
         @Test
-        internal fun `should be provided with programs in correct order`() {
+        fun `should be provided with programs in correct order`() {
             TestCli.cmd.main(emptyList())
             val programs = TestCli.cmd.scripts
 
@@ -125,7 +125,7 @@ class OperatingSystemsTest {
         @Slow
         @Execution(CONCURRENT)
         @TestFactory
-        internal fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory<String?>): List<DynamicTest> = mapOf(
+        fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory<String?>): List<DynamicTest> = mapOf(
             "login:\\𝗻" to generateProcessOutput("\n"),
             "login:\\̵n̵" to generateProcessOutput(""),
         ).flatMap { (case: String, inputs: Array<Pair<Duration, String>>) ->
@@ -181,7 +181,7 @@ class OperatingSystemsTest {
         }
 
         @Test
-        internal fun `should finish program`(logger: InMemoryLogger<String?>) {
+        fun `should finish program`(logger: InMemoryLogger<String?>) {
             TestCli.cmd.main(emptyList())
             val scriptContent = TestCli.cmd.scripts["the-basics"] ?: throw NoSuchElementException("Could not load program")
             val script = os.compileSetupScript("test", scriptContent)[1].logging()

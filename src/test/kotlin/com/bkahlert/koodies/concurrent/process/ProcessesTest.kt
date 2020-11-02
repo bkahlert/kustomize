@@ -125,7 +125,8 @@ class ProcessesTest {
         }
 
         expectThat(completedProcess.exitCode).isEqualTo(0)
-        expectThat(completedProcess.all).containsExactlyInAnyOrder(OUT typed "test output", ERR typed "test error")
+        expectThat(completedProcess.output.lines()).containsExactly(OUT typed "test output")
+        expectThat(completedProcess.error.lines()).containsExactly(ERR typed "test error")
     }
 
     @OptIn(ExperimentalTime::class)
@@ -174,7 +175,8 @@ class ProcessesTest {
                 .isA<IllegalStateException>()
                 .message
                 .isNotNull()
-                .contains("last 4 I/O lines")
+                .contains("last 6 I/O lines")
+                .containsAtLeast("koodies.process")
                 .containsAtLeast(OUT.format("test out"), 2)
                 .containsAtLeast(ERR.format("test err"), 2)
         }
@@ -206,9 +208,9 @@ class ProcessesTest {
                             .map { it.removeEscapeSequences() }
                             .toList()
                     } ?: fail("error message missing")
-                }.hasSize(2).all {
-                    containsAtLeast("test out", 2)
-                    containsAtLeast("test err", 2)
+                }.hasSize(3).all {
+                    contains("test out")
+                    contains("test err")
                 }
         }
     }
@@ -322,7 +324,7 @@ class ProcessesTest {
 
         val (_, exitCode, io, _, _, _, _) = process.waitForCompletion()
         expectThat(exitCode).isEqualTo(143)
-        expectThat(io).containsExactlyInSomeOrder {
+        expectThat(io.drop(2)).containsExactlyInSomeOrder {
             +(OUT typed "test out") + (ERR typed "test err")
             +(IN typed "just read ${OUT.format("test out")}") + (IN typed "just read ${ERR.format("test err")}")
         }
@@ -373,11 +375,15 @@ class ProcessesTest {
 
         val (_, _, io, _, _, _, _) = process.waitForCompletion()
 
-        expectThat(io).containsExactlyInSomeOrder {
+        expectThat(io.drop(2)).containsExactlyInSomeOrder {
             +(IN typed "test in")
             +(OUT typed "test out") + (ERR typed "test err")
             +(OUT typed "test in") + (ERR typed "test in") + (OUT typed "") + (ERR typed "")
         }
+        expectThat(process.waitForCompletion().meta.removeEscapeSequences())
+            .contains("Executing")
+            .containsAtLeast("koodies.process", 2)
+            .containsAtLeast(".sh", 2)
         expectThat(process.waitForCompletion().input.lines()).containsExactly(
             IN typed "test in",
         )

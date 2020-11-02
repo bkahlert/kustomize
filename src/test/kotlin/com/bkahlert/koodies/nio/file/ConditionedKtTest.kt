@@ -20,7 +20,7 @@ import java.io.File
 import java.nio.file.Path
 
 @Execution(CONCURRENT)
-internal class ConditionedKtTest {
+class ConditionedKtTest {
 
     val tmpDir: Path = File.createTempFile("file", ".txt").toPath().also { it.delete() }.parent
 

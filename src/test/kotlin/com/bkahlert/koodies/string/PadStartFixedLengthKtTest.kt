@@ -12,10 +12,10 @@ import strikt.assertions.hasLength
 import strikt.assertions.isEqualTo
 
 @Execution(CONCURRENT)
-internal class PadStartFixedLengthKtTest {
+class PadStartFixedLengthKtTest {
 
     @ConcurrentTestFactory
-    internal fun `should truncate to 10 chars using ··· and _`() = listOf(
+    fun `should truncate to 10 chars using ··· and _`() = listOf(
         "SomeClassName and a couple of words" to "Some···rds",
         "Short" to "_____Short",
     ).flatMap { (input, expected) ->

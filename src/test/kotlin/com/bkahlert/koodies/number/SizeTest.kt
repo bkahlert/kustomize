@@ -61,10 +61,10 @@ import strikt.assertions.message
 import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class SizeTest {
+class SizeTest {
 
     @Test
-    internal fun `should use decimal unit by default`() {
+    fun `should use decimal unit by default`() {
         expectThat(42.Mega.bytes.toString()).isEqualTo("42.0 MB")
     }
 
@@ -72,7 +72,7 @@ internal class SizeTest {
     inner class WithBinaryPrefix {
 
         @ConcurrentTestFactory
-        internal fun `should format integer binary form`() = listOf(
+        fun `should format integer binary form`() = listOf(
             4_200_000.Yobi.bytes to "4.20e+6 YiB",
             42.Yobi.bytes to "42.0 YiB",
             42.Zebi.bytes to "42.0 ZiB",
@@ -101,7 +101,7 @@ internal class SizeTest {
 
 
         @ConcurrentTestFactory
-        internal fun `should format fraction binary form`() = listOf(
+        fun `should format fraction binary form`() = listOf(
             4_200.Gibi.bytes to "4.10 TiB",
             420.Gibi.bytes to "420 GiB",
             42.Gibi.bytes to "42.0 GiB",
@@ -126,7 +126,7 @@ internal class SizeTest {
             }
 
         @ConcurrentTestFactory
-        internal fun `should format 0 binary form`() = listOf(
+        fun `should format 0 binary form`() = listOf(
             0.Yobi.bytes to "0 B",
             0.Kibi.bytes to "0 B",
             0.bytes to "0 B",
@@ -138,7 +138,7 @@ internal class SizeTest {
         }
 
         @ConcurrentTestFactory
-        internal fun `should throw on yet unsupported prefixes`() = listOf(
+        fun `should throw on yet unsupported prefixes`() = listOf(
             BinaryPrefix.mibi to { number: Int -> number.mibi },
             BinaryPrefix.mubi to { number: Int -> number.mubi },
             BinaryPrefix.nabi to { number: Int -> number.nabi },
@@ -156,7 +156,7 @@ internal class SizeTest {
         }
 
         @ConcurrentTestFactory
-        internal fun `should format to specific unit`() = listOf(
+        fun `should format to specific unit`() = listOf(
             4_200_000.Yobi.bytes to "4.84e+24 MiB",
             42.Yobi.bytes to "4.84e+19 MiB",
             42.Zebi.bytes to "4.73e+16 MiB",
@@ -181,7 +181,7 @@ internal class SizeTest {
     inner class WithDecimalPrefix {
 
         @ConcurrentTestFactory
-        internal fun `should format integer decimal form`() = listOf(
+        fun `should format integer decimal form`() = listOf(
             4_200_000.Yotta.bytes to "4.20e+6 YB",
             42.Yotta.bytes to "42.0 YB",
             42.Zetta.bytes to "42.0 ZB",
@@ -210,7 +210,7 @@ internal class SizeTest {
 
 
         @ConcurrentTestFactory
-        internal fun `should format fraction decimal form`() = listOf(
+        fun `should format fraction decimal form`() = listOf(
             4_200.Giga.bytes to "4.20 TB",
             420.Giga.bytes to "420 GB",
             42.Giga.bytes to "42.0 GB",
@@ -235,7 +235,7 @@ internal class SizeTest {
             }
 
         @ConcurrentTestFactory
-        internal fun `should format 0 decimal form`() = listOf(
+        fun `should format 0 decimal form`() = listOf(
             0.Yotta.bytes to "0 B",
             0.kilo.bytes to "0 B",
             0.bytes to "0 B",
@@ -247,7 +247,7 @@ internal class SizeTest {
         }
 
         @ConcurrentTestFactory
-        internal fun `should throw on yet unsupported prefixes`() = listOf(
+        fun `should throw on yet unsupported prefixes`() = listOf(
             DecimalPrefix.deci to { number: Int -> number.deci },
             DecimalPrefix.centi to { number: Int -> number.centi },
             DecimalPrefix.milli to { number: Int -> number.milli },
@@ -267,7 +267,7 @@ internal class SizeTest {
         }
 
         @ConcurrentTestFactory
-        internal fun `should format to specific unit`() = listOf(
+        fun `should format to specific unit`() = listOf(
             4_200_000.Yotta.bytes to "4.20e+24 MB",
             42.Yotta.bytes to "4.20e+19 MB",
             42.Zetta.bytes to "4.20e+16 MB",
@@ -296,12 +296,12 @@ internal class SizeTest {
         val tempFile: Path = Paths.tempFile().apply { 2500.times { appendText("1234567890") } }
 
         @Test
-        internal fun `should format size human-readable (10^x)`() {
+        fun `should format size human-readable (10^x)`() {
             expectThat(tempFile.size.toString(DecimalPrefix::class)).isEqualTo("25.0 KB")
         }
 
         @Test
-        internal fun `should format size human-readable (2^y)`() {
+        fun `should format size human-readable (2^y)`() {
             expectThat(tempFile.size.toString(BinaryPrefix::class)).isEqualTo("24.4 KiB")
         }
     }
@@ -312,7 +312,7 @@ internal class SizeTest {
         val decFactor = DecimalPrefix.kilo.factor
 
         @ConcurrentTestFactory
-        internal fun `should format to specific unit`() = listOf(
+        fun `should format to specific unit`() = listOf(
             42.Yobi.bytes to binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * 42.bytes,
             42.Zebi.bytes to binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * 42.bytes,
             42.Exbi.bytes to binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * 42.bytes,

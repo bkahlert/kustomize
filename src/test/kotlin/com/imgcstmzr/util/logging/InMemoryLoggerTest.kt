@@ -16,9 +16,9 @@ import strikt.assertions.startsWith
 @Execution(ExecutionMode.CONCURRENT)
 @ExtendWith(OutputCaptureExtension::class)
 @Isolated // flaky OutputCapture
-internal class InMemoryLoggerTest {
+class InMemoryLoggerTest {
     @Test
-    internal fun `should log using OutputStream`(capturedOutput: CapturedOutput) {
+    fun `should log using OutputStream`(capturedOutput: CapturedOutput) {
         val outputStream = ByteArrayOutputStream()
 
         val logger = InMemoryLogger<Unit>("caption", true, listOf(outputStream))
@@ -31,7 +31,7 @@ internal class InMemoryLoggerTest {
     }
 
     @Test
-    internal fun `should provide access to logs`(output: CapturedOutput) {
+    fun `should provide access to logs`(output: CapturedOutput) {
         val outputStream = ByteArrayOutputStream()
 
         val logger = InMemoryLogger<Unit>("caption", true, listOf(outputStream))
@@ -43,7 +43,7 @@ internal class InMemoryLoggerTest {
     }
 
     @Test
-    internal fun `should use BlockRenderingLogger to logs`(output: CapturedOutput) {
+    fun `should use BlockRenderingLogger to logs`(output: CapturedOutput) {
         val outputStream = ByteArrayOutputStream()
 
         val logger = InMemoryLogger<Unit>("caption", true, listOf(outputStream))

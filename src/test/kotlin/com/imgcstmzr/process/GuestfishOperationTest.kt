@@ -7,9 +7,9 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 
 @Execution(CONCURRENT)
-internal class GuestfishOperationTest {
+class GuestfishOperationTest {
     @Test
-    internal fun `should provide summary`() {
+    fun `should provide summary`() {
         expectThat(GuestfishOperation(arrayOf(
             "!ls -lisa",
             "!mkdir -p /work",

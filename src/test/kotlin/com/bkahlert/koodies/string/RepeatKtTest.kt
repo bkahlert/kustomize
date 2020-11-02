@@ -10,10 +10,10 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class RepeatKtTest {
+class RepeatKtTest {
 
     @ConcurrentTestFactory
-    internal fun `should repeat`() = listOf(
+    fun `should repeat`() = listOf(
         3 to ("AAA" to "ABC 🤯ABC 🤯ABC 🤯"),
         1 to ("A" to "ABC 🤯"),
         0 to ("" to ""),
@@ -30,12 +30,12 @@ internal class RepeatKtTest {
     }
 
     @Test
-    internal fun `should return throw on negative Char repeat`() {
+    fun `should return throw on negative Char repeat`() {
         expectCatching { 'A'.repeat(-1) }
     }
 
     @Test
-    internal fun `should return throw on negative String repeat`() {
+    fun `should return throw on negative String repeat`() {
         expectCatching { "ABC 🤯".repeat(-1) }
     }
 }

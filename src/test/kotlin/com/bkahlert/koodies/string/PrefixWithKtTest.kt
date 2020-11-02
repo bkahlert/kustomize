@@ -7,15 +7,15 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 
 @Execution(CONCURRENT)
-internal class PrefixWithKtTest {
+class PrefixWithKtTest {
     @Test
-    internal fun `should add prefix if not there`() {
+    fun `should add prefix if not there`() {
         @Suppress("SpellCheckingInspection")
         expectThat("foo".prefixWith("bar")).isEqualTo("barfoo")
     }
 
     @Test
-    internal fun `should add prefix if already there`() {
+    fun `should add prefix if already there`() {
         @Suppress("SpellCheckingInspection")
         expectThat("barfoo".prefixWith("bar")).isEqualTo("barbarfoo")
     }

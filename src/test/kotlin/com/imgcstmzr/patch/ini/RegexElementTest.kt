@@ -7,10 +7,10 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class RegexElementTest {
+class RegexElementTest {
 
     @Test
-    internal fun `should get all fields`() {
+    fun `should get all fields`() {
         val editor = KeyValueEditor(" key='value'")
         expectThat(editor.margin).isEqualTo(" ")
         expectThat(editor.name).isEqualTo("key")
@@ -20,7 +20,7 @@ internal class RegexElementTest {
 
 
     @Test
-    internal fun `should set all fields`() {
+    fun `should set all fields`() {
         val editor = KeyValueEditor(" key='value'")
         editor.margin = "\t"
         editor.name = "foo"

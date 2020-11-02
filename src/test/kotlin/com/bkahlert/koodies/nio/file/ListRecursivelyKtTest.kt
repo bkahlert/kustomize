@@ -13,15 +13,15 @@ import strikt.assertions.isFailure
 import java.nio.file.NotDirectoryException
 
 @Execution(CONCURRENT)
-internal class ListRecursivelyKtTest {
+class ListRecursivelyKtTest {
     @Test
-    internal fun `should list all entries recursively`() {
+    fun `should list all entries recursively`() {
         val dir = PathFixtures.directoryWithTwoFiles()
         expectThat(dir.listRecursively().toList()).containsExactly(dir.resolve("sub-dir"), dir.resolve("sub-dir/config.txt"), dir.resolve("example.html"))
     }
 
     @Test
-    internal fun `should throw on listing file`() {
+    fun `should throw on listing file`() {
         expectCatching { Paths.tempFile().listRecursively() }.isFailure().isA<NotDirectoryException>()
     }
 }

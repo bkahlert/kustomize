@@ -18,36 +18,36 @@ import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class CodePointTest {
+class CodePointTest {
 
     @Test
-    internal fun `should be instantiatable from Int`() {
+    fun `should be instantiatable from Int`() {
         val subject = CodePoint(0x41)
         expectThat(subject).asString().isEqualTo("A")
     }
 
     @Test
-    internal fun `should be instantiatable from CharSequence`() {
+    fun `should be instantiatable from CharSequence`() {
         expectThat(CodePoint("A".subSequence(0, 1))).asString().isEqualTo("A")
     }
 
     @Test
-    internal fun `should be instantiatable from CharArray`() {
+    fun `should be instantiatable from CharArray`() {
         expectThat(CodePoint("A".toCharArray())).asString().isEqualTo("A")
     }
 
     @Test
-    internal fun `should throw on empty string`() {
+    fun `should throw on empty string`() {
         expectCatching { CodePoint("") }.isFailure().isA<IllegalArgumentException>()
     }
 
     @Test
-    internal fun `should throw on multi codepoint string`() {
+    fun `should throw on multi codepoint string`() {
         expectCatching { CodePoint("ab") }.isFailure().isA<IllegalArgumentException>()
     }
 
     @ConcurrentTestFactory
-    internal fun using() = listOf(
+    fun using() = listOf(
         "\u0041" to 1L, // A
         "\uD83E\uDD13" to 1L, // 🤓
         "\u2192\uD808\uDC31\u2190" to 3L, // →𒀱←
@@ -88,14 +88,14 @@ internal class CodePointTest {
     inner class CodePointValidation {
 
         @Test
-        internal fun `should detekt valid code points`() {
+        fun `should detekt valid code points`() {
             expectThat('A'.toInt())
                 .isEqualTo(65)
                 .get { isValidCodePoint() }.isTrue()
         }
 
         @Test
-        internal fun `should detekt invalid code points`() {
+        fun `should detekt invalid code points`() {
             expectThat(Character.MAX_CODE_POINT + 1).get { isValidCodePoint() }.isFalse()
         }
     }

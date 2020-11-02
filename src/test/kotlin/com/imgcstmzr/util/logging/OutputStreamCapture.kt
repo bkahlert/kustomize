@@ -7,7 +7,7 @@ import java.util.function.Consumer
 /**
  * An [OutputStream] implementation that captures written strings.
  */
-internal class OutputStreamCapture(private val systemStream: PrintStream, private val copy: Consumer<String>) : OutputStream() {
+class OutputStreamCapture(private val systemStream: PrintStream, private val copy: Consumer<String>) : OutputStream() {
     override fun write(b: Int) = write(byteArrayOf((b and 0xFF).toByte()))
 
     override fun write(b: ByteArray, off: Int, len: Int) {

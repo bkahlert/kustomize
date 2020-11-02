@@ -8,10 +8,10 @@ import strikt.assertions.containsExactly
 import strikt.assertions.isEmpty
 
 @Execution(CONCURRENT)
-internal class MatchKtTest {
+class MatchKtTest {
 
     @Test
-    internal fun `should fill placeholder on match`() {
+    fun `should fill placeholder on match`() {
         val input = """! perl -i.bak -pe 's|(?<=the-user:)[^:]*|crypt("the-password","\\\${'$'}6\\\${'$'}{}\\\${'$'}")|e' /some/where/in/the/shadow"""
 
         val actual = input.match("""! perl -i.{} -pe 's|(?<={}:)[^:]*|crypt("{}","\\\${'$'}6\\\${'$'}{}\\\${'$'}")|e' {}/shadow""")
@@ -20,7 +20,7 @@ internal class MatchKtTest {
     }
 
     @Test
-    internal fun `should not fill placeholder on mismatch`() {
+    fun `should not fill placeholder on mismatch`() {
         val input = """! perl -i.bak -pe 's|(?<=the-user:)[^:]*|crypt("the-password","\\\${'$'}6\\\${'$'}{}\\\${'$'}")|e' /some/where/in/the/shadow"""
 
         val actual = input.match("""! perl harbor -i.{} -pe 's|(?<={}:)[^:]*|crypt("{}","\\\${'$'}6\\\${'$'}{}\\\${'$'}")|e' {}/shadow""")

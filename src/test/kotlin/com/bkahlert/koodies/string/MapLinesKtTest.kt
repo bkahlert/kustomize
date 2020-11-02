@@ -7,38 +7,38 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(CONCURRENT)
-internal class MapLinesKtTest {
+class MapLinesKtTest {
 
     val transform = { s: String -> s + s.reversed() }
 
     @Test
-    internal fun `should transform single line`() {
+    fun `should transform single line`() {
         expectThat("AB".mapLines(ignoreTrailingSeparator = true, transform)).isEqualTo("ABBA")
     }
 
     @Test
-    internal fun `should transform multi line`() {
+    fun `should transform multi line`() {
         @Suppress("SpellCheckingInspection")
         expectThat("AB\nBA".mapLines(ignoreTrailingSeparator = true, transform)).isEqualTo("ABBA\nBAAB")
     }
 
     @Test
-    internal fun `should keep trailing line`() {
+    fun `should keep trailing line`() {
         expectThat("AB\nBA\n".mapLines { "X" }).isEqualTo("X\nX\n")
     }
 
     @Test
-    internal fun `should map empty string`() {
+    fun `should map empty string`() {
         expectThat("".mapLines { "X" }).isEqualTo("X")
     }
 
     @Test
-    internal fun `should map empty string and keep trailing line`() {
+    fun `should map empty string and keep trailing line`() {
         expectThat("\n".mapLines { "X" }).isEqualTo("X\n")
     }
 
     @Test
-    internal fun `should map trailing empty line if not ignored`() {
+    fun `should map trailing empty line if not ignored`() {
         expectThat("\n".mapLines(ignoreTrailingSeparator = false) { "X" }).isEqualTo("X\nX")
 
     }

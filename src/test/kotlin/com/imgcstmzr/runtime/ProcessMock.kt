@@ -119,7 +119,7 @@ class ProcessMock(
 
         val terminated: Boolean get() = unreadCount == 0 || !processAlive
         var closed = false
-        internal var processAlive: Boolean = true
+        var processAlive: Boolean = true
         var blockUntil: Long = System.currentTimeMillis()
         private val unread: MutableList<Pair<Duration, MutableList<Byte>>> = inputs.map { it.first to it.second.toByteArray().toMutableList() }.toMutableList()
         val unreadCount: Int get() = unread.map { it.second.size }.sum()

@@ -11,19 +11,19 @@ import strikt.assertions.isFailure
 import java.nio.file.NotDirectoryException
 
 @Execution(CONCURRENT)
-internal class RequireDirectoryKtTest {
+class RequireDirectoryKtTest {
     @Test
-    internal fun `should throw on file`() {
+    fun `should throw on file`() {
         expectCatching { Paths.tempFile().requireDirectory() }.isFailure().isA<NotDirectoryException>()
     }
 
     @Test
-    internal fun `should not throw on directory`() {
+    fun `should not throw on directory`() {
         Paths.tempDir().requireDirectory()
     }
 
     @Test
-    internal fun `should throw on missing`() {
+    fun `should throw on missing`() {
         expectCatching { Paths.tempDir().also { it.delete() }.requireDirectory() }.isFailure().isA<NotDirectoryException>()
     }
 }

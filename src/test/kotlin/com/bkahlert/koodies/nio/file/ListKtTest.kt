@@ -13,15 +13,15 @@ import strikt.assertions.isFailure
 import java.nio.file.NotDirectoryException
 
 @Execution(CONCURRENT)
-internal class ListKtTest {
+class ListKtTest {
     @Test
-    internal fun `should only list entries in current directory`() {
+    fun `should only list entries in current directory`() {
         val dir = PathFixtures.directoryWithTwoFiles()
         expectThat(dir.list().toList()).containsExactly(dir.resolve("sub-dir"), dir.resolve("example.html"))
     }
 
     @Test
-    internal fun `should throw on listing file`() {
+    fun `should throw on listing file`() {
         expectCatching { Paths.tempFile().list() }.isFailure().isA<NotDirectoryException>()
     }
 }

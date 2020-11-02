@@ -24,17 +24,17 @@ import kotlin.time.seconds
 
 @ExperimentalTime
 @Execution(CONCURRENT)
-internal class NonBlockingCharReaderTest {
+class NonBlockingCharReaderTest {
 
     @Test
-    internal fun `should read null if empty`(logger: InMemoryLogger<String?>) {
+    fun `should read null if empty`(logger: InMemoryLogger<String?>) {
         val reader = NonBlockingCharReader("".byteInputStream(), 100.milliseconds)
         5 times { expectThat(reader.read(CharArray(1), 0, 1, logger)).isLessThanOrEqualTo(0) }
         10 times { expectThat(reader.read(CharArray(1), 0, 1, logger)).isEqualTo(-1) }
     }
 
     @Test
-    internal fun `should return null if source is closed`(logger: InMemoryLogger<String?>) {
+    fun `should return null if source is closed`(logger: InMemoryLogger<String?>) {
         val reader = NonBlockingCharReader("123".byteInputStream(), 100.milliseconds)
         expectThat(reader.readText()).isEqualTo("123")
         5 times { expectThat(reader.read(CharArray(1), 0, 1, logger)).isLessThanOrEqualTo(0) }
@@ -42,7 +42,7 @@ internal class NonBlockingCharReaderTest {
     }
 
     @Test
-    internal fun `should read content`() {
+    fun `should read content`() {
         val line = "line #壹\nline #❷"
         val reader = NonBlockingCharReader(line.byteInputStream(), 100.milliseconds)
         expectThat(reader.readLines()).containsExactly("line #壹", "line #❷")
@@ -50,7 +50,7 @@ internal class NonBlockingCharReaderTest {
 
     @Slow
     @Test
-    internal fun `should read in a non-greedy fashion resp just as much as needed to avoid blocking`(logger: InMemoryLogger<String?>) {
+    fun `should read in a non-greedy fashion resp just as much as needed to avoid blocking`(logger: InMemoryLogger<String?>) {
         val inputStream =
             ProcessMock.SlowInputStream(
                 1.seconds to "123",

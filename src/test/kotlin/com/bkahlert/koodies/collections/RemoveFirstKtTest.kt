@@ -9,9 +9,9 @@ import strikt.assertions.isA
 import strikt.assertions.isFailure
 
 @Execution(CONCURRENT)
-internal class RemoveFirstKtTest {
+class RemoveFirstKtTest {
     @Test
-    internal fun `should remove first elements`() {
+    fun `should remove first elements`() {
         val list = mutableListOf("a", "b", "c")
         val first2 = list.removeFirst(2)
         expectThat(first2).containsExactly("a", "b")
@@ -19,7 +19,7 @@ internal class RemoveFirstKtTest {
     }
 
     @Test
-    internal fun `should throw and leave list unchanged on too few elements`() {
+    fun `should throw and leave list unchanged on too few elements`() {
         val list = mutableListOf("a", "b", "c")
         expectCatching { list.removeFirst(4) }.isFailure().isA<IllegalArgumentException>()
         expectThat(list).containsExactly("a", "b", "c")

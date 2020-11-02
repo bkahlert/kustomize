@@ -49,7 +49,7 @@ class FixtureLogTest {
     }
 
     @Test
-    internal fun `should delete read-only files`(logger: InMemoryLogger<String>) {
+    fun `should delete read-only files`(logger: InMemoryLogger<String>) {
         val file = Paths.tempFile().deleteOnExit()
         file.toFile().setReadOnly()
         FixtureLog.apply { logger.delete() }

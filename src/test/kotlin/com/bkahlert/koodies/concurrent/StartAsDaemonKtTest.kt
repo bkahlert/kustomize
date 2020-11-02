@@ -14,10 +14,10 @@ import kotlin.time.measureTime
 import kotlin.time.milliseconds
 
 @Execution(CONCURRENT)
-internal class StartAsDaemonKtTest {
+class StartAsDaemonKtTest {
     @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
-    internal fun `should start daemon`() = listOf(
+    fun `should start daemon`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(Thread.currentThread().isDaemon) }.startAsDaemon() },
         "postfix form" to { finished: AtomicBoolean -> startAsDaemon() { finished.set(Thread.currentThread().isDaemon) } },
     ).map { (caption, exec) ->
@@ -34,7 +34,7 @@ internal class StartAsDaemonKtTest {
 
     @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
-    internal fun `should start immediately`() = listOf(
+    fun `should start immediately`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsDaemon() },
         "postfix form" to { finished: AtomicBoolean -> startAsDaemon() { finished.set(true) } },
     ).map { (caption, exec) ->
@@ -51,7 +51,7 @@ internal class StartAsDaemonKtTest {
 
     @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
-    internal fun `should start delayed`() = listOf(
+    fun `should start delayed`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsDaemon(500.milliseconds) },
         "postfix form" to { finished: AtomicBoolean -> startAsDaemon(500.milliseconds) { finished.set(true) } },
     ).map { (caption, exec) ->

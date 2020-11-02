@@ -40,7 +40,7 @@ class ImageBuilderTest {
     inner class Format {
 
         @ConcurrentTestFactory
-        internal fun `should format size`() = listOf(
+        fun `should format size`() = listOf(
             4.Mebi.bytes to "4M",
             4.2.Mebi.bytes to "5M",
             1.5.Gibi.bytes to "1536M",
@@ -54,7 +54,7 @@ class ImageBuilderTest {
     @Nested
     inner class ToSectors {
         @ConcurrentTestFactory
-        internal fun `should calculate sectors`() = listOf(
+        fun `should calculate sectors`() = listOf(
             4.Mebi.bytes to 8192,
             4.2.Mebi.bytes to 10240,
             1.5.Gibi.bytes to 3145728,
@@ -69,7 +69,7 @@ class ImageBuilderTest {
     inner class ToPartitions {
 
         @ConcurrentTestFactory
-        internal fun `should calculate partitions`() = listOf(
+        fun `should calculate partitions`() = listOf(
             4.Mebi.bytes to doubleArrayOf(.5, .5) to listOf(2048..4095, 4096..6143),
             4.2.Mebi.bytes to doubleArrayOf(1.0) to listOf(2048..8191),
             1.5.Gibi.bytes to doubleArrayOf(.2, .4, .4) to listOf(2048..630373, 630374..1887026, 1887027..3143679),
@@ -82,7 +82,7 @@ class ImageBuilderTest {
         }
 
         @ConcurrentTestFactory
-        internal fun `should require positive partitions`() = listOf(
+        fun `should require positive partitions`() = listOf(
             4.Mebi.bytes to doubleArrayOf(.5, -.5),
             4.2.Mebi.bytes to doubleArrayOf(-1.0),
             1.5.Gibi.bytes to doubleArrayOf(.2, -.4, .4),
@@ -100,7 +100,7 @@ class ImageBuilderTest {
     inner class BuildFrom {
 
         @ConcurrentTestFactory
-        internal fun `should require positive partitions`() = listOf(
+        fun `should require positive partitions`() = listOf(
             4.Mebi.bytes to doubleArrayOf(.5, -.5),
             4.2.Mebi.bytes to doubleArrayOf(-1.0),
             1.5.Gibi.bytes to doubleArrayOf(.2, -.4, .4),
@@ -118,27 +118,27 @@ class ImageBuilderTest {
         }
 
         @Test
-        internal fun `should only accept tar gzip archive`() {
+        fun `should only accept tar gzip archive`() {
             expectCatching { buildFrom(Path.of("archive.zip")) }.isFailure().isA<IllegalArgumentException>()
         }
 
         @Test
-        internal fun `should only accept two partitions`() {
+        fun `should only accept two partitions`() {
             expectCatching { buildFrom(Path.of("archive.tar.gz"), ratios = emptyArray()) }.isFailure().isA<IllegalArgumentException>()
         }
 
         @Test
-        internal fun `should only accept EXT4 as first partition`() {
+        fun `should only accept EXT4 as first partition`() {
             expectCatching { buildFrom(Path.of("archive.tar.gz"), ratio = 0.5 to FAT) }.isFailure().isA<IllegalArgumentException>()
         }
 
         @Test
-        internal fun `should only accept FAT as boot partition`() {
+        fun `should only accept FAT as boot partition`() {
             expectCatching { buildFrom(Path.of("archive.tar.gz"), ratios = arrayOf(0.5 to EXT4)) }.isFailure().isA<IllegalArgumentException>()
         }
 
         @Slow @Test
-        internal fun `should build img from archive`(logger: InMemoryLogger<Any>) {
+        fun `should build img from archive`(logger: InMemoryLogger<Any>) {
             val archive = Paths.tempDir()
                 .also { it.resolve("cmdline.txt").also { it.writeText("console=serial0,115200 console=tty1 ...") } }
                 .also { it.resolve("boot").mkdirs() }

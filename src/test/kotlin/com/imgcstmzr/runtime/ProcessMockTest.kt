@@ -40,12 +40,12 @@ import kotlin.time.seconds
 
 @ExperimentalTime
 @Execution(ExecutionMode.CONCURRENT)
-internal class ProcessMockTest {
+class ProcessMockTest {
 
     @Nested
     inner class SlowInputStream {
         @Test
-        internal fun `should provide input correctly`(logger: InMemoryLogger<String?>) {
+        fun `should provide input correctly`(logger: InMemoryLogger<String?>) {
             val slowInputStream = ProcessMock.SlowInputStream("Hello\n", "World!\n", baseDelayPerInput = 1.seconds, logger = logger)
 
             assertTimeoutPreemptively(10.seconds, executable = {
@@ -56,7 +56,7 @@ internal class ProcessMockTest {
         }
 
         @Test
-        internal fun `should provide input slowly`(logger: InMemoryLogger<String?>) {
+        fun `should provide input slowly`(logger: InMemoryLogger<String?>) {
             val delay = 1.seconds
             val slowInputStream = ProcessMock.SlowInputStream("Hello\n", "World!\n", baseDelayPerInput = delay, logger = logger)
 
@@ -69,7 +69,7 @@ internal class ProcessMockTest {
         }
 
         @ConcurrentTestFactory
-        internal fun `should provide 'block on prompt' behavior`(logger: InMemoryLogger<String?>) =
+        fun `should provide 'block on prompt' behavior`(logger: InMemoryLogger<String?>) =
             listOf("with echoed input" to true,
                 "without echoed input" to false).map { (name, echoOption) ->
                 dynamicTest(name) {
@@ -109,14 +109,14 @@ internal class ProcessMockTest {
 
 
         @Test
-        internal fun `should produce same byte sequence as ByteArrayInputStream`(logger: InMemoryLogger<String?>) {
+        fun `should produce same byte sequence as ByteArrayInputStream`(logger: InMemoryLogger<String?>) {
             val input = "A𝌪𝌫𝌬𝌭𝌮Z"
             val inputStream = ProcessMock.SlowInputStream(input, baseDelayPerInput = 2.seconds, logger = logger)
             expectThat(input.byteInputStream().readAllBytes()).isEqualTo(inputStream.readAllBytes())
         }
 
         @ConcurrentTestFactory
-        internal fun `should never apply delay at at end stream`(logger: InMemoryLogger<String?>) = "𝌪".let { input ->
+        fun `should never apply delay at at end stream`(logger: InMemoryLogger<String?>) = "𝌪".let { input ->
             listOf(
                 ProcessMock.SlowInputStream(input,
                     logger = logger,
@@ -152,13 +152,13 @@ internal class ProcessMockTest {
         @Nested
         inner class UsingExitCode {
             @Test
-            internal fun `should return mocked exit`(logger: InMemoryLogger<String?>) {
+            fun `should return mocked exit`(logger: InMemoryLogger<String?>) {
                 val p = ProcessMock(logger = logger, processExit = { immediateExit(expectedExitCode) })
                 expectThat(p.exitValue()).isEqualTo(expectedExitCode)
             }
 
             @Test
-            internal fun `should throw on exception`(logger: InMemoryLogger<String?>) {
+            fun `should throw on exception`(logger: InMemoryLogger<String?>) {
                 val p = ProcessMock(logger = logger, processExit = { throw IllegalStateException() })
 
                 expectCatching {
@@ -173,7 +173,7 @@ internal class ProcessMockTest {
         @Nested
         inner class UsingWaitFor {
             @Test
-            internal fun `should return mocked exit code`(logger: InMemoryLogger<String?>) {
+            fun `should return mocked exit code`(logger: InMemoryLogger<String?>) {
                 val p = ProcessMock(logger = logger, processExit = { immediateExit(expectedExitCode) })
 
                 val exitCode = p.waitFor()
@@ -182,7 +182,7 @@ internal class ProcessMockTest {
             }
 
             @Test
-            internal fun `should throw on exception`(logger: InMemoryLogger<String?>) {
+            fun `should throw on exception`(logger: InMemoryLogger<String?>) {
                 val p = ProcessMock(logger = logger, processExit = { throw IllegalStateException() })
 
                 expectCatching {
@@ -192,7 +192,7 @@ internal class ProcessMockTest {
             }
 
             @Test
-            internal fun `should delay exit`(logger: InMemoryLogger<String?>) {
+            fun `should delay exit`(logger: InMemoryLogger<String?>) {
                 val p = ProcessMock(logger = logger, processExit = { ProcessExitMock.delayedExit(expectedExitCode, 50.milliseconds) })
                 val start = System.currentTimeMillis()
 
@@ -203,7 +203,7 @@ internal class ProcessMockTest {
             }
 
             @Test
-            internal fun `should return true if process exits in time`(logger: InMemoryLogger<String?>) {
+            fun `should return true if process exits in time`(logger: InMemoryLogger<String?>) {
                 val p = ProcessMock(logger = logger, processExit = { ProcessExitMock.delayedExit(expectedExitCode, 50.milliseconds) })
 
                 val returnValue = p.waitFor(100, TimeUnit.MILLISECONDS)
@@ -212,7 +212,7 @@ internal class ProcessMockTest {
             }
 
             @Test
-            internal fun `should return false if process not exits in time`(logger: InMemoryLogger<String?>) {
+            fun `should return false if process not exits in time`(logger: InMemoryLogger<String?>) {
                 val p = ProcessMock(logger = logger, processExit = { ProcessExitMock.delayedExit(expectedExitCode, 50.milliseconds) })
 
                 val returnValue = p.waitFor(25, TimeUnit.MILLISECONDS)
@@ -227,13 +227,13 @@ internal class ProcessMockTest {
             @Nested
             inner class WithDefaultInputStream {
                 @Test
-                internal fun `should be finished if exit is immediate`(logger: InMemoryLogger<String?>) {
+                fun `should be finished if exit is immediate`(logger: InMemoryLogger<String?>) {
                     val p = ProcessMock(logger = logger, processExit = { immediateExit(expectedExitCode) })
                     expectThat(p.isAlive).isFalse()
                 }
 
                 @Test
-                internal fun `should be alive if exit is delayed`(logger: InMemoryLogger<String?>) {
+                fun `should be alive if exit is delayed`(logger: InMemoryLogger<String?>) {
                     val p = ProcessMock(logger = logger, processExit = { ProcessExitMock.delayedExit(expectedExitCode, 50.milliseconds) })
                     expectThat(p.isAlive).isTrue()
                 }
@@ -242,13 +242,13 @@ internal class ProcessMockTest {
             @Nested
             inner class WithSlowInputStream {
                 @Test
-                internal fun `should be finished if all read`(logger: InMemoryLogger<String?>) {
+                fun `should be finished if all read`(logger: InMemoryLogger<String?>) {
                     val p = ProcessMock.withSlowInput(logger = logger, echoInput = true, processExit = { immediateExit(expectedExitCode) })
                     expectThat(p.isAlive).isFalse()
                 }
 
                 @Test
-                internal fun `should be alive if not all read`(logger: InMemoryLogger<String?>) {
+                fun `should be alive if not all read`(logger: InMemoryLogger<String?>) {
                     val p = ProcessMock.withSlowInput("unread",
                         logger = logger,
                         echoInput = true,
@@ -262,7 +262,7 @@ internal class ProcessMockTest {
     @Nested
     inner class OutputStreamWiring {
         @Test
-        internal fun `should allow SlowInputStream to read process's input stream`(logger: InMemoryLogger<String?>) {
+        fun `should allow SlowInputStream to read process's input stream`(logger: InMemoryLogger<String?>) {
             val p = ProcessMock.withIndividuallySlowInput(prompt(), processExit = { immediateSuccess() }, echoInput = true, logger = logger)
             with(p.outputStream.writer()) {
                 expectThat(p.received).isEmpty()
@@ -280,7 +280,7 @@ internal class ProcessMockTest {
 
     @Slow
     @Test
-    internal fun `should terminate if all output is manually read`(logger: InMemoryLogger<String?>) {
+    fun `should terminate if all output is manually read`(logger: InMemoryLogger<String?>) {
         val p = ProcessMock.withIndividuallySlowInput(
             500.milliseconds to "Welcome!\n",
             500.milliseconds to "Password? ",
@@ -310,7 +310,7 @@ internal class ProcessMockTest {
 
 
     @Test
-    internal fun `should terminate if all output is consumed`(logger: InMemoryLogger<String?>) {
+    fun `should terminate if all output is consumed`(logger: InMemoryLogger<String?>) {
         val p = ProcessMock.withIndividuallySlowInput(
             500.milliseconds to "Welcome!\n",
             500.milliseconds to "Password? ",
@@ -341,7 +341,7 @@ internal class ProcessMockTest {
     }
 
     @Test
-    internal fun `should provide access to unfiltered output stream`(logger: InMemoryLogger<String?>) {
+    fun `should provide access to unfiltered output stream`(logger: InMemoryLogger<String?>) {
         val p = ProcessMock.withIndividuallySlowInput(
             baseDelayPerInput = 1.seconds,
             echoInput = true,
