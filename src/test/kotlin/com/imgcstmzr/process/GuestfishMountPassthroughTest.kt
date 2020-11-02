@@ -2,7 +2,7 @@ package com.imgcstmzr.process
 
 import com.bkahlert.koodies.concurrent.process.Processes
 import com.bkahlert.koodies.shell.toHereDoc
-import com.bkahlert.koodies.string.lines
+import com.bkahlert.koodies.string.joinLinesToString
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.imgcstmzr.process.Guestfish.Companion.SHARED_DIRECTORY_NAME
@@ -91,7 +91,7 @@ internal class GuestfishMountPassthroughTest {
                     !"docker exec -i ${img.fileName} bash -c ".plus(listOf(
                         "ls",
                         "umount $mountDir/$SHARED_DIRECTORY_NAME",
-                    ).lines())
+                    ).joinLinesToString())
                 }.waitForCompletion().let { "Result #1: $result\nResult #2: $it".magenta() }
                 result
             },

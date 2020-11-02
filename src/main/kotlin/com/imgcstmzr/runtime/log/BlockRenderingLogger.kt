@@ -1,10 +1,10 @@
 package com.imgcstmzr.runtime.log
 
 import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.concurrent.process.IO.Companion.format
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.exception.toSingleLineString
 import com.bkahlert.koodies.nullable.letIfSet
+import com.bkahlert.koodies.string.LineSeparators.LF
 import com.bkahlert.koodies.string.prefixLinesWith
 import com.bkahlert.koodies.string.prefixWith
 import com.bkahlert.koodies.string.repeat
@@ -12,15 +12,14 @@ import com.bkahlert.koodies.string.truncateBy
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.ansiAwareMapLines
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
-import com.bkahlert.koodies.terminal.ansi.AnsiFormats.italic
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.mordant.AnsiCode
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.HasStatus.Companion.status
+import com.imgcstmzr.runtime.log.RenderingLogger.Companion.formatException
+import com.imgcstmzr.runtime.log.RenderingLogger.Companion.formatResult
 
-// TODO use lambda logging
 open class BlockRenderingLogger<R>(
     private val caption: String,
     val borderedOutput: Boolean = false,
@@ -39,16 +38,13 @@ open class BlockRenderingLogger<R>(
         get() = if (borderedOutput) "\n╭─────╴" + ANSI.termColors.bold(caption) + "\n$prefix" else ANSI.termColors.bold("Started: $caption")
     val prefix: String get() = if (borderedOutput) "│   " else " "
     fun getBlockEnd(result: Result<R>): String {
-        val renderedResult: String? = result.toSingleLineString()
         val message: String =
             if (result.isSuccess) {
-                val renderedSuccess = renderedResult?.let { "✔ " + "returned".italic() + " $it" } ?: "✔"
-                if (borderedOutput) "│\n╰─────╴$renderedSuccess\n\n"
-                else "Completed: $renderedSuccess\n"
+                val renderedSuccess = formatResult(result)
+                if (borderedOutput) "│\n╰─────╴$renderedSuccess\n"
+                else "Completed: $renderedSuccess"
             } else {
-                val renderedFailure = "Failure($caption): ${renderedResult?.red()}"
-                if (borderedOutput) "ϟ\n╰─────╴$renderedFailure\n\n"
-                else "ϟ\n $renderedFailure\n"
+                formatException(if (borderedOutput) "$LF╰─────╴" else LF, result.toSingleLineString()) + (if (borderedOutput) "$LF$LF" else LF)
             }
         return message.ansiAwareMapLines { it.bold() }
     }
@@ -85,11 +81,10 @@ open class BlockRenderingLogger<R>(
         this
     }
 
-    override fun logResult(block: () -> Result<R>): R = block().let { result ->
-        kotlin.runCatching {
-            log(getBlockEnd(result))
-            result.getOrThrow()
-        }.onFailure { render(true) { it.format() } }.getOrThrow()
+    override fun logResult(block: () -> Result<R>): R {
+        val result = block()
+        render(true) { getBlockEnd(result) }
+        return result.getOrThrow()
     }
 
     companion object {
@@ -100,14 +95,6 @@ open class BlockRenderingLogger<R>(
         val statusPadding: (String) -> String = { text: String ->
             " ".repeat((statusInformationColumn - text.removeEscapeSequences<CharSequence>().length).coerceAtLeast(statusInformationMinimalPadding))
         }
-
-        @Deprecated(message = "Use segment instead")
-        inline fun <reified R> render(caption: String, borderedOutput: Boolean = true, block: (RenderingLogger<R>) -> R) {
-            val logger = BlockRenderingLogger<R>(caption, borderedOutput)
-            kotlin.runCatching { block(logger) }.also { logger.logResult { it } }.getOrThrow()
-        }
-
-        inline fun <reified R> render(caption: String): BlockRenderingLogger<R> = BlockRenderingLogger(caption)
     }
 }
 

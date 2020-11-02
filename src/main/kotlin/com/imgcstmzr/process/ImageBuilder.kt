@@ -59,7 +59,7 @@ object ImageBuilder {
         require(ratios.first().second == FileSystemType.FAT) { "Currently only ${FileSystemType.FAT} is supported as the boot partition." }
 
         require(freeSpaceRatio >= 0) { "Free space ration must be at least 0.0" }
-        echo(IO.Type.META typed Now.emoji + " Preparing raw image using the content of $bootDirectory. This takes a moment...")
+        echo(IO.Type.META typed "${Now.emoji} Preparing raw image using the content of $bootDirectory. This takes a moment...")
         val hostDirectory = bootDirectory.parent
         val addFilesCommand: String = "-tar-in ${Guestfish.DOCKER_MOUNT_ROOT.resolve(bootDirectory.fileName)} / compress:gzip"
 

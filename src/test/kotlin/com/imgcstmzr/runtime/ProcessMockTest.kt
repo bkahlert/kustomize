@@ -3,7 +3,7 @@ package com.imgcstmzr.runtime
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.startAsDaemon
 import com.bkahlert.koodies.nio.NonBlockingReader
-import com.bkahlert.koodies.string.lines
+import com.bkahlert.koodies.string.joinLinesToString
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
@@ -330,7 +330,7 @@ internal class ProcessMockTest {
             p.enter("password1234")
         }
 
-        expectThat(reader.readLines().lines()).isEqualToByteWise("""
+        expectThat(reader.readLines().joinLinesToString()).isEqualToByteWise("""
             Welcome!
             Password? password1234
             

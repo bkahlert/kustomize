@@ -98,21 +98,21 @@ fun Path.toDataUri(): String {
  *
  * @param text text to write into file.
  */
-fun Path.writeText(text: String): Unit = toFile().writeText(text)
+fun Path.writeText(text: String): Path = apply { toFile().writeText(text) }
 
 /**
  * Appends [text] to the content of this file using UTF-8.
  *
  * @param text text to append to file.
  */
-fun Path.appendText(text: String): Unit = toFile().appendText(text)
+fun Path.appendText(text: String): Path = apply { toFile().appendText(text) }
 
 /**
  * Appends a new [line] to the content of this file using UTF-8.
  *
  * @param line line to append to file.
  */
-fun Path.appendLine(line: String): Unit = appendText("$line${LineSeparators.LF}")
+fun Path.appendLine(line: String): Path = apply { appendText("$line${LineSeparators.LF}") }
 
 /**
  * Returns the base name of the file described by this [Path].
@@ -214,7 +214,8 @@ fun Path.renameTo(fileName: String): Path =
     }
 
 /**
- * Cleans up this path by removing the [delimiter] from the [Path.getFileName].
+ * Cleans up this path by removing the [delimiter] from the [Path.getFileName]
+ * (e.g. `/path/file.txt$crap` with `$` removed ➜ `/path/file.txt`).
  *
  * The removal itself takes place by renaming the corresponding file system resource.
  */
@@ -283,13 +284,17 @@ fun Path.onEachFileRecursively(action: (path: Path) -> Unit, comparator: Compara
 fun <R> Path.mapFilesRecursively(action: (path: Path) -> R, comparator: Comparator<Path> = naturalOrder()): List<R> =
     Files.walk(this).use { it.sorted(comparator).map(action).toList() }
 
-fun Path.delete(recursively: Boolean = false) {
+/**
+ * Tries to delete this path—optionally [recursively]—and returns whether
+ * the path no more exists. That is, `true` is returned if the path was
+ * successfully deleted or if it did not exist already.
+ */
+fun Path.delete(recursively: Boolean = false): Boolean =
     if (recursively) {
-        if (exists) toFile().deleteRecursively()
+        if (exists) toFile().deleteRecursively() else true
     } else {
-        if (exists) toFile().delete()
+        if (exists) toFile().delete() else true
     }
-}
 
 /**
  * Requires this path to be a directory and contain exactly one file which

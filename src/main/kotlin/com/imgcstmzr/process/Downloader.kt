@@ -34,7 +34,7 @@ object Downloader {
                 "&& break",
             )
             !"done"
-        }.waitForCompletion()
+        }.waitForExitCode()
 
         return temp.checkSingleFile { "Failed to download $url." }.cleanUp("?").also { echo(" Completed.") }
     }

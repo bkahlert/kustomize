@@ -9,29 +9,52 @@ import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.startAsDaemon
 import com.bkahlert.koodies.concurrent.synchronized
+import com.bkahlert.koodies.nio.file.age
+import com.bkahlert.koodies.nio.file.list
+import com.bkahlert.koodies.regex.RegularExpressions
+import com.bkahlert.koodies.regex.sequenceOfAllMatches
+import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.test.strikt.containsExactlyInSomeOrder
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.bkahlert.koodies.time.sleep
+import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.containsAtLeast
+import com.imgcstmzr.util.extension
 import com.imgcstmzr.util.isEqualToStringWise
 import com.imgcstmzr.util.logging.CapturedOutput
 import com.imgcstmzr.util.logging.OutputCaptureExtension
+import com.imgcstmzr.util.readAll
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.api.fail
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.api.parallel.Isolated
+import strikt.api.expectCatching
 import strikt.api.expectThat
+import strikt.assertions.all
+import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.containsExactlyInAnyOrder
+import strikt.assertions.hasSize
+import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
+import strikt.assertions.isFailure
 import strikt.assertions.isFalse
+import strikt.assertions.isGreaterThan
 import strikt.assertions.isLessThanOrEqualTo
+import strikt.assertions.isNotNull
 import strikt.assertions.isTrue
+import strikt.assertions.message
+import java.net.URL
+import java.nio.file.Path
 import java.util.Collections
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
+import kotlin.time.minutes
 import kotlin.time.seconds
 
 @Execution(ExecutionMode.CONCURRENT)
@@ -127,6 +150,67 @@ class ProcessesTest {
             process.waitForCompletion()
             expectThat(output).containsExactlyInAnyOrder("test out", "test err")
         }.let { expectThat(it).isLessThanOrEqualTo(2.5.seconds) }
+    }
+
+    @Nested
+    inner class OnExitCodeMismatch {
+        @OptIn(ExperimentalTime::class)
+        @Test
+        fun `should print last IO lines`() {
+            val process = startShellScript {
+                !"""
+                    while true; do
+                        >&1 echo "test out"
+                        >&2 echo "test err"
+                        sleep 1
+                    done
+                """.trimIndent()
+            }
+            startAsDaemon(2.seconds) {
+                process.destroy()
+            }
+            expectCatching { process.waitForExitCode() }
+                .isFailure()
+                .isA<IllegalStateException>()
+                .message
+                .isNotNull()
+                .contains("last 4 I/O lines")
+                .containsAtLeast(OUT.format("test out"), 2)
+                .containsAtLeast(ERR.format("test err"), 2)
+        }
+
+        @OptIn(ExperimentalTime::class)
+        @Test
+        fun `should save IO log`() {
+            val process = startShellScript {
+                !"""
+                while true; do
+                    >&1 echo "test out"
+                    >&2 echo "test err"
+                    sleep 1
+                done
+                """.trimIndent()
+            }
+            startAsDaemon(2.seconds) {
+                process.destroy()
+            }
+            process.waitForCompletion()
+            expectCatching { process.waitForExitCode() }
+                .isFailure()
+                .isA<IllegalStateException>()
+                .message.get {
+                    this?.let {
+                        RegularExpressions.urlRegex.sequenceOfAllMatches(it)
+                            .map { URL(it) }
+                            .map { it.openStream().reader().readText() }
+                            .map { it.removeEscapeSequences() }
+                            .toList()
+                    } ?: fail("error message missing")
+                }.hasSize(2).all {
+                    containsAtLeast("test out", 2)
+                    containsAtLeast("test err", 2)
+                }
+        }
     }
 
     @OptIn(ExperimentalTime::class)
@@ -236,7 +320,7 @@ class ProcessesTest {
         5.5.seconds.sleep()
         process.destroy()
 
-        val (exitCode, io, _, _, _, _) = process.waitForCompletion()
+        val (_, exitCode, io, _, _, _, _) = process.waitForCompletion()
         expectThat(exitCode).isEqualTo(143)
         expectThat(io).containsExactlyInSomeOrder {
             +(OUT typed "test out") + (ERR typed "test err")
@@ -244,19 +328,30 @@ class ProcessesTest {
         }
     }
 
+
     @OptIn(ExperimentalTime::class)
     @Test
-    fun `should return exit code`() {
+    fun `should provide PID`() {
         val process = startShellScript {
             !"""
                  exit 23
                 """.trimIndent()
         }
 
-        val (exitCode, _) = process.waitForCompletion()
-        expectThat(exitCode).isEqualTo(23)
+        expectThat(process.waitForCompletion().pid).isGreaterThan(0)
     }
 
+    @OptIn(ExperimentalTime::class)
+    @Test
+    fun `should provide exit code`() {
+        val process = startShellScript {
+            !"""
+                 exit 23
+                """.trimIndent()
+        }
+
+        expectThat(process.waitForCompletion().exitCode).isEqualTo(23)
+    }
 
     @OptIn(ExperimentalTime::class)
     @Test
@@ -276,7 +371,7 @@ class ProcessesTest {
             it.enter("test in")
         }
 
-        val (_, io) = process.waitForCompletion()
+        val (_, _, io, _, _, _, _) = process.waitForCompletion()
 
         expectThat(io).containsExactlyInSomeOrder {
             +(IN typed "test in")
@@ -311,5 +406,30 @@ class ProcessesTest {
                 test in
                 
             """.trimIndent().let { ERR typed it })
+    }
+
+    @Isolated
+    @Nested
+    inner class CleanUp {
+        @OptIn(ExperimentalTime::class)
+        @Test
+        fun `should cleanup shell scripts`() {
+            val id = String.random(32)
+            val scripts = fun(): List<Path> = Paths.TEMP.list().filter {
+                it.extension == "sh"
+            }.filter {
+                val readAll = it.readAll()
+                readAll.contains(id)
+            }.toList()
+            startShellScript { !"echo '$id'" }
+            scripts().apply {
+                check(size == 1)
+                check(all { it.age < 10.seconds })
+                onEach { it.age = 11.minutes }
+            }
+
+            Processes.cleanUp()
+            expectThat(scripts()).isEmpty()
+        }
     }
 }

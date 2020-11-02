@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.docker
 
+import com.bkahlert.koodies.concurrent.process.DockerBuilder
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.Processes
 import com.bkahlert.koodies.concurrent.process.Processes.checkIfOutputContains
@@ -8,6 +9,8 @@ import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.regex.RegexBuilder
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.time.sleep
+import com.imgcstmzr.util.Paths
+import org.codehaus.plexus.util.cli.Commandline
 import java.nio.file.Path
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
@@ -36,32 +39,22 @@ object Docker {
 
     @Suppress("SpellCheckingInspection")
     fun run(
-        name: String,
-        volumes: Map<Path, Path> = emptyMap(),
-        image: String,
-        args: List<String> = emptyList(),
+        workingDirectory: Path = Paths.WORKING_DIRECTORY,
         outputProcessor: (DockerProcess.(IO) -> Unit)? = null,
+        init: DockerBuilder.() -> Unit,
     ): DockerProcess {
-        val containerName = name.toContainerName()
         var runningProcess: RunningProcess = RunningProcess.nullRunningProcess
-        return DockerProcess(containerName) { runningProcess }.also { dockerProcess ->
+        val name = extractName(init)
+        return DockerProcess(name) { runningProcess }.also { dockerProcess ->
             runningProcess = startShellScript(
+                workingDirectory = workingDirectory,
+                shellScript = { docker(init) },
                 outputProcessor = outputProcessor?.let { { output -> it(dockerProcess, output) } },
                 runAfterProcessTermination = {
                     stop(name)
                     remove(name, forcibly = true)
                 },
-            ) {
-                !"""
-                    docker run \
-                      --name "$containerName" \
-                      --rm \
-                      -i \
-                      ${volumes.map { volume -> "--volume ${volume.key}:${volume.value}" }.joinToString(" ")} \
-                      $image \
-                      ${args.joinToString(" ")}
-                """.trimIndent()
-            }
+            )
         }
     }
 
@@ -88,6 +81,17 @@ object Docker {
      * A [Regex] that matches valid Docker container names.
      */
     private val containerNameRegex: Regex = Regex("[a-zA-Z0-9][a-zA-Z0-9._-]{7,}")
+
+    /**
+     * Extracts the name of a Docker command
+     */
+    fun extractName(init: DockerBuilder.() -> Unit): String =
+        mutableListOf<String>()
+            .also { DockerBuilder(it).apply(init) }
+            .map { cmd -> Commandline(cmd).arguments.dropWhile { arg -> !arg.contains("--name") } }
+            .filter { argList -> argList.size > 1 }
+            .mapNotNull { argList -> if (argList.size > 1) argList.drop(1).first() else null }
+            .single { it.matches(containerNameRegex) }
 
     /**
      * Transforms this [String] to a valid Docker container name.

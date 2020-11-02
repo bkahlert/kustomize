@@ -67,13 +67,44 @@ by dictOf("unicode.dict.tsv"
     const val rightToLeftMark = '\u200F'
 
     /**
-     * [REPLACEMENT CHARACTER](https://codepoints.net/U+FFFD) �
+     * [Tai Xuan Jing Symbols](https://codepoints.net/tai_xuan_jing_symbols)
+     *
+     * Block from `U+1D300` to `U+1D35F`. This block was introduced in Unicode version 4.0 (2003). It contains 87 codepoints.
+     *
+     * `𝌀` to `𝍖`
      */
-    const val replacementCharacter = '\uFFFD'
-
     object DivinationSymbols {
-        const val tetragramForEnlargment: String = "\uD834\uDF33" // 𝌳
-        const val tetragramForPurety: String = "\uD834\uDF2A" // 𝌪
+        @Suppress("unused", "KDocMissingDocumentation")
+        enum class Monograms(override val codePointsRange: IntRange = CodePoint("𝌀")..CodePoint("𝌀")) : UnicodeBlock {
+            Earth;
+
+            override val valuesCount by lazy { values().size }
+            override fun toString(): String = string
+        }
+
+        @Suppress("unused", "KDocMissingDocumentation")
+        enum class Digrams(override val codePointsRange: IntRange = CodePoint("𝌁")..CodePoint("𝌅")) : UnicodeBlock {
+            HeavenlyEarth, HumanEarth, EarthlyHeaven, EarthlyHuman, Earth;
+
+            override val valuesCount by lazy { values().size }
+            override fun toString(): String = string
+        }
+
+        @Suppress("unused", "KDocMissingDocumentation")
+        enum class Tetragrams(override val codePointsRange: IntRange = CodePoint("𝌆")..CodePoint("𝍖")) : UnicodeBlock {
+            Centre, FullCircle, Mired, Barrier, KeepingSmall, Contrariety, Ascent, Opposition, BranchingOut, DefectivenessOrDistortion, Divergence, Youthfulness, Increase, Penetration, Reach, Contact, HoldingBack, Waiting, Following, Advance, Release, Resistance, Ease, Joy, Contention, Endeavour, Duties, Change, Decisiveness, BoldResolution, Packing, Legion, Closeness, Kinship, Gathering, Strength, Purity, Fullness, Residence, LawOrModel, Response, GoingToMeet, Encounters, Stove, Greatness, Enlargement, Pattern, Ritual, Flight, VastnessOrWasting, Constancy, Measure, Eternity, Unity, Diminishment, ClosedMouth, Guardedness, GatheringIn, Massing, Accumulation, Embellishment, Doubt, Watch, Sinking, Inner, Departure, Darkening, Dimming, Exhaustion, Severance, Stoppage, Hardness, Completion, Closure, Failure, Aggravation, Compliance, OnTheVerge, Difficulties, Labouring, Fostering;
+
+            override val valuesCount by lazy { values().size }
+            override fun toString(): String = string
+        }
+    }
+
+    @Suppress("unused", "KDocMissingDocumentation")
+    enum class BoxDrawings(override val codePointsRange: IntRange = CodePoint("─")..CodePoint("╿")) : UnicodeBlock {
+        LightHorizontal, HeavyHorizontal, LightVertical, HeavyVertical, LightTripleDashHorizontal, HeavyTripleDashHorizontal, LightTripleDashVertical, HeavyTripleDashVertical, LightQuadrupleDashHorizontal, HeavyQuadrupleDashHorizontal, LightQuadrupleDashVertical, HeavyQuadrupleDashVertical, LightDownAndRight, DownLightAndRightHeavy, DownHeavyAndRightLight, HeavyDownAndRight, LightDownAndLeft, DownLightAndLeftHeavy, DownHeavyAndLeftLight, HeavyDownAndLeft, LightUpAndRight, UpLightAndRightHeavy, UpHeavyAndRightLight, HeavyUpAndRight, LightUpAndLeft, UpLightAndLeftHeavy, UpHeavyAndLeftLight, HeavyUpAndLeft, LightVerticalAndRight, VerticalLightAndRightHeavy, UpHeavyAndRightDownLight, DownHeavyAndRightUpLight, VerticalHeavyAndRightLight, DownLightAndRightUpHeavy, UpLightAndRightDownHeavy, HeavyVerticalAndRight, LightVerticalAndLeft, VerticalLightAndLeftHeavy, UpHeavyAndLeftDownLight, DownHeavyAndLeftUpLight, VerticalHeavyAndLeftLight, DownLightAndLeftUpHeavy, UpLightAndLeftDownHeavy, HeavyVerticalAndLeft, LightDownAndHorizontal, LeftHeavyAndRightDownLight, RightHeavyAndLeftDownLight, DownLightAndHorizontalHeavy, DownHeavyAndHorizontalLight, RightLightAndLeftDownHeavy, LeftLightAndRightDownHeavy, HeavyDownAndHorizontal, LightUpAndHorizontal, LeftHeavyAndRightUpLight, RightHeavyAndLeftUpLight, UpLightAndHorizontalHeavy, UpHeavyAndHorizontalLight, RightLightAndLeftUpHeavy, LeftLightAndRightUpHeavy, HeavyUpAndHorizontal, LightVerticalAndHorizontal, LeftHeavyAndRightVerticalLight, RightHeavyAndLeftVerticalLight, VerticalLightAndHorizontalHeavy, UpHeavyAndDownHorizontalLight, DownHeavyAndUpHorizontalLight, VerticalHeavyAndHorizontalLight, LeftUpHeavyAndRightDownLight, RightUpHeavyAndLeftDownLight, LeftDownHeavyAndRightUpLight, RightDownHeavyAndLeftUpLight, DownLightAndUpHorizontalHeavy, UpLightAndDownHorizontalHeavy, RightLightAndLeftVerticalHeavy, LeftLightAndRightVerticalHeavy, HeavyVerticalAndHorizontal, LightDoubleDashHorizontal, HeavyDoubleDashHorizontal, LightDoubleDashVertical, HeavyDoubleDashVertical, DoubleHorizontal, DoubleVertical, DownSingleAndRightDouble, DownDoubleAndRightSingle, DoubleDownAndRight, DownSingleAndLeftDouble, DownDoubleAndLeftSingle, DoubleDownAndLeft, UpSingleAndRightDouble, UpDoubleAndRightSingle, DoubleUpAndRight, UpSingleAndLeftDouble, UpDoubleAndLeftSingle, DoubleUpAndLeft, VerticalSingleAndRightDouble, VerticalDoubleAndRightSingle, DoubleVerticalAndRight, VerticalSingleAndLeftDouble, VerticalDoubleAndLeftSingle, DoubleVerticalAndLeft, DownSingleAndHorizontalDouble, DownDoubleAndHorizontalSingle, DoubleDownAndHorizontal, UpSingleAndHorizontalDouble, UpDoubleAndHorizontalSingle, DoubleUpAndHorizontal, VerticalSingleAndHorizontalDouble, VerticalDoubleAndHorizontalSingle, DoubleVerticalAndHorizontal, LightArcDownAndRight, LightArcDownAndLeft, LightArcUpAndLeft, LightArcUpAndRight, LightDiagonalUpperRightToLowerLeft, LightDiagonalUpperLeftToLowerRight, LightDiagonalCross, LightLeft, LightUp, LightRight, LightDown, HeavyLeft, HeavyUp, HeavyRight, HeavyDown, LightLeftAndHeavyRight, LightUpAndHeavyDown, HeavyLeftAndLightRight, HeavyUpAndLightDown;
+
+        override val valuesCount by lazy { values().size }
+        override fun toString(): String = string
     }
 
     var boxDrawings = ('\u2500'..'\u257F').toList()
@@ -138,15 +169,50 @@ by dictOf("unicode.dict.tsv"
         '\u007F' to '\u2421', // ␡
     )
 
+    /**
+     * Contains this character's replacement symbol if any.
+     *
+     * This only applies to the so called [controlCharacters].
+     */
     val Char.replacementSymbol: Char? get() = controlCharacters[this]
+
+
+    /**
+     * [REPLACEMENT CHARACTER](https://codepoints.net/U+FFFD) �
+     */
+    const val replacementCharacter = '\uFFFD'
+
+
+    /**
+     * [GREEK LETTER KOPPA](https://codepoints.net/U+03DE) Ϟ
+     */
+    val greekLetterKoppa = 'Ϟ'
+
+    /**
+     * [GREEK SMALL LETTER KOPPA](https://codepoints.net/U+03DF) ϟ
+     */
+    val greekSmallLetterKoppa = 'ϟ'
+
 
     /**
      * Unicode emojis as specified by the [Unicode® Technical Standard #51](https://unicode.org/reports/tr51/) 🤓
      */
     object Emojis {
+
+        class Emoji(private val emoji: String) :
+            CharSequence by emoji.removeSuffix(variationSelector15.toString()).removeSuffix(variationSelector16.toString()) {
+            constructor(emoji: Char) : this(emoji.toString())
+
+            val textVariant get() = "$emoji$variationSelector15"
+            val emojiVariant get() = "$emoji$variationSelector16"
+
+            override fun equals(other: Any?): Boolean = toString() == other.toString()
+            override fun toString(): String = emoji
+        }
+
         private val fullHourClocks = listOf("🕛", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚").toIndexMap()
         private val halfHourClocks = listOf("🕧", "🕜", "🕝", "🕞", "🕟", "🕠", "🕡", "🕢", "🕣", "🕤", "🕥", "🕦").toIndexMap()
-        private fun List<String>.toIndexMap() = mapIndexed { index, clock -> index to clock }.toMap()
+        private fun List<String>.toIndexMap() = mapIndexed { index, clock -> index to Emoji(clock) }.toMap()
 
         /**
          * A dictionary that maps integers to a clock emoji that shows the corresponding full hour, e.g. `3` will return a "3 o'clock"/🕒 emoji.
@@ -155,7 +221,7 @@ by dictOf("unicode.dict.tsv"
          * will also return the corresponding hour.
          */
         object FullHoursDictionary {
-            operator fun get(key: Int): String = fullHourClocks[key `%+` fullHourClocks.size] ?: error("Missing clock in dictionary")
+            operator fun get(key: Int): Emoji = fullHourClocks[key `%+` fullHourClocks.size] ?: error("Missing clock in dictionary")
         }
 
         /**
@@ -165,18 +231,77 @@ by dictOf("unicode.dict.tsv"
          * will also return the corresponding next half hour.
          */
         object HalfHoursDictionary {
-            operator fun get(key: Int): String = halfHourClocks[key `%+` halfHourClocks.size] ?: error("Missing clock in dictionary")
+            operator fun get(key: Int): Emoji = halfHourClocks[key `%+` halfHourClocks.size] ?: error("Missing clock in dictionary")
         }
 
-        fun Instant.asEmoji(approximationMode: ApproximationMode = ApproximationMode.Ceil): String {
+        fun Instant.asEmoji(approximationMode: ApproximationMode = ApproximationMode.Ceil): Emoji {
             val zonedDateTime: ZonedDateTime = atZone(ZoneId.systemDefault())
             val hour = zonedDateTime.hour
             val minute = zonedDateTime.minute
             val closest = (approximationMode.calc(minute.toDouble(), 30.0) / 30.0).toInt()
             return listOf(FullHoursDictionary[hour - 1], HalfHoursDictionary[hour - 1], FullHoursDictionary[hour])[closest]
         }
+
+        /**
+         * [LINE FEED (LF)](https://codepoints.net/U+26A1) ⚡️ ⚡︎
+         */
+        val highVoltageSign = Emoji('⚡')
+
+        /**
+         * [LINE FEED (LF)](https://codepoints.net/U+2714) ✔️ ✔︎
+         */
+        val heavyCheckMark = Emoji('✔')
+
+
+        /**
+         * [VARIATION SELECTOR-15](https://codepoints.net/U+FE0E)
+         *
+         * <cite>This codepoint may change the appearance of the preceding character.
+         * If that is a symbol, dingbat or emoji, U+FE0E forces it to be rendered
+         * in a textual fashion as compared to a colorful image.</cite>
+         */
+        const val variationSelector15: Char = '︎'
+
+        /**
+         * [VARIATION SELECTOR-16](https://codepoints.net/U+FE0F)
+         *
+         * <cite>This codepoint may change the appearance of the preceding character.
+         * If that is a symbol, dingbat or emoji, U+FE0F forces it to be rendered
+         * as a colorful image as compared to a monochrome text variant."</cite>
+         */
+        const val variationSelector16: Char = '️'
     }
 
+    /**
+     * Interface to facilitate implementing named, enumerable Unicode code points by their names.
+     *
+     * @sample DivinationSymbols.Digrams
+     */
+    interface UnicodeBlock {
+        val codePointsRange: IntRange
+        val codePointsCount: Int get() = codePointsRange.last - codePointsRange.first + 1
+        val valuesCount: Int
+        val ordinal: Int
+        val bytes: Int
+            get() = (codePointsCount.toDouble() / valuesCount.toDouble()).let {
+                it.also {
+                    check(it % 1.0 == 0.0) {
+                        "All $valuesCount enums must be represented with the same number of bytes.$lineFeed" +
+                            "Either the number of code points ($codePointsCount) is incorrect or the number of bytes differs between the encoded elements."
+                    }
+                }.toInt()
+            }
+        val string: String get() = "${Unicode[codePointsRange.first + ordinal * bytes]}"
+        fun asTable(): String {
+            val table = StringBuilder()
+            for (i in codePointsRange step bytes) {
+                val codePoint: CodePoint = Unicode[i]
+                val name: String = Unicode[i.toLong()]
+                table.append("$codePoint\t$name\n")
+            }
+            return table.toString()
+        }
+    }
 }
 
 private fun URL.loadTabSeparatedValues(skipLines: Long) = openStream().bufferedReader().lines().skip(skipLines).map { row ->

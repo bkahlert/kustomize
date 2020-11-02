@@ -39,6 +39,13 @@ abstract class RunningProcess : Process() {
         }
     }
 
+    val metaStream: OutputStream get() = capturingMetaStream
+    private val capturingMetaStream: OutputStream by lazy {
+        TeeOutputStream(OutputStream.nullOutputStream(), RedirectingOutputStream {
+            ioLog.add(IO.Type.META, it)
+        })
+    }
+
     override fun getOutputStream(): OutputStream = capturingOutputStream
     private val capturingOutputStream: OutputStream by lazy {
         TeeOutputStream(process.outputStream, RedirectingOutputStream {
@@ -62,7 +69,7 @@ abstract class RunningProcess : Process() {
     override fun info(): ProcessHandle.Info = process.info()
     override fun children(): Stream<ProcessHandle> = process.children()
     override fun descendants(): Stream<ProcessHandle> = process.descendants()
-    override fun toString(): String = "RunningProcess(process=$process, result=$result)"
+    override fun toString(): String = "RunningProcess(process=$process, result=${result.toSimpleString()})"
 
     /**
      * Causes the current thread to wait, if necessary, until the
@@ -105,6 +112,37 @@ abstract class RunningProcess : Process() {
     fun waitForCompletion(): CompletedProcess = result.get()
 
     /**
+     * Causes the current thread to wait, if necessary, until the
+     * process represented by this [RunningProcess] has terminated
+     * **and checks if the specified [requiredExitCode] was returned**.
+     *
+     * If the [exitValue] differs from the expectation, an [IllegalStateException]
+     * is thrown with [lazyMessage] as its message.
+     *
+     * This method returns immediately if the process has already terminated.
+     *
+     * If the process has not yet terminated, the calling thread will be
+     * blocked until the process exits.
+     *
+     * @return The [CompletedProcess] comprising its [exitValue] and logged [IO]
+     *         if the [requiredExitCode] was returned.
+     *         By convention, the value `0` indicates normal termination which
+     *         is required by default.
+     * @throws InterruptedException if the current thread is
+     *         [interrupted][Thread.interrupt] by another
+     *         thread while it is waiting, then the wait is ended and
+     *         an [InterruptedException] is thrown.
+     * @throws IllegalStateException if a different than the [requiredExitCode]
+     *         was returned comprising the [lazyMessage].
+     */
+    fun waitForExitCode(
+        requiredExitCode: Int = 0,
+        lazyMessage: CompletedProcess.() -> String = {
+            waitForCompletion().defaultLazyMessage(requiredExitCode)()
+        },
+    ): CompletedProcess = waitForCompletion().checkExitCode(requiredExitCode, lazyMessage)
+
+    /**
      * Whether this [Process] failed, that is, returned with an exit value other than `0`.
      */
     val failed: Boolean
@@ -113,6 +151,14 @@ abstract class RunningProcess : Process() {
     companion object {
         @Suppress("SpellCheckingInspection")
         private const val errorMessage = "This instance must only be used as an alternative to `lateinit`. All methods of this instance throw an exception."
+
+        /**
+         * Simplified version of [CompletableFuture.toString]. Here only the state is kept and
+         * the surrounding `CompletableFuture133sds982[` stuff trashed.
+         */
+        private fun <T> CompletableFuture<T>.toSimpleString(): String {
+            return Regex(".*\\[(.*)]").matchEntire(toString())?.groupValues?.last() ?: toString()
+        }
 
         /**
          * A non existent [Process] that serves as a not-null instance but whose methods are never meant to be called.
@@ -132,7 +178,7 @@ abstract class RunningProcess : Process() {
          */
         val nullRunningProcess: RunningProcess = object : RunningProcess() {
             override val process: Process = nullProcess
-            override val result: CompletableFuture<CompletedProcess> = CompletableFuture.completedFuture(CompletedProcess(-1, emptyList()))
+            override val result: CompletableFuture<CompletedProcess> = CompletableFuture.completedFuture(CompletedProcess(-1L, -1, emptyList()))
         }
     }
 }

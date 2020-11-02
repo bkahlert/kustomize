@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.nio
 
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
-import com.bkahlert.koodies.string.lines
+import com.bkahlert.koodies.string.joinLinesToString
 import com.bkahlert.koodies.test.junit.Slow
 import com.imgcstmzr.runtime.ProcessMock
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
@@ -144,7 +144,7 @@ internal abstract class SharedReaderTest(val readerFactory: (InputStream, Durati
                     read.add(it)
                 }
             }
-            expectThat(read.lines()).isEqualTo(inputStream().readAllBytes().decodeToString().withoutTrailingLineSeparator)
+            expectThat(read.joinLinesToString()).isEqualTo(inputStream().readAllBytes().decodeToString().withoutTrailingLineSeparator)
         }
 
         @Test
@@ -153,7 +153,7 @@ internal abstract class SharedReaderTest(val readerFactory: (InputStream, Durati
 
             assertTimeoutPreemptively(8.seconds.toJavaDuration()) {
                 val read = reader.readLines()
-                expectThat(read.lines()).isEqualTo(inputStream().readAllBytes().decodeToString().withoutTrailingLineSeparator)
+                expectThat(read.joinLinesToString()).isEqualTo(inputStream().readAllBytes().decodeToString().withoutTrailingLineSeparator)
             }
         }
     }

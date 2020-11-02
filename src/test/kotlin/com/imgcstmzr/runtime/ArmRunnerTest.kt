@@ -59,7 +59,7 @@ class ArmRunnerTest {
     @Test
     fun `should boot and run program in user session`(@OS(RaspberryPiLite::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
 
-        val exitCode = ArmRunner.run(
+        val completedProcess = ArmRunner.run(
             name = name(ArmRunnerTest::`should boot and run program in user session`),
             osImage = osImage,
             logger = logger,
@@ -67,7 +67,7 @@ class ArmRunnerTest {
                 osImage.compileScript("demo train", "sudo apt-get install -y -m sl", "sl"),
             ))
 
-        expectThat(exitCode).isEqualTo(0)
+        expectThat(completedProcess.exitCode).isEqualTo(0)
         expectThat(logger.logged).contains("@@(@@@)")
         expectThat(logger.logged.lines().takeLast(20))
             .any { contains("shutting down") }

@@ -14,6 +14,7 @@ import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
 import com.imgcstmzr.runtime.OperatingSystemMock
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.logging.OutputCaptureExtension.Companion.isCapturingOutput
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
@@ -32,6 +33,11 @@ annotation class OS(
 
 open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
 
+    init {
+        // provoking instantiation of FixtureLog to have it clean up first
+        FixtureLog.location
+    }
+
     override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =
         parameterContext.parameter.type.isAssignableFrom(OperatingSystemImage::class.java)
 
@@ -48,19 +54,25 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
     }
 
     companion object {
-        val fixtureLog: (Path) -> Unit = FixtureLog(Paths.TEST.resolve("fixture.log"))
         val OperatingSystem.directoryName get() = downloadUrl?.let { Path.of(it).baseName } ?: "imgcstmzr"
 
         private val cache = Cache(Paths.TEST.resolve("test"), maxConcurrentWorkingDirectories = 500)
-        private fun OperatingSystem.getCopy(): OperatingSystemImage =
-            this based cache.provideCopy(directoryName, false) { kotlin.runCatching { download() }.getOrElse { prepareImg("cmdline.txt", "config.txt") } }
+        private fun OperatingSystem.getCopy(): OperatingSystemImage = synchronized(this) {
+            this based cache.provideCopy(directoryName, false) {
+                if (downloadUrl != null) {
+                    download()
+                } else {
+                    prepareImg("cmdline.txt", "config.txt") // TODO use ImageBuilder
+                }
+            }
+        }
 
         /**
          * Dynamically creates a raw image with two partitions containing the given [files].
          */
         private fun prepareImg(vararg files: String): Path {
             val basename = "imgcstmzr"
-            echo(META typed Now.emoji + " Preparing test img with files ${files.joinToString(", ")}. This takes a moment...")
+            echo(META typed "${Now.emoji} Preparing test img with files ${files.joinToString(", ")}. This takes a moment...")
             val hostDir = Paths.TEST.resolve(basename + String.random(4)).mkdirs()
             val copyFileCommands: List<String> = files.map {
                 ClassPath.of(it).copyTo(hostDir.resolve(it))
@@ -121,8 +133,7 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
             getStore(context).get(context.requiredTestInstance, Path::class.java)
 
         private fun saveReferenceForCleanup(context: ExtensionContext, img: Path) {
-            fixtureLog(img)
-            getStore(context).put(context.requiredTestInstance, img)
+            getStore(context).put(context.requiredTestInstance, img.deleteOnExit())
         }
 
         private fun getStore(context: ExtensionContext): ExtensionContext.Store =

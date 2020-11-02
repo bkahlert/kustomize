@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.string
 
+import com.bkahlert.koodies.string.Unicode.Emojis.Emoji
 import org.antlr.v4.runtime.ANTLRErrorListener
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -19,8 +20,9 @@ import kotlin.streams.toList
  * and consist of 1 or more instances of [CodePoint].
  */
 inline class Grapheme(val codePoints: List<CodePoint>) {
-    constructor(charSequence: CharSequence) : this(charSequence.codePoints().mapToObj { CodePoint(it) }.toList()
-        .also { require(count(charSequence) == 1) { "$it does not represent a single grapheme" } })
+    constructor(charSequence: CharSequence) : this(
+        charSequence.codePoints().mapToObj { CodePoint(it) }.toList()
+            .also { require(count(charSequence) == 1) { "$it does not represent a single grapheme" } })
 
     /**
      * Contains the character pointed to and represented by a [String].
@@ -37,7 +39,8 @@ inline class Grapheme(val codePoints: List<CodePoint>) {
             it.asGraphemeSequence().drop(1).firstOrNull() == null
         }
 
-        fun count(string: CharSequence): Int = count(string.toString())
+        fun count(emoji: Emoji): Int = count("$emoji")
+        fun count(string: CharSequence): Int = count("$string")
         fun count(string: String): Int = parseToResults(string).size
 
         fun <T : CharSequence> T.getGrapheme(index: Int): String =

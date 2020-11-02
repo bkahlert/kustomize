@@ -7,8 +7,8 @@ package com.bkahlert.koodies.string
  * If that is what you are looking for, use [Grapheme].
  */
 inline class CodePoint(val codePoint: Int) {
-    constructor(charSequence: CharSequence) : this(charSequence.toString()
-        .also { require(charSequence.isValidCodePoint()) { "$it does not represent a single Unicode code point" } }
+    constructor(charSequence: CharSequence) : this("$charSequence"
+        .also { require(it.isValidCodePoint()) { "$it does not represent a single Unicode code point" } }
         .codePointAt(0))
 
     constructor(chars: CharArray) : this(String(chars))
@@ -24,6 +24,8 @@ inline class CodePoint(val codePoint: Int) {
     val string: String get() = Character.toString(codePoint)
 
     override fun toString(): String = string
+
+    operator fun rangeTo(to: CodePoint): IntRange = codePoint..to.codePoint
 
     companion object {
         fun Int.isValidCodePoint(): Boolean = Character.getType(this).toByte().let {

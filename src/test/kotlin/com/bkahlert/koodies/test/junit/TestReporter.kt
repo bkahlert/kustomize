@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.test.junit
 
+import com.bkahlert.koodies.string.LineSeparators.LF
 import org.junit.platform.engine.TestTag
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestIdentifier
@@ -19,7 +20,7 @@ private enum class TagDistributionReportRenderer(val render: (TestPlan) -> Strin
     SUMMARY({ testPlan ->
         with(testPlan.tagDistribution) {
             "Report \"Tag Distribution\": " +
-                joinToString("; ") { (tags, tests) ->
+                joinToString("; ", postfix = LF) { (tags, tests) ->
                     (if (tags.isEmpty()) "NO TAGS" else tags.joinToString("+") { it.name }) + ": " + tests.size
                 }
         }

@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.terminal.ascii
 
-import com.bkahlert.koodies.string.lines
+import com.bkahlert.koodies.string.joinLinesToString
 import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ascii.Borders.Block
@@ -53,7 +53,7 @@ fun <T : CharSequence> Iterable<T>.wrapWithBorder(
     padding: Int = 2,
     margin: Int = 1,
     ansiCode: AnsiCode = AnsiCode(emptyList()),
-): String = lines().wrapWithBorder(border, padding, margin, ansiCode)
+): String = joinLinesToString().wrapWithBorder(border, padding, margin, ansiCode)
 
 class Draw(val obj: CharSequence) {
     val border get() = Border()

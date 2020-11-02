@@ -79,7 +79,7 @@ class NonBlockingReader(
                         lastReadLine!!.withoutTrailingLineSeparator
                     }
                 }
-                logStatus { META typed Now.emoji + " ${(maxTimeMillis - System.currentTimeMillis()).milliseconds}; 📋 ${unfinishedLine.debug}; 🆕 ${justRead.debug}" }
+                logStatus { META typed "${Now.emoji} ${(maxTimeMillis - System.currentTimeMillis()).milliseconds}; 📋 ${unfinishedLine.debug}; 🆕 ${justRead.debug}" }
                 if (read == 1) {
 //                    println(this@NonBlockingReader)
                     val lineAlreadyRead = lastReadLineDueTimeout == true && lastReadLine?.hasTrailingLineSeparator == true && !justReadCRLF
@@ -99,7 +99,7 @@ class NonBlockingReader(
                     }
                 }
                 if (System.currentTimeMillis() >= maxTimeMillis && !(blockOnEmptyLine && unfinishedLine.isEmpty())) {
-                    logStatus { META typed Now.emoji + " Timed out. Returning ${unfinishedLine.quoted}" }
+                    logStatus { META typed "${Now.emoji} Timed out. Returning ${unfinishedLine.quoted}" }
                     lastReadLineDueTimeout = true
                     lastReadLine = unfinishedLine.toString()
                     return@segment lastReadLine!!.withoutTrailingLineSeparator

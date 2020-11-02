@@ -4,7 +4,6 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
-import com.bkahlert.koodies.test.junit.debug.Debug
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.imgcstmzr.util.containsAtMost
 import com.imgcstmzr.util.logging.InMemoryLogger
@@ -19,10 +18,10 @@ import strikt.assertions.contains
 import strikt.assertions.isSuccess
 
 @Execution(ExecutionMode.CONCURRENT)
-internal class RenderingLoggerIntTest {
+class RenderingLoggerIntTest {
 
     @Test
-    internal fun `should log`(logger: InMemoryLogger<Unit>) {
+    fun `should log`(logger: InMemoryLogger<Unit>) {
         logger.logLine { "｀、ヽ｀ヽ｀、ヽ(ノ＞＜)ノ ｀、ヽ｀☂ヽ｀、ヽ" }
         logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logger.logResult { Result.success(Unit) }
@@ -39,7 +38,7 @@ internal class RenderingLoggerIntTest {
     }
 
     @Test
-    internal fun `should allow single line logging`(logger: InMemoryLogger<Unit>) {
+    fun `should allow single line logging`(logger: InMemoryLogger<Unit>) {
         logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logger.miniSegment<Unit, Unit>("mini") {
             logStatus { OUT typed "A" }
@@ -63,9 +62,8 @@ internal class RenderingLoggerIntTest {
                 """.trimIndent())
     }
 
-    @Debug
     @Test
-    internal fun `should allow nested logging`(logger: InMemoryLogger<String>) {
+    fun `should allow nested logging`(logger: InMemoryLogger<String>) {
         logger.logStatus { OUT typed "outer 1" }
         logger.logStatus { OUT typed "outer 2" }
         logger.segment<String, Unit>("nested log", null) {
@@ -94,12 +92,12 @@ internal class RenderingLoggerIntTest {
                     │   outer 3                                               {}                                      ▮▮
                     │   outer 4                                               {}                                      ▮▮
                     │{}
-                    ╰─────╴✔{}
+                    ╰─────╴✔ returned{}
                 """.trimIndent())
     }
 
     @ConcurrentTestFactory
-    internal fun `should allow complex layout`(loggerFactory: InMemoryLoggerFactory<Unit>) = listOf(
+    fun `should allow complex layout`(loggerFactory: InMemoryLoggerFactory<Unit>) = listOf(
         true to """
             ╭─────╴{}
             │{}
@@ -184,7 +182,7 @@ internal class RenderingLoggerIntTest {
         }
 
     @Test
-    internal fun `should log status`(logger: InMemoryLogger<Unit>) {
+    fun `should log status`(logger: InMemoryLogger<Unit>) {
         logger.logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logger.logResult { Result.success(Unit) }
 
@@ -199,7 +197,7 @@ internal class RenderingLoggerIntTest {
     }
 
     @Test
-    internal fun `should log status in same column`(logger: InMemoryLogger<Unit>) {
+    fun `should log status in same column`(logger: InMemoryLogger<Unit>) {
         logger.logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logger.segment<Unit, Unit>("nested", null) {
             logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
@@ -214,7 +212,7 @@ internal class RenderingLoggerIntTest {
     }
 
     @Test
-    internal fun `should log exception`(logger: InMemoryLogger<String>) {
+    fun `should log exception`(logger: InMemoryLogger<String>) {
         kotlin.runCatching {
             logger.logStatus { OUT typed "outer 1" }
             logger.logStatus { OUT typed "outer 2" }
@@ -238,15 +236,14 @@ internal class RenderingLoggerIntTest {
                     │   │{}
                     │   │   nested 1                                          {}                                      ▮▮
                     │   ϟ{}
-                    │   ╰─────╴Failure(nested log): java.lang.IllegalStateException: an exception @ ${RenderingLoggerIntTest::class.qualifiedName}{}
+                    │   ╰─────╴failed with java.lang.IllegalStateException: an exception @ ${RenderingLoggerIntTest::class.qualifiedName}{}
                     │{}
-                    │   java.lang.IllegalStateException: an exception
-                    │   	at {} 
+                    │{}
                 """.trimIndent(), ignoreTrailingLines = true)
     }
 
     @Test
-    internal fun `should simple log when closed twice`(logger: InMemoryLogger<Unit>) {
+    fun `should simple log when closed twice`(logger: InMemoryLogger<Unit>) {
         logger.logResult { Result.success(Unit) }
         logger.logResult { Result.success(Unit) }
         expectThat(logger.logged)
@@ -255,7 +252,7 @@ internal class RenderingLoggerIntTest {
     }
 
     @Test
-    internal fun `should simply log multiple calls to logResult`(logger: InMemoryLogger<String>) {
+    fun `should simply log multiple calls to logResult`(logger: InMemoryLogger<String>) {
         expectCatching {
             logger.miniSegment<String, Int>("close twice") {
                 logStatus { META typed "line" }

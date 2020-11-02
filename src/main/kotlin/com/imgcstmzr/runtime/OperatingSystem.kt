@@ -3,7 +3,6 @@ package com.imgcstmzr.runtime
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
-import com.bkahlert.koodies.concurrent.process.Processes
 import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.docker.Docker.toContainerName
@@ -439,7 +438,7 @@ interface OperatingSystem {
                 when {
                     listOf("'TAB'", "'ENTER'", "<Ok>").any { output.contains(it, ignoreCase = true) } -> {
                         enter("\t\t\t\t\t", delay = 500.milliseconds)
-                        println(Processes.mostRecentChild.pid())
+                        feedback("If something goes wrong, I hope it helps: PID is ${process.pid()}")
                         "4/4 confirm password"
                     }
                     output.matches(loginPattern) -> {

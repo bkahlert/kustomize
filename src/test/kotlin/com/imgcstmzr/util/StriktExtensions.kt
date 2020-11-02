@@ -3,6 +3,7 @@
 package com.imgcstmzr.util
 
 import com.bkahlert.koodies.nio.file.listRecursively
+import com.bkahlert.koodies.regex.countMatches
 import com.bkahlert.koodies.string.CodePoint
 import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.string.LineSeparators
@@ -21,13 +22,13 @@ import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
 import strikt.assertions.hasSize
-import strikt.assertions.isDirectory
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
+// TODO improve compatibility with https://github.com/JetBrains/intellij-community/blob/3f7e93e20b7e79ba389adf593b3b59e46a3e01d1/plugins/testng/src/com/theoryinpractice/testng/model/TestProxy.java#L50 in order to always trigger the "Click here to compare" link
 fun Assertion.Builder<*>.asString(trim: Boolean = true): DescribeableBuilder<String> {
     return this.get("asString") {
         val string = when (this) {
@@ -73,11 +74,18 @@ fun Assertion.Builder<*>.isEqualToStringWise(other: Any?, removeAnsi: Boolean = 
     }
 
 
+fun Assertion.Builder<String>.containsAtLeast(value: String, lowerLimit: Int = 1) =
+    assert("contains ${value.quoted} at least ${lowerLimit}x") {
+        val actual = Regex.fromLiteral(value).countMatches(it)
+        if (actual >= lowerLimit) pass()
+        else fail("but actually contains it ${actual}x")
+    }
+
 fun Assertion.Builder<String>.containsAtMost(value: String, limit: Int = 1) =
     assert("contains ${value.quoted} at most ${limit}x") {
-        val actual = Regex.fromLiteral(value).matchEntire(it)?.groups?.size ?: 0
+        val actual = Regex.fromLiteral(value).countMatches(it)
         if (actual <= limit) pass()
-        else fail("but actually contains it ${limit}x")
+        else fail("but actually contains it ${actual}x")
     }
 
 fun <T : CharSequence> Assertion.Builder<T>.notContainsLineSeparator() =
@@ -195,12 +203,12 @@ fun Assertion.Builder<Path>.hasSameFiles(other: Path) =
 
 fun Assertion.Builder<Path>.containsAllFiles(other: Path) =
     assert("contains all files as ${other.quoted}") { actual ->
-        expectThat(actual).isDirectory()
-        expectThat(other).isDirectory()
+        if (!actual.isDirectory) fail("$actual is no directory")
+        if (!other.isDirectory) fail("$other is no directory")
         other.listRecursively().filter { it.isFile }.forEach { otherPath ->
             val relativePath = other.relativize(otherPath)
             val actualPath = actual.resolve(relativePath)
-            expectThat(actualPath).hasEqualContent(otherPath)
+            if (actualPath.readAll() != otherPath.readAll()) fail("$actualPath and $otherPath have different content:\nactual: ${actual.readAll()}\nexpected:${otherPath.readAll()}")
         }
         pass()
     }

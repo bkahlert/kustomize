@@ -4,6 +4,8 @@ import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.exception.toSingleLineString
+import com.bkahlert.koodies.string.Unicode.Emojis.heavyCheckMark
+import com.bkahlert.koodies.string.Unicode.greekSmallLetterKoppa
 import com.bkahlert.koodies.string.prefixWith
 import com.bkahlert.koodies.string.truncateBy
 import com.bkahlert.koodies.terminal.ANSI
@@ -14,6 +16,9 @@ import com.bkahlert.koodies.terminal.ansi.AnsiFormats.italic
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.mordant.AnsiCode
 import com.imgcstmzr.runtime.HasStatus
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 /**
  * Logger interface to implement loggers that don't just log
@@ -48,13 +53,11 @@ interface RenderingLogger<R> {
         this
     }
 
-    fun logResult(block: () -> Result<R>): R = kotlin.runCatching {
+    fun logResult(block: () -> Result<R>): R {
         val result = block()
         render(true) { formatResult(result) }
-        result.getOrThrow()
-    }.onFailure { ex ->
-        render(true) { formatException(ex.toSingleLineString()) }
-    }.getOrThrow()
+        return result.getOrThrow()
+    }
 
     companion object {
         val DEFAULT: RenderingLogger<Any> = object : RenderingLogger<Any> {
@@ -62,11 +65,13 @@ interface RenderingLogger<R> {
         }
 
         fun formatResult(result: Result<*>): String =
-            if (result.isSuccess) formatReturnValue(result.toSingleLineString()) else formatException(result.toSingleLineString())
+            if (result.isSuccess) formatReturnValue(result.toSingleLineString()) else formatException("", result.toSingleLineString())
 
-        fun formatReturnValue(oneLiner: String?): String = oneLiner?.let { "✔ ".green() + "returned".italic() + " $it" } ?: "✔".green()
+        fun formatReturnValue(oneLiner: String?): String =
+            oneLiner?.let { "${heavyCheckMark} ".green() + "returned".italic() + " $it" } ?: heavyCheckMark.green()
 
-        fun formatException(oneLiner: String?): String = oneLiner?.let { "ϟ ".red() + "failed with ${it.red()}" } ?: "ϟ".red()
+        fun formatException(prefix: String, oneLiner: String?): String =
+            oneLiner?.let { "$greekSmallLetterKoppa".red() + prefix + "failed with ${it.red()}" } ?: "$greekSmallLetterKoppa".red()
 
         inline fun <R, R2> RenderingLogger<R>?.subLogger(
             caption: String,
@@ -100,6 +105,20 @@ interface RenderingLogger<R> {
                 }
             return kotlin.runCatching { block(logger) }.also { logger.logResult { it } }.getOrThrow()
         }
+
+        @JvmName("simpleSubLogger")
+        inline fun <R> RenderingLogger<R>?.subLogger(
+            caption: String,
+            ansiCode: AnsiCode? = null,
+            borderedOutput: Boolean = (this as? BlockRenderingLogger)?.borderedOutput ?: false,
+            block: RenderingLogger<R>.() -> R,
+        ): R = subLogger<R, R>(caption, ansiCode, borderedOutput, block)
     }
+}
+
+@OptIn(ExperimentalContracts::class)
+inline fun <T : RenderingLogger<R>, R> T.applyLogging(crossinline block: T.() -> R): Unit {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    logResult { runCatching { block() } }
 }
 

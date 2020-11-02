@@ -1,12 +1,10 @@
 package com.bkahlert.koodies.test.junit
 
-import com.bkahlert.koodies.string.random
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.TestTemplate
 import org.junit.jupiter.api.extension.ExtensionContext
 import java.lang.reflect.AnnotatedElement
-import java.lang.reflect.Executable
 import java.lang.reflect.Method
 import java.util.Optional
 
@@ -24,21 +22,6 @@ val ExtensionContext.testName: String
         val name = element.map { parent.map { it.testName }.orElse("") + separator + displayName }.orElse("")
         return if (name.startsWith(separator)) name.substring(separator.length) else name
     }
-
-/**
- * Contains an ID valid for the whole test plan run.
- */
-val ExtensionContext.uniqueName
-    get() = element.map {
-        when (it) {
-            is Class<*> -> it.simpleName
-            is Method -> it.name
-            is Executable -> it.name
-            else -> it.toString()
-        }
-    }.orElseGet {
-        "unknown $this"
-    } + " - " + String.random(8)
 
 /**
  * The container of this test method.

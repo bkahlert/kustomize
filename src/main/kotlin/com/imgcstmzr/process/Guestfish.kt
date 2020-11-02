@@ -1,12 +1,12 @@
 package com.imgcstmzr.process
 
+import com.bkahlert.koodies.concurrent.process.CompletedProcess
 import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.docker.Docker
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.string.match
 import com.bkahlert.koodies.string.random
-import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.github.ajalt.clikt.output.TermUi
 import com.imgcstmzr.runtime.OperatingSystems
@@ -26,6 +26,10 @@ import java.nio.file.Path
  *
  * Instances use [containerName] for the underlying Docker container (any existing container gets removed).
  * [imgPathOnHost] will be mounted before running any command.
+ *
+ * *Developer Note:*
+ * Run `docker run --rm -v $(PWD):/work --entrypoint /bin/bash -it cmattoon/guestfish` if you want to
+ * play around with Guestfish interactively.
  */
 class Guestfish(
     /**
@@ -67,28 +71,28 @@ class Guestfish(
         val block: RenderingLogger<Unit>.() -> Unit = {
             require(imgPathOnHost.exists) { "Error running Guestfish: $imgPathOnHost does not exist.".wrapWithBorder() }
 
-            check(Docker.run(
-                name = containerName,
-                volumes = mapOf(
-                    imgPathOnHost to imgPathOnDocker,
-                    imgPathOnHost.parent.resolve(SHARED_DIRECTORY_NAME) to GUEST_ROOT_ON_DOCKER,
-                ),
-                image = IMAGE_NAME,
-                args = listOf(
-                    "--rw",
-                    "--add $imgPathOnDocker",
-                    "--mount /dev/sda2:/",
-                    "--mount /dev/sda1:/boot",
-                    (guestfishOperation + shutdownOperation).asHereDoc(),
-                ),
-            ) { output ->
-                if (debug || output.type == ERR) logStatus { output }
-            }.waitForCompletion().exitCode == 0) {
-                "An error while running the following command inside $imgPathOnHost:\n${TODO()}\n" +
-                    "To debug you could try: docker exec -it ${imgPathOnHost.fileName} bash".bold()
-            }
+            Docker.run(
+                workingDirectory = imgPathOnHost.parent,
+                outputProcessor = { output -> if (debug || output.type == ERR) logStatus { output } },
+            ) {
+                run(
+                    redirectStdErrToStdOut = true, // needed since some commandrvf writes all output to stderr
+                    name = containerName,
+                    volumes = mapOf(
+                        imgPathOnHost to imgPathOnDocker,
+                        imgPathOnHost.parent.resolve(SHARED_DIRECTORY_NAME) to GUEST_ROOT_ON_DOCKER,
+                    ),
+                    image = IMAGE_NAME,
+                    args = listOf(
+                        "--rw",
+                        "--add $imgPathOnDocker",
+                        "--mount /dev/sda2:/",
+                        "--mount /dev/sda1:/boot",
+                        (guestfishOperation + shutdownOperation).asHereDoc(),
+                    ),
+                )
+            }.waitForExitCode()
 
-//            val exitCode = execShellScript(workingDirectory = imgPathOnHost.parent, // TODO working directory necessity test
             guestfishOperation.commands.map { it.match("""! perl -i.{} -pe 's|(?<={}:)[^:]*|crypt("{}","\\\${'$'}6\\\${'$'}{}\\\${'$'}")|e' {}/shadow""") }
                 .filter { it.size > 2 }
                 .forEach {
@@ -182,13 +186,27 @@ class Guestfish(
         /**
          * Executes the given [operation] on a [Guestfish] instance with just [volumes] mounted.
          */
-        fun execute(containerName: String, volumes: Map<Path, Path>, operation: GuestfishOperation, debug: Boolean = false): Int =
-            Docker.run(name = containerName,
-                volumes = volumes,
-                image = IMAGE_NAME,
-                args = listOf("--", (operation + shutdownOperation).asHereDoc())) { output ->
-                if (debug || output.type == ERR) TermUi.echo(output)
-            }.waitForCompletion().exitCode.also { check(it == 0) }
+        fun execute(
+            containerName: String,
+            volumes: Map<Path, Path>,
+            operation: GuestfishOperation,
+            workingDirectory: Path = Paths.WORKING_DIRECTORY,
+            debug: Boolean = false,
+        ): CompletedProcess =
+            Docker.run(
+                workingDirectory = workingDirectory,
+                outputProcessor = { output ->
+                    if (debug || output.type == ERR) TermUi.echo(output)
+                }
+            ) {
+                run(
+                    redirectStdErrToStdOut = true, // needed since some commandrvf writes all output to stderr
+                    name = containerName,
+                    volumes = volumes,
+                    image = IMAGE_NAME,
+                    args = listOf("--", (operation + shutdownOperation).asHereDoc()),
+                )
+            }.waitForExitCode()
     }
 }
 

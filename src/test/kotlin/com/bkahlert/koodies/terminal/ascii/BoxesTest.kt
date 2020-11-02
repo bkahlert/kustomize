@@ -10,12 +10,12 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 
 @Execution(CONCURRENT)
-internal class BoxesTest {
+class BoxesTest {
     @Test
-    internal fun `should render FAIL`(logger: InMemoryLogger<Unit>) {
+    fun `should render FAIL`(logger: InMemoryLogger<Unit>) {
         logger.logStatus { IO.Type.ERR typed Boxes.FAIL.toString() }
         expectThat(logger).matches("""
-            ╭─────╴should render FAIL{}
+            ╭─────╴BoxesTest ➜ should render FAIL{}
             │   
             │   ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄{}
             │   ████▌▄▌▄▐▐▌█████
@@ -27,10 +27,10 @@ internal class BoxesTest {
     }
 
     @Test
-    internal fun `should render sphere box`(logger: InMemoryLogger<Unit>) {
+    fun `should render sphere box`(logger: InMemoryLogger<Unit>) {
         logger.logStatus { IO.Type.META typed Boxes.SPHERICAL("SPHERICAL").toString() }
         expectThat(logger).matches("""
-            ╭─────╴should render sphere box{}
+            ╭─────╴BoxesTest ➜ should render sphere box{}
             │   
             │     █ ▉▕▊▕▋▕▌▕▍▕▎▕▏ ▏  ▏  ▕  ▕  ▏▕▎▕▍▕▌▕▋▕▊▕▉ █
             │   █ ▉ ▊ ▋ ▌ ▍ ▎ ▏ ${'\u00A0'.repeat(3)}SPHERICAL${'\u00A0'.repeat(3)}  ▏ ▎ ▍ ▌ ▋ ▊ ▉ █
@@ -41,10 +41,10 @@ internal class BoxesTest {
     }
 
     @Test
-    internal fun `should render single line sphere box`(logger: InMemoryLogger<Unit>) {
+    fun `should render single line sphere box`(logger: InMemoryLogger<Unit>) {
         logger.logStatus { IO.Type.META typed Boxes.SINGLE_LINE_SPHERICAL("SINGLE LINE SPHERICAL").toString() }
         expectThat(logger).matches("""
-            ╭─────╴should render single line sphere box{}
+            ╭─────╴BoxesTest ➜ should render single line sphere box{}
             │   
             │    ▕  ▏ ▎ ▍ ▌ ▋ ▊ ▉ █ ▇ ▆ ▅ ▄ ▃ ▂ ▁  SINGLE LINE SPHERICAL  ▁ ▂ ▃ ▄ ▅ ▆ ▇ █ ▉ ▊ ▋ ▌ ▍ ▎ ▏ ▕  
             │
@@ -53,10 +53,10 @@ internal class BoxesTest {
     }
 
     @Test
-    internal fun `should render wide pillars`(logger: InMemoryLogger<Unit>) {
+    fun `should render wide pillars`(logger: InMemoryLogger<Unit>) {
         logger.logStatus { IO.Type.META typed Boxes.WIDE_PILLARS("WIDE PILLARS").toString() }
         expectThat(logger).matches("""
-            ╭─────╴should render wide pillars{}
+            ╭─────╴BoxesTest ➜ should render wide pillars{}
             │   
             │   █ █ ▉▕▉ ▊▕▊▕▋ ▋▕▌ ▌ ▍▕▎ ▍ ▎▕▏ ▏ WIDE PILLARS  ▏ ▏▕▎ ▍ ▎▕▍ ▌ ▌▕▋ ▋▕▊▕▊ ▉▕▉ █ █
             │
@@ -65,10 +65,10 @@ internal class BoxesTest {
     }
 
     @Test
-    internal fun `should render pillars`(logger: InMemoryLogger<Unit>) {
+    fun `should render pillars`(logger: InMemoryLogger<Unit>) {
         logger.logStatus { IO.Type.META typed Boxes.PILLARS("PILLARS").toString() }
         expectThat(logger).matches("""
-            ╭─────╴should render pillars{}
+            ╭─────╴BoxesTest ➜ should render pillars{}
             │   
             │   █ ▉ ▊ ▋ ▌ ▍ ▎ ▏ PILLARS  ▏ ▎ ▍ ▌ ▋ ▊ ▉ █
             │

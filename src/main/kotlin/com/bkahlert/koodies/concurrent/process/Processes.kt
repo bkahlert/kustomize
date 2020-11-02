@@ -4,16 +4,21 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.concurrent.process.RunningProcess.Companion.nullRunningProcess
+import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.startAsCompletableFuture
 import com.bkahlert.koodies.nio.NonBlockingReader
+import com.bkahlert.koodies.nio.file.age
+import com.bkahlert.koodies.nio.file.conditioned
+import com.bkahlert.koodies.nio.file.exists
+import com.bkahlert.koodies.nio.file.list
 import com.bkahlert.koodies.terminal.ansi.AnsiStyles.tag
 import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.time.poll
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.Paths.WORKING_DIRECTORY
-import com.imgcstmzr.util.appendText
-import com.imgcstmzr.util.makeExecutable
-import com.imgcstmzr.util.quoted
+import com.imgcstmzr.util.delete
+import com.imgcstmzr.util.isFile
+import com.imgcstmzr.util.unquoted
 import org.codehaus.plexus.util.cli.Commandline
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -25,10 +30,12 @@ import kotlin.streams.asSequence
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
+import kotlin.time.minutes
 
 /**
  * Provides methods to start a new [Process] and to access running ones.
  */
+@OptIn(ExperimentalTime::class)
 object Processes {
     val current: ProcessHandle get() = ProcessHandle.current()
 
@@ -52,7 +59,6 @@ object Processes {
         val flags = if (caseSensitive) "" else "i"
         check(startShellScript { line("$command | grep -q$flags '$substring'") }.waitForCompletion().exitCode == 0)
     }.isSuccess
-
 
     /**
      * Runs the [shellScript] synchronously and returns the [CompletedProcess].
@@ -101,13 +107,12 @@ object Processes {
         env: Map<String, String> = emptyMap(),
         runAfterProcessTermination: (() -> Unit)? = null,
     ): RunningProcess = startCommand(
-        command = Paths.tempFile(extension = ".sh").apply {
-            appendText("#!/bin/sh\n")
-            appendText("cd ${workingDirectory.quoted}\n")
-            shellScriptLines.forEach { appendText("$it\n") }
-            makeExecutable()
-        }.toString(),
-        workingDirectory = null,
+        command = ShellScript().apply {
+            shebang()
+            changeDirectoryOrExit(workingDirectory)
+            shellScriptLines.forEach { line(it) }
+        }.buildTo(Paths.tempFile(base = shellScriptPrefix, extension = shellScriptExtension)).conditioned,
+        workingDirectory = null, // part of the shell script
         env = env,
         runAfterProcessTermination = runAfterProcessTermination,
         inputStream = inputStream,
@@ -131,15 +136,16 @@ object Processes {
         inputStream: InputStream? = InputStream.nullInputStream(),
         outputProcessor: (RunningProcess.(IO) -> Unit)? = { line -> println(line) },
     ): RunningProcess {
-        val commandline = Commandline(command)
-        commandline.addArguments(arguments)
-        commandline.workingDirectory = workingDirectory?.toFile()
-        env.forEach { commandline.addEnvironment(it.key, it.value) }
+        val commandline = Commandline(command).apply {
+            addArguments(arguments)
+            this.workingDirectory = workingDirectory?.toFile()
+            env.forEach { addEnvironment(it.key, it.value) }
+        }
 
-        outputProcessor?.let { it(nullRunningProcess, META typed "Executing $commandline") }
         lateinit var runningProcess: RunningProcess
         return executeCommandLine(
             commandLine = commandline,
+            metaProcessor = { line -> outputProcessor?.let { it(runCatching { runningProcess }.getOrElse { nullRunningProcess }, META typed line) } },
             inputProvider = inputStream,
             systemOutProcessor = { line -> outputProcessor?.let { it(runningProcess, OUT typed line) } },
             systemErrProcessor = { line -> outputProcessor?.let { it(runningProcess, ERR typed line) } },
@@ -155,6 +161,7 @@ object Processes {
      * wrapping it in a [RunningProcess].
      *
      * @param commandLine The command line to be executed.
+     * @param metaProcessor A thread-safe processor that receives information about the process.
      * @param inputProvider Optional, yet thread-safe input for the [RunningProcess] to read from.
      *                    Alternatively the [RunningProcess]'s [RunningProcess.getOutputStream] can be used to provide data.
      * @param systemOutProcessor A thread-safe processor that receives the processes system output.
@@ -170,8 +177,9 @@ object Processes {
      * @return A [RunningProcess] with a couple of convenience functionality.
      */
     @ExperimentalTime
-    fun executeCommandLine(
+    private fun executeCommandLine(
         commandLine: Commandline,
+        metaProcessor: (String) -> Unit,
         inputProvider: InputStream?,
         systemOutProcessor: (String) -> Unit,
         systemErrProcessor: (String) -> Unit,
@@ -182,8 +190,17 @@ object Processes {
         val process = commandLine.execute()
         val processHook: Thread = ShutdownHookUtils.processHookFor(process)
         ShutdownHookUtils.addShutDownHook(processHook)
+        val pid = process.pid()
 
         return object : RunningProcess() {
+            init {
+                "Executing $commandLine".log()
+                listOf(commandLine.executable, commandLine.arguments)
+                    .map { Path.of(it.toString().unquoted) }
+                    .filter { it.exists }
+                    .joinToString("\n") { "📄 ${it.toUri()}" }.log()
+            }
+
             override val process: Process = process
             var disabled: Boolean = false
             override val result: CompletableFuture<CompletedProcess> = executor.startAsCompletableFuture {
@@ -210,7 +227,7 @@ object Processes {
                     outputStream.runCatching { close() }
 
                     fold(
-                        onSuccess = { CompletedProcess(it, ioLog.logged) },
+                        onSuccess = { CompletedProcess(pid, it, ioLog.logged) },
                         onFailure = { throw RuntimeException("An error occurred while killing ${"$commandLine".tag()}.", it) }
                     )
                 }
@@ -223,6 +240,11 @@ object Processes {
                 Thread.currentThread().name = "$commandLine::wait until ${Now + timeout}"
                 500.milliseconds.poll { !process.isAlive }.forAtMost(timeout) { throw InterruptedException("Process $this timed out after $it") }
                 exitValue()
+            }
+
+            private fun String.log() {
+                metaStream.enter(this, delay = Duration.ZERO)
+                metaProcessor(this)
             }
 
             private fun setupInputFeeder(): CompletableFuture<Any>? = inputProvider?.run {
@@ -262,5 +284,32 @@ object Processes {
             private fun InputStream.readerForStream(nonBlockingReader: Boolean): Reader =
                 if (nonBlockingReader) NonBlockingReader(this, blockOnEmptyLine = true) else InputStreamReader(this)
         }
+    }
+
+    const val shellScriptPrefix: String = "koodies.process."
+    const val shellScriptExtension: String = ".sh"
+
+    init {
+        cleanUp()
+        ShutdownHookUtils.addShutDownHook { cleanUp() }
+    }
+
+    /**
+     * Deletes temporary shell scripts created during [Process] generation
+     * that are older than 10 minutes.
+     *
+     * This method is automatically called during startup and shutdown.
+     */
+    fun cleanUp() {
+        Paths.TEMP.list()
+            .filter { it.isFile }
+            .filter { file ->
+                file.fileName.toString().let {
+                    it.startsWith(Processes.shellScriptPrefix)
+                        && it.endsWith(Processes.shellScriptExtension)
+                }
+            }
+            .filter { it.age > 10.minutes }
+            .forEach { it.delete() }
     }
 }

@@ -1,7 +1,7 @@
 package com.imgcstmzr.util.logging
 
 import com.bkahlert.koodies.test.junit.Verbosity.Companion.isVerbose
-import com.bkahlert.koodies.test.junit.uniqueName
+import com.bkahlert.koodies.test.junit.testName
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace.create
@@ -32,7 +32,7 @@ class InMemoryLoggerResolver : ParameterResolver, AfterEachCallback {
 
     private fun ExtensionContext.createLogger(suffix: String? = null, borderedOutput: Boolean, parameterContext: ParameterContext): InMemoryLogger<Unit> =
         object : InMemoryLogger<Unit>(
-            caption = uniqueName + if (suffix != null) "::$suffix" else "",
+            caption = testName + if (suffix != null) "::$suffix" else "",
             borderedOutput = borderedOutput,
             outputStreams = if (isVerbose || parameterContext.isVerbose) listOf(System.out) else emptyList()
         ) {

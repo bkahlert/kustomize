@@ -1,5 +1,6 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.concurrent.process.CompletedProcess
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.IN
@@ -47,15 +48,19 @@ object ArmRunner {
             override val logger: RenderingLogger<T> = logger ?: MutedBlockRenderingLogger()
         }
         return Docker.run(
-            name = name,
-            volumes = listOf(osImage.toAbsolutePath() to Path.of("/sdcard/filesystem.img")).toMap(),
-            image = DOCKER_IMAGE,
-            args = emptyList(),
             outputProcessor = outputProcessor?.let {
                 { IO: IO ->
                     it(runningOperatingSystem, IO)
                 }
-            }).also { runningProcess = it }
+            },
+            init = {
+                run(
+                    name = name,
+                    volumes = mapOf(osImage.toAbsolutePath() to Path.of("/sdcard/filesystem.img")),
+                    image = DOCKER_IMAGE,
+                )
+            }
+        ).also { runningProcess = it }
     }
 
     /**
@@ -73,7 +78,7 @@ object ArmRunner {
         osImage: OperatingSystemImage,
         logger: RenderingLogger<Any>,
         vararg programs: Program,
-    ): Int = logger.subLogger("$osImage", ansiCode = ANSI.termColors.cyan) {
+    ): CompletedProcess = logger.subLogger<Any, CompletedProcess>("$osImage", ansiCode = ANSI.termColors.cyan) {
         val unfinished: MutableList<Program> = mutableListOf(
             osImage.loginProgram(OperatingSystems.Companion.Credentials(osImage.defaultUsername, osImage.defaultPassword)),/*.logging()*/
             *programs,
@@ -93,6 +98,6 @@ object ArmRunner {
             }
             if (!unfinished.compute(this, output)) unfinished.takeIf { it.isNotEmpty() }?.removeAt(0)
             0
-        }.waitForCompletion().exitCode
+        }.waitForCompletion()
     }
 }
