@@ -9,7 +9,9 @@ fun Any?.toSingleLineString(): String? {
 
 fun Throwable?.toSingleLineString(): String? {
     if (this == null) return null
-    return this::class.qualifiedName + ": " + message + " @ " + stackTrace?.first()
+    return rootCause.let {
+        it::class.simpleName + ": " + it.message + it.stackTrace?.firstOrNull()?.let { element -> " at.(${element.fileName}:${element.lineNumber})" }
+    }
 }
 
 fun Result<*>?.toSingleLineString(): String? {

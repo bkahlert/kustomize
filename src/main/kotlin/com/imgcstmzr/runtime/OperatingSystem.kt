@@ -7,10 +7,12 @@ import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.docker.Docker.toContainerName
 import com.bkahlert.koodies.string.LineSeparators.LF
+import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.green
 import com.bkahlert.koodies.terminal.ascii.Kaomojis
 import com.bkahlert.koodies.terminal.ascii.Kaomojis.thinking
+import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.unit.Mega
 import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.bytes
@@ -22,13 +24,14 @@ import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.miniSegment
 import com.imgcstmzr.runtime.log.segment
-import com.imgcstmzr.util.debug
+import com.imgcstmzr.util.quoted
 import java.io.File
 import java.nio.file.Path
 import kotlin.properties.Delegates.observable
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
+import kotlin.time.seconds
 
 // TODO rename to Booter
 sealed class OperatingSystems : OperatingSystem {
@@ -277,8 +280,8 @@ abstract class RunningOperatingSystem(
     @OptIn(ExperimentalTime::class)
     fun enter(vararg values: String, delay: Duration = 10.milliseconds) {
         if (process.isAlive) {
+            feedback("Entering ${values.joinToString { it.withoutTrailingLineSeparator }.quoted}")
             process.enter(*values, delay = delay)
-            feedback("Entered ${values.joinToString { it.debug }}")
         } else {
             feedback("Process $process is not alive.")
         }
@@ -393,13 +396,22 @@ interface OperatingSystem {
     /**
      * Creates a program to log [Credentials.username] in using [Credentials.password].
      */
-    @OptIn(ExperimentalTime::class) fun loginProgram(credentials: Credentials): Program {
+    @OptIn(ExperimentalTime::class)
+    fun loginProgram(credentials: Credentials): Program {
+        var usernameLastEntered = 0L
         fun RunningOperatingSystem.enterUsername() {
-            enter("${credentials.username}\r")
+            if (Now.passedSince(usernameLastEntered) > 10.seconds) {
+                enter("${credentials.username}\r")
+                usernameLastEntered = Now.millis
+            }
         }
 
+        var passwordLastEntered = 0L
         fun RunningOperatingSystem.enterPassword() {
-            enter("${credentials.password}\r", delay = 500.milliseconds)
+            if (Now.passedSince(passwordLastEntered) > 10.seconds) {
+                enter("${credentials.password}\r", delay = 500.milliseconds)
+                passwordLastEntered = Now.millis
+            }
         }
 
         var pwLineExpectationFailed = 0
@@ -424,6 +436,9 @@ interface OperatingSystem {
             },
             "3/4: password..." to { output ->
                 when {
+                    output.contains("incorrect", ignoreCase = true) -> {
+                        throw IncorrectPasswordException(credentials)
+                    }
                     output.matches(passwordPattern) || pwLineExpectationFailed % 5 == 2 -> {
                         enterPassword()
                         "4/4 confirm password"
@@ -436,6 +451,9 @@ interface OperatingSystem {
             },
             "4/4 confirm password" to { output ->
                 when {
+                    output.contains("incorrect", ignoreCase = true) -> {
+                        throw IncorrectPasswordException(credentials)
+                    }
                     listOf("'TAB'", "'ENTER'", "<Ok>").any { output.contains(it, ignoreCase = true) } -> {
                         enter("\t\t\t\t\t", delay = 500.milliseconds)
                         feedback("If something goes wrong, I hope it helps: PID is ${process.pid()}")
@@ -457,25 +475,29 @@ interface OperatingSystem {
         )
     }
 
-
     /**
      * Creates a program to shutdown immediately.
      */
+    @OptIn(ExperimentalTime::class)
     fun shutdownProgram(): Program {
-        fun RunningOperatingSystem.invokeShutdown() {
-            enter("sudo shutdown -h now")
+        var shutdownLastEntered = 0L
+        fun RunningOperatingSystem.enterShutdown() {
+            if (Now.passedSince(shutdownLastEntered) > 10.seconds) {
+                enter("sudo shutdown -h now")
+                shutdownLastEntered = Now.millis
+            }
         }
 
         return Program(
             "shutdown",
             { output ->
-                invokeShutdown()
+                enterShutdown()
                 "shutting down"
             },
             "shutting down" to { output ->
                 when {
                     output.matches(readyPattern) -> {
-                        invokeShutdown()
+                        enterShutdown()
                         "shutting down"
                     }
                     output.isNotBlank() -> {

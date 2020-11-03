@@ -45,8 +45,10 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
         val annotation = parameterContext.parameter.getAnnotation(OS::class.java)
         val operatingSystem: OperatingSystem = annotation?.value?.objectInstance ?: OperatingSystemMock()
         val autoDelete = annotation?.autoDelete ?: true
-        if (!extensionContext.isCapturingOutput()) echo("Provisioning an image containing ${operatingSystem.name.cyan()} (${operatingSystem.directoryName})")
-        return operatingSystem.getCopy().also { if (autoDelete) saveReferenceForCleanup(extensionContext, it) }
+        if (!extensionContext.isCapturingOutput()) echo("Provisioning an image containing ${operatingSystem.name.cyan()} (${operatingSystem.directoryName})...")
+        return operatingSystem.getCopy().also { if (autoDelete) saveReferenceForCleanup(extensionContext, it) }.also {
+            if (!extensionContext.isCapturingOutput()) echo("Provision completed: ${"$it".cyan()}")
+        }
     }
 
     override fun afterEach(context: ExtensionContext) {

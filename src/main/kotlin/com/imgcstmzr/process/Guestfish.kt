@@ -9,7 +9,7 @@ import com.bkahlert.koodies.string.match
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.github.ajalt.clikt.output.TermUi
-import com.imgcstmzr.runtime.OperatingSystems
+import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
@@ -35,7 +35,7 @@ class Guestfish(
     /**
      * [Path] of the [imgPathOnHost] this [Guestfish] mounts before running any command.
      */
-    private val imgPathOnHost: Path,
+    private val imgPathOnHost: OperatingSystemImage,
 
     private val logger: BlockRenderingLogger<Any>,
 
@@ -98,7 +98,7 @@ class Guestfish(
                 .forEach {
                     val credentials = Credentials(it[1], it[2])
                     logStatus { META typed "Password of user ${credentials.username.quoted} updated." }
-                    OperatingSystems.credentials[imgPathOnHost] = credentials
+                    imgPathOnHost.credentials = credentials
                 }
             0
         }

@@ -148,6 +148,7 @@ class DockerTest {
 
         @Nested
         inner class IsRunning {
+
             @OptIn(ExperimentalTime::class)
             @Test
             fun `should return false on not yet started container container`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
@@ -220,7 +221,7 @@ class DockerTest {
                     if (dockerProcess.isRunning) break
                     Thread.sleep(100)
                 }
-                expectThat(Docker.exists(dockerProcess.name)).isTrue()
+                expectThat((System.currentTimeMillis() - startTime).milliseconds).isLessThan(5.seconds)
 
                 dockerProcess.destroy()
                 val destroyTime = System.currentTimeMillis()

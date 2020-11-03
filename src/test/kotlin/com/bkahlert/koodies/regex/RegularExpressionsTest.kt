@@ -15,6 +15,19 @@ class RegularExpressionsTest {
 
     @ConcurrentTestFactory
     fun `should correctly match`() = listOf(
+        RegularExpressions.atLeastOneWhitespaceRegex to MatchExpectations(
+            matchingInput = listOf(
+                " ",
+                "  ",
+                "\t",
+                " \t ",
+            ), nonMatchingInput = listOf(
+                "",
+                "a",
+                "a ",
+                " a",
+                "a b",
+            )),
         RegularExpressions.urlRegex to MatchExpectations(
             matchingInput = listOf(
                 "http://example.net",
@@ -73,12 +86,12 @@ class RegularExpressionsTest {
     ).map { (regex, expectations) ->
         dynamicContainer("for ${regex.pattern}", listOf(
             dynamicContainer("should match", expectations.matchingInput.map { matchingInput ->
-                dynamicTest(matchingInput) {
+                dynamicTest("input: $matchingInput") {
                     expectThat(matchingInput).matches(regex)
                 }
             }),
             dynamicContainer("should not match", expectations.nonMatchingInput.map { nonMatchingInput ->
-                dynamicTest(nonMatchingInput) {
+                dynamicTest("input: $nonMatchingInput") {
                     expectThat(nonMatchingInput).not { matches(regex) }
                 }
             }),

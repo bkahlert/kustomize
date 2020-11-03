@@ -49,7 +49,7 @@ interface RenderingLogger<R> {
     }
 
     fun logStatus(items: List<HasStatus> = emptyList(), block: () -> IO = { OUT typed "" }): RenderingLogger<R> = block().let { output ->
-        render(true) { output.formatted.lines().joinToString("\n") }
+        render(true) { output.formatted + " (${items.size})" }
         this
     }
 
@@ -68,7 +68,7 @@ interface RenderingLogger<R> {
             if (result.isSuccess) formatReturnValue(result.toSingleLineString()) else formatException("", result.toSingleLineString())
 
         fun formatReturnValue(oneLiner: String?): String =
-            oneLiner?.let { "${heavyCheckMark} ".green() + "returned".italic() + " $it" } ?: heavyCheckMark.green()
+            oneLiner?.let { "$heavyCheckMark ".green() + "returned".italic() + " $it" } ?: heavyCheckMark.green()
 
         fun formatException(prefix: String, oneLiner: String?): String =
             oneLiner?.let { "$greekSmallLetterKoppa".red() + prefix + "failed with ${it.red()}" } ?: "$greekSmallLetterKoppa".red()

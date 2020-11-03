@@ -79,7 +79,7 @@ object ArmRunner {
         vararg programs: Program,
     ): Int = logger.subLogger<Any, Int>("$osImage", ansiCode = ANSI.termColors.cyan) {
         val unfinished: MutableList<Program> = mutableListOf(
-            osImage.loginProgram(OperatingSystems.Companion.Credentials(osImage.defaultUsername, osImage.defaultPassword)),/*.logging()*/
+            osImage.loginProgram(osImage.credentials),/*.logging()*/
             *programs,
             osImage.shutdownProgram(),/*.logging()*/
         )
@@ -88,12 +88,7 @@ object ArmRunner {
                 META -> feedback(output.unformatted)
                 IN -> logStatus(items = unfinished) { output }
                 OUT -> logStatus(items = unfinished) { output }
-                ERR -> {
-                    println("Err in ArmRunner occurred: $output")
-                    //                    logException { // TODO
-                    //                        RuntimeException(output.unformatted)
-                    //                    }
-                }
+                ERR -> feedback("Unfortunately an error occurred: ${output.formatted}")
             }
             if (!unfinished.compute(this, output)) unfinished.takeIf { it.isNotEmpty() }?.removeAt(0)
             0

@@ -5,7 +5,6 @@ import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.test.strikt.hasSize
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
-import com.bkahlert.koodies.time.DateTimeFormatters.ISO8601_INSTANT
 import com.bkahlert.koodies.time.format
 import com.bkahlert.koodies.time.parseableInstant
 import com.bkahlert.koodies.time.sleep
@@ -15,9 +14,9 @@ import com.bkahlert.koodies.unit.bytes
 import com.imgcstmzr.patch.new.buildPatch
 import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
-import com.imgcstmzr.runtime.OperatingSystem
+import com.imgcstmzr.runtime.OperatingSystemImage
+import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.runtime.RunningOperatingSystem
 import com.imgcstmzr.util.DockerRequired
 import com.imgcstmzr.util.FixtureResolverExtension
 import com.imgcstmzr.util.OS
@@ -34,12 +33,9 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import org.junit.jupiter.api.parallel.Isolated
-import strikt.api.Assertion.Builder
-import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
 import strikt.assertions.exists
 import strikt.assertions.isEmpty
-import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
 import java.nio.file.Path
 import java.time.Instant
@@ -54,14 +50,14 @@ class PatchesKtTest {
     @Isolated // flaky OutputCapture
     inner class ConsoleLoggingByDefault {
         @Test
-        fun `should only log to console by default`(img: Path, capturedOutput: CapturedOutput) {
+        fun `should only log to console by default`(img: OperatingSystemImage, capturedOutput: CapturedOutput) {
             val nullPatch = buildPatch("No-Op Patch") {}
             nullPatch.patch(img)
             expectThat(capturedOutput.out.removeEscapeSequences()).isNotEmpty()
         }
 
         @Test
-        fun `should log bordered by default`(img: Path, capturedOutput: CapturedOutput) {
+        fun `should log bordered by default`(img: OperatingSystemImage, capturedOutput: CapturedOutput) {
             val nullPatch = buildPatch("No-Op Patch") {}
             nullPatch.patch(img)
             expectThat(capturedOutput.out.trim().removeEscapeSequences()).matchesCurlyPattern("""
@@ -78,7 +74,7 @@ class PatchesKtTest {
     @Isolated // flaky OutputCapture
     inner class NoSystemOut {
         @Test
-        fun `should only log using specified logger`(img: Path, logger: InMemoryLogger<Any>, capturedOutput: CapturedOutput) {
+        fun `should only log using specified logger`(img: OperatingSystemImage, logger: InMemoryLogger<Any>, capturedOutput: CapturedOutput) {
             val nullPatch = buildPatch("No-Op Patch") {}
             nullPatch.patch(img, logger)
             expectThat(logger.logged.removeEscapeSequences()).isNotEmpty()
@@ -87,10 +83,10 @@ class PatchesKtTest {
     }
 
     @Test
-    fun `should log not bordered if specified`(img: Path, capturedOutput: CapturedOutput) {
+    fun `should log not bordered if specified`(osImage: OperatingSystemImage, capturedOutput: CapturedOutput) {
         val logger = InMemoryLogger<Any>("not-bordered", false, emptyList())
         val nullPatch = buildPatch("No-Op Patch") {}
-        nullPatch.patch(img, logger)
+        nullPatch.patch(osImage, logger)
         expectThat(logger.logged.removeEscapeSequences()).matchesCurlyPattern("""
         Started: not-bordered
          Started: NO-OP PATCH
@@ -103,12 +99,12 @@ class PatchesKtTest {
 
     @DockerRequired
     @Test
-    fun `should prepare root directory then patch and copy everything back`(img: Path, logger: InMemoryLogger<Any>) {
+    fun `should prepare root directory then patch and copy everything back`(osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
         val sshPatch = SshPatch()
 
-        sshPatch.patch(img, logger)
+        sshPatch.patch(osImage, logger)
 
-        val guestfish = Guestfish(img.copyToTempSiblingDirectory(), logger).withRandomSuffix()
+        val guestfish = Guestfish(osImage based osImage.copyToTempSiblingDirectory(), logger).withRandomSuffix()
         guestfish.run(copyOutCommands(listOf(Path.of("/boot/ssh"))))
         expectThat(guestfish.guestRootOnHost).get { resolve("boot/ssh") }.exists().get { }
     }
@@ -117,9 +113,8 @@ class PatchesKtTest {
     @ExperimentalTime
     @DockerRequired
     @Test
-    fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite::class) img: Path, logger: InMemoryLogger<Any>) {
+    fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
         val now = Instant.now()
-        val nowString = ISO8601_INSTANT.format<Instant>(now)
 
         val fullyFleshedPatch = buildPatch("Try Everything Patch") {
             img {
@@ -168,9 +163,9 @@ class PatchesKtTest {
             }
         }
 
-        fullyFleshedPatch.patch(img, logger)
+        fullyFleshedPatch.patch(osImage, logger)
 
-        expectThat(img)
+        expectThat(osImage)
             .hasSize(2.Gibi.bytes)
             .booted<RaspberryPiLite>(logger) {
                 command("chafa /home/pi/BKAHLERT.png --duration 5");
@@ -178,31 +173,4 @@ class PatchesKtTest {
                 { true }
             }
     }
-}
-
-inline fun <reified T : RunningOperatingSystem> Builder<T>.command(input: String): DescribeableBuilder<String?> = get("running $input") {
-    enter(input)
-    readLine()
-}
-
-fun Builder<String?>.outputs(expected: String): Unit {
-    isEqualTo(expected)
-}
-
-interface RunningOSX
-
-val <T : RunningOSX> Builder<T>.command: Builder<T>
-    get() = get { this }
-
-inline fun <reified T : OperatingSystem, U : CharSequence> Builder<Path>.booted(
-    crossinline assertion: Builder<RunningOperatingSystem>.() -> Unit,
-): Builder<Path> {
-    val os = T::class.objectInstance ?: error("Invalid OS")
-    get("booted $os") {
-        os.bootToUserSession("Booting to assert $this", this) { output ->
-            get("logged in") { this@bootToUserSession }.apply(assertion)
-        }
-    }
-
-    return this
 }

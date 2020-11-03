@@ -14,6 +14,7 @@ import com.imgcstmzr.patch.new.Patch
 import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.OperatingSystem
+import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.bootRunStop
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
@@ -33,7 +34,7 @@ fun Patch.banner() { // TODO make use of it or delete
     echo("")
 }
 
-fun Patch.patch(img: Path, parentLogger: BlockRenderingLogger<Any>? = null) {
+fun Patch.patch(img: OperatingSystemImage, parentLogger: BlockRenderingLogger<Any>? = null) {
     parentLogger.segment<Any, Any>(name.toUpperCase(), null, borderedOutput = false) {
         applyImgOperations(img, this@patch)
         applyGuestfishAndFileSystemOperations(img, this@patch)
@@ -41,7 +42,7 @@ fun Patch.patch(img: Path, parentLogger: BlockRenderingLogger<Any>? = null) {
     }
 }
 
-fun BlockRenderingLogger<Any>.applyImgOperations(img: Path, patch: Patch) {
+fun BlockRenderingLogger<Any>.applyImgOperations(img: OperatingSystemImage, patch: Patch) {
     val count = patch.imgOperations.size
     if (count == 0) {
         logStatus { META typed "IMG Operations: —" }
@@ -56,7 +57,7 @@ fun BlockRenderingLogger<Any>.applyImgOperations(img: Path, patch: Patch) {
     }
 }
 
-fun BlockRenderingLogger<Any>.applyGuestfishAndFileSystemOperations(img: Path, patch: Patch): Any {
+fun BlockRenderingLogger<Any>.applyGuestfishAndFileSystemOperations(img: OperatingSystemImage, patch: Patch): Any {
     val count = patch.guestfishOperations.size + patch.fileSystemOperations.size
     if (count == 0) {
         logStatus { META typed "File System Operations: —" }
@@ -109,7 +110,7 @@ fun BlockRenderingLogger<Any>.applyGuestfishAndFileSystemOperations(img: Path, p
     }
 }
 
-fun BlockRenderingLogger<Any>.applyPrograms(img: Path, patch: Patch): Any {
+fun BlockRenderingLogger<Any>.applyPrograms(img: OperatingSystemImage, patch: Patch): Any {
     val count = patch.programs.size
     if (count == 0) {
         logStatus { META typed "Scripts: —" }
@@ -127,7 +128,7 @@ fun BlockRenderingLogger<Any>.applyPrograms(img: Path, patch: Patch): Any {
 
 fun <E : Patch> Collection<E>.merge(): Patch = CompositePatch(this)
 
-fun <E : Patch> Collection<E>.patch(img: Path) = merge().patch(img)
+fun <E : Patch> Collection<E>.patch(img: OperatingSystemImage) = merge().patch(img)
 
 interface Operation<TARGET> : HasStatus {
     var currentStatus: Status

@@ -44,7 +44,7 @@ open class BlockRenderingLogger<R>(
                 if (borderedOutput) "│\n╰─────╴$renderedSuccess\n"
                 else "Completed: $renderedSuccess"
             } else {
-                formatException(if (borderedOutput) "$LF╰─────╴" else LF, result.toSingleLineString()) + (if (borderedOutput) "$LF$LF" else LF)
+                formatException(if (borderedOutput) "$LF╰─────╴" else LF, result.toSingleLineString()) + LF
             }
         return message.ansiAwareMapLines { it.bold() }
     }

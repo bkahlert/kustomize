@@ -4,8 +4,10 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.IN
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.Processes.cheapEvalShellScript
 import com.bkahlert.koodies.concurrent.process.Processes.evalShellScript
 import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
+import com.bkahlert.koodies.concurrent.process.Processes.startShellScriptDetached
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.startAsDaemon
 import com.bkahlert.koodies.concurrent.synchronized
@@ -54,6 +56,7 @@ import java.nio.file.Path
 import java.util.Collections
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
+import kotlin.time.milliseconds
 import kotlin.time.minutes
 import kotlin.time.seconds
 
@@ -113,6 +116,41 @@ class ProcessesTest {
             expectThat(redirectedOutput.first { it.type == OUT }).isEqualToStringWise(OUT.format("test output"), removeAnsi = false)
             expectThat(redirectedOutput.first { it.type == ERR }).isEqualToStringWise(ERR.format("test error"), removeAnsi = false)
         }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    @Test
+    fun `should run detached scripts`() {
+        val path = Paths.tempFile()
+        val process = startShellScriptDetached {
+            !"""sleep 3"""
+            !"""echo $$ > "$path""""
+        }
+        var content: String
+        var waitCount = 0
+        var aliveCount = 0
+        val pid = process.pid()
+        while (path.readAll().also { content = it.trim() }.isBlank()) {
+            waitCount++
+            if (process.isAlive) aliveCount++
+            500.milliseconds.sleep()
+        }
+        expectThat(waitCount).isGreaterThan(4)
+        expectThat(aliveCount).isGreaterThan(4)
+        expectThat(process.isAlive).isFalse()
+        expectThat(content).isEqualTo("$pid")
+    }
+
+    @OptIn(ExperimentalTime::class)
+    @Test
+    fun `should cheap eval script`() {
+        val output = cheapEvalShellScript {
+            !"""
+                >&1 echo "test output"
+                >&2 echo "test error"
+            """.trimMargin()
+        }
+        expectThat(output).isEqualTo("test output")
     }
 
     @Test
@@ -201,8 +239,8 @@ class ProcessesTest {
                 .isFailure()
                 .isA<IllegalStateException>()
                 .message.get {
-                    this?.let {
-                        RegularExpressions.urlRegex.sequenceOfAllMatches(it)
+                    this?.let { message ->
+                        RegularExpressions.urlRegex.sequenceOfAllMatches(message)
                             .map { URL(it) }
                             .map { it.openStream().reader().readText() }
                             .map { it.removeEscapeSequences() }

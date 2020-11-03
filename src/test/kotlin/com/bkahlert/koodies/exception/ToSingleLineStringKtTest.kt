@@ -18,7 +18,7 @@ class ToSingleLineStringKtTest {
         @Test
         fun `should format as a single line`() {
             val actual = RuntimeException("test").toSingleLineString() ?: ""
-            expectThat(actual).startsWith("java.lang.RuntimeException: test @ com.bkahlert.koodies.exception.ToSingleLineStringKtTest")
+            expectThat(actual).startsWith("RuntimeException: test at.(ToSingleLineStringKtTest.kt:20)")
             expectThat(actual.lines()).hasSize(1)
         }
     }
@@ -44,7 +44,7 @@ class ToSingleLineStringKtTest {
             @Test
             fun `should format as a single line`() {
                 val actual = Result.failure<String>(RuntimeException("test")).toSingleLineString() ?: ""
-                expectThat(actual).startsWith("java.lang.RuntimeException: test @ com.bkahlert.koodies.exception.ToSingleLineStringKtTest")
+                expectThat(actual).startsWith("RuntimeException: test at.(ToSingleLineStringKtTest.kt:46)")
                 expectThat(actual.lines()).hasSize(1)
             }
         }

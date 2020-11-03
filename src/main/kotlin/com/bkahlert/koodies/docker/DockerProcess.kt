@@ -28,9 +28,11 @@ class DockerProcess(
 
     @OptIn(ExperimentalTime::class)
     private fun cleanUp(forcibly: Boolean) {
-        stop()
+        stop() // asynchronous call; just trying to be nice to call stop
         remove(forcibly)
-        100.milliseconds.poll { !isRunning }.forAtMost(10.seconds) {
+        100.milliseconds.poll {
+            !isRunning
+        }.forAtMost(10.seconds) {
             throw TimeoutException("Could not clean up $this within $it.")
         }
     }

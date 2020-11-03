@@ -30,6 +30,7 @@ import com.imgcstmzr.patch.UsernamePatch
 import com.imgcstmzr.process.Downloader.download
 import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
+import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.util.Paths
@@ -148,7 +149,7 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
     override fun run() {
         val cache: Cache = shared[Cache::class] as Cache
 
-        with(img.toPath()) {
+        with(os based img.toPath()) {
             TermUi.debug(os)
             TermUi.debug(size)
             TermUi.debug(enableSsh)

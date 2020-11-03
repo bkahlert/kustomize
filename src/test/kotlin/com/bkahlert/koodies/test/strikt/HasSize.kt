@@ -5,7 +5,7 @@ import com.bkahlert.koodies.unit.size
 import strikt.api.Assertion
 import java.nio.file.Path
 
-fun Assertion.Builder<Path>.hasSize(size: Size) =
+fun <T : Path> Assertion.Builder<T>.hasSize(size: Size) =
     assert("has $size") {
         val actualSize = it.size
         when (actualSize == size) {

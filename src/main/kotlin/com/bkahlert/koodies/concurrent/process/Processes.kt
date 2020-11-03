@@ -11,6 +11,7 @@ import com.bkahlert.koodies.nio.file.age
 import com.bkahlert.koodies.nio.file.conditioned
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.list
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ansi.AnsiStyles.tag
 import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.time.poll
@@ -25,6 +26,7 @@ import java.io.InputStreamReader
 import java.io.Reader
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
 import java.util.concurrent.Executors
 import kotlin.streams.asSequence
 import kotlin.time.Duration
@@ -53,11 +55,47 @@ object Processes {
             ?: throw IllegalStateException("This process $current has no recent child processes!\nChildren: ${children.toList()}")
 
     /**
+     * Runs the [shellScript] asynchronously and with no helping wrapper.
+     *
+     * Returns the raw [Process].
+     */
+    fun startShellScriptDetached(
+        workingDirectory: Path = WORKING_DIRECTORY,
+        env: Map<String, String> = emptyMap(),
+        shellScript: ShellScript.() -> Unit,
+    ): Process {
+        val command = ShellScript().apply {
+            shebang()
+            changeDirectoryOrExit(directory = workingDirectory)
+            shellScript()
+        }.buildTo(Paths.tempFile(base = shellScriptPrefix, extension = shellScriptExtension)).conditioned
+        return Commandline(command).apply {
+            addArguments(arguments)
+            this.workingDirectory = workingDirectory?.toFile()
+            env.forEach { addEnvironment(it.key, it.value) }
+        }.execute()
+    }
+
+    /**
+     * Same as [evalShellScript] but reads `std output` synchronously
+     * with neither additional comfort nor additional threads overhead.
+     */
+    fun cheapEvalShellScript(
+        workingDirectory: Path = WORKING_DIRECTORY,
+        env: Map<String, String> = emptyMap(),
+        shellScript: ShellScript.() -> Unit,
+    ): String =
+        startShellScriptDetached(workingDirectory, env, shellScript)
+            .inputStream.bufferedReader().readText()
+            .removeEscapeSequences()
+            .trim()
+
+    /**
      * Runs the [command] synchronously in a lightweight fashion and returns if the [substring] is contained in the output.
      */
     fun checkIfOutputContains(command: String, substring: String, caseSensitive: Boolean = false): Boolean = runCatching {
         val flags = if (caseSensitive) "" else "i"
-        check(startShellScript { line("$command | grep -q$flags '$substring'") }.waitForCompletion().exitCode == 0)
+        check(startShellScriptDetached { line("$command | grep -q$flags '$substring'") }.waitFor() == 0)
     }.isSuccess
 
     /**
@@ -76,6 +114,7 @@ object Processes {
             shellScript = shellScript,
         ).waitForCompletion()
     }
+
 
     /**
      * Runs the [shellScript] asynchronously and returns the [RunningProcess].
@@ -204,11 +243,14 @@ object Processes {
             override val process: Process = process
             var disabled: Boolean = false
             override val result: CompletableFuture<CompletedProcess> = executor.startAsCompletableFuture {
+                val exceptionHandler: (Throwable) -> Unit = {
+                    process.destroy()
+                }
                 runCatching {
                     listOf(
-                        "stdin" to setupInputFeeder(),
-                        "stdout" to setupOutputPumper(),
-                        "stderr" to setupErrorPumper(),
+                        "stdin" to setupInputFeeder(exceptionHandler),
+                        "stdout" to setupOutputPumper(exceptionHandler),
+                        "stderr" to setupErrorPumper(exceptionHandler),
                     ).let { ioHelper ->
                         awaitExitCode().also {
                             ioHelper.forEach { (_, completable) -> completable?.join() }
@@ -228,7 +270,12 @@ object Processes {
 
                     fold(
                         onSuccess = { CompletedProcess(pid, it, ioLog.logged) },
-                        onFailure = { throw RuntimeException("An error occurred while killing ${"$commandLine".tag()}.", it) }
+                        onFailure = {
+                            if (it is CompletionException) {
+                                throw it.cause ?: it
+                            }
+                            throw RuntimeException("An unexpected error occurred while killing ${"$commandLine".tag()}.", it)
+                        }
                     )
                 }
             }
@@ -247,37 +294,43 @@ object Processes {
                 metaProcessor(this)
             }
 
-            private fun setupInputFeeder(): CompletableFuture<Any>? = inputProvider?.run {
+            private fun setupInputFeeder(exceptionHandler: (Throwable) -> Unit): CompletableFuture<Any>? = inputProvider?.run {
                 executor.startAsCompletableFuture {
-                    use {
-                        var bytesCopied: Long = 0
-                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                        var bytes = read(buffer)
-                        while (bytes >= 0) {
-                            if (!disabled) {
-                                outputStream.write(buffer, 0, bytes)
-                                bytesCopied += bytes
-                                bytes = inputProvider.read(buffer)
-                            } else {
-                                break
+                    runCatching {
+                        use {
+                            var bytesCopied: Long = 0
+                            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                            var bytes = read(buffer)
+                            while (bytes >= 0) {
+                                if (!disabled) {
+                                    outputStream.write(buffer, 0, bytes)
+                                    bytesCopied += bytes
+                                    bytes = read(buffer)
+                                } else {
+                                    break
+                                }
                             }
                         }
+                    }.onFailure { exceptionHandler(it) }.getOrThrow()
+                }
+            }
+
+            private fun setupOutputPumper(exceptionHandler: (Throwable) -> Unit) = executor.startAsCompletableFuture {
+                kotlin.runCatching {
+                    inputStream.readerForStream(nonBlockingReader).forEachLine { line ->
+                        Thread.currentThread().name = "$commandLine::out:pump"
+                        if (!disabled) systemOutProcessor(line)
                     }
-                }
+                }.onFailure { exceptionHandler(it) }.getOrThrow()
             }
 
-            private fun setupOutputPumper() = executor.startAsCompletableFuture {
-                inputStream.readerForStream(nonBlockingReader).forEachLine { line ->
-                    Thread.currentThread().name = "$commandLine::out:pump"
-                    if (!disabled) systemOutProcessor(line)
-                }
-            }
-
-            private fun setupErrorPumper() = executor.startAsCompletableFuture {
-                errorStream.readerForStream(nonBlockingReader).forEachLine { line ->
-                    Thread.currentThread().name = "$commandLine::err:pump"
-                    if (!disabled) systemErrProcessor(line)
-                }
+            private fun setupErrorPumper(exceptionHandler: (Throwable) -> Unit) = executor.startAsCompletableFuture {
+                kotlin.runCatching {
+                    errorStream.readerForStream(nonBlockingReader).forEachLine { line ->
+                        Thread.currentThread().name = "$commandLine::err:pump"
+                        if (!disabled) systemErrProcessor(line)
+                    }
+                }.onFailure { exceptionHandler(it) }.getOrThrow()
             }
 
             @OptIn(ExperimentalTime::class)

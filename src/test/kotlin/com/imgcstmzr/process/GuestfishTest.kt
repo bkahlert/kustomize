@@ -6,6 +6,7 @@ import com.bkahlert.koodies.test.junit.debug.Debug
 import com.imgcstmzr.process.Guestfish.Companion.changePasswordCommand
 import com.imgcstmzr.process.Guestfish.Companion.copyInCommands
 import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
+import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.OperatingSystems.DietPi
 import com.imgcstmzr.util.DockerRequired
@@ -51,13 +52,13 @@ class GuestfishTest {
 
     @Test
     @DockerRequired
-    fun `should copy file from img, skip non-existing and override one`(img: Path, logger: InMemoryLogger<Any>, @Debug debug: Boolean) {
-        val guestfish = Guestfish(img, logger, debug = debug).withRandomSuffix()
+    fun `should copy file from osImage, skip non-existing and override one`(osImage: OperatingSystemImage, logger: InMemoryLogger<Any>, @Debug debug: Boolean) {
+        val guestfish = Guestfish(osImage, logger, debug = debug).withRandomSuffix()
         guestfish.run(copyOutCommands(listOf(Path.of("/boot/cmdline.txt"), Path.of("/non/existing.txt"))))
         val dir = guestfish.guestRootOnHost
 
         dir.resolve("boot/config.txt").writeText("overwrite me")
-        Guestfish(img, logger).withRandomSuffix().run(copyOutCommands(listOf(Path.of("/boot/config.txt"))))
+        Guestfish(osImage, logger).withRandomSuffix().run(copyOutCommands(listOf(Path.of("/boot/config.txt"))))
 
         expectThat(dir.resolve("boot/cmdline.txt")).hasEqualContent(ClassPath.of("cmdline.txt"))
         expectThat(dir.resolve("boot/config.txt")).hasEqualContent(ClassPath.of("config.txt")).not { hasContent("overwrite") }
@@ -65,8 +66,8 @@ class GuestfishTest {
 
     @Test
     @DockerRequired
-    fun `should copy new file to img and overwrite a second one`(img: Path, logger: InMemoryLogger<Any>) {
-        val guestfish = Guestfish(img, logger).withRandomSuffix()
+    fun `should copy new file to osImage and overwrite a second one`(osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+        val guestfish = Guestfish(osImage, logger).withRandomSuffix()
         val exampleHtml = Path.of("/example.html")
         val exampleHtmlOnHost = guestfish.guestRootOnHost.asRootFor(exampleHtml).also { ClassPath.of("example.html").copyTo(it) }
         val configTxt = Path.of("/boot/config.txt")
@@ -84,8 +85,8 @@ class GuestfishTest {
 
     @Test
     @DockerRequired
-    fun `should change password`(@OS(DietPi::class) img: Path, logger: InMemoryLogger<Any>) {
-        val guestfish = Guestfish(img, logger).withRandomSuffix()
+    fun `should change password`(@OS(DietPi::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+        val guestfish = Guestfish(osImage, logger).withRandomSuffix()
         val shadowPath = Path.of("/etc/shadow")
         val hostShadow = guestfish.guestRootOnHost.asRootFor(shadowPath)
 
@@ -95,12 +96,12 @@ class GuestfishTest {
 
     @Test
     @DockerRequired
-    fun `should update credentials password`(@OS(DietPi::class) img: Path, logger: InMemoryLogger<Any>) {
-        val guestfish = Guestfish(img, logger).withRandomSuffix()
+    fun `should update credentials password`(@OS(DietPi::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+        val guestfish = Guestfish(osImage, logger).withRandomSuffix()
         val password = String.random()
 
         guestfish.run(changePasswordCommand("root", password, String.random(32)))
 
-        expectThat(OperatingSystems.credentials).hasEntry(img, OperatingSystems.Companion.Credentials("root", password))
+        expectThat(OperatingSystems.credentials).hasEntry(osImage, OperatingSystems.Companion.Credentials("root", password))
     }
 }

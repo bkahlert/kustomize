@@ -2,9 +2,9 @@ package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.concurrent.process.DockerBuilder
 import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.concurrent.process.Processes
 import com.bkahlert.koodies.concurrent.process.Processes.checkIfOutputContains
 import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
+import com.bkahlert.koodies.concurrent.process.Processes.startShellScriptDetached
 import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.regex.RegexBuilder
 import com.bkahlert.koodies.string.random
@@ -29,15 +29,14 @@ object Docker {
      * Whether a Docker container with the given [name] is running.
      */
     fun isContainerRunning(name: String): Boolean =
-        Processes.evalShellScript { !"""docker ps --no-trunc --filter "name=$name"""" }.output.lines().drop(1).size == 1
+        checkIfOutputContains("""docker ps --no-trunc --format "{{.Names}}" --filter "name=^$name${'$'}"""", name)
 
     /**
      * Whether a Docker container—no matter if it's running or not—exists.
      */
     fun exists(name: String): Boolean =
-        Processes.evalShellScript { !"""docker ps --no-trunc --filter "name=$name" --all""" }.output.lines().drop(1).size == 1
+        checkIfOutputContains("""docker ps --no-trunc --format "{{.Names}}" --filter "name=^$name${'$'} --all"""", name)
 
-    @Suppress("SpellCheckingInspection")
     fun run(
         workingDirectory: Path = Paths.WORKING_DIRECTORY,
         outputProcessor: (DockerProcess.(IO) -> Unit)? = null,
@@ -59,15 +58,15 @@ object Docker {
     }
 
     /**
-     * Explicitly stops the Docker container with the given [name].
+     * Explicitly stops the Docker container with the given [name] **asynchronously**.
      */
     fun stop(name: String) {
-        startShellScript { !"docker stop \"$name\"" }.waitForCompletion()
+        startShellScriptDetached { !"docker stop \"$name\"" }
         1.seconds.sleep()
     }
 
     /**
-     * Explicitly (stops and) removes the Docker container with the given [name].
+     * Explicitly (stops and) removes the Docker container with the given [name] **synchronously**.
      *
      * If needed even [forcibly].
      */

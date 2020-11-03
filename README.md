@@ -25,7 +25,9 @@ Alternatively run `--config=bother-you.json
 - [gu](https://www.graalvm.org/docs/reference-manual/gu/): `gu install native-image`
 - Run `bin/imgcstmzr`
 
-## Technologies Used
+## Development
+
+### Technologies Used
 
 - [Kotlin](https://kotlinlang.org/) as the programming language
 - [Config4k](https://github.com/config4k/config4k) to process HOCON configuration files
@@ -35,6 +37,21 @@ Alternatively run `--config=bother-you.json
 - [JUnit 5](https://junit.org/junit5/) for testing
 - [Gradle Shadow](https://github.com/johnrengelman/shadow) and [GraalVM Native Image Plugin](https://github.com/mike-neck/graalvm-native-image-plugin) to
   generate a native self-enclosed binary provided as a [Docker](https://www.docker.com/) image
+
+### Debugging
+
+Running all tests will despite the number hardly leave any output.  
+The reason for that the tests are run concurrently, and those relying on specific logging on the console would need non-parallel execution.
+
+Therefore, logging is done in-memory using the component `InMemoryLogger`. Assertions on specific output can be done on that component's properties which give
+access to the overall output and `in`, `out` and `err` separately—each with or without ANSI control sequences.
+
+To actually see the output of a process, it suffices to run a single test only. `InMemoryLoggerResolver`, which is the component to provide instances
+of `InMemoryLogger` will take notice and configure the logger to not only capture the output but to also actually forward it to the console.
+
+Alternatively tests or test containers (= classes) can be annotated with `@Debug` which makes the corresponding logger also print to the console and which
+temporarily deactivates all other tests. In contrast to run a single test this approach also allows multiple `@Debug` annotated tests to run while still seeing
+output. Although that output is very likely mingled since those tests still run in parallel by default.
 
 ## TODO
 
