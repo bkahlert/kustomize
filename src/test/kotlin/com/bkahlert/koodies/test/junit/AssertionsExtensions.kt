@@ -8,10 +8,16 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.toJavaDuration
 
 @ExperimentalTime
+fun <T : CharSequence> assertTimeoutPreemptively(
+    timeout: Duration,
+    executable: Executable,
+    messageSupplier: Supplier<T>?,
+) {
+    Assertions.assertTimeoutPreemptively(timeout.toJavaDuration(), executable, messageSupplier?.let { "$it" })
+}
+
+@ExperimentalTime
 fun assertTimeoutPreemptively(
     timeout: Duration,
-    executable: Executable? = null,
-    messageSupplier: Supplier<String?>? = null,
-) {
-    Assertions.assertTimeoutPreemptively(timeout.toJavaDuration(), executable, messageSupplier)
-}
+    executable: Executable,
+) = assertTimeoutPreemptively<String>(timeout, executable, null)

@@ -7,13 +7,14 @@ import com.bkahlert.koodies.nullable.invoke
 import com.bkahlert.koodies.string.Unicode.Emojis.heavyBallotX
 import com.bkahlert.koodies.string.Unicode.Emojis.heavyCheckMark
 import com.bkahlert.koodies.string.Unicode.greekSmallLetterKoppa
+import com.bkahlert.koodies.string.mapLines
 import com.bkahlert.koodies.string.prefixWith
 import com.bkahlert.koodies.string.truncateBy
 import com.bkahlert.koodies.terminal.ANSI
-import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.ansiAwareMapLines
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.italic
+import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.asAnsiString
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.mordant.AnsiCode
 import com.imgcstmzr.runtime.HasStatus
@@ -34,20 +35,20 @@ interface RenderingLogger<R> {
      *
      * All default implemented methods use this method.
      */
-    fun render(trailingNewline: Boolean, block: () -> String)
+    fun render(trailingNewline: Boolean, block: () -> CharSequence)
 
-    fun logText(block: () -> String): RenderingLogger<R> = block().let { output ->
+    fun logText(block: () -> CharSequence): RenderingLogger<R> = block().let { output ->
         render(false) { output }
         this
     }
 
-    fun logLine(block: () -> String): RenderingLogger<R> = block().let { output ->
+    fun logLine(block: () -> CharSequence): RenderingLogger<R> = block().let { output ->
         render(true) { output }
         this
     }
 
     fun logStatus(items: List<HasStatus> = emptyList(), block: () -> IO = { OUT typed "" }): RenderingLogger<R> = block().let { output ->
-        render(true) { output.formatted + " (${items.size})" }
+        render(true) { "${output.formatted} (${items.size})" }
         this
     }
 
@@ -78,21 +79,21 @@ interface RenderingLogger<R> {
 
     companion object {
         val DEFAULT: RenderingLogger<Any> = object : RenderingLogger<Any> {
-            override fun render(trailingNewline: Boolean, block: () -> String) = block().let { TermUi.echo(it, trailingNewline) }
+            override fun render(trailingNewline: Boolean, block: () -> CharSequence) = block().let { TermUi.echo(it, trailingNewline) }
         }
 
         val recoveredLoggers = mutableListOf<RenderingLogger<*>>()
 
-        fun RenderingLogger<*>.formatResult(result: Result<*>): String =
+        fun RenderingLogger<*>.formatResult(result: Result<*>): CharSequence =
             if (result.isSuccess) formatReturnValue(result.toSingleLineString()) else formatException(" ", result.toSingleLineString())
 
-        fun RenderingLogger<*>.formatReturnValue(oneLiner: String): String {
+        fun RenderingLogger<*>.formatReturnValue(oneLiner: CharSequence): CharSequence {
             val format = if (recoveredLoggers.contains(this)) ANSI.termColors.green else ANSI.termColors.green
             val symbol = if (recoveredLoggers.contains(this)) heavyBallotX else heavyCheckMark
             return if (oneLiner.isEmpty()) format("$symbol") else format("$symbol") + " returned".italic() + " $oneLiner"
         }
 
-        fun RenderingLogger<*>.formatException(prefix: String, oneLiner: String?): String {
+        fun RenderingLogger<*>.formatException(prefix: CharSequence, oneLiner: CharSequence?): CharSequence {
             val format = if (recoveredLoggers.contains(this)) ANSI.termColors.green else ANSI.termColors.red
             return oneLiner?.let {
                 val event = if (recoveredLoggers.contains(this)) "recovered from" else "failed with"
@@ -101,7 +102,7 @@ interface RenderingLogger<R> {
         }
 
         inline fun <R, R2> RenderingLogger<R>?.subLogger(
-            caption: String,
+            caption: CharSequence,
             ansiCode: AnsiCode? = null,
             borderedOutput: Boolean = (this as? BlockRenderingLogger)?.borderedOutput ?: false,
             block: RenderingLogger<R2>.() -> R2,
@@ -122,7 +123,7 @@ interface RenderingLogger<R> {
                             caption = caption,
                             borderedOutput = borderedOutput,
                         ) { output ->
-                            val indentedOutput = output.ansiAwareMapLines {
+                            val indentedOutput = output.asAnsiString().mapLines {
                                 val truncateBy = color.invoke(it.truncateBy(prefix.length, minWhitespaceLength = 3))
                                 truncateBy.prefixWith(prefix)
                             }
@@ -135,25 +136,25 @@ interface RenderingLogger<R> {
 
         @JvmName("simpleSubLogger")
         inline fun <R> RenderingLogger<R>?.subLogger(
-            caption: String,
+            caption: CharSequence,
             ansiCode: AnsiCode? = null,
             borderedOutput: Boolean = (this as? BlockRenderingLogger)?.borderedOutput ?: false,
             block: RenderingLogger<R>.() -> R,
         ): R = subLogger<R, R>(caption, ansiCode, borderedOutput, block)
 
         inline fun <reified R1, reified R2> RenderingLogger<R1>?.singleLineLogger(
-            caption: String,
+            caption: CharSequence,
             noinline block: SingleLineLogger<R2>.() -> R2,
         ): R2 = if (this == null) {
             val logger: SingleLineLogger<R2> =
                 object : SingleLineLogger<R2>(caption) {
-                    override fun render(block: () -> String) {
+                    override fun render(block: () -> CharSequence) {
                     }
                 }
             kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
         } else {
             val logger: SingleLineLogger<R2> = object : SingleLineLogger<R2>(caption) {
-                override fun render(block: () -> String) {
+                override fun render(block: () -> CharSequence) {
                     val message = block()
                     val prefix = this@singleLineLogger.nestingPrefix
                     val logMessage = prefix + message.bold()
@@ -165,7 +166,7 @@ interface RenderingLogger<R> {
 
         @JvmName("simpleSingleLineLogger")
         inline fun <reified R> RenderingLogger<R>?.singleLineLogger(
-            caption: String,
+            caption: CharSequence,
             noinline block: SingleLineLogger<R>.() -> R,
         ): R = singleLineLogger<R, R>(caption, block)
     }

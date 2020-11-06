@@ -8,8 +8,10 @@ import com.bkahlert.koodies.string.CodePoint
 import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.LineSeparators.isMultiline
+import com.bkahlert.koodies.string.asString
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.bkahlert.koodies.string.truncate
+import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.Size
@@ -65,8 +67,8 @@ fun <T : CharSequence> Assertion.Builder<T>.isEqualToByteWise(other: CharSequenc
 
 fun Assertion.Builder<*>.isEqualToStringWise(other: Any?, removeAnsi: Boolean = true) =
     assert("have same toString value") { value ->
-        val actualString = value.toString().let { if (removeAnsi) it.removeEscapeSequences<CharSequence>() else it }
-        val expectedString = other.toString().let { if (removeAnsi) it.removeEscapeSequences<CharSequence>() else it }
+        val actualString = value.toString().let { if (removeAnsi || value is ANSI) it.removeEscapeSequences() else it }
+        val expectedString = other.toString().let { if (removeAnsi || value is ANSI) it.removeEscapeSequences() else it }
         when (actualString == expectedString) {
             true -> pass()
             else -> fail("was $actualString instead of $expectedString.")
@@ -74,16 +76,16 @@ fun Assertion.Builder<*>.isEqualToStringWise(other: Any?, removeAnsi: Boolean = 
     }
 
 
-fun Assertion.Builder<String>.containsAtLeast(value: String, lowerLimit: Int = 1) =
+fun <T : CharSequence> Assertion.Builder<T>.containsAtLeast(value: CharSequence, lowerLimit: Int = 1) =
     assert("contains ${value.quoted} at least ${lowerLimit}x") {
-        val actual = Regex.fromLiteral(value).countMatches(it)
+        val actual = Regex.fromLiteral(value.asString()).countMatches(it)
         if (actual >= lowerLimit) pass()
         else fail("but actually contains it ${actual}x")
     }
 
-fun Assertion.Builder<String>.containsAtMost(value: String, limit: Int = 1) =
+fun <T : CharSequence> Assertion.Builder<T>.containsAtMost(value: CharSequence, limit: Int = 1) =
     assert("contains ${value.quoted} at most ${limit}x") {
-        val actual = Regex.fromLiteral(value).countMatches(it)
+        val actual = Regex.fromLiteral(value.toString()).countMatches(it)
         if (actual <= limit) pass()
         else fail("but actually contains it ${actual}x")
     }

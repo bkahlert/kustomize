@@ -14,5 +14,6 @@ fun TermUi.debug(
     lineSeparator: String = console.lineSeparator,
 ) {
     val text = message?.toString()?.withSuffix("\n") ?: "null"
-    console.print(if (err) IO.Type.ERR.format(text) else IO.Type.META.format(text), err)
+    val formatted = if (err) IO.Type.ERR.format(text) else IO.Type.META.format(text)
+    console.print("$formatted", err)
 }

@@ -1,12 +1,6 @@
 package com.bkahlert.koodies.terminal.ansi
 
-import com.bkahlert.koodies.nullable.let
-import com.bkahlert.koodies.string.LineSeparators
-import com.bkahlert.koodies.string.LineSeparators.lineSequence
-import com.bkahlert.koodies.string.LineSeparators.trailingLineSeparator
-import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
 import com.bkahlert.koodies.string.Unicode
-import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ANSI.termColors
 import com.imgcstmzr.util.namedGroups
 import com.github.ajalt.mordant.AnsiCode as MordantAnsiCode
@@ -23,7 +17,7 @@ class AnsiCode(
      * The code needed to close a control sequence.
      */
     val closeCode: Int,
-) : com.github.ajalt.mordant.AnsiCode(listOf(openCodes to closeCode)) {
+) : MordantAnsiCode(listOf(openCodes to closeCode)) {
     /**
      * Creates an [AnsiCode] using a [Pair] of which the [Pair.first]
      * element forms the codes used to open a control sequence and [Pair.second]
@@ -35,7 +29,7 @@ class AnsiCode(
      * Creates an [AnsiCode] based on a [MordantAnsiCode] providing access
      * to the open and close codes of the latter.
      */
-    constructor(mordantAnsiCode: com.github.ajalt.mordant.AnsiCode) : this(extractCodes(mordantAnsiCode))
+    constructor(mordantAnsiCode: MordantAnsiCode) : this(mordantAnsiCode.publicCodes)
 
     /**
      * Convenience view on all codes used by this [AnsiCode].
@@ -45,7 +39,6 @@ class AnsiCode(
     companion object {
         const val ESC = Unicode.escape // `ESC[` also called 7Bit Control Sequence Introducer
         const val CSI = Unicode.controlSequenceIntroducer
-        val ansiCloseRegex = Regex("(?<CSI>$CSI|$ESC\\[)((?:\\d{1,3};?)+)m")
 
         /**
          * Partial Line Forward
@@ -61,6 +54,48 @@ class AnsiCode(
         const val PARTIAL_LINE_FORWARD = "$ESC\\[K"
 
         const val splitCodeMarker = "👈 ansi code splitter 👉"
+
+        /**
+         * Returns the control sequence needed to close all [codes] that are
+         * not already closed in the list.
+         *
+         * Think of it as a bunch of HTML tags of which a few have not been closed,
+         * whereas this function returns the string that renders the HTML valid again.
+         */
+        fun closingControlSequence(codes: List<Int>): String = controlSequence(closingCodes(unclosedCodes(codes)))
+
+        /**
+         * Iterates through the codes and returns the ones that have no closing counterpart.
+         *
+         * Think of it as a bunch of HTML tags of which a few have not been closed,
+         * whereas this function returns those tags that render the HTML invalid.
+         */
+        fun unclosedCodes(codes: List<Int>): List<Int> {
+            val unclosedCodes = mutableListOf<Int>()
+            codes.forEach { code ->
+                val ansiCodes: List<AnsiCode> = codeToAnsiCodeMappings[code] ?: emptyList()
+                ansiCodes.forEach { ansiCode ->
+                    if (ansiCode.closeCode != code) {
+                        unclosedCodes.addAll(ansiCode.openCodes)
+                    } else {
+                        unclosedCodes.removeAll { ansiCode.openCodes.contains(it) }
+                    }
+                }
+            }
+            return unclosedCodes
+        }
+
+        /**
+         * Returns the codes needed to close the given ones.
+         */
+        fun closingCodes(codes: List<Int>): List<Int> =
+            codes.flatMap { openCode -> codeToAnsiCodeMappings[openCode]?.map { ansiCode -> ansiCode.closeCode } ?: emptyList() }
+
+        /**
+         * Returns the rendered control sequence for the given codes.
+         */
+        fun controlSequence(codes: List<Int>): String =
+            MordantAnsiCode(codes, 0)(splitCodeMarker).split(splitCodeMarker)[0]
 
         /**
          * A map that maps the open and close codes of all supported instances of [AnsiCode]
@@ -88,23 +123,28 @@ class AnsiCode(
         /**
          * [Regex] that matches an [AnsiCode].
          */
-        val regex: Regex = Regex("(?<CSI>$CSI|$ESC\\[)(?<parameterBytes>[0-?]*)(?<intermediateBytes>[ -/]*)(?<finalByte>[@-~])")
+        val ansiCodeRegex: Regex = Regex("(?<CSI>$CSI|$ESC\\[)(?<parameterBytes>[0-?]*)(?<intermediateBytes>[ -/]*)(?<finalByte>[@-~])")
 
         /**
-         * Extracts the unfortunately otherwise inaccessible open and close codes of a [MordantAnsiCode].
+         * Provides (comparably expensive) access to the [Pair] of opening and closing [codes] of a [MordantAnsiCode].
          */
-        private fun extractCodes(ansiCode: com.github.ajalt.mordant.AnsiCode): Pair<List<Int>, Int> = splitCodeMarker
-            .let<String, List<String>> { ansiCode(it).split(it) }
-            .map { parseAnsiCodesAsSequence(it).toList() }
-            .let<List<List<Int>>, Pair<List<Int>, Int>> { (openCodes: List<Int>, closeCode: List<Int>) -> openCodes to closeCode.single() }
+        val MordantAnsiCode.publicCodes: Pair<List<Int>, Int>
+            get() = splitCodeMarker
+                .let<String, List<String>> { this(it).split(it) }
+                .map { it.parseAnsiCodesAsSequence().toList() }
+                .let<List<List<Int>>, Pair<List<Int>, Int>> { (openCodes: List<Int>, closeCode: List<Int>) -> openCodes to closeCode.single() }
 
         /**
-         * Given a char sequence a sequence of found [AnsiCode] open and close codes is returned.
+         * Searches this char sequence for [AnsiCode] and returns a stream of codes.
+         *
+         * *Note: This method makes no difference between opening and closing codes.
          */
-        private fun parseAnsiCodesAsSequence(charSequence: CharSequence): Sequence<Int> = regex.findAll(charSequence).flatMap { parseAnsiCode(it) }
+        fun CharSequence.parseAnsiCodesAsSequence(): Sequence<Int> = ansiCodeRegex.findAll(this).flatMap { parseAnsiCode(it) }
 
         /**
-         * Given a char sequence a sequence of found [AnsiCode] open and close codes is returned.
+         * Given a [matchResult] resulting from [ansiCodeRegex] all found ANSI codes are returned.
+         *
+         * *Note: This method makes no difference between opening and closing codes.
          */
         fun parseAnsiCode(matchResult: MatchResult): Sequence<Int> {
             val intermediateBytes = matchResult.namedGroups["intermediateBytes"]?.value ?: ""
@@ -118,72 +158,10 @@ class AnsiCode(
             }
         }
 
-
-        /**
-         * Maps each line of this char sequence using using [transform] while
-         * keeping the eventually [ANSI] formatting intact.
-         *
-         * If this strings consists of but a single line this line is mapped.
-         *
-         * If this string has a trailing line that trailing line is left unchanged.
-         */
-        fun CharSequence.ansiAwareMapLines(ignoreTrailingSeparator: Boolean = true, transform: (String) -> String): String {
-            val trailingLineBreak = trailingLineSeparator
-            val prefixedLines = withoutTrailingLineSeparator.ansiAwareLineSequence().joinToString("\n") { line ->
-                transform(line)
-            }
-            return prefixedLines + (trailingLineBreak?.let {
-                trailingLineBreak + (if (!ignoreTrailingSeparator) transform("") else "")
-            } ?: "")
-        }
-
-        /**
-         * Splits this char sequence to a sequence of lines delimited by any of the [LineSeparators]
-         * while keeping an eventually [ANSI] formatting intact.
-         *
-         * The lines returned do not include terminating line separators.
-         */
-        fun CharSequence.ansiAwareLineSequence(): Sequence<String> {
-            val openingCodes = mutableListOf<Int>()
-            return lineSequence().map { line ->
-                val currentOpeningCodes = openingCodes.toList()
-                parseAnsiCodesAsSequence(line).forEach { code ->
-                    val ansiCodes: List<AnsiCode> = codeToAnsiCodeMappings[code] ?: emptyList()
-                    ansiCodes.forEach { ansiCode ->
-                        if (ansiCode.closeCode != code) {
-                            openingCodes.addAll(ansiCode.openCodes)
-                        } else {
-                            openingCodes.removeAll { ansiCode.openCodes.contains(it) }
-                        }
-                    }
-                }
-                if (currentOpeningCodes.isNotEmpty()) {
-                    com.github.ajalt.mordant.AnsiCode(currentOpeningCodes, 0)(line)
-                } else {
-                    line
-                }
-            }
-        }
-
-        /**
-         * Splits this char sequence to a list of lines delimited by any of the [LineSeparators]
-         * while keeping an eventually [ANSI] formatting intact.
-         *
-         * The lines returned do not include terminating line separators.
-         */
-        fun CharSequence.ansiAwareLines(): List<String> = ansiAwareLineSequence().toList()
-
-
-        fun CharSequence.ansiAwareLength(): Int = removeEscapeSequences().length
-
-        fun CharSequence.ansiAwareSubstring(startIndex: Int, endIndex: Int): String {
-            return AnsiString(this).substring(startIndex, endIndex)
-        }
-
         /**
          * Returns the [String] with [ANSI escape codes](https://en.wikipedia.org/wiki/ANSI_escape_code) removed.
          */
-        fun <T : CharSequence> T.removeEscapeSequences(): String = regex.replace(this, "")
+        fun CharSequence.removeEscapeSequences(): String = ansiCodeRegex.replace(this, "")
 
         /**
          * Returns the [String] with [ANSI escape codes](https://en.wikipedia.org/wiki/ANSI_escape_code) removed.

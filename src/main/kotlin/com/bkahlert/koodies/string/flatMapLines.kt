@@ -1,7 +1,6 @@
 package com.bkahlert.koodies.string
 
-import com.bkahlert.koodies.string.LineSeparators.trailingLineSeparator
-import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
+import com.bkahlert.koodies.string.LineSeparators.hasTrailingLineSeparator
 
 /**
  * Flat maps each line of this char sequence using [transform].
@@ -10,12 +9,10 @@ import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
  *
  * If this char sequence has a trailing line that trailing line is left unchanged.
  */
-fun <T : CharSequence> T.flatMapLines(ignoreTrailingSeparator: Boolean = true, transform: (CharSequence) -> Iterable<T>): String {
-    val trailingLineBreak = trailingLineSeparator
-    val prefixedLines = withoutTrailingLineSeparator.lines().joinToString("\n") { line ->
-        transform(line).joinToString("\n")
+fun <T : CharSequence> T.flatMapLines(ignoreTrailingSeparator: Boolean = true, transform: (CharSequence) -> Iterable<T>): String =
+    (hasTrailingLineSeparator && ignoreTrailingSeparator).let { trailingLineSeparator ->
+        lines().map { line -> transform(line).joinToString("\n") }
+            .let { if (trailingLineSeparator) it.dropLast(1) else it }
+            .joinToString("\n")
+            .let { if (trailingLineSeparator) it + "\n" else it }
     }
-    return prefixedLines + (trailingLineBreak?.let {
-        trailingLineBreak + (if (!ignoreTrailingSeparator) transform("").joinToString("\n") else "")
-    } ?: "")
-}

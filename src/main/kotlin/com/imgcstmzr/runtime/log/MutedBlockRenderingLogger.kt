@@ -4,13 +4,13 @@ import com.bkahlert.koodies.concurrent.process.IO
 import com.imgcstmzr.runtime.HasStatus
 
 open class MutedBlockRenderingLogger<R>(
-    caption: String = "",
+    caption: CharSequence = "",
     borderedOutput: Boolean = false,
-    interceptor: (String) -> String? = { it },
-    log: (String) -> Any = { },
+    interceptor: (CharSequence) -> CharSequence? = { it },
+    log: (CharSequence) -> Any = { },
 ) : BlockRenderingLogger<R>(caption, borderedOutput, interceptor, log) {
 
-    override fun render(trailingNewline: Boolean, block: () -> String) {}
+    override fun render(trailingNewline: Boolean, block: () -> CharSequence) {}
 
     override fun logStatus(items: List<HasStatus>, block: () -> IO) = this
 

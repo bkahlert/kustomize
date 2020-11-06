@@ -1,7 +1,6 @@
 package com.bkahlert.koodies.string
 
-import com.bkahlert.koodies.string.LineSeparators.trailingLineSeparator
-import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
+import com.bkahlert.koodies.string.LineSeparators.hasTrailingLineSeparator
 
 /**
  * Maps each line of this char sequence using [transform].
@@ -10,12 +9,20 @@ import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
  *
  * If this char sequence has a trailing line that trailing line is left unchanged.
  */
-fun <T : CharSequence> T.mapLines(ignoreTrailingSeparator: Boolean = true, transform: (CharSequence) -> T): String {
-    val trailingLineBreak = trailingLineSeparator
-    val prefixedLines = withoutTrailingLineSeparator.lines().joinToString("\n") { line ->
-        transform(line)
+fun CharSequence.mapLines(ignoreTrailingSeparator: Boolean = true, transform: (CharSequence) -> CharSequence): String =
+    (hasTrailingLineSeparator && ignoreTrailingSeparator).let { trailingLineSeparator ->
+        lines().map(transform)
+            .let { if (trailingLineSeparator) it.dropLast(1) else it }
+            .joinToString("\n")
+            .let { if (trailingLineSeparator) it + "\n" else it }
     }
-    return prefixedLines + (trailingLineBreak?.let {
-        trailingLineBreak + (if (!ignoreTrailingSeparator) transform("") else "")
-    } ?: "")
-}
+
+/**
+ * Maps each line of this string using [transform].
+ *
+ * If this string consists of but a single line this line is mapped.
+ *
+ * If this string has a trailing line that trailing line is left unchanged.
+ */
+fun String.mapLines(ignoreTrailingSeparator: Boolean = true, transform: (CharSequence) -> CharSequence): String =
+    (this as CharSequence).mapLines(ignoreTrailingSeparator, transform)

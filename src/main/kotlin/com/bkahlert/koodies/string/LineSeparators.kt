@@ -94,8 +94,14 @@ object LineSeparators : Collection<String> {
     /**
      * If this [CharSequence] ends with one of the [LineSeparators] this property contains this [CharSequence] without it.
      */
-    val CharSequence.withoutTrailingLineSeparator: String
-        get() = trailingLineSeparator?.let { lineBreak -> removeSuffix(lineBreak).toString() } ?: toString()
+    val CharSequence.withoutTrailingLineSeparator: CharSequence
+        get() = trailingLineSeparator?.let { lineBreak -> removeSuffix(lineBreak) } ?: this
+
+    /**
+     * If this [String] ends with one of the [LineSeparators] this property contains this [String] without it.
+     */
+    val String.withoutTrailingLineSeparator: String
+        get() = trailingLineSeparator?.let { lineBreak -> removeSuffix(lineBreak) } ?: this
 
     // TODO would be more streamlined if there was a lines(keepDelimiters=true) function
 

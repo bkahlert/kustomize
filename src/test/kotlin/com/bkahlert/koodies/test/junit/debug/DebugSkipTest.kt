@@ -25,7 +25,6 @@ import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 import java.util.logging.LogManager
 
-
 @Isolated
 @Execution(ExecutionMode.CONCURRENT)
 class DebugSkipTest {

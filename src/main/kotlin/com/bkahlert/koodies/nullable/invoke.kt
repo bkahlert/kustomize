@@ -1,5 +1,7 @@
 package com.bkahlert.koodies.nullable
 
+import com.github.ajalt.clikt.output.TermUi.echo
+
 /**
  * 👍 ✅ `... transform(a) ...`
  *
@@ -75,8 +77,8 @@ private object InvokeSamples {
         fun someFunction(arg: String, optionalTransformation: ((String) -> String)? = null): String =
             optionalTransformation(arg)
 
-        println(someFunction("text") { "<strong>$it</strong>" }) // ➜ <strong>text</strong>
-        println(someFunction("text")) // ➜ text
+        echo(someFunction("text") { "<strong>$it</strong>" }) // ➜ <strong>text</strong>
+        echo(someFunction("text")) // ➜ text
     }
 
     fun optionalNullableReturningTransformation() {

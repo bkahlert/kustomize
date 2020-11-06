@@ -21,8 +21,8 @@ class IOTest {
             IO.Type.values().map { type ->
                 dynamicTest("$sample + $type") {
                     val message = "$sample of type $type"
-                    val string = (type typed message).toString().also { println(it) }
-                    expectThat(string.removeEscapeSequences<CharSequence>()).isEqualTo(message)
+                    val string = (type typed message).toString()
+                    expectThat(string.removeEscapeSequences()).isEqualTo(message)
                 }
             }
         }

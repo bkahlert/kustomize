@@ -19,7 +19,7 @@ import kotlin.reflect.KFunction2
 import kotlin.reflect.KFunction3
 
 open class InMemoryLogger<T> private constructor(
-    caption: String,
+    caption: CharSequence,
     borderedOutput: Boolean = false,
     private val outputStream: TeeOutputStream,
     private val captured: MutableList<CharSequence> = mutableListOf(),
@@ -27,7 +27,7 @@ open class InMemoryLogger<T> private constructor(
 ) : BlockRenderingLogger<T>(
     caption = caption,
     borderedOutput = borderedOutput,
-    log = { message: String ->
+    log = { message: CharSequence ->
         val time = Thread.currentThread().name.padStartFixedLength(30, strategy = MIDDLE) + ":" + " ${Now.passedSince(start)}".padStartFixedLength(7)
         outputStream.write(message.prefixLinesWith(prefix = "$time: ").toByteArray())
         captured.add(message.withoutTrailingLineSeparator)

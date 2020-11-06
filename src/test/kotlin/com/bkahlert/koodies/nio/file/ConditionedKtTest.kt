@@ -37,7 +37,6 @@ class ConditionedKtTest {
     fun `should return absolute`() {
         val workDir = Paths.WORKING_DIRECTORY
         val relativize = workDir.relativize(workDir.resolve("file.txt").deleteOnExit())
-        println(relativize)
         val conditioned = relativize.also { it.writeText("was me") }.conditioned
         expectThat(Path.of(conditioned)).isAbsolute().containsContent("was me")
     }

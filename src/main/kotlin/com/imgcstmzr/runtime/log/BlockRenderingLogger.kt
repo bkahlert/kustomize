@@ -5,14 +5,15 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.exception.toSingleLineString
 import com.bkahlert.koodies.nullable.letIfSet
 import com.bkahlert.koodies.string.LineSeparators.LF
+import com.bkahlert.koodies.string.mapLines
 import com.bkahlert.koodies.string.prefixLinesWith
 import com.bkahlert.koodies.string.prefixWith
 import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.string.truncateBy
 import com.bkahlert.koodies.terminal.ANSI
-import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.ansiAwareMapLines
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
+import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.asAnsiString
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.mordant.AnsiCode
 import com.imgcstmzr.runtime.HasStatus
@@ -21,34 +22,34 @@ import com.imgcstmzr.runtime.log.RenderingLogger.Companion.formatException
 import com.imgcstmzr.runtime.log.RenderingLogger.Companion.formatResult
 
 open class BlockRenderingLogger<R>(
-    private val caption: String,
+    private val caption: CharSequence,
     val borderedOutput: Boolean = false,
-    val interceptor: (String) -> String? = { it },
-    val log: (String) -> Any = { output: String ->
+    val interceptor: (CharSequence) -> CharSequence? = { it },
+    val log: (CharSequence) -> Any = { output: CharSequence ->
         TermUi.echo(output, trailingNewline = false)
     },
 ) : RenderingLogger<R> {
 
     override val nestingPrefix: String get() = if (borderedOutput) "├─╴ " else " :"
 
-    override fun render(trailingNewline: Boolean, block: () -> String): Unit = block().let { message: String ->
-        val finalMessage: String? = interceptor.invoke(message + if (trailingNewline) "\n" else "")
+    override fun render(trailingNewline: Boolean, block: () -> CharSequence): Unit = block().let { message: CharSequence ->
+        val finalMessage: CharSequence? = interceptor.invoke("$message" + if (trailingNewline) "\n" else "")
         if (finalMessage != null) log.invoke(finalMessage)
     }
 
     private val blockStart
-        get() = if (borderedOutput) "\n╭─────╴" + ANSI.termColors.bold(caption) + "\n$prefix" else ANSI.termColors.bold("Started: $caption")
+        get() = if (borderedOutput) "\n╭─────╴" + ANSI.termColors.bold("$caption") + "\n$prefix" else ANSI.termColors.bold("Started: $caption")
     val prefix: String get() = if (borderedOutput) "│   " else " "
-    fun getBlockEnd(result: Result<R>): String {
+    fun getBlockEnd(result: Result<R>): CharSequence {
         val message: String =
             if (result.isSuccess) {
                 val renderedSuccess = formatResult(result)
                 if (borderedOutput) "│\n╰─────╴$renderedSuccess\n"
                 else "Completed: $renderedSuccess"
             } else {
-                formatException(if (borderedOutput) "$LF╰─────╴" else " ", result.toSingleLineString()) + if (borderedOutput) LF else ""
+                formatException(if (borderedOutput) "$LF╰─────╴" else " ", result.toSingleLineString()).toString() + if (borderedOutput) LF else ""
             }
-        return message.ansiAwareMapLines { it.bold() }
+        return message.asAnsiString().mapLines { it.bold() }
     }
 
     init {
@@ -60,7 +61,7 @@ open class BlockRenderingLogger<R>(
         this
     }
 
-    override fun logLine(block: () -> String): RenderingLogger<R> = block().let {
+    override fun logLine(block: () -> CharSequence): RenderingLogger<R> = block().let {
         val message = it.prefixLinesWith(ignoreTrailingSeparator = false, prefix)
         render(true) { message }
         this
@@ -71,7 +72,7 @@ open class BlockRenderingLogger<R>(
             val currentPrefix = prefix
             output.formatted.lines().forEachIndexed { index, line ->
                 val message = if (index == 0 && output.type == OUT) {
-                    val fill = statusPadding(line.removeEscapeSequences<CharSequence>())
+                    val fill = statusPadding(line.removeEscapeSequences())
                     val status = items.status()
                     "$currentPrefix$line$fill$status"
                 } else {
@@ -95,17 +96,17 @@ open class BlockRenderingLogger<R>(
         private const val statusInformationMinimalPadding = 5
 
         val statusPadding: (String) -> String = { text: String ->
-            " ".repeat((statusInformationColumn - text.removeEscapeSequences<CharSequence>().length).coerceAtLeast(statusInformationMinimalPadding))
+            " ".repeat((statusInformationColumn - text.removeEscapeSequences().length).coerceAtLeast(statusInformationMinimalPadding))
         }
     }
 }
 
 
 inline fun <R, R2> BlockRenderingLogger<R>?.segment(
-    caption: String,
+    caption: CharSequence,
     ansiCode: AnsiCode? = ANSI.termColors.magenta,
     borderedOutput: Boolean = this?.borderedOutput ?: false,
-    noinline additionalInterceptor: ((String) -> String?)? = null,
+    noinline additionalInterceptor: ((CharSequence) -> CharSequence?)? = null,
     block: BlockRenderingLogger<R2>.() -> R2,
 ): R2 {
     val logger: BlockRenderingLogger<R2> =
@@ -131,7 +132,7 @@ inline fun <R, R2> BlockRenderingLogger<R>?.segment(
                         interceptor
                     },
                 ) { output ->
-                    val indentedOutput = output.ansiAwareMapLines {
+                    val indentedOutput = output.asAnsiString().mapLines {
                         val truncateBy = it.truncateBy(prefix.length, minWhitespaceLength = 3).let { ansiCode?.invoke(it) ?: it }
                         truncateBy.prefixWith(prefix)
                     }
@@ -144,18 +145,18 @@ inline fun <R, R2> BlockRenderingLogger<R>?.segment(
 
 
 inline fun <reified R1, reified R2> BlockRenderingLogger<R1>?.miniSegment(
-    caption: String,
+    caption: CharSequence,
     noinline block: SingleLineLogger<R2>.() -> R2,
 ): R2 = if (this == null) {
     val logger: SingleLineLogger<R2> =
         object : SingleLineLogger<R2>(caption) {
-            override fun render(block: () -> String) {
+            override fun render(block: () -> CharSequence) {
             }
         }
     kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
 } else {
     val logger: SingleLineLogger<R2> = object : SingleLineLogger<R2>(caption) {
-        override fun render(block: () -> String) {
+        override fun render(block: () -> CharSequence) {
             val message = block()
             val prefix = this@miniSegment.nestingPrefix
             val logMessage = prefix + message.bold()

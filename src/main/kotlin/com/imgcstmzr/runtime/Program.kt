@@ -77,7 +77,7 @@ class Program(
         override fun toString(): String = when (oldState) {
             null -> " ▶️ $leftBracket$newState$rightBracket"
             else -> {
-                val visualizedOutput = if (IO.isBlank) '\u2400' else IO.text.replaceNonPrintableCharacters().cyan()
+                val visualizedOutput = if (IO.isBlank) '\u2400' else IO.text.toString().replaceNonPrintableCharacters().cyan()
                 when (newState) {
                     oldState -> "$leftBracket$oldState$rightBracket 🔁 $visualizedOutput"
                     null -> " ⏹️ "

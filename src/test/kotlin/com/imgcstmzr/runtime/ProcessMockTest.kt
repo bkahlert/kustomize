@@ -48,11 +48,11 @@ class ProcessMockTest {
         fun `should provide input correctly`(logger: InMemoryLogger<String?>) {
             val slowInputStream = ProcessMock.SlowInputStream("Hello\n", "World!\n", baseDelayPerInput = 1.seconds, logger = logger)
 
-            assertTimeoutPreemptively(10.seconds, executable = {
+            assertTimeoutPreemptively(10.seconds) {
                 val read = String(slowInputStream.readBytes())
 
                 expectThat(read).isEqualTo("Hello\nWorld!\n")
-            })
+            }
         }
 
         @Test
@@ -60,12 +60,12 @@ class ProcessMockTest {
             val delay = 1.seconds
             val slowInputStream = ProcessMock.SlowInputStream("Hello\n", "World!\n", baseDelayPerInput = delay, logger = logger)
 
-            assertTimeoutPreemptively(delay * 5, executable = {
+            assertTimeoutPreemptively(delay * 5) {
                 val duration = measureTime {
                     String(slowInputStream.readBytes())
                 }
                 expectThat(duration).assertThat("is slow") { it > delay }
-            })
+            }
         }
 
         @ConcurrentTestFactory

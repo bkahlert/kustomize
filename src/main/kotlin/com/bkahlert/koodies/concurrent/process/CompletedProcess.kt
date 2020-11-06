@@ -108,12 +108,8 @@ class CompletedProcess(
     fun saveIO(path: Path = Paths.tempFile("koodies.process.$pid.", ".log")): List<Path> =
         kotlin.runCatching {
             listOf(
-                path.withExtension("ansi.log").writeText(all.joinLinesToString {
-                    it.formatted
-                }),
-                path.withExtension("log").writeText(all.joinLinesToString {
-                    it.unformatted
-                })
+                path.withExtension("ansi.log").writeText(all.joinLinesToString { it.formatted }),
+                path.withExtension("log").writeText(all.joinLinesToString { it.unformatted })
             )
         }.getOrElse {
             if (it is IOException) throw it

@@ -14,11 +14,10 @@ abstract class SingleLineLogger<R>(caption: CharSequence) : RenderingLogger<R> {
     var strings: List<String>? by vetoable(listOf("$caption:"),
         onChange = { _: KProperty<*>, oldValue: List<String>?, _: List<String>? -> oldValue != null })
 
-    abstract fun render(block: () -> String)
+    abstract fun render(block: () -> CharSequence)
 
-    override fun render(trailingNewline: Boolean, block: () -> String) {
-        val element = block()
-        strings = strings?.plus(element)
+    override fun render(trailingNewline: Boolean, block: () -> CharSequence) {
+        strings = strings?.plus("${block()}")
     }
 
     override fun logStatus(items: List<HasStatus>, block: () -> IO): RenderingLogger<R> {

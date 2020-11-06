@@ -33,13 +33,11 @@ fun <T : Any> Iterable<T>.joinLinesToString(
     limit: Int = -1,
     truncated: CharSequence = "...",
     transform: ((T) -> CharSequence)? = null,
-): String {
-    return joinToString(
-        separator = LineSeparators.LF,
-        prefix = prefix,
-        postfix = postfix,
-        limit = limit,
-        truncated = truncated,
-        transform = transform
-    )
-}
+) = joinToString(
+    separator = LineSeparators.LF,
+    prefix = prefix,
+    postfix = postfix,
+    limit = limit,
+    truncated = truncated,
+    transform = transform
+)

@@ -10,8 +10,8 @@ import strikt.assertions.isGreaterThanOrEqualTo
 import strikt.assertions.isLessThan
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
-import kotlin.time.milliseconds
 import kotlin.time.minutes
+import kotlin.time.seconds
 
 @Execution(CONCURRENT)
 class AgeKtTest {
@@ -19,7 +19,7 @@ class AgeKtTest {
     @Test
     fun `should read age`() {
         expectThat(Paths.tempFile().deleteOnExit().age)
-            .isLessThan(100.milliseconds)
+            .isLessThan(1.seconds)
             .isGreaterThanOrEqualTo(Duration.ZERO)
     }
 
@@ -29,7 +29,7 @@ class AgeKtTest {
         val file = Paths.tempFile().deleteOnExit()
         file.age = 20.minutes
         expectThat(file.age)
-            .isLessThan(20.minutes + 100.milliseconds)
+            .isLessThan(20.minutes + 1.seconds)
             .isGreaterThanOrEqualTo(20.minutes)
     }
 }
