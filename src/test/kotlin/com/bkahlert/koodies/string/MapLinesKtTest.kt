@@ -9,7 +9,7 @@ import strikt.assertions.isEqualTo
 @Execution(CONCURRENT)
 class MapLinesKtTest {
 
-    val transform = { s: String -> s + s.reversed() }
+    val transform = { s: CharSequence -> "$s" + s.reversed() }
 
     @Test
     fun `should transform single line`() {

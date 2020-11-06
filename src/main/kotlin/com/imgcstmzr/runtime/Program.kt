@@ -1,6 +1,7 @@
 package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.string.TruncationStrategy.MIDDLE
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.bkahlert.koodies.string.truncate
@@ -10,20 +11,22 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.clikt.output.TermUi.echo
+import com.imgcstmzr.runtime.HasStatus.Companion.asStatus
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.quoted
 
 /**
  * Instances of this class can interact with a process based on a state machine for the given [name].
- * Or in other words: A [Program] does not run in a [RunningOperatingSystem] but on it, like somehow a human interacts with his machine.
+ * Or in other words: A [Program] does not run in a [RunningOperatingSystem] but on it, like somehow a human interacts with a machine.
  *
  * The workflow is as follows:
  * 1. The handler of the [initialState] is called whenever the [Process] generates an output.
  *    Based on the current state and the output the handler has to return with the new state whereas the new state can be the old state.
- *    Furthermore the handler is free to interact with the [Process], e.g. using [Process.fakeInput].
+ *    Furthermore the handler is free to interact with the [Process], e.g. using [RunningOperatingSystem.enter] to simulate a user input.
  * 2. Everytime an output is generated the currently active handler based on the provided [stateMachine] is used to process that new output.
- * 3. Step 1-2 occur as long as input is generated or a handler returns `null` as the new state.
- *    `null` signifies the workflows successful accomplishment.
+ * 3. Step 1-2 occur as long as input is generated and a handler does not return `null` as the new state.
+ *    - `null` signifies the workflows successful completion.
+ *    - To signify a problem an exception can be thrown.
  */
 class Program(
     val name: String,
@@ -110,6 +113,11 @@ class Program(
          */
         fun Collection<Program>.compute(runningOperatingSystem: RunningOperatingSystem, IO: IO): Boolean =
             this.firstOrNull()?.compute(runningOperatingSystem, IO) ?: false
+
+        /**
+         * Formats an array of programs
+         */
+        fun Array<out Program>.format(): String = if (size > 0) map { it.name }.asStatus() else META.format("no programs")
 
         private fun stateName(index: Int, commands: Array<out String>): String {
             val commandLine = commands[index]

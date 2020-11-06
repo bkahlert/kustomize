@@ -1,5 +1,10 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.runtime.OperatingSystemImage
+import com.imgcstmzr.runtime.OperatingSystems
+import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
+import com.imgcstmzr.util.DockerRequired
+import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.containsContent
 import com.imgcstmzr.util.delete
@@ -17,6 +22,7 @@ import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.all
 import strikt.assertions.hasSize
+import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
 import strikt.assertions.none
 import java.nio.file.Path
@@ -79,6 +85,21 @@ class UsernamePatchTest {
         expectThat(root.listFilesRecursively(Path::isFile)) {
             all { containsContent("dietpi:") }
             none { containsContent("dietella:") }
+        }
+    }
+
+    @DockerRequired
+    @Test
+    fun `should update log in was updated username`(@OS(RaspberryPiLite::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+        val newUsername = "ella".also { check(it != osImage.defaultUsername) { "$it is already the default username." } }
+        val patch = UsernamePatch(osImage.defaultUsername, newUsername)
+
+        patch.patch(osImage, logger)
+
+        expectThat(osImage.credentials).isEqualTo(OperatingSystems.Companion.Credentials(newUsername, osImage.defaultPassword))
+        expectThat(osImage).booted(logger) {
+            command("echo 'Hi $newUsername 👋'");
+            { true }
         }
     }
 }

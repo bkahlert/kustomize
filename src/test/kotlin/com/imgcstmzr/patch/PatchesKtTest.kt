@@ -7,8 +7,6 @@ import com.bkahlert.koodies.test.strikt.hasSize
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.bkahlert.koodies.time.format
 import com.bkahlert.koodies.time.parseableInstant
-import com.bkahlert.koodies.time.sleep
-import com.bkahlert.koodies.unit.Gibi
 import com.bkahlert.koodies.unit.Giga
 import com.bkahlert.koodies.unit.bytes
 import com.imgcstmzr.patch.new.buildPatch
@@ -17,8 +15,8 @@ import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
+import com.imgcstmzr.runtime.Program
 import com.imgcstmzr.util.DockerRequired
-import com.imgcstmzr.util.FixtureResolverExtension
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.copyToTempSiblingDirectory
 import com.imgcstmzr.util.logging.CapturedOutput
@@ -26,7 +24,7 @@ import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.OutputCaptureExtension
 import com.imgcstmzr.util.readAll
 import com.imgcstmzr.util.touch
-import com.imgcstmzr.util.writeText
+import com.imgcstmzr.util.writeLine
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -40,10 +38,9 @@ import strikt.assertions.isNotEmpty
 import java.nio.file.Path
 import java.time.Instant
 import kotlin.time.ExperimentalTime
-import kotlin.time.seconds
 
 @Execution(ExecutionMode.CONCURRENT)
-@ExtendWith(FixtureResolverExtension::class, OutputCaptureExtension::class)
+@ExtendWith(OutputCaptureExtension::class)
 class PatchesKtTest {
 
     @Nested
@@ -61,11 +58,12 @@ class PatchesKtTest {
             val nullPatch = buildPatch("No-Op Patch") {}
             nullPatch.patch(img)
             expectThat(capturedOutput.out.trim().removeEscapeSequences()).matchesCurlyPattern("""
-            Started: {}
+            Started: NO-OP PATCH
              IMG Operations: —
              File System Operations: —
+             IMG Operations II: —
              Scripts: —
-            Completed: {}
+            Completed: ✔ returned ❬0⫻1❭
         """.trimIndent())
         }
     }
@@ -92,6 +90,7 @@ class PatchesKtTest {
          Started: NO-OP PATCH
           IMG Operations: —
           File System Operations: —
+          IMG Operations II: —
           Scripts: —
          Completed: ✔ returned ❬0⫻1❭
         """.trimIndent())
@@ -104,20 +103,19 @@ class PatchesKtTest {
 
         sshPatch.patch(osImage, logger)
 
-        val guestfish = Guestfish(osImage based osImage.copyToTempSiblingDirectory(), logger).withRandomSuffix()
+        val guestfish = Guestfish(osImage based Path.of(osImage.path).copyToTempSiblingDirectory(), logger).withRandomSuffix()
         guestfish.run(copyOutCommands(listOf(Path.of("/boot/ssh"))))
         expectThat(guestfish.guestRootOnHost).get { resolve("boot/ssh") }.exists().get { }
     }
-
 
     @ExperimentalTime
     @DockerRequired
     @Test
     fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
-        val now = Instant.now()
+        val timestamp = Instant.now()
 
-        val fullyFleshedPatch = buildPatch("Try Everything Patch") {
-            img {
+        val patch = buildPatch("Try Everything Patch") {
+            preFile {
                 resize(2.Giga.bytes)
             }
             guestfish {
@@ -127,50 +125,34 @@ class PatchesKtTest {
                 edit("/root/.imgcstmzr.created", { path ->
                     require(path.readAll().parseableInstant<Any>())
                 }) {
-                    it.touch().writeText(now.format())
+                    it.touch().writeLine(timestamp.format())
                 }
 
-                edit("/home/pi/BKAHLERT.png", { path ->
+                edit("/home/pi/demo.ansi", { path ->
                     require(path.exists)
                 }) {
-                    ClassPath("BKAHLERT.png").copyTo(it)
+                    ClassPath("demo.ansi").copyTo(it)
                 }
             }
             booted {
-                @Suppress("SpellCheckingInspection")
-                program(
-                    "printing .imgcstmzr.created",
-                    { "init" },
-                    "init" to { read ->
-                        enter("sudo cat /root/.imgcstmzr.created")
-                        "chafa"
-                    },
-                    "chafa" to { read ->
-                        if (RaspberryPiLite.readyPattern.matches(read)) {
-                            enter("sudo apt install -y -m chafa")
-                            "chafa-install"
-                        } else "chafa"
-                    },
-                    "chafa-install" to { read ->
-                        if (RaspberryPiLite.readyPattern.matches(read)) "logo"
-                        else "chafa-install"
-                    },
-                    "logo" to {
-                        enter("chafa /home/pi/BKAHLERT.png")
-                        null
-                    }
-                )
+                run(osImage.compileScript("demo", "sudo cat /root/.imgcstmzr.created", "cat /home/pi/demo.ansi"))
             }
         }
 
-        fullyFleshedPatch.patch(osImage, logger)
+        patch.patch(osImage, logger)
 
         expectThat(osImage)
-            .hasSize(2.Gibi.bytes)
-            .booted<RaspberryPiLite>(logger) {
-                command("chafa /home/pi/BKAHLERT.png --duration 5");
-                5.seconds.sleep();
-                { true }
-            }
+            .hasSize(2.Giga.bytes)
+            .booted(logger, Program("check",
+                { "init" },
+                "init" to { read ->
+                    enter("sudo cat /root/.imgcstmzr.created")
+                    "demo"
+                },
+                "validate" to {
+                    if (it != timestamp.format()) "validate"
+                    null
+                }
+            ))
     }
 }

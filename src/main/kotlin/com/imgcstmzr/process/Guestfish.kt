@@ -11,10 +11,9 @@ import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.github.ajalt.clikt.output.TermUi
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
-import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.miniSegment
-import com.imgcstmzr.runtime.log.segment
+import com.imgcstmzr.runtime.log.RenderingLogger.Companion.singleLineLogger
+import com.imgcstmzr.runtime.log.RenderingLogger.Companion.subLogger
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.quoted
@@ -37,7 +36,7 @@ class Guestfish(
      */
     private val imgPathOnHost: OperatingSystemImage,
 
-    private val logger: BlockRenderingLogger<Any>,
+    private val logger: RenderingLogger<Any>,
 
     /**
      * Name to be used for the underlying Docker container. If a container with the same name exists, it will be stopped and removed.
@@ -102,8 +101,8 @@ class Guestfish(
                 }
             0
         }
-        if (debug) logger.segment(caption = caption, ansiCode = null, block = block)
-        else logger.miniSegment(caption = caption, block = block)
+        if (debug) logger.subLogger(caption = caption, ansiCode = null, block = block)
+        else logger.singleLineLogger(caption = caption, block = block)
     }
 
     fun copyOut(guestPathAsString: String): Path {
@@ -113,6 +112,7 @@ class Guestfish(
     }
 
     companion object {
+        @Suppress("SpellCheckingInspection")
         private const val IMAGE_NAME: String = "cmattoon/guestfish"//"curator/guestfish"
         val DOCKER_MOUNT_ROOT: Path = Path.of("/work")///root")
         val GUEST_MOUNT_ROOT: Path = Path.of("/")
@@ -168,19 +168,6 @@ class Guestfish(
                     ! perl -i.$bakExtension -pe 's|(?<=$username:)[^:]*|crypt("$password","\\\${'$'}6\\\${'$'}$salt\\\${'$'}")|e' $DOCKER_MOUNT_ROOT/shadow
                     copy-in $DOCKER_MOUNT_ROOT/shadow $DOCKER_MOUNT_ROOT/shadow.$bakExtension /etc
                 """.trimIndent().lines()) + copyOutCommands(listOf(shadowPath, shadowBackup))
-        }
-
-        /**
-         * Constructs a command that starts a Guestfish Docker container with the given [volumes] mapped.
-         *
-         * The command stops and removes any existing Guestfish Docker container with the same [containerName].
-         */
-        private fun dockerCmd(containerName: String, volumes: Map<Path, Path> = emptyMap(), vararg appArguments: String): String {
-            val volumeArguments = volumes.map { "--volume ${it.key}:${it.value}" }.toTypedArray()
-            val dockerRun = arrayOf(
-                "docker 2>&1", "run", "--name", "\"$containerName\"", "--rm", "-i", *volumeArguments, IMAGE_NAME, "\$CMD", *appArguments
-            ).joinToString(" ")
-            return "docker rm --force \"$containerName\" &> /dev/null ; $dockerRun"
         }
 
         /**

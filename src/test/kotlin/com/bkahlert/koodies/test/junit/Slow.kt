@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.test.junit
 
-import com.bkahlert.koodies.test.junit.E2E.Companion.NAME
+import com.bkahlert.koodies.test.junit.Slow.Companion.NAME
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Timeout
 import java.util.concurrent.TimeUnit.MINUTES

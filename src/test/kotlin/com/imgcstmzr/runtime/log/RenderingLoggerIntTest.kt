@@ -3,11 +3,13 @@ package com.imgcstmzr.runtime.log
 import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.imgcstmzr.util.containsAtMost
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.InMemoryLoggerFactory
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -236,8 +238,7 @@ class RenderingLoggerIntTest {
                     │   │{}
                     │   │   nested 1                                          {}                                      ▮▮
                     │   ϟ{}
-                    │   ╰─────╴failed with java.lang.IllegalStateException: an exception @ ${RenderingLoggerIntTest::class.qualifiedName}{}
-                    │{}
+                    │   ╰─────╴failed with IllegalStateException: an exception at.(${RenderingLoggerIntTest::class.simpleName}.kt:223){}
                     │{}
                 """.trimIndent(), ignoreTrailingLines = true)
     }
@@ -268,5 +269,23 @@ class RenderingLoggerIntTest {
             ├─╴ close twice: line ✔ returned ❬1{}❭ ✔ returned ❬2{}❭
             ├─╴ close twice: line ✔ returned ❬1{}❭ ✔ returned ❬2{}❭ ✔ returned ❬3{}❭
         """.trimIndent())
+    }
+
+    @Disabled
+    @Test
+    fun `should wrap long lines`(logger: InMemoryLogger<String>) {
+        val longLine = "｀、ヽ｀ヽ｀、ヽ".repeat(10) + "ノ＞＜)ノ" + " ｀、ヽ｀、ヽ｀、ヽ".repeat(10)
+        logger.logLine { longLine }
+        logger.logStatus { OUT typed longLine }
+        logger.logResult { Result.success(longLine) }
+
+        expectThat(logger.logged).matchesCurlyPattern(
+            """
+                    ╭─────╴{}
+                    │{}
+                    │   ｀、ヽ｀ヽ｀、ヽ(ノ＞＜)ノ ｀、ヽ｀☂ヽ｀、ヽ
+                    │{}
+                    ╰─────╴✔{}
+                """.trimIndent())
     }
 }

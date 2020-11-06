@@ -2,6 +2,10 @@
 
 package com.bkahlert.koodies.boolean
 
+import com.bkahlert.koodies.string.Unicode.Emojis.checkMark_
+import com.bkahlert.koodies.string.Unicode.Emojis.crossMark
+import com.bkahlert.koodies.string.Unicode.Emojis.heavyLargeCircle
+
 /**
  * Emoji representation of this [Boolean]
  *
@@ -11,9 +15,9 @@ package com.bkahlert.koodies.boolean
  */
 val Boolean?.asEmoji: String
     inline get() = when (this) {
-        true -> "✅"
-        false -> "❌"
-        null -> "⭕"
+        true -> "$checkMark_"
+        false -> "$crossMark"
+        null -> "$heavyLargeCircle"
     }
 
 private object Samples {

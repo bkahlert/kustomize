@@ -18,13 +18,7 @@ interface HasStatus {
         /**
          * Default implementation to render the status of a [List] of [HasStatus] instances.
          */
-        fun List<HasStatus>.status(): String {
-            if (size == 0) return pauseSymbol
-            return joinToTruncatedString("  $playSymbol ", "$fastForwardSymbol ",
-                truncated = "…",
-                transform = { element -> ANSI.termColors.bold(element.status()) },
-                transformEnd = { lastElement -> ANSI.termColors.gray(lastElement.status()) })
-        }
+        fun List<HasStatus>.status(): String = map { it.status() }.asStatus()
 
         /**
          * Default implementation to render the status of a [List] of [HasStatus] instances.

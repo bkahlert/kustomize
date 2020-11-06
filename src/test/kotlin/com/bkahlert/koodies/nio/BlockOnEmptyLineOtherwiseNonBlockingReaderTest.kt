@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.nio
 
+import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.time.sleep
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.util.logging.InMemoryLogger
@@ -24,7 +25,7 @@ class BlockOnEmptyLineOtherwiseNonBlockingReaderTest :
     }) {
 
     @OptIn(ExperimentalTime::class)
-    @Test
+    @Slow @Test
     fun `should not read empty lines due to timeout`(logger: InMemoryLogger<String?>) {
         val reader = readerFactory(object : InputStream() {
             override fun read(): Int {

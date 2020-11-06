@@ -25,7 +25,7 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
-import strikt.assertions.hasEntry
+import strikt.assertions.isEqualTo
 import java.nio.file.Path
 
 @Execution(ExecutionMode.CONCURRENT)
@@ -102,6 +102,6 @@ class GuestfishTest {
 
         guestfish.run(changePasswordCommand("root", password, String.random(32)))
 
-        expectThat(OperatingSystems.credentials).hasEntry(osImage, OperatingSystems.Companion.Credentials("root", password))
+        expectThat(osImage.credentials).isEqualTo(OperatingSystems.Companion.Credentials("root", password))
     }
 }

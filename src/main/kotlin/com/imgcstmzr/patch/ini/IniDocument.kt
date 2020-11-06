@@ -60,6 +60,7 @@ class IniDocument private constructor(mutableElements: Collection<Line>) : Colle
         path.toFile().writeText(toString())
     }
 
+    @Suppress("unused")
     class SectionLine(input: String) : RegexElement(input, false) {
         var sectionIndent by regex("^\\s*")
         var sectionNameLeftBracket by regex("[\\[]")
@@ -68,6 +69,7 @@ class IniDocument private constructor(mutableElements: Collection<Line>) : Colle
         var sectionTrailingRubbish by regex("\\s*")
     }
 
+    @Suppress("unused")
     class KeyLine(input: String) : RegexElement(input, false) {
         var margin by regex("^\\s*")
         var name by regex("[\\w]+")
@@ -83,6 +85,7 @@ class IniDocument private constructor(mutableElements: Collection<Line>) : Colle
             }
     }
 
+    @Suppress("unused")
     class CommentLine(input: String) : RegexElement(input, false) {
         var outerPadding by regex("\\s*")
         var delimiter by regex("[;#]")

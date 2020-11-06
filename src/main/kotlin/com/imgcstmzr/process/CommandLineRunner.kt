@@ -1,19 +1,14 @@
 package com.imgcstmzr.process
 
+import com.bkahlert.koodies.concurrent.process.CompletedProcess
+import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
+import com.bkahlert.koodies.concurrent.process.IO.Type.META
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.nio.NonBlockingReader
-import com.github.ajalt.clikt.output.TermUi
-import com.imgcstmzr.process.Output.Type.ERR
-import com.imgcstmzr.process.Output.Type.META
-import com.imgcstmzr.process.Output.Type.OUT
-import com.imgcstmzr.runtime.log.InfoAdaptingLogger
-import com.imgcstmzr.util.debug
-import org.slf4j.Logger
-import java.io.BufferedReader
 import java.io.IOException
-import java.io.InputStreamReader
 import java.io.UncheckedIOException
-import java.lang.ProcessBuilder.Redirect
-import java.lang.ProcessBuilder.Redirect.INHERIT
 import java.lang.ProcessBuilder.Redirect.PIPE
 import java.nio.file.Path
 import java.util.Locale
@@ -26,8 +21,8 @@ import kotlin.time.ExperimentalTime
  * problems concerning output redirection and synchronization.
  */
 @Deprecated("Replace by Exec")
-class CommandLineRunner(private var blocking: Boolean = true) {
-    private var log: Logger? = null
+class CommandLineRunner() {
+    private var log: ((String) -> Unit)? = null
 
     /**
      * Starts a process and waits for its return while using the provided Consumer for all three forms
@@ -47,109 +42,83 @@ class CommandLineRunner(private var blocking: Boolean = true) {
     fun startProcessAndWaitForCompletion(
         directory: Path,
         shellScript: String,
-        inputRedirect: Redirect = PIPE,
-        outputRedirect: Redirect = INHERIT,
-        errorRedirect: Redirect = PIPE,
-        processor: Process.(Output) -> Unit,
+//        test: String,
+        processor: Process.(IO) -> Unit,
     ): RunningProcess {
-        val loggerName = CommandLineRunner::class.java.simpleName + "(" + shellScript.split(" ").toTypedArray()[0] + ")"
-        val process = startProcess(directory, shellScript, inputRedirect, outputRedirect, errorRedirect)
-        log = InfoAdaptingLogger(loggerName) { line -> process.processor(META typed line) }
-        if (blocking) {
-            BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line -> process.processor(OUT typed line) }
-            BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line -> process.processor(ERR typed line) }
-        } else {
-            NonBlockingReader(process.inputStream).forEachLine { line -> process.processor(OUT typed line) }
-            NonBlockingReader(process.errorStream).forEachLine { line -> process.processor(ERR typed line) }
-        }
-        return waitForProcessAsync(process)
-    }
 
-    private fun startProcess(
-        directory: Path,
-        shellScript: String,
-        inputRedirect: Redirect = PIPE,
-        outputRedirect: Redirect = INHERIT,
-        errorRedirect: Redirect = PIPE,
-    ): Process {
-        return try {
-            log?.info("Starting {}...", shellScript)
-            TermUi.debug("$directory\$ $shellScript")
+        println("OLD: " + directory + " --- " + shellScript)
+//        val split = test.split(";")
+//        split.forEach {
+//            val new = Exec.commandLine(it, emptyArray(), null, emptyMap())
+//            println("NEW: " + new.executable + " --- " + new.arguments.toList())
+//            println("NEW: " + new.commandline.toList())
+//            println("NEW: " + new)
+//
+//            val process = try {
+//                log?.invoke("Starting $shellScript in $directory...")
+//                val process = ProcessBuilder()
+//                    .command(*new.commandline)
+//                    .directory(new.workingDirectory)
+//                    .redirectInput(PIPE)
+//                    .redirectOutput(PIPE)
+//                    .redirectError(PIPE)
+//                    .start()
+//                log?.invoke("Process $process successfully started")
+//                process
+//            } catch (e: IOException) {
+//                throw UncheckedIOException(e)
+//            }
+//            log = { line -> process.processor(META typed line) }
+//            NonBlockingReader(process.inputStream).forEachLine { line -> process.processor(OUT typed line) }
+//            NonBlockingReader(process.errorStream).forEachLine { line -> process.processor(ERR typed line) }
+//
+//
+//            System.exit(0)
+//        }
+
+
+        val process = try {
+            log?.invoke("Starting $shellScript in $directory...")
             val process = ProcessBuilder()
                 .command(SHELL_CMD, SHELL_CMD_ARGS, shellScript)
+//                .command(new.)
                 .directory(directory.toAbsolutePath().toFile())
-                .redirectInput(inputRedirect)
-                .redirectOutput(outputRedirect)
-                .redirectError(errorRedirect)
+                .redirectInput(PIPE)
+                .redirectOutput(PIPE)
+                .redirectError(PIPE)
                 .start()
-            log?.info("Process {} successfully started", process)
+            log?.invoke("Process $process successfully started")
             process
         } catch (e: IOException) {
             throw UncheckedIOException(e)
         }
+        log = { line -> process.processor(META typed line) }
+        NonBlockingReader(process.inputStream).forEachLine { line -> process.processor(OUT typed line) }
+        NonBlockingReader(process.errorStream).forEachLine { line -> process.processor(ERR typed line) }
+        return process.waitForProcessAsync()
     }
 
-    @ExperimentalTime fun startRawProcessAndWaitForCompletion(
-        directory: Path,
-        command: List<String>,
-        inputRedirect: Redirect = PIPE,
-        outputRedirect: Redirect = INHERIT,
-        errorRedirect: Redirect = PIPE,
-        processor: Process.(Output) -> Unit,
-    ): RunningProcess {
-        val loggerName = CommandLineRunner::class.java.simpleName + "(" + command.toTypedArray()[0] + ")"
-        val process = startRawProcess(directory, command, inputRedirect, outputRedirect, errorRedirect)
-        log = InfoAdaptingLogger(loggerName) { line -> process.processor(META typed line) }
-        if (blocking) {
-            BufferedReader(InputStreamReader(process.inputStream)).forEachLine { line -> process.processor(OUT typed line) }
-            BufferedReader(InputStreamReader(process.errorStream)).forEachLine { line -> process.processor(ERR typed line) }
-        } else {
-            NonBlockingReader(process.inputStream).forEachLine { line -> process.processor(OUT typed line) }
-            NonBlockingReader(process.errorStream).forEachLine { line -> process.processor(ERR typed line) }
+    private fun Process.waitForProcessAsync(): RunningProcess =
+        object : RunningProcess() {
+            override val process: Process = this
+            override val result: CompletableFuture<CompletedProcess> = CompletableFuture.supplyAsync { CompletedProcess(0L, waitForProcess(), emptyList()) }
         }
-        return waitForProcessAsync(process)
-    }
 
-    private fun startRawProcess(
-        directory: Path,
-        command: List<String>,
-        inputRedirect: Redirect = PIPE,
-        outputRedirect: Redirect = INHERIT,
-        errorRedirect: Redirect = PIPE,
-    ): Process {
-        return try {
-            log?.info("Starting {}...", command)
-            TermUi.debug(command)
-            val process = ProcessBuilder()
-                .command(command)
-                .directory(directory.toFile())
-                .redirectInput(inputRedirect)
-                .redirectOutput(outputRedirect)
-                .redirectError(errorRedirect)
-                .start()
-            log?.info("Process {} successfully started", process)
-            process
-        } catch (e: IOException) {
-            throw UncheckedIOException(e)
-        }
-    }
-
-    private fun waitForProcessAsync(process: Process): RunningProcess = RunningProcess(process, CompletableFuture.supplyAsync { waitForProcess(process) })
-    private fun waitForProcess(process: Process): Int {
+    private fun Process.waitForProcess(): Int {
         try {
-            log?.info("Waiting for process {} to complete...", process)
-            val exitCode = process.waitFor()
-            log?.info("{} exited with code {}", process, exitCode)
+            log?.invoke("Waiting for process $this to complete...")
+            val exitCode = waitFor()
+            log?.invoke("$this exited with code $exitCode")
             return exitCode
         } catch (ie: InterruptedException) {
-            log?.info("Waiting for process completion was interrupted. Destroying {}...", process)
-            process.destroyForcibly()
+            log?.invoke("Waiting for process completion was interrupted. Destroying $this...")
+            destroyForcibly()
             Thread.currentThread().interrupt()
             while (true) {
                 try {
-                    log?.info("Waiting for process destruction to finish...", process)
-                    val exitCode = process.waitFor()
-                    log?.info("Process successfully destructed with code {}", process, exitCode)
+                    log?.invoke("Waiting for process destruction of $this to finish...")
+                    val exitCode = waitFor()
+                    log?.invoke("Process $this successfully destructed with code $exitCode")
                     return exitCode
                 } catch (e: InterruptedException) {
                     Thread.currentThread().interrupt()

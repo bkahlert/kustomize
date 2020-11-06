@@ -35,13 +35,13 @@ class RandomKtTest {
     @Test
     fun `should not easily produce the same string`(logger: InMemoryLogger<Unit>) {
         val calculated = mutableListOf<String>()
-        (0 until 10000).onEach {
+        (0 until 1000).onEach {
             calculated += String.random(8).also {
                 logger.logLine { Kaomojis.`(＃￣_￣)o︠・━・・━・━━・━☆`.toString() + " " + it }
                 expectThat(calculated).doesNotContain(it)
             }
         }
-        expectThat(calculated).hasSize(10000)
+        expectThat(calculated).hasSize(1000)
     }
 
     @Test

@@ -3,8 +3,10 @@ package com.imgcstmzr.runtime
 import com.bkahlert.koodies.docker.Docker
 import com.bkahlert.koodies.docker.DockerProcess
 import com.bkahlert.koodies.time.sleep
+import com.imgcstmzr.runtime.ArmRunner.runOn
 import com.imgcstmzr.runtime.OperatingSystems.DietPi
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
+import com.imgcstmzr.runtime.OperatingSystems.TinyCore
 import com.imgcstmzr.util.DockerRequired
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.logging.InMemoryLogger
@@ -72,6 +74,16 @@ class ArmRunnerTest {
         expectThat(logger.logged.lines().takeLast(20))
             .any { contains("shutting down") }
             .any { contains("reboot: System halted") }
+    }
+
+    @Test
+    fun `should run program in user session`(@OS(TinyCore::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+
+        osImage.compileScript("demo train", "sudo apt-get install -y -m sl", "sl").runOn(osImage, logger)
+
+        expectThat(logger.logged)
+            .contains("Running Tiny Core at piCore-12.0.img with ◀◀ demo train")
+            .contains("Booting QEMU machine")
     }
 
     @Suppress("unused")

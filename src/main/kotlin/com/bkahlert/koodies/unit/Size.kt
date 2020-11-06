@@ -154,7 +154,7 @@ val Number.bytes: Size get() = if (this == 0) Size.ZERO else Size(toBigDecimal()
 val Path.size: Size
     get() {
         requireExists()
-        return if (!isDirectory) Files.size(this).bytes
+        return if (!isDirectory) Files.size(toAbsolutePath()).bytes
         else (toFile().listFiles() ?: return Size.ZERO)
             .asSequence()
             .map(File::toPath)

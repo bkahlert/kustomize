@@ -17,7 +17,7 @@ import java.nio.file.Path
 class FixtureLogTest {
 
     @BeforeEach
-    private fun reset(logger: InMemoryLogger<String>) {
+    private fun reset(logger: InMemoryLogger<Any>) {
         FixtureLog.apply { logger.delete() }
     }
 
@@ -49,7 +49,7 @@ class FixtureLogTest {
     }
 
     @Test
-    fun `should delete read-only files`(logger: InMemoryLogger<String>) {
+    fun `should delete read-only files`(logger: InMemoryLogger<Any>) {
         val file = Paths.tempFile().deleteOnExit()
         file.toFile().setReadOnly()
         FixtureLog.apply { logger.delete() }

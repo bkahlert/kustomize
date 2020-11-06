@@ -39,7 +39,6 @@ class DockerPsTest {
                         """.trimIndent()))
             }.also { 100.milliseconds.poll { it.isRunning }.forAtMost(5.seconds) { fail("Docker containers did not start") } }
         }
-//        startAsThread { println("containers started") }
     }
 
     @Execution(SAME_THREAD)
@@ -51,8 +50,6 @@ class DockerPsTest {
         "shared-prefix-boot-and-run-program-in-user-session" to true,
     ).map { (name, expectedIsRunning) ->
         dynamicTest("${expectedIsRunning.asEmoji} $name") {
-//            startAsThread { println("testing $name") }
-//            startAsThread { println(Processes.cheapEvalShellScript { !"""docker ps --no-trunc --format "{{.Names}}"""" }.lines()) }
             expectThat(Docker.isContainerRunning(name)).isEqualTo(expectedIsRunning)
         }
     }

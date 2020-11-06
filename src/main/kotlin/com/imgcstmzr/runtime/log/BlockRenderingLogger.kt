@@ -29,6 +29,8 @@ open class BlockRenderingLogger<R>(
     },
 ) : RenderingLogger<R> {
 
+    override val nestingPrefix: String get() = if (borderedOutput) "├─╴ " else " :"
+
     override fun render(trailingNewline: Boolean, block: () -> String): Unit = block().let { message: String ->
         val finalMessage: String? = interceptor.invoke(message + if (trailingNewline) "\n" else "")
         if (finalMessage != null) log.invoke(finalMessage)
@@ -44,7 +46,7 @@ open class BlockRenderingLogger<R>(
                 if (borderedOutput) "│\n╰─────╴$renderedSuccess\n"
                 else "Completed: $renderedSuccess"
             } else {
-                formatException(if (borderedOutput) "$LF╰─────╴" else LF, result.toSingleLineString()) + LF
+                formatException(if (borderedOutput) "$LF╰─────╴" else " ", result.toSingleLineString()) + if (borderedOutput) LF else ""
             }
         return message.ansiAwareMapLines { it.bold() }
     }
@@ -155,7 +157,8 @@ inline fun <reified R1, reified R2> BlockRenderingLogger<R1>?.miniSegment(
     val logger: SingleLineLogger<R2> = object : SingleLineLogger<R2>(caption) {
         override fun render(block: () -> String) {
             val message = block()
-            val logMessage = if (borderedOutput) "├─╴ " + message.bold() else " :" + message.bold()
+            val prefix = this@miniSegment.nestingPrefix
+            val logMessage = prefix + message.bold()
             this@miniSegment.render(true) { logMessage }
         }
     }

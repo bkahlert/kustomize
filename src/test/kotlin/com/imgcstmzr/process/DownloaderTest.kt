@@ -1,5 +1,6 @@
 package com.imgcstmzr.process
 
+import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.strikt.hasSize
 import com.bkahlert.koodies.unit.bytes
 import com.imgcstmzr.process.Downloader.download
@@ -16,7 +17,7 @@ import strikt.assertions.isFailure
 @Execution(ExecutionMode.CONCURRENT)
 class DownloaderTest {
 
-    @Test
+    @Slow @Test
     fun `should download OS`() {
         val path = OperatingSystemMock(downloadUrl = "https://file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg").download()
         expectThat(path).hasSize(102117.bytes)
@@ -27,19 +28,19 @@ class DownloaderTest {
         expectCatching { OperatingSystemMock().download() }.isFailure().isA<IllegalArgumentException>()
     }
 
-    @Test
+    @Slow @Test
     fun `should download file with explicit protocol`() {
         val path = download("https://file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg")
         expectThat(path).hasSize(102117.bytes)
     }
 
-    @Test
+    @Slow @Test
     fun `should download file without explicit protocol`() {
         val path = download("file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg")
         expectThat(path).hasSize(102117.bytes)
     }
 
-    @Test
+    @Slow @Test
     fun `should use server side provided name without query or hash`() {
         val path = download("https://file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg?abc=def#hij")
         expectThat(path.fileName).isEqualToStringWise("file_example_JPG_100kB.jpg")
@@ -47,7 +48,7 @@ class DownloaderTest {
 
     @Test
     fun `should throw on error`() {
-        expectCatching { download("protocol--------/uploads/2017/10/file_example_JPG_100kB.jpg") }
+        expectCatching { download("#+ü protocol--------/uploads/2017/10/file_example_JPG_100kB.jpg") }
             .isFailure().isA<IllegalStateException>()
     }
 }

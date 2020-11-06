@@ -308,7 +308,7 @@ class ProcessMockTest {
         expectThat(p.isAlive).isFalse()
     }
 
-
+    @Slow
     @Test
     fun `should terminate if all output is consumed`(logger: InMemoryLogger<String?>) {
         val p = ProcessMock.withIndividuallySlowInput(

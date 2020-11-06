@@ -2,7 +2,6 @@ package com.imgcstmzr.patch
 
 import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.runtime.ArmRunner
-import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.Program
 import com.imgcstmzr.runtime.RunningOperatingSystem
@@ -11,6 +10,7 @@ import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.quoted
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
+import strikt.assertions.isEqualTo
 import java.nio.file.Path
 
 fun Assertion.Builder<Guestfish>.path(guestPath: String): Assertion.Builder<Path> = path(Path.of(guestPath))
@@ -41,11 +41,10 @@ fun Assertion.Builder<String>.isEqualTo(expected: String) =
         }
     }
 
-inline fun <reified T : OperatingSystem> Assertion.Builder<OperatingSystemImage>.booted(
+inline fun Assertion.Builder<OperatingSystemImage>.booted(
     logger: BlockRenderingLogger<Any>,
     crossinline assertion: RunningOperatingSystem.(String) -> ((String) -> Boolean)?,
 ): Assertion.Builder<OperatingSystemImage> {
-    val os = T::class.objectInstance ?: error("Invalid OS")
     get("booted ${this.get { operatingSystem }}") {
 
         val verificationStep: RunningOperatingSystem.(String) -> String? = { output: String ->
@@ -70,6 +69,16 @@ inline fun <reified T : OperatingSystem> Assertion.Builder<OperatingSystemImage>
 
     return this
 }
+
+fun Assertion.Builder<OperatingSystemImage>.booted(
+    logger: BlockRenderingLogger<Any>,
+    program: Program,
+): Assertion.Builder<OperatingSystemImage> =
+    compose("booted ${this.get { operatingSystem }}") {
+        get { ArmRunner.run(name = "Assertion Boot of $this", osImage = this, logger = logger, programs = arrayOf(program)) }.isEqualTo(0)
+    } then {
+        if (allPassed) pass() else fail("Program ${program.name} did not return successfully")
+    }
 
 
 inline fun <reified T : RunningOperatingSystem> Assertion.Builder<T>.command(input: String): DescribeableBuilder<String?> = get("running $input") {

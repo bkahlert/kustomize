@@ -17,6 +17,7 @@ import com.bkahlert.koodies.regex.RegularExpressions
 import com.bkahlert.koodies.regex.sequenceOfAllMatches
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
+import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.strikt.containsExactlyInSomeOrder
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.bkahlert.koodies.time.sleep
@@ -119,7 +120,7 @@ class ProcessesTest {
     }
 
     @OptIn(ExperimentalTime::class)
-    @Test
+    @Slow @Test
     fun `should run detached scripts`() {
         val path = Paths.tempFile()
         val process = startShellScriptDetached {
@@ -168,7 +169,7 @@ class ProcessesTest {
     }
 
     @OptIn(ExperimentalTime::class)
-    @Test
+    @Slow @Test
     fun `should be destroyable`() {
         measureTime {
             val output = mutableSetOf<String>().synchronized()
@@ -194,7 +195,7 @@ class ProcessesTest {
     @Nested
     inner class OnExitCodeMismatch {
         @OptIn(ExperimentalTime::class)
-        @Test
+        @Slow @Test
         fun `should print last IO lines`() {
             val process = startShellScript {
                 !"""
@@ -206,9 +207,9 @@ class ProcessesTest {
                 """.trimIndent()
             }
             startAsDaemon(2.seconds) {
-                process.destroy()
+                process.destroyForcibly()
             }
-            expectCatching { process.waitForExitCode() }
+            expectCatching { process.waitForExitCode(143) }
                 .isFailure()
                 .isA<IllegalStateException>()
                 .message
@@ -220,7 +221,7 @@ class ProcessesTest {
         }
 
         @OptIn(ExperimentalTime::class)
-        @Test
+        @Slow @Test
         fun `should save IO log`() {
             val process = startShellScript {
                 !"""
@@ -232,10 +233,10 @@ class ProcessesTest {
                 """.trimIndent()
             }
             startAsDaemon(2.seconds) {
-                process.destroy()
+                process.destroyForcibly()
             }
             process.waitForCompletion()
-            expectCatching { process.waitForExitCode() }
+            expectCatching { process.waitForExitCode(143) }
                 .isFailure()
                 .isA<IllegalStateException>()
                 .message.get {
@@ -273,7 +274,7 @@ class ProcessesTest {
     }
 
     @OptIn(ExperimentalTime::class)
-    @Test
+    @Slow @Test
     fun `should run after process termination on destruction`() {
         measureTime {
             var ranAfterProcessTermination = false
@@ -298,7 +299,7 @@ class ProcessesTest {
     }
 
     @OptIn(ExperimentalTime::class)
-    @Test
+    @Slow @Test
     fun `should process input`() {
         val output = mutableSetOf<String>().synchronized()
         val process = startShellScript(outputProcessor = {
@@ -334,7 +335,7 @@ class ProcessesTest {
     }
 
     @OptIn(ExperimentalTime::class)
-    @Test
+    @Slow @Test
     fun `should provide output processor access to own running process`() {
         val process = startShellScript(outputProcessor = { output ->
             if (output.type != META) {
@@ -394,7 +395,7 @@ class ProcessesTest {
     }
 
     @OptIn(ExperimentalTime::class)
-    @Test
+    @Slow @Test
     fun `should provide IO`() {
         val process = startShellScript {
             !"""

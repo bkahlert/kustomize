@@ -5,8 +5,9 @@ import com.bkahlert.koodies.nio.file.conditioned
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.list
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
+import com.imgcstmzr.runtime.log.RenderingLogger
+import com.imgcstmzr.runtime.log.RenderingLogger.Companion.singleLineLogger
 import com.imgcstmzr.runtime.log.applyLogging
-import com.imgcstmzr.runtime.log.miniSegment
 import java.nio.file.Path
 
 /**
@@ -18,19 +19,19 @@ object FixtureLog : (Path) -> Path {
     val location = Paths.TEST.resolve("fixture.log")
 
     init {
-        val blockRenderingLogger = BlockRenderingLogger<String>("Fixture Leftovers Cleanup 🧹", borderedOutput = true)
-        blockRenderingLogger.applyLogging { delete() }
+        val renderingLogger: RenderingLogger<Any> = BlockRenderingLogger<Any>("Fixture Leftovers Cleanup 🧻", borderedOutput = true)
+        renderingLogger.applyLogging { delete() }
         addShutDownHook {
-            BlockRenderingLogger<String>("Fixture Leftovers Cleanup 🧹", borderedOutput = true).applyLogging { delete() }
+            BlockRenderingLogger<Any>("Fixture Leftovers Cleanup 🧻", borderedOutput = true).applyLogging { delete() }
         }
     }
 
-    fun BlockRenderingLogger<String>.delete(): String {
+    fun RenderingLogger<Any>.delete(): String {
         val entriesPerLines = 1
         var deleted = 0
         paths()
             .flatMap { fixture ->
-                if (fixture.extension == "img") {
+                if (fixture.extension == "img" && fixture.parent != Paths.TEMP) {
                     val fixtureDirectory = fixture.parent
                     val directoryWithFixtureDirectories = fixtureDirectory.parent
                     listOf(fixture).plus(directoryWithFixtureDirectories.list().filter { otherFixtureDirectory ->
@@ -42,13 +43,13 @@ object FixtureLog : (Path) -> Path {
             }
             .plusElement(location)
             .windowed(entriesPerLines, entriesPerLines).forEach { paths ->
-                miniSegment("deleting") {
+                singleLineLogger("deleting") {
                     paths.forEach {
-                        logLine { "${it}" }
+                        logLine { "$it" }
                         kotlin.runCatching {
                             check(it.delete(true)) { "$it could not be deleted." }
                             deleted++
-                        }.getOrElse { logException { it } }
+                        }.getOrElse { logCaughtException { it } }
                     }
                 }
             }

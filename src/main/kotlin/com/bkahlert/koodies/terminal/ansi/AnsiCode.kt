@@ -60,13 +60,13 @@ class AnsiCode(
          */
         const val PARTIAL_LINE_FORWARD = "$ESC\\[K"
 
-        private const val splitCodeMarker = "👈 ansi code splitter 👉"
+        const val splitCodeMarker = "👈 ansi code splitter 👉"
 
         /**
          * A map that maps the open and close codes of all supported instances of [AnsiCode]
          * to their respective [AnsiCode].
          */
-        private val codeToAnsiCodeMappings: Map<Int, List<AnsiCode>> by lazy {
+        internal val codeToAnsiCodeMappings: Map<Int, List<AnsiCode>> by lazy {
             hashMapOf<Int, MutableList<AnsiCode>>().apply {
                 with(termColors) {
                     sequenceOf(
@@ -88,7 +88,7 @@ class AnsiCode(
         /**
          * [Regex] that matches an [AnsiCode].
          */
-        val regex: Regex = Regex("(?<CSI>${CSI}|${ESC}\\[)(?<parameterBytes>[0-?]*)(?<intermediateBytes>[ -/]*)(?<finalByte>[@-~])")
+        val regex: Regex = Regex("(?<CSI>$CSI|$ESC\\[)(?<parameterBytes>[0-?]*)(?<intermediateBytes>[ -/]*)(?<finalByte>[@-~])")
 
         /**
          * Extracts the unfortunately otherwise inaccessible open and close codes of a [MordantAnsiCode].
@@ -101,15 +101,21 @@ class AnsiCode(
         /**
          * Given a char sequence a sequence of found [AnsiCode] open and close codes is returned.
          */
-        private fun parseAnsiCodesAsSequence(charSequence: CharSequence): Sequence<Int> = regex.findAll(charSequence).filter {
-            val intermediateBytes = it.namedGroups["intermediateBytes"]?.value ?: ""
-            val lastByte = it.namedGroups["finalByte"]?.value ?: ""
-            intermediateBytes.isBlank() && lastByte == "m"
-        }.flatMap { result ->
-            result.namedGroups["parameterBytes"]?.value?.split(";")?.mapNotNull {
-                val x = kotlin.runCatching { it.toInt() }.getOrNull()
-                x
-            } ?: emptyList()
+        private fun parseAnsiCodesAsSequence(charSequence: CharSequence): Sequence<Int> = regex.findAll(charSequence).flatMap { parseAnsiCode(it) }
+
+        /**
+         * Given a char sequence a sequence of found [AnsiCode] open and close codes is returned.
+         */
+        fun parseAnsiCode(matchResult: MatchResult): Sequence<Int> {
+            val intermediateBytes = matchResult.namedGroups["intermediateBytes"]?.value ?: ""
+            val lastByte = matchResult.namedGroups["finalByte"]?.value ?: ""
+            return if (intermediateBytes.isBlank() && lastByte == "m") {
+                matchResult.namedGroups["parameterBytes"]?.value?.split(";")?.mapNotNull {
+                    kotlin.runCatching { it.toInt() }.getOrNull()
+                }?.asSequence() ?: emptySequence()
+            } else {
+                emptySequence()
+            }
         }
 
 
@@ -167,6 +173,12 @@ class AnsiCode(
          */
         fun CharSequence.ansiAwareLines(): List<String> = ansiAwareLineSequence().toList()
 
+
+        fun CharSequence.ansiAwareLength(): Int = removeEscapeSequences().length
+
+        fun CharSequence.ansiAwareSubstring(startIndex: Int, endIndex: Int): String {
+            return AnsiString(this).substring(startIndex, endIndex)
+        }
 
         /**
          * Returns the [String] with [ANSI escape codes](https://en.wikipedia.org/wiki/ANSI_escape_code) removed.

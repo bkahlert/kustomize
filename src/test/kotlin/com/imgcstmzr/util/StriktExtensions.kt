@@ -13,8 +13,8 @@ import com.bkahlert.koodies.string.truncate
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.Size
-import com.imgcstmzr.patch.ImgOperation
 import com.imgcstmzr.patch.PathOperation
+import com.imgcstmzr.patch.new.ImgOperation
 import com.imgcstmzr.patch.new.Patch
 import com.imgcstmzr.process.GuestfishOperation
 import com.imgcstmzr.runtime.Program
@@ -262,7 +262,7 @@ fun <T : Patch> Assertion.Builder<T>.matches(
     fileSystemOperationsAssertion: Assertion.Builder<List<PathOperation>>.() -> Unit = { hasSize(0) },
     programsAssertion: Assertion.Builder<List<Program>>.() -> Unit = { hasSize(0) },
 ) = compose("matches") { patch ->
-    imgOperationsAssertion(get { imgOperations })
+    imgOperationsAssertion(get { preFileImgOperations })
     guestfishOperationsAssertion(get { guestfishOperations })
     fileSystemOperationsAssertion(get { fileSystemOperations })
     programsAssertion(get { programs })

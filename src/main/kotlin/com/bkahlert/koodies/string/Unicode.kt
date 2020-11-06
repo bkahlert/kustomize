@@ -243,15 +243,65 @@ by dictOf("unicode.dict.tsv"
         }
 
         /**
+         * [BALLOT BOX](https://codepoints.net/U+2610) ☐️ ☐︎
+         */
+        val ballotBox = Emoji('☐')
+
+        /**
+         * [BALLOT BOX WITH CHECK](https://codepoints.net/U+2611) ☑️ ☑︎
+         */
+        val ballotBoxWithCheck = Emoji('☑')
+
+        /**
+         * [BALLOT BOX WITH X](https://codepoints.net/U+2612) ☒️ ☒︎
+         */
+        val ballotBoxWithX = Emoji('☒')
+
+
+        /**
          * [LINE FEED (LF)](https://codepoints.net/U+26A1) ⚡️ ⚡︎
          */
         val highVoltageSign = Emoji('⚡')
 
         /**
-         * [LINE FEED (LF)](https://codepoints.net/U+2714) ✔️ ✔︎
+         * [CHECK MARK](https://codepoints.net/U+2713) ✓️ ✓︎
+         */
+        val checkMark = Emoji('✓')
+
+        /**
+         * [HEAVY CHECK MARK](https://codepoints.net/U+2714) ✔️ ✔︎
          */
         val heavyCheckMark = Emoji('✔')
 
+        /**
+         * [CHECK MARK](https://codepoints.net/U+2705) ✅️ ✅︎
+         */
+        val checkMark_ = Emoji('✅')
+
+        /**
+         * [X MARK](https://codepoints.net/U+274E) ❎️ ❎︎
+         */
+        val xMark = Emoji('❎')
+
+        /**
+         * [BALLOT X](https://codepoints.net/U+2717) ✗️ ✗︎
+         */
+        val ballotX = Emoji('✗')
+
+        /**
+         * [HEAVY BALLOT X](https://codepoints.net/U+2718) ✘️ ✘︎
+         */
+        val heavyBallotX = Emoji('✘')
+
+        /**
+         * [CROSS MARK](https://codepoints.net/U+274C) ❌️ ❌︎
+         */
+        val crossMark = Emoji('❌')
+
+        /**
+         * [HEAVY LARGE CIRCLE](https://codepoints.net/U+2B55) ⭕️ ⭕︎
+         */
+        val heavyLargeCircle = Emoji('⭕')
 
         /**
          * [VARIATION SELECTOR-15](https://codepoints.net/U+FE0E)

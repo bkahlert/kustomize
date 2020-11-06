@@ -2,7 +2,6 @@ package com.imgcstmzr.process
 
 import com.bkahlert.koodies.io.TarArchiveGzCompressor.tarGzip
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
-import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.strikt.hasSize
 import com.bkahlert.koodies.unit.Gibi
 import com.bkahlert.koodies.unit.Mebi
@@ -14,6 +13,7 @@ import com.imgcstmzr.process.ImageBuilder.buildFrom
 import com.imgcstmzr.process.ImageBuilder.format
 import com.imgcstmzr.process.ImageBuilder.toPartitions
 import com.imgcstmzr.process.ImageBuilder.toSectors
+import com.imgcstmzr.util.DockerRequired
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.addExtension
 import com.imgcstmzr.util.logging.InMemoryLogger
@@ -137,7 +137,8 @@ class ImageBuilderTest {
             expectCatching { buildFrom(Path.of("archive.tar.gz"), ratios = arrayOf(0.5 to EXT4)) }.isFailure().isA<IllegalArgumentException>()
         }
 
-        @Slow @Test
+        @DockerRequired
+        @Test
         fun `should build img from archive`(logger: InMemoryLogger<Any>) {
             val archive = Paths.tempDir()
                 .also { it.resolve("cmdline.txt").also { it.writeText("console=serial0,115200 console=tty1 ...") } }

@@ -3,7 +3,7 @@ package com.imgcstmzr.util
 import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.requireExists
-import com.bkahlert.koodies.string.LineSeparators
+import com.bkahlert.koodies.string.LineSeparators.LF
 import com.bkahlert.koodies.string.random
 import java.awt.datatransfer.MimeTypeParseException
 import java.io.BufferedInputStream
@@ -20,27 +20,27 @@ import java.util.Base64
 import kotlin.streams.toList
 
 val Path.isReadable: Boolean
-    get() = Files.isReadable(this)
+    get() = Files.isReadable(toAbsolutePath())
 
 val Path.isWritable: Boolean
-    get() = Files.isWritable(this)
+    get() = Files.isWritable(toAbsolutePath())
 
 val Path.isExecutable: Boolean
-    get() = Files.isExecutable(this)
+    get() = Files.isExecutable(toAbsolutePath())
 
 fun Path.makeExecutable() = toFile().setExecutable(true)
 
 val Path.isFile: Boolean
-    get() = Files.isRegularFile(this)
+    get() = Files.isRegularFile(toAbsolutePath())
 
 val Path.isDirectory: Boolean
-    get() = Files.isDirectory(this)
+    get() = Files.isDirectory(toAbsolutePath())
 
 val Path.isSymlink: Boolean
-    get() = Files.isSymbolicLink(this)
+    get() = Files.isSymbolicLink(toAbsolutePath())
 
 val Path.isHidden: Boolean
-    get() = Files.isHidden(this)
+    get() = Files.isHidden(toAbsolutePath())
 
 fun Path.touch(): Path {
     if (!exists) Files.write(this, emptyList())
@@ -65,7 +65,7 @@ fun Path.resourceAsStream(): InputStream? =
     if (this is ClassPath) {
         this.resourceAsStream()
     } else {
-        Files.newInputStream(this)
+        Files.newInputStream(toAbsolutePath())
     }
 
 fun Path.resourceAsBufferedStream(): BufferedInputStream? =
@@ -93,12 +93,20 @@ fun Path.toDataUri(): String {
 
 
 /**
- * Sets the content of this file as [text] encoded using UTF-8.
+ * Sets the content of this file to [text] encoded using UTF-8.
  * If this file exists, it becomes overwritten.
  *
  * @param text text to write into file.
  */
 fun Path.writeText(text: String): Path = apply { toFile().writeText(text) }
+
+/**
+ * Sets the content of this file to [line] encoded using UTF-8.
+ * If this file exists, it becomes overwritten.
+ *
+ * @param line text to write into file.
+ */
+fun Path.writeLine(line: String): Path = apply { writeText("$line$LF") }
 
 /**
  * Appends [text] to the content of this file using UTF-8.
@@ -112,7 +120,7 @@ fun Path.appendText(text: String): Path = apply { toFile().appendText(text) }
  *
  * @param line line to append to file.
  */
-fun Path.appendLine(line: String): Path = apply { appendText("$line${LineSeparators.LF}") }
+fun Path.appendLine(line: String): Path = apply { appendText("$line$LF") }
 
 /**
  * Returns the base name of the file described by this [Path].
@@ -178,7 +186,7 @@ fun Path.wrap(value: CharSequence): String = toString().wrap(value)
 
 val Path.quoted get() = toAbsolutePath().toString().quoted
 
-fun Path.readAllBytes(): ByteArray = if (this is ClassPath) this.readAllBytes() else Files.readAllBytes(this)
+fun Path.readAllBytes(): ByteArray = if (this is ClassPath) this.readAllBytes() else Files.readAllBytes(toAbsolutePath())
 
 fun Path.readAllLines(charset: Charset = Charsets.UTF_8): List<String> =
     if (this is ClassPath) this.readAllLines(charset) else Files.readAllLines(this, charset)
@@ -268,13 +276,13 @@ fun Path.copyToTempSiblingDirectory(): Path {
  * Returns a list of all directories and files in this [Path] **and its sub directories** that satisfy the provided [predicate].
  */
 fun Path.listFilesRecursively(predicate: ((path: Path) -> Boolean) = { true }, comparator: Comparator<Path> = naturalOrder()): List<Path> =
-    Files.walk(this).use { it.sorted(comparator).filter(predicate).toList() }
+    Files.walk(toAbsolutePath()).use { it.sorted(comparator).filter(predicate).toList() }
 
 /**
  * Calls [action] on each directory and file in this [Path] **and its sub directories**.
  */
 fun Path.onEachFileRecursively(action: (path: Path) -> Unit, comparator: Comparator<Path> = naturalOrder()) {
-    Files.walk(this).use { it.sorted(comparator).forEach(action) }
+    Files.walk(toAbsolutePath()).use { it.sorted(comparator).forEach(action) }
 }
 
 /**
@@ -282,7 +290,7 @@ fun Path.onEachFileRecursively(action: (path: Path) -> Unit, comparator: Compara
  * and returns a [Sequence] of each [action]'s result.
  */
 fun <R> Path.mapFilesRecursively(action: (path: Path) -> R, comparator: Comparator<Path> = naturalOrder()): List<R> =
-    Files.walk(this).use { it.sorted(comparator).map(action).toList() }
+    Files.walk(toAbsolutePath()).use { it.sorted(comparator).map(action).toList() }
 
 /**
  * Tries to delete this path—optionally [recursively]—and returns whether

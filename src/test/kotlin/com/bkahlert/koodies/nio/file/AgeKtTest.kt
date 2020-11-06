@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
-import strikt.assertions.isGreaterThan
+import strikt.assertions.isGreaterThanOrEqualTo
 import strikt.assertions.isLessThan
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -20,7 +20,7 @@ class AgeKtTest {
     fun `should read age`() {
         expectThat(Paths.tempFile().deleteOnExit().age)
             .isLessThan(100.milliseconds)
-            .isGreaterThan(Duration.ZERO)
+            .isGreaterThanOrEqualTo(Duration.ZERO)
     }
 
     @OptIn(ExperimentalTime::class)
@@ -30,7 +30,7 @@ class AgeKtTest {
         file.age = 20.minutes
         expectThat(file.age)
             .isLessThan(20.minutes + 100.milliseconds)
-            .isGreaterThan(20.minutes)
+            .isGreaterThanOrEqualTo(20.minutes)
     }
 }
 

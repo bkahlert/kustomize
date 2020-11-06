@@ -87,6 +87,7 @@ class DockerTest {
 
             kotlin.runCatching {
                 dockerProcess.enter("echo 'test'")
+                dockerProcess.enter("exit")
 
                 val startTime = System.currentTimeMillis()
                 while ((System.currentTimeMillis() - startTime).milliseconds < 8.seconds) {
@@ -102,7 +103,8 @@ class DockerTest {
         @Test
         fun `should start docker and process output`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
             var outputProcessed = false
-            val dockerProcess = run(testName(Lifecycle::`should start docker and process output`), osImage) { if (it.type == OUT) outputProcessed = true }
+            val dockerProcess =
+                runOsImage(testName(Lifecycle::`should start docker and process output`), osImage) { if (it.type == OUT) outputProcessed = true }
 
             kotlin.runCatching {
                 val startTime = System.currentTimeMillis()
@@ -152,7 +154,7 @@ class DockerTest {
             @OptIn(ExperimentalTime::class)
             @Test
             fun `should return false on not yet started container container`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
-                val dockerProcess = run(testName(IsRunning::`should return false on not yet started container container`), osImage)
+                val dockerProcess = runOsImage(testName(IsRunning::`should return false on not yet started container container`), osImage)
                 kotlin.runCatching {
                     expectThat(dockerProcess.isRunning).isFalse()
                 }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
@@ -161,7 +163,7 @@ class DockerTest {
             @OptIn(ExperimentalTime::class)
             @Test
             fun `should return true on running container`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
-                val dockerProcess = run(testName(IsRunning()::`should return true on running container`), osImage)
+                val dockerProcess = runOsImage(testName(IsRunning()::`should return true on running container`), osImage)
                 kotlin.runCatching {
                     val startTime = System.currentTimeMillis()
                     while ((System.currentTimeMillis() - startTime).milliseconds < 5.seconds) {
@@ -177,7 +179,7 @@ class DockerTest {
             @OptIn(ExperimentalTime::class)
             @Test
             fun `should return false on completed container`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
-                val dockerProcess = run(testName(IsRunning::`should return false on completed container`), osImage)
+                val dockerProcess = runOsImage(testName(IsRunning::`should return false on completed container`), osImage)
                 kotlin.runCatching {
                     val startTime = System.currentTimeMillis()
                     while ((System.currentTimeMillis() - startTime).milliseconds < 5.seconds) {
@@ -199,7 +201,7 @@ class DockerTest {
             @OptIn(ExperimentalTime::class)
             @Test
             fun `should stop started container`(@OS(DietPi::class) osImage: OperatingSystemImage) {
-                val dockerProcess = run(testName(IsRunning::`should stop started container`), osImage)
+                val dockerProcess = runOsImage(testName(IsRunning::`should stop started container`), osImage)
                 kotlin.runCatching {
                     100.milliseconds.poll { dockerProcess.isRunning }.forAtMost(5.seconds) { fail("timed out") }
 
@@ -214,7 +216,7 @@ class DockerTest {
         @OptIn(ExperimentalTime::class)
         @Test
         fun `should remove docker container after completion`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
-            val dockerProcess = run(testName(Lifecycle::`should remove docker container after completion`), osImage)
+            val dockerProcess = runOsImage(testName(Lifecycle::`should remove docker container after completion`), osImage)
             kotlin.runCatching {
                 val startTime = System.currentTimeMillis()
                 while ((System.currentTimeMillis() - startTime).milliseconds < 5.seconds) {
@@ -238,7 +240,7 @@ class DockerTest {
     @Test
     fun `should not produce incorrect empty lines`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
         val output = mutableListOf<IO>().synchronized()
-        val dockerProcess = run(testName(DockerTest::`should not produce incorrect empty lines`), osImage) { output.add(it) }
+        val dockerProcess = runOsImage(testName(DockerTest::`should not produce incorrect empty lines`), osImage) { output.add(it) }
         kotlin.runCatching {
             val startTime = System.currentTimeMillis()
             while ((System.currentTimeMillis() - startTime).milliseconds < 8.seconds) {
@@ -254,7 +256,7 @@ class DockerTest {
 }
 
 @Suppress("SpellCheckingInspection")
-private fun run(name: String, osImage: OperatingSystemImage, outputProcessor: (DockerProcess.(IO) -> Unit)? = null): DockerProcess {
+private fun runOsImage(name: String, osImage: OperatingSystemImage, outputProcessor: (DockerProcess.(IO) -> Unit)? = null): DockerProcess {
     return Docker.run(outputProcessor = outputProcessor) {
         run(name = name, volumes = listOf(osImage.toAbsolutePath() to Path.of("/sdcard/filesystem.img")).toMap(), image = "lukechilds/dockerpi:vm")
     }

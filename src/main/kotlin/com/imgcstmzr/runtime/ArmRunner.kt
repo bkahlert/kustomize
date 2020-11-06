@@ -10,6 +10,7 @@ import com.bkahlert.koodies.docker.Docker
 import com.bkahlert.koodies.docker.DockerProcess
 import com.bkahlert.koodies.terminal.ANSI
 import com.imgcstmzr.runtime.Program.Companion.compute
+import com.imgcstmzr.runtime.Program.Companion.format
 import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger.Companion.subLogger
@@ -67,7 +68,7 @@ object ArmRunner {
      * runs all provided [programs].
      *
      * Before the [programs] the [osImage] will be booted and a login takes place.
-     * After the execution of all [programs] finished the [osImage] will
+     * After the execution of all [programs] finishes the [osImage] will
      * be shutdown.
      *
      * @return exit code `0` if no errors occurred.
@@ -77,7 +78,7 @@ object ArmRunner {
         osImage: OperatingSystemImage,
         logger: RenderingLogger<Any>,
         vararg programs: Program,
-    ): Int = logger.subLogger<Any, Int>("$osImage", ansiCode = ANSI.termColors.cyan) {
+    ): Int = logger.subLogger<Any, Int>("Running ${osImage.shortName} with ${programs.format()}", ansiCode = ANSI.termColors.cyan) {
         val unfinished: MutableList<Program> = mutableListOf(
             osImage.loginProgram(osImage.credentials),/*.logging()*/
             *programs,
@@ -94,4 +95,19 @@ object ArmRunner {
             0
         }.waitForExitCode(0).exitCode
     }
+
+    /**
+     * Starts a [DockerProcess] that boots the [osImage] and runs this [Program].
+     * *(The program's name is used as the container name.)*
+     *
+     * Before this [Program] the [osImage] will be booted and a login takes place.
+     * After the execution of this [Program] finishes the [osImage] will
+     * be shutdown.
+     *
+     * @return exit code `0` if no errors occurred.
+     */
+    fun Program.runOn(
+        osImage: OperatingSystemImage,
+        logger: RenderingLogger<Any>,
+    ): Int = run(name, osImage, logger, this)
 }

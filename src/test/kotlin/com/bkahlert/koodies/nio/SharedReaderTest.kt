@@ -127,6 +127,7 @@ abstract class SharedReaderTest(val readerFactory: (InputStream, Duration, Block
         expectThat(read).containsExactly("Hello", "World")
     }
 
+    @Suppress("unused")
     @Isolated
     @ExperimentalTime
     @Nested
@@ -134,6 +135,7 @@ abstract class SharedReaderTest(val readerFactory: (InputStream, Duration, Block
         val bootLog = ClassPath("raspberry.boot")
         val inputStream = { bootLog.resourceAsStream() ?: throw IllegalStateException() }
 
+        @Slow
         @Test
         fun `should quickly read boot sequence using custom forEachLine`(logger: InMemoryLogger<String?>) {
             val reader = readerFactory(inputStream(), 1.seconds, logger)
@@ -147,6 +149,7 @@ abstract class SharedReaderTest(val readerFactory: (InputStream, Duration, Block
             expectThat(read.joinLinesToString()).isEqualTo(inputStream().readAllBytes().decodeToString().withoutTrailingLineSeparator)
         }
 
+        @Slow
         @Test
         fun `should quickly read boot sequence using foreign forEachLine`(logger: InMemoryLogger<String?>) {
             val reader = readerFactory(inputStream(), 1.seconds, logger)

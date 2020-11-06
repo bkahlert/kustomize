@@ -95,3 +95,4 @@ https://github.com/garthvh/ansible-raspi-playbooks/blob/master/playbooks/new-def
 - `ShellScriptBuilder` (with !"echo 'this is a command'")
 - `ContainsExactlyInSomeOrder` (easily understandable builder pattern)
 - `RegExDocument` (delegates properties)
+- `PatchTest` (Complex builder pattern)

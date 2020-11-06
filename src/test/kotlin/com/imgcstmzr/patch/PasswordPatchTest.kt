@@ -59,12 +59,13 @@ class PasswordPatchTest {
         passwordPatch.patch(osImage, logger)
 
         expectThat(osImage.credentials).isEqualTo(Credentials(username, newPassword))
-        expectThat(osImage).mounted(logger) {
-            path(passwordPath).hasMatchingLine(userPasswordPattern).get { this.single { it.startsWith(username) } }
-        }.booted<RaspberryPiLite>(logger) {
-            command("echo '👏 🤓 👋'");
-            { true }
-        }
+        expectThat(osImage)
+            .mounted(logger) {
+                path(passwordPath).hasMatchingLine(userPasswordPattern).get { this.single { it.startsWith(username) } }
+            }.booted(logger) {
+                command("echo '👏 🤓 👋'");
+                { true }
+            }
     }
 
     @DockerRequired

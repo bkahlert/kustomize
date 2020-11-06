@@ -1,7 +1,6 @@
 package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.unit.Size
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import java.nio.file.Path
 
@@ -11,13 +10,6 @@ open class OperatingSystemMock(
     override val defaultUsername: String = "",
     override val defaultPassword: String = "",
 ) : OperatingSystem {
-    override fun increaseDiskSpace(
-        size: Size,
-        img: Path,
-        parentLogger: BlockRenderingLogger<Any>?,
-    ): Any {
-        error(::increaseDiskSpace.name + " not implemented in mock")
-    }
 
     override fun bootToUserSession(
         scenario: String,

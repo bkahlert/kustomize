@@ -1,8 +1,6 @@
 package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
-import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.docker.Docker.toContainerName
@@ -13,16 +11,11 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.green
 import com.bkahlert.koodies.terminal.ascii.Kaomojis
 import com.bkahlert.koodies.terminal.ascii.Kaomojis.thinking
 import com.bkahlert.koodies.time.Now
-import com.bkahlert.koodies.unit.Mega
-import com.bkahlert.koodies.unit.Size
-import com.bkahlert.koodies.unit.bytes
-import com.bkahlert.koodies.unit.size
 import com.imgcstmzr.process.CommandLineRunner
 import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
 import com.imgcstmzr.runtime.Program.Companion.compute
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.miniSegment
 import com.imgcstmzr.runtime.log.segment
 import com.imgcstmzr.util.quoted
 import java.io.File
@@ -52,44 +45,6 @@ sealed class OperatingSystems : OperatingSystem {
         override val downloadUrl: String = "https://downloads.raspberrypi.org/raspios_lite_armhf_latest"
         override val defaultUsername: String = "pi"
         override val defaultPassword: String = "raspberry"
-
-        override fun increaseDiskSpace(
-            size: Size,
-            img: Path,
-            parentLogger: BlockRenderingLogger<Any>?,
-        ): Any {
-            return parentLogger.segment("Increasing Disk Space: ${img.size} ➜ $size", null) {
-                var missing = size - img.size
-                val bytesPerStep = 100.Mega.bytes
-                val oneHundredMegaBytes = bytesPerStep.toZeroFilledByteArray()
-                when {
-                    missing < 0.bytes -> {
-                        logStatus { ERR typed "Requested disk space is ${-missing} smaller than current size of ${img.fileName} (${img.size})." }
-                        logStatus { ERR typed "Decreasing an image's disk space is currently not supported." }
-                    }
-                    missing == 0.bytes -> {
-                        logStatus { OUT typed "${img.fileName} is has already ${img.size}" }
-                    }
-                    else -> {
-                        miniSegment<Any, Size>("Progress:") {
-                            logStatus { OUT typed img.size.toString() }
-                            while (missing > 0.bytes) {
-                                val write = if (missing < bytesPerStep) missing.toZeroFilledByteArray() else oneHundredMegaBytes
-                                img.toFile().appendBytes(write)
-                                missing -= write.size
-                                logStatus { OUT typed "⥅ ${img.size}" }
-                            }
-                            img.size
-                        }
-
-                        logStatus { OUT typed "Image Disk Space Successfully increased to " + img.size.toString() + ". Booting OS to finalize..." }
-
-                        val compileScript = compileScript("expand-root", "sudo raspi-config --expand-rootfs")
-                        compileScript.bootRunStop("Resizing", this@RaspberryPiLite, img, this@segment)
-                    }
-                }
-            }
-        }
 
         override fun bootToUserSession(
             scenario: String,
@@ -148,6 +103,25 @@ sealed class OperatingSystems : OperatingSystem {
     }
 
     /**
+     * [Raspberry Pi OS Lite](https://www.raspberrypi.org/downloads/raspberry-pi-os/)
+     */
+    object RaspberryPi : OperatingSystems() {
+        override val name: String = "Raspberry Pi OS"
+        override val downloadUrl: String = "https://downloads.raspberrypi.org/raspios_armhf_latest"
+        override val defaultUsername: String = "pi"
+        override val defaultPassword: String = "raspberry"
+
+        override fun bootToUserSession(
+            scenario: String,
+            img: Path,
+            parentLogger: BlockRenderingLogger<Any>?,
+            processor: RunningOperatingSystem.(IO) -> Any,
+        ): Any {
+            return RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
+        }
+    }
+
+    /**
      * [DietPi](https://dietpi.com)
      */
     object DietPi : OperatingSystems() {
@@ -155,12 +129,6 @@ sealed class OperatingSystems : OperatingSystem {
         override val downloadUrl: String = "https://dietpi.com/downloads/images/DietPi_RPi-ARMv6-Buster.7z"
         override val defaultUsername: String = "root"
         override val defaultPassword: String = "dietpi"
-
-        override fun increaseDiskSpace(
-            size: Size,
-            img: Path,
-            parentLogger: BlockRenderingLogger<Any>?,
-        ): Any = RaspberryPiLite.increaseDiskSpace(size, img, parentLogger)
 
         override fun bootToUserSession(
             scenario: String,
@@ -179,12 +147,6 @@ sealed class OperatingSystems : OperatingSystem {
         override val defaultUsername: String = "tc"
         override val defaultPassword: String = "piCore"
 
-        override fun increaseDiskSpace(
-            size: Size,
-            img: Path,
-            parentLogger: BlockRenderingLogger<Any>?,
-        ): Any = RaspberryPiLite.increaseDiskSpace(size, img, parentLogger)
-
         override fun bootToUserSession(
             scenario: String,
             img: Path,
@@ -201,12 +163,6 @@ sealed class OperatingSystems : OperatingSystem {
         override val downloadUrl: String = "http://os.archlinuxarm.org/os/ArchLinuxARM-rpi-latest.tar.gz"
         override val defaultUsername: String = "alarm" // root
         override val defaultPassword: String = "alarm" // root
-
-        override fun increaseDiskSpace(
-            size: Size,
-            img: Path,
-            parentLogger: BlockRenderingLogger<Any>?,
-        ): Any = RaspberryPiLite.increaseDiskSpace(size, img, parentLogger)
 
         override fun bootToUserSession(
             scenario: String,
@@ -227,12 +183,6 @@ sealed class OperatingSystems : OperatingSystem {
         override val defaultUsername: String = ""
         override val defaultPassword: String = ""
 
-        override fun increaseDiskSpace(
-            size: Size,
-            img: Path,
-            parentLogger: BlockRenderingLogger<Any>?,
-        ): Any = RaspberryPiLite.increaseDiskSpace(size, img, parentLogger)
-
         override fun bootToUserSession(
             scenario: String,
             img: Path,
@@ -252,11 +202,43 @@ sealed class OperatingSystems : OperatingSystem {
         override val defaultUsername: String = ""
         override val defaultPassword: String = ""
 
-        override fun increaseDiskSpace(
-            size: Size,
+        override fun bootToUserSession(
+            scenario: String,
             img: Path,
             parentLogger: BlockRenderingLogger<Any>?,
-        ): Any = RaspberryPiLite.increaseDiskSpace(size, img, parentLogger)
+            processor: RunningOperatingSystem.(IO) -> Any,
+        ): Any = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
+    }
+
+    /**
+     * [RISC OS Pico RC5](https://cdimage.ubuntu.com/releases/20.10/release/ubuntu-20.10-preinstalled-server-armhf+raspi.img.xz)
+     *
+     * Size: ~700MB
+     */
+    object UbuntuServer : OperatingSystems() {
+        override val name: String = "Ubuntu Server 20.10"
+        override val downloadUrl: String = "https://www.riscosopen.org/zipfiles/platform/raspberry-pi/Pico.5.zip"
+        override val defaultUsername: String = "ubuntu"
+        override val defaultPassword: String = "ubuntu"
+
+        override fun bootToUserSession(
+            scenario: String,
+            img: Path,
+            parentLogger: BlockRenderingLogger<Any>?,
+            processor: RunningOperatingSystem.(IO) -> Any,
+        ): Any = RaspberryPiLite.bootToUserSession(scenario, img, parentLogger, processor)
+    }
+
+    /**
+     * [WebThings Gateway](https://github.com/WebThingsIO/gateway/releases/download/0.12.0/gateway-0.12.0.img.zip)
+     *
+     * Size: ~860MB
+     */
+    object WebThingsGateway : OperatingSystems() {
+        override val name: String = "WebThings Gateway"
+        override val downloadUrl: String = "https://github.com/WebThingsIO/gateway/releases/download/0.12.0/gateway-0.12.0.img.zip"
+        override val defaultUsername: String = "pi"
+        override val defaultPassword: String = "raspberry"
 
         override fun bootToUserSession(
             scenario: String,
@@ -354,12 +336,6 @@ interface OperatingSystem {
     val readyPattern: Regex
         get() = Regex("(?<user>[\\w-_]+)@(?<host>[\\w-_]+):(?<path>[^#$]+?)[#$](?<optWhitespace>\\s*)")
 
-    fun increaseDiskSpace(
-        size: Size,
-        img: Path,
-        parentLogger: BlockRenderingLogger<Any>?,
-    ): Any
-
     /**
      * Boots the [OperatingSystem] on the [img] and performs the needed steps to get to the command prompt.
      * With that ready [processor] is called with every output.
@@ -390,8 +366,10 @@ interface OperatingSystem {
     /**
      * Compiles a script with a [name] consisting of [commands] to be executed.
      */
-    fun compileScript(name: String, vararg commands: String): Program =
-        Program.fromScript(name, readyPattern, *commands)
+    fun compileScript(name: String, vararg commands: String): Program {
+        check(commands.isNotEmpty()) { "Script $name must not be empty." }
+        return Program.fromScript(name, readyPattern, *commands)
+    }
 
     /**
      * Creates a program to log [Credentials.username] in using [Credentials.password].
