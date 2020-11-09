@@ -48,6 +48,7 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import strikt.assertions.isFalse
 import strikt.assertions.isGreaterThan
+import strikt.assertions.isGreaterThanOrEqualTo
 import strikt.assertions.isLessThanOrEqualTo
 import strikt.assertions.isNotNull
 import strikt.assertions.isTrue
@@ -136,8 +137,8 @@ class ProcessesTest {
             if (process.isAlive) aliveCount++
             500.milliseconds.sleep()
         }
-        expectThat(waitCount).isGreaterThan(4)
-        expectThat(aliveCount).isGreaterThan(4)
+        expectThat(waitCount).isGreaterThanOrEqualTo(4)
+        expectThat(aliveCount).isGreaterThanOrEqualTo(4)
         expectThat(process.isAlive).isFalse()
         expectThat(content).isEqualTo("$pid")
     }
@@ -295,7 +296,7 @@ class ProcessesTest {
             }
             process.waitForCompletion()
             expectThat(ranAfterProcessTermination).isTrue()
-        }.let { expectThat(it).isLessThanOrEqualTo(2.5.seconds) }
+        }.let { expectThat(it).isLessThanOrEqualTo(3.seconds) }
     }
 
     @OptIn(ExperimentalTime::class)

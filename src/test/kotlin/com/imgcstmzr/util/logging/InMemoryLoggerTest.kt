@@ -21,7 +21,7 @@ class InMemoryLoggerTest {
     fun `should log using OutputStream`(capturedOutput: CapturedOutput) {
         val outputStream = ByteArrayOutputStream()
 
-        val logger = InMemoryLogger<Unit>("caption", true, listOf(outputStream))
+        val logger = InMemoryLogger<Unit>("caption", true, -1, listOf(outputStream))
         logger.logLine { "abc" }
 
         expectThat(capturedOutput).isEmpty()
@@ -34,7 +34,7 @@ class InMemoryLoggerTest {
     fun `should provide access to logs`(output: CapturedOutput) {
         val outputStream = ByteArrayOutputStream()
 
-        val logger = InMemoryLogger<Unit>("caption", true, listOf(outputStream))
+        val logger = InMemoryLogger<Unit>("caption", true, -1, listOf(outputStream))
         logger.logLine { "abc" }
 
         expectThat(logger.logged.removeEscapeSequences())
@@ -46,7 +46,7 @@ class InMemoryLoggerTest {
     fun `should use BlockRenderingLogger to logs`(output: CapturedOutput) {
         val outputStream = ByteArrayOutputStream()
 
-        val logger = InMemoryLogger<Unit>("caption", true, listOf(outputStream))
+        val logger = InMemoryLogger<Unit>("caption", true, -1, listOf(outputStream))
 
         expectThat(logger.logged.removeEscapeSequences()).startsWith("╭─────╴caption")
     }

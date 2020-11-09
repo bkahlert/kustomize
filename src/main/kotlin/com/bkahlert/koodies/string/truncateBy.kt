@@ -19,4 +19,4 @@ fun CharSequence.truncateBy(numberOfWhitespaces: Int, startIndex: Int = 0, minWh
  * Therefore the truncated string might not be fully truncated than envisioned.
  */
 fun String.truncateBy(numberOfWhitespaces: Int, startIndex: Int = 0, minWhitespaceLength: Int = 1): String =
-    truncateTo(length - numberOfWhitespaces, startIndex, minWhitespaceLength)
+    truncateTo(length - numberOfWhitespaces, startIndex, minWhitespaceLength).asString()

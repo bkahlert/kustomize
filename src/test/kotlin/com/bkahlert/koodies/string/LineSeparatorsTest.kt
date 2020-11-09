@@ -1,13 +1,18 @@
 package com.bkahlert.koodies.string
 
+import com.bkahlert.koodies.string.LineSeparators.CR
+import com.bkahlert.koodies.string.LineSeparators.CRLF
 import com.bkahlert.koodies.string.LineSeparators.INTERMEDIARY_LINE_PATTERN
 import com.bkahlert.koodies.string.LineSeparators.LAST_LINE_PATTERN
 import com.bkahlert.koodies.string.LineSeparators.LINE_PATTERN
+import com.bkahlert.koodies.string.LineSeparators.PS
 import com.bkahlert.koodies.string.LineSeparators.SEPARATOR_PATTERN
 import com.bkahlert.koodies.string.LineSeparators.firstLineSeparator
 import com.bkahlert.koodies.string.LineSeparators.firstLineSeparatorLength
 import com.bkahlert.koodies.string.LineSeparators.hasTrailingLineSeparator
 import com.bkahlert.koodies.string.LineSeparators.isMultiline
+import com.bkahlert.koodies.string.LineSeparators.lineSequence
+import com.bkahlert.koodies.string.LineSeparators.lines
 import com.bkahlert.koodies.string.LineSeparators.trailingLineSeparator
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
@@ -22,6 +27,7 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
+import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
 import strikt.assertions.isNotNull
@@ -61,7 +67,81 @@ class LineSeparatorsTest {
 
     @Test
     fun `should iterate all line breaks in order`() {
-        expectThat(LineSeparators.joinToString(" ") { "($it)" }).isEqualTo("(\r\n) (\n) (\r) (${LineSeparators.LS}) (${LineSeparators.PS}) (${LineSeparators.NL})")
+        expectThat(LineSeparators.joinToString(" ") { "($it)" }).isEqualTo("(\r\n) (\n) (\r) (${LineSeparators.LS}) ($PS) (${LineSeparators.NL})")
+    }
+
+    @Nested
+    inner class LineSequence {
+
+        @Test
+        fun `should keep trailing new lines`() {
+            expectThat("1${CR}2${CRLF}3$PS".lineSequence().toList())
+                .containsExactly("1", "2", "3", "")
+        }
+
+        @Nested
+        inner class WithTrailingSeparatorIgnored {
+            @Test
+            fun `should not have trailing empty line if one existed`() {
+                expectThat("1${CR}2${CRLF}3$PS".lineSequence(ignoreTrailingSeparator = true).toList())
+                    .containsExactly("1", "2", "3")
+            }
+
+            @Test
+            fun `should not have trailing empty line if none existed`() {
+                expectThat("1${CR}2${CRLF}3".lineSequence(ignoreTrailingSeparator = true).toList())
+                    .containsExactly("1", "2", "3")
+            }
+
+            @Test
+            fun `should consist of single line if only one existed`() {
+                expectThat("1".lineSequence(ignoreTrailingSeparator = true).toList())
+                    .containsExactly("1")
+            }
+
+            @Test
+            fun `should be empty if only (trailing) line is empty`() {
+                expectThat("".lineSequence(ignoreTrailingSeparator = true).toList())
+                    .isEmpty()
+            }
+        }
+    }
+
+    @Nested
+    inner class Lines {
+
+        @Test
+        fun `should keep trailing new lines`() {
+            expectThat("1${CR}2${CRLF}3$PS".lines())
+                .containsExactly("1", "2", "3", "")
+        }
+
+        @Nested
+        inner class WithTrailingSeparatorIgnored {
+            @Test
+            fun `should not have trailing empty line if one existed`() {
+                expectThat("1${CR}2${CRLF}3$PS".lines(ignoreTrailingSeparator = true))
+                    .containsExactly("1", "2", "3")
+            }
+
+            @Test
+            fun `should not have trailing empty line if none existed`() {
+                expectThat("1${CR}2${CRLF}3".lines(ignoreTrailingSeparator = true))
+                    .containsExactly("1", "2", "3")
+            }
+
+            @Test
+            fun `should consist of single line if only one existed`() {
+                expectThat("1".lines(ignoreTrailingSeparator = true))
+                    .containsExactly("1")
+            }
+
+            @Test
+            fun `should be empty if only (trailing) line is empty`() {
+                expectThat("".lineSequence(ignoreTrailingSeparator = true).toList())
+                    .isEmpty()
+            }
+        }
     }
 
     @ConcurrentTestFactory

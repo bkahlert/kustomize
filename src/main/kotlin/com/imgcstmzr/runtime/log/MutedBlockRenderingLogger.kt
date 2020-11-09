@@ -8,7 +8,11 @@ open class MutedBlockRenderingLogger<R>(
     borderedOutput: Boolean = false,
     interceptor: (CharSequence) -> CharSequence? = { it },
     log: (CharSequence) -> Any = { },
-) : BlockRenderingLogger<R>(caption, borderedOutput, interceptor, log) {
+) : BlockRenderingLogger<R>(
+    caption = caption,
+    borderedOutput = borderedOutput,
+    interceptor = interceptor,
+    log = log) {
 
     override fun render(trailingNewline: Boolean, block: () -> CharSequence) {}
 

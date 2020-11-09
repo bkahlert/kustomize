@@ -84,6 +84,16 @@ class CodePointTest {
         )
     }
 
+    @Test
+    fun `should have name`() {
+        expectThat(Unicode[66].unicodeName).isEqualTo("LATIN CAPITAL LETTER B")
+    }
+
+    @Test
+    fun `should have formatted name`() {
+        expectThat(Unicode[66].formattedName).isEqualTo("❲LATIN CAPITAL LETTER B❳")
+    }
+
     @Nested
     inner class CodePointValidation {
 

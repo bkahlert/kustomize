@@ -14,6 +14,7 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.any
 import strikt.assertions.contains
@@ -69,11 +70,21 @@ class ArmRunnerTest {
                 osImage.compileScript("demo train", "sudo apt-get install -y -m sl", "sl"),
             ))
 
-        expectThat(exitCode).isEqualTo(0)
-        expectThat(logger.logged).contains("@@(@@@)")
-        expectThat(logger.logged.lines().takeLast(20))
-            .any { contains("shutting down") }
-            .any { contains("reboot: System halted") }
+        expect {
+            that(exitCode).isEqualTo(0)
+            that(logger.logged) {
+                compose("did run sl or at least tried (in case of internet problems)") {
+                    contains("Building dependency tree")
+                    contains("@@(@@@)")
+                } then {
+                    if (anyPassed) pass()
+                    else fail("neither tried nor succeeded")
+                }
+                get { lines().takeLast(20) }
+                    .any { contains("shutting down") }
+                    .any { contains("reboot: System halted") }
+            }
+        }
     }
 
     @Test
@@ -81,9 +92,10 @@ class ArmRunnerTest {
 
         osImage.compileScript("demo train", "sudo apt-get install -y -m sl", "sl").runOn(osImage, logger)
 
-        expectThat(logger.logged)
-            .contains("Running Tiny Core at piCore-12.0.img with ◀◀ demo train")
-            .contains("Booting QEMU machine")
+        expectThat(logger.logged) {
+            contains("Running Tiny Core at piCore-12.0.img with ◀◀ demo train")
+            contains("Booting QEMU machine")
+        }
     }
 
     @Suppress("unused")

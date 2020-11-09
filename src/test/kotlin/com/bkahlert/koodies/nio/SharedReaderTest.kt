@@ -141,7 +141,7 @@ abstract class SharedReaderTest(val readerFactory: (InputStream, Duration, Block
             val reader = readerFactory(inputStream(), 1.seconds, logger)
 
             val read = mutableListOf<String>()
-            assertTimeoutPreemptively(8.seconds.toJavaDuration()) {
+            assertTimeoutPreemptively(30.seconds.toJavaDuration()) {
                 reader.forEachLine {
                     read.add(it)
                 }
@@ -154,7 +154,7 @@ abstract class SharedReaderTest(val readerFactory: (InputStream, Duration, Block
         fun `should quickly read boot sequence using foreign forEachLine`(logger: InMemoryLogger<String?>) {
             val reader = readerFactory(inputStream(), 1.seconds, logger)
 
-            assertTimeoutPreemptively(8.seconds.toJavaDuration()) {
+            assertTimeoutPreemptively(30.seconds.toJavaDuration()) {
                 val read = reader.readLines()
                 expectThat(read.joinLinesToString()).isEqualTo(inputStream().readAllBytes().decodeToString().withoutTrailingLineSeparator)
             }

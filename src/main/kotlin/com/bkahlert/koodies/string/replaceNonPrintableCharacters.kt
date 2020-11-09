@@ -1,16 +1,26 @@
 package com.bkahlert.koodies.string
 
+import com.bkahlert.koodies.number.toHexString
 import com.bkahlert.koodies.string.Unicode.replacementSymbol
-import com.bkahlert.koodies.string.Unicode.unicodeName
+import com.bkahlert.koodies.terminal.ansi.AnsiStyles.unit
 
-private val boxDrawings by lazy { Regex.escape(Unicode.boxDrawings.joinToString("")) }
-private val specialCharacterPattern by lazy { Regex("[^\\p{Print}\\p{IsPunctuation}$boxDrawings]") }
 
 /**
- * Replaces all special/non-printable characters, that is, all characters but \x20 (space) to \x7E (tilde) with their Unicode name.
+ * Replaces control (e.g. [Unicode.escape], surrogate (e.g. `\ubd00`) and whitespace (e.g. [Unicode.lineFeed]) characters
+ * with a visual representation or, if unavailable, with their written Unicode name.
  */
-fun String.replaceNonPrintableCharacters(): String = this.replace(specialCharacterPattern) {
-    val char = it.value.first()
-    if (char.replacementSymbol != null) char.replacementSymbol.toString()
-    else "❲" + char.unicodeName + "❳"
+fun String.replaceNonPrintableCharacters(): String {
+    return mapCodePoints { codePoint ->
+        val prefix = if (codePoint.string in LineSeparators) "⏎" else ""
+        val suffix = if (codePoint.char in Unicode.controlCharacters.values) "ꜝ" else ""
+        prefix + when {
+            codePoint.char == ' ' -> " "
+            codePoint.replacementSymbol != null -> codePoint.replacementSymbol.toString()
+            codePoint.string in LineSeparators -> "⏎"
+            codePoint.isHighSurrogate -> codePoint.codePoint.toHexString(pad = true) + "▌﹍"
+            codePoint.isLowSurrogate -> "﹍▐" + codePoint.codePoint.toHexString(pad = true)
+            codePoint.isWhitespace || codePoint.char in Unicode.whitespaces -> codePoint.unicodeName.unit()
+            else -> codePoint.string
+        } + suffix
+    }.joinToString("")
 }

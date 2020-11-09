@@ -33,18 +33,20 @@ class IO(
      */
     val formatted: String by lazy { type.format(this) }
 
+    private val lines by lazy { text.lines().map { type typed it }.toList() }
+
     /**
      * Splits this [IO] into separate lines while keeping the ANSI formatting intact.
      */
-    fun lines(): List<IO> = text.lines().map { type typed it }.toList()
+    fun lines(): List<IO> = lines
 
     /**
      * Whether this [text] (ignoring eventually existing [ANSI] escape sequences)
      * is blank (≝ is empty or consists of nothing but whitespaces).
      */
-    val isBlank: Boolean = unformatted.isBlank()
+    val isBlank: Boolean by lazy { unformatted.isBlank() }
 
-    override fun toString(): String = "$formatted"
+    override fun toString(): String = formatted
 
     companion object {
         /**

@@ -7,28 +7,17 @@ import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.imgcstmzr.process.Guestfish.Companion.SHARED_DIRECTORY_NAME
 import com.imgcstmzr.runtime.OperatingSystems.DietPi
-import com.imgcstmzr.util.FixtureResolverExtension
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.copyToTempSiblingDirectory
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
-import org.junit.jupiter.api.TestFactory
-import org.junit.jupiter.api.extension.ExtendWith
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
 import java.nio.file.Path
 
-@ExtendWith(FixtureResolverExtension::class)
-@Execution(ExecutionMode.SAME_THREAD)
-@Disabled
 class GuestfishMountPassthroughTest {
 
     /**
      * Experiment to [mount disk image to host using Guestfish](https://medium.com/@kumar_pravin/mount-disk-image-to-host-using-guestfish-d5f33c0297e0).
      */
-    @TestFactory
-    @Execution(ExecutionMode.SAME_THREAD)
     fun `should provide access to filesystem`(@OS(DietPi::class, autoDelete = false) img: Path): List<DynamicTest> {
         val dockerImageName = "cmattoon/guestfish"
 

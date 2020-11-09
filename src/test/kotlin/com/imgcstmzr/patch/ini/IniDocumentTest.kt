@@ -86,16 +86,15 @@ class IniDocumentTest {
                 dynamicTest("${fragment.replaceNonPrintableCharacters().quoted} should NOT be parsed by $parser") {
                     expectCatching {
                         val instance = parser(fragment)
-                        println(instance)
+                        "$instance"
                     }.assert("") { result ->
-                        println(result)
+                        "$result"
                     }.isFailure().isA<IllegalArgumentException>()
                 }
             }.plus(
                 parsers.map { parser ->
                     dynamicTest("${fragment.replaceNonPrintableCharacters().quoted} should be parsed by $parser") {
                         val actual = parser(fragment)
-                        println(actual)
                         expectThat(actual.toString()).isEqualTo(fragment)
                     }
                 })
@@ -174,7 +173,6 @@ class IniDocumentTest {
             val foundKeys = iniDocument.findKey("dtparam")
             foundKeys.onEach { it.values = listOf("new-value") }
             expectThat(foundKeys).hasSize(1).get { get(0).toString() }.isEqualTo("dtparam=new-value")
-            println(iniDocument)
         }
 
         @Suppress("SpellCheckingInspection")
@@ -194,7 +192,6 @@ class IniDocumentTest {
             iniDocument.findKey("missing").also { expectThat(it).isEmpty() }
             iniDocument.append("missing=no-more")
             expectThat(iniDocument.toString()).endsWith("missing=no-more")
-            println(iniDocument.toString())
         }
 
         @Test
@@ -206,7 +203,6 @@ class IniDocumentTest {
             iniDocument.createKeyIfMissing("missing", "v3", "xxx")
 
             expectThat(iniDocument.toString()).endsWith("missing=v1,v2\n[xxx]\nmissing=v3")
-            println(iniDocument.toString())
         }
 
         @Suppress("SpellCheckingInspection")
@@ -221,7 +217,6 @@ class IniDocumentTest {
             expectThat(path.readAll())
                 .contains("dtoverlay=vc4-fkms-v3d,added-value")
                 .contains("dtoverlay=dwc2,added-value")
-            println(iniDocument)
         }
     }
 }

@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.collections
 
-import com.bkahlert.koodies.number.`%+`
+import com.bkahlert.koodies.number.mod
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
@@ -11,7 +11,7 @@ import kotlin.reflect.KProperty
  */
 inline fun <reified T> List<T>.withNegativeIndices(): List<T> {
     return object : List<T> by this {
-        override fun get(index: Int): T = this@withNegativeIndices[index `%+` size]
+        override fun get(index: Int): T = this@withNegativeIndices[index.mod(size)]
     }
 }
 

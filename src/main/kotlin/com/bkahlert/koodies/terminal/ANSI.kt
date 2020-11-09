@@ -3,8 +3,8 @@ package com.bkahlert.koodies.terminal
 import com.github.ajalt.mordant.TermColors
 
 object ANSI {
-    val color get() = termColors.hsv((Math.random() * 360.0).toInt(), 100, 94)
-    val termColors by lazy { TermColors(IDE.ansiSupport) } // TODO use extension functions
+    val randomColor get() = termColors.hsv((Math.random() * 360.0).toInt(), 100, 94)
+    val termColors by lazy { TermColors(IDE.ansiSupport) }
 }
 
 val TermColors.rainbow

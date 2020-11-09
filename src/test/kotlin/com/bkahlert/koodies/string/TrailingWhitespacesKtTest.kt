@@ -17,12 +17,12 @@ class TrailingWhitespacesKtTest {
 
     @Test
     fun `should find untypical whitespaces`() {
-        expectThat(Unicode.whitespaces.joinToString("").trailingWhitespaces).hasLength(1)
+        expectThat(Unicode.whitespaces.joinToString("").trailingWhitespaces).hasLength(20)
     }
 
     @Test
-    fun `should only last whitespace`() {
-        expectThat("abc  ".trailingWhitespaces).isEqualTo(" ")
+    fun `should find only last whitespaces`() {
+        expectThat("ab   c  ".trailingWhitespaces).isEqualTo("  ")
     }
 
 

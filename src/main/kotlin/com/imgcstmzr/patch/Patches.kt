@@ -4,6 +4,8 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ANSI
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
+import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.patch.Operation.Status.Failure
@@ -44,7 +46,7 @@ fun Patch.patch(osImage: OperatingSystemImage, logger: RenderingLogger<Any>? = n
 fun RenderingLogger<Any>.applyPreFileImgOperations(osImage: OperatingSystemImage, patch: Patch) {
     val count = patch.preFileImgOperations.size
     if (count == 0) {
-        logStatus { META typed "IMG Operations: —" }
+        logLine { META typed "IMG Operations: —" }
         return
     }
 
@@ -59,12 +61,12 @@ fun RenderingLogger<Any>.applyPreFileImgOperations(osImage: OperatingSystemImage
 fun RenderingLogger<Any>.applyGuestfishAndFileSystemOperations(osImage: OperatingSystemImage, patch: Patch): Any {
     val count = patch.guestfishOperations.size + patch.fileSystemOperations.size
     if (count == 0) {
-        logStatus { META typed "File System Operations: —" }
+        logLine { META typed "File System Operations: —" }
         return 0
     }
 
     return subLogger("File System Operations", null) {
-        logStatus { META typed "Starting Guestfish VM..." }
+        logLine { META typed "Starting Guestfish VM..." }
         val guestfish = Guestfish(osImage, this, this::class.qualifiedName + "." + String.random(16))
 
         val remainingGuestfishOperations = patch.guestfishOperations.toMutableList()
@@ -74,14 +76,14 @@ fun RenderingLogger<Any>.applyGuestfishAndFileSystemOperations(osImage: Operatin
                 guestfish.run(op) // TODO
             }
         } else {
-            logStatus { META typed "No Guestfish operations to run." }
+            logLine { META typed "No Guestfish operations to run." }
         }
 
         val guestPaths = patch.fileSystemOperations.map { it.target }
         if (guestPaths.isNotEmpty()) {
             guestfish.run(Guestfish.copyOutCommands(guestPaths))
         } else {
-            logStatus { META typed "No files to extract." }
+            logLine { META typed "No files to extract." }
         }
 
         val root = guestfish.guestRootOnHost
@@ -94,14 +96,14 @@ fun RenderingLogger<Any>.applyGuestfishAndFileSystemOperations(osImage: Operatin
                 action.invoke(root.asRootFor(path), this)
             }
         } else {
-            logStatus { META typed "No files to patch." }
+            logLine { META typed "No files to patch." }
         }
 
         val changedFiles = root.listFilesRecursively({ it.isFile }).map { root.relativize(it) }.toList()
         if (changedFiles.isNotEmpty()) {
             guestfish.run(Guestfish.copyInCommands(changedFiles))
         } else {
-            logStatus { META typed "No changed files to copy back." }
+            logLine { META typed "No changed files to copy back." }
         }
     }
 }
@@ -109,7 +111,7 @@ fun RenderingLogger<Any>.applyGuestfishAndFileSystemOperations(osImage: Operatin
 fun RenderingLogger<Any>.applyPostFileImgOperations(osImage: OperatingSystemImage, patch: Patch) {
     val count = patch.postFileImgOperations.size
     if (count == 0) {
-        logStatus { META typed "IMG Operations II: —" }
+        logLine { META typed "IMG Operations II: —" }
         return
     }
 
@@ -124,7 +126,7 @@ fun RenderingLogger<Any>.applyPostFileImgOperations(osImage: OperatingSystemImag
 fun RenderingLogger<Any>.applyPrograms(osImage: OperatingSystemImage, patch: Patch): Any {
     val count = patch.programs.size
     if (count == 0) {
-        logStatus { META typed "Scripts: —" }
+        logLine { META typed "Scripts: —" }
         return 0
     }
 
@@ -165,15 +167,15 @@ class PathOperation(override val target: Path, val verifier: (Path) -> Any, val 
 
     override operator fun invoke(target: Path, log: RenderingLogger<Any>) {
         log.singleLineLogger(target.fileName.toString()) {
-            logStatus { OUT typed ANSI.termColors.yellow("Action needed? ...") }
+            logLine { OUT typed ANSI.termColors.yellow("Action needed? ...") }
             val result = runCatching { verifier.invoke(target) }
             if (result.isFailure) {
                 currentStatus = Running
-                logStatus { OUT typed ((ANSI.termColors.yellow + ANSI.termColors.bold)(" Yes...")) }
+                logLine { OUT typed " Yes...".yellow().bold() }
 
                 handler.invoke(target)
 
-                logStatus { OUT typed ANSI.termColors.yellow("Verifying ...") }
+                logLine { OUT typed ANSI.termColors.yellow("Verifying ...") }
                 runCatching { verifier.invoke(target) }.onFailure {
                     currentStatus = Failure
                 }

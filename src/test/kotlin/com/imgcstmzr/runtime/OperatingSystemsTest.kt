@@ -141,7 +141,7 @@ class OperatingSystemsTest {
                     val processMock = ProcessMock.withIndividuallySlowInput(
                         inputs = inputs,
                         baseDelayPerInput = baseDelayPerWord,
-                        echoInput = true, // TODO
+                        echoInput = true,
                         processExit = { immediateSuccess() },
                         logger = logger,
                     )
@@ -151,7 +151,7 @@ class OperatingSystemsTest {
                     }
                     val reader = NonBlockingReader(processMock.inputStream, timeout = nonBlockingReaderTimeout, logger = logger)
 
-                    assertTimeoutPreemptively(1.minutes, {
+                    assertTimeoutPreemptively(2.minutes, {
                         var finished = false
                         reader.forEachLine { line ->
                             logger.miniTrace<String?, Unit>("read<<") {

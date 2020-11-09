@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.terminal.ascii
 
+import com.bkahlert.koodies.string.maxLineLength
 import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import kotlin.math.ceil
@@ -20,16 +21,15 @@ import kotlin.math.floor
  * bar baz
  * ```
  */
-fun <T : CharSequence> Collection<T>.center(whitespace: Char = '\u00A0'): List<String> {
-    return map { it.trim() }.let { trimmed ->
-        trimmed.maxOfOrNull { it.removeEscapeSequences().length }?.let { maxLength ->
+fun <T : CharSequence> Iterable<T>.center(whitespace: Char = '\u00A0'): List<String> =
+    map { it.trim() }.let { trimmed ->
+        trimmed.maxLineLength().let { maxLength ->
             trimmed.map { line ->
                 val missing: Double = (maxLength - line.removeEscapeSequences().length) / 2.0
                 whitespace.repeat(floor(missing).toInt()) + line + whitespace.repeat(ceil(missing).toInt())
             }.toList()
-        } ?: emptyList()
+        }
     }
-}
 
 
 /**
@@ -47,4 +47,5 @@ fun <T : CharSequence> Collection<T>.center(whitespace: Char = '\u00A0'): List<S
  * bar baz
  * ```
  */
-fun <T : CharSequence> T.center(whitespace: Char = '\u00A0'): String = lines().center(whitespace).joinToString("\n")
+fun <T : CharSequence> T.center(whitespace: Char = '\u00A0'): String =
+    lines().center(whitespace).joinToString("\n")

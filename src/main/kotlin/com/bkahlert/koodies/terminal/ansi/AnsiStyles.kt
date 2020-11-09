@@ -15,4 +15,9 @@ object AnsiStyles {
      * `【tag】`
      */
     fun CharSequence.tag(): String = "【$this】"
+
+    /**
+     * `❲unit❳`
+     */
+    fun CharSequence.unit(): String = "❲$this❳"
 }

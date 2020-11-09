@@ -3,6 +3,7 @@ package com.bkahlert.koodies.terminal.ascii
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.string.repeat
 import com.imgcstmzr.runtime.log.matches
+import com.imgcstmzr.util.logging.Columns
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -12,12 +13,12 @@ import strikt.api.expectThat
 @Execution(CONCURRENT)
 class BoxesTest {
     @Test
-    fun `should render FAIL`(logger: InMemoryLogger<Unit>) {
-        logger.logStatus { IO.Type.ERR typed Boxes.FAIL.toString() }
+    fun `should render FAIL`(@Columns(150) logger: InMemoryLogger<Unit>) {
+        logger.logLine { IO.Type.ERR typed Boxes.FAIL.toString() }
         expectThat(logger).matches("""
             ╭─────╴BoxesTest ➜ should render FAIL{}
             │   
-            │   ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄{}
+            │   ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
             │   ████▌▄▌▄▐▐▌█████
             │   ████▌▄▌▄▐▐▌▀████
             │   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
@@ -27,8 +28,8 @@ class BoxesTest {
     }
 
     @Test
-    fun `should render sphere box`(logger: InMemoryLogger<Unit>) {
-        logger.logStatus { IO.Type.META typed Boxes.SPHERICAL("SPHERICAL").toString() }
+    fun `should render sphere box`(@Columns(100) logger: InMemoryLogger<Unit>) {
+        logger.logLine { IO.Type.META typed Boxes.SPHERICAL("SPHERICAL") }
         expectThat(logger).matches("""
             ╭─────╴BoxesTest ➜ should render sphere box{}
             │   
@@ -41,8 +42,8 @@ class BoxesTest {
     }
 
     @Test
-    fun `should render single line sphere box`(logger: InMemoryLogger<Unit>) {
-        logger.logStatus { IO.Type.META typed Boxes.SINGLE_LINE_SPHERICAL("SINGLE LINE SPHERICAL").toString() }
+    fun `should render single line sphere box`(@Columns(100) logger: InMemoryLogger<Unit>) {
+        logger.logLine { IO.Type.META typed Boxes.SINGLE_LINE_SPHERICAL("SINGLE LINE SPHERICAL") }
         expectThat(logger).matches("""
             ╭─────╴BoxesTest ➜ should render single line sphere box{}
             │   
@@ -53,8 +54,8 @@ class BoxesTest {
     }
 
     @Test
-    fun `should render wide pillars`(logger: InMemoryLogger<Unit>) {
-        logger.logStatus { IO.Type.META typed Boxes.WIDE_PILLARS("WIDE PILLARS").toString() }
+    fun `should render wide pillars`(@Columns(100) logger: InMemoryLogger<Unit>) {
+        logger.logLine { IO.Type.META typed Boxes.WIDE_PILLARS("WIDE PILLARS") }
         expectThat(logger).matches("""
             ╭─────╴BoxesTest ➜ should render wide pillars{}
             │   
@@ -65,8 +66,8 @@ class BoxesTest {
     }
 
     @Test
-    fun `should render pillars`(logger: InMemoryLogger<Unit>) {
-        logger.logStatus { IO.Type.META typed Boxes.PILLARS("PILLARS").toString() }
+    fun `should render pillars`(@Columns(100) logger: InMemoryLogger<Unit>) {
+        logger.logLine { IO.Type.META typed Boxes.PILLARS("PILLARS") }
         expectThat(logger).matches("""
             ╭─────╴BoxesTest ➜ should render pillars{}
             │   

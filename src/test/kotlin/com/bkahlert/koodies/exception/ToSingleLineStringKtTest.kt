@@ -32,7 +32,7 @@ class ToSingleLineStringKtTest {
             @Test
             fun `should format as a single line`() {
                 val actual = Result.success("good").toSingleLineString()
-                expectThat(actual.removeEscapeSequences()).isEqualTo("❬good⫻4❭")
+                expectThat(actual.removeEscapeSequences()).isEqualTo("good")
                 expectThat(actual.lines()).hasSize(1)
             }
         }

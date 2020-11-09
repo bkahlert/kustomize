@@ -1,6 +1,7 @@
 package com.bkahlert.koodies.string
 
 import com.bkahlert.koodies.string.LineSeparators.hasTrailingLineSeparator
+import com.bkahlert.koodies.string.LineSeparators.lines
 
 /**
  * Maps each line of this char sequence using [transform].

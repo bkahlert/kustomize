@@ -1,3 +1,4 @@
 package com.bkahlert.koodies.string
 
-val CharSequence.trailingWhitespaces: String get() = Regex("[${Regex.fromLiteral(Unicode.whitespaces.joinToString(""))}]$").find(toString())?.value ?: ""
+val CharSequence.trailingWhitespaces: String
+    get() = toString().mapCodePoints { if (it.char !in Unicode.whitespaces) null else it.char }.takeLastWhile { it != null }.joinToString("")

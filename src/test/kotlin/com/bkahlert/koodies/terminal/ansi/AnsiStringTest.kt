@@ -10,6 +10,7 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.strikethrough
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.underline
+import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.asAnsiString
 import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.getChar
 import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.render
 import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.subSequence
@@ -35,9 +36,12 @@ import strikt.assertions.isFailure
 @Execution(CONCURRENT)
 class AnsiStringTest {
 
-    val italicCyan = with(ANSI.termColors) { italic + cyan }
-    val ansiString =
-        AnsiString(italicCyan("${"Important:".underline()} This line has ${"no".strikethrough()} ANSI escapes.\nThis one's ${"bold!".bold()}\r\nLast one is clean."))
+    companion object {
+        val italicCyan = with(ANSI.termColors) { italic + cyan }
+        val nonAnsiString = "Important: This line has no ANSI escapes.\nThis one's bold!\r\nLast one is clean."
+        val ansiString =
+            AnsiString(italicCyan("${"Important:".underline()} This line has ${"no".strikethrough()} ANSI escapes.\nThis one's ${"bold!".bold()}\r\nLast one is clean."))
+    }
 
     @Suppress("SpellCheckingInspection")
     val expectedAnsiFormattedLines = listOf(
@@ -59,7 +63,7 @@ class AnsiStringTest {
         @Test
         fun `should tokenize string`() {
             val tokens = string.tokenize()
-            expectThat(tokens).containsExactly(
+            expectThat(tokens.toList()).containsExactly(
                 "$ESC[3;36m" to 0,
                 "$ESC[4m" to 0,
                 "Important:" to 10,
@@ -237,12 +241,12 @@ class AnsiStringTest {
     }
 
     @Nested
-    inner class Unstrip {
+    inner class Unformatted {
 
         @Suppress("SpellCheckingInspection", "LongLine")
         @ConcurrentTestFactory
         fun `should strip ANSI escape sequences off`() = listOf(
-            ansiString to "Important: This line has no ANSI escapes.\nThis one's bold!\r\nLast one is clean.",
+            ansiString to nonAnsiString,
             AnsiString("[$ESC[0;32m  OK  $ESC[0m] Listening on $ESC[0;1;39mudev Control Socket$ESC[0m.") to
                 "[  OK  ] Listening on udev Control Socket.",
             AnsiString("Text") to "Text",
@@ -383,10 +387,48 @@ class AnsiStringTest {
             expectThat("$ESC[4;m ← missing second code $ESC[24m".lines()).containsExactly("$ESC[4;m ← missing second code $ESC[24m")
         }
     }
+
+    @Nested
+    inner class ChunkedSequence {
+        @Test
+        fun `should chunk non-ANSI string`() {
+            expectThat(nonAnsiString.chunkedSequence(26).toList()).containsExactly(
+                "Important: This line has n",
+                "o ANSI escapes.\nThis one's",
+                " bold!\r\nLast one is clean.",
+            )
+        }
+
+        @Test
+        fun `should chunk ANSI string`() {
+            expectThat(ansiString.chunkedSequence(26).toList()).containsExactly(
+                "$ESC[3;36m$ESC[4mImportant:$ESC[24m This line has $ESC[9mn$ESC[23;39;29m".asAnsiString(),
+                "$ESC[3;36;9mo$ESC[29m ANSI escapes.\nThis one's$ESC[23;39m".asAnsiString(),
+                "$ESC[3;36m $ESC[1mbold!$ESC[22m\r\nLast one is clean.$ESC[23;39m".asAnsiString(),
+            )
+        }
+    }
+
+    @Nested
+    inner class Plus {
+        @Test
+        fun `should create string from existing plus added string`() {
+            expectThat(nonAnsiString + "plus").isEqualTo(
+                "Important: This line has no ANSI escapes.\nThis one's bold!\r\nLast one is clean.plus",
+            )
+        }
+
+        @Test
+        fun `should create ANSI string from existing plus added string`() {
+            expectThat(ansiString + "plus").isEqualTo(
+                "$ESC[3;36m$ESC[4mImportant:$ESC[24m This line has $ESC[9mno$ESC[29m ANSI escapes.\nThis one's $ESC[1mbold!$ESC[22m\r\nLast one is clean.$ESC[23;39mplus".asAnsiString(),
+            )
+        }
+    }
 }
 
 
-fun <T : AnsiString> Assertion.Builder<T>.isEqualToStringWise(other: Any?) =
+fun <T : AnsiString> Assertion.Builder<out T>.isEqualToStringWise(other: Any?): Assertion.Builder<out T> =
     assert("have same toString value") { value ->
         val actualString = value.unformatted
         val expectedString = other.let { if (it is AnsiString) it.unformatted else it.toString().removeEscapeSequences() }

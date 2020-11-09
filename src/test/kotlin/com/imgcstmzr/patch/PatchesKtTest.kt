@@ -63,7 +63,7 @@ class PatchesKtTest {
              File System Operations: —
              IMG Operations II: —
              Scripts: —
-            Completed: ✔ returned ❬0⫻1❭
+            Completed: ✔ returned 0
         """.trimIndent())
         }
     }
@@ -82,7 +82,7 @@ class PatchesKtTest {
 
     @Test
     fun `should log not bordered if specified`(osImage: OperatingSystemImage, capturedOutput: CapturedOutput) {
-        val logger = InMemoryLogger<Any>("not-bordered", false, emptyList())
+        val logger = InMemoryLogger<Any>("not-bordered", false, -1, emptyList())
         val nullPatch = buildPatch("No-Op Patch") {}
         nullPatch.patch(osImage, logger)
         expectThat(logger.logged.removeEscapeSequences()).matchesCurlyPattern("""
@@ -92,7 +92,7 @@ class PatchesKtTest {
           File System Operations: —
           IMG Operations II: —
           Scripts: —
-         Completed: ✔ returned ❬0⫻1❭
+         Completed: ✔ returned 0
         """.trimIndent())
     }
 

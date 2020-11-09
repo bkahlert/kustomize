@@ -71,15 +71,26 @@ object LineSeparators : Collection<String> {
      * Splits this char sequence to a sequence of lines delimited by any of the [LineSeparators].
      *
      * The lines returned do not include terminating line separators.
+     *
+     * If the last last is empty, it will be ignored unless [ignoreTrailingSeparator] is provided.
      */
-    fun CharSequence.lineSequence(): Sequence<String> = splitToSequence(*ALL)
+    fun CharSequence.lineSequence(ignoreTrailingSeparator: Boolean = false): Sequence<String> =
+        if (!ignoreTrailingSeparator) splitToSequence(*ALL)
+        else splitToSequence(*ALL).iterator().run {
+            generateSequence {
+                hasNext().let { hasNext -> if (hasNext) next() else null }
+                    ?.let { current -> if (hasNext() || current.isNotEmpty()) current else null }
+            }
+        }
 
     /**
      * Splits this char sequence to a list of lines delimited by any of the [LineSeparators].
      *
      * The lines returned do not include terminating line separators.
+     *
+     * If the last last is empty, it will be ignored unless [ignoreTrailingSeparator] is provided.
      */
-    fun CharSequence.lines(): List<String> = lineSequence().toList()
+    fun CharSequence.lines(ignoreTrailingSeparator: Boolean = false): List<String> = lineSequence(ignoreTrailingSeparator).toList()
 
     /**
      * If this [CharSequence] ends with one of the [LineSeparators] this property includes it.

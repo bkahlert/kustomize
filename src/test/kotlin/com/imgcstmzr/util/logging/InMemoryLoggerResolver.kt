@@ -34,7 +34,8 @@ class InMemoryLoggerResolver : ParameterResolver, AfterEachCallback {
         object : InMemoryLogger<Unit>(
             caption = testName + if (suffix != null) "::$suffix" else "",
             borderedOutput = borderedOutput,
-            outputStreams = if (isVerbose || parameterContext.isVerbose) listOf(System.out) else emptyList()
+            statusInformationColumn = parameterContext.findAnnotation(Columns::class.java).map { it.value }.orElse(-1),
+            outputStreams = if (isVerbose || parameterContext.isVerbose) listOf(System.out) else emptyList(),
         ) {
             private var resultLogged = false
             override fun logResult(block: () -> Result<Unit>) {

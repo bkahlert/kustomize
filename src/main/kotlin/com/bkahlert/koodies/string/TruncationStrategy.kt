@@ -3,9 +3,9 @@ package com.bkahlert.koodies.string
 import kotlin.math.ceil
 import kotlin.math.floor
 
-enum class TruncationStrategy(private val implementation: (CharSequence).(Int, String) -> String) {
+enum class TruncationStrategy(private val implementation: (CharSequence).(Int, CharSequence) -> CharSequence) {
     START({ maxLength, marker ->
-        marker + drop(length - (maxLength - marker.length))
+        "$marker${subSequence(length - (maxLength - marker.length), length)}"
     }),
     MIDDLE({ maxLength, marker ->
         ((maxLength - marker.length) / 2.0).let { halfMaxLength ->
@@ -15,9 +15,9 @@ enum class TruncationStrategy(private val implementation: (CharSequence).(Int, S
         }
     }),
     END({ maxLength, marker ->
-        "" + take(maxLength - marker.length) + marker
+        "${subSequence(0, maxLength - marker.length)}$marker"
     });
 
-    fun truncate(string: String, maxLength: Int, marker: String = "…"): String =
-        if (string.length > maxLength) implementation(string, maxLength, marker) else string
+    fun truncate(text: CharSequence, maxLength: Int, marker: String = "…"): CharSequence =
+        if (text.length > maxLength) implementation(text, maxLength, marker) else text
 }

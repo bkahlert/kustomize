@@ -7,9 +7,10 @@ package com.bkahlert.koodies.string
  * (unless [minWhitespaceLength] is set to 0).
  * Therefore the truncated string might not be fully truncated than envisioned.
  */
-fun String.truncateTo(maxLength: Int, startIndex: Int = 0, minWhitespaceLength: Int = 1): String {
+fun CharSequence.truncateTo(maxLength: Int, startIndex: Int = 0, minWhitespaceLength: Int = 1): CharSequence {
     val difference = length - maxLength
     if (difference <= 0) return this
+    val trailingWhitespaces = trailingWhitespaces
     if (trailingWhitespaces.isNotEmpty()) {
         val trimmed = this.take(length - trailingWhitespaces.length.coerceAtMost(difference))
         return if (trimmed.length <= maxLength) trimmed else trimmed.truncateTo(maxLength, startIndex, minWhitespaceLength)
@@ -20,5 +21,5 @@ fun String.truncateTo(maxLength: Int, startIndex: Int = 0, minWhitespaceLength: 
     val whitespaceStart = longestWhitespace.range.first
     val truncated = replaceRange(whitespaceStart, whitespaceStart + 2, " ")
     if (truncated.length >= length) return truncated
-    return truncated.truncateTo(maxLength, startIndex, minWhitespaceLength)
+    return truncated.truncateTo(maxLength, startIndex, minWhitespaceLength).toString()
 }

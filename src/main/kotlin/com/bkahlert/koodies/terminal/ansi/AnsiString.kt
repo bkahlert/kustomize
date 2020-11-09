@@ -1,9 +1,13 @@
 package com.bkahlert.koodies.terminal.ansi
 
+import com.bkahlert.koodies.concurrent.synchronized
+import com.bkahlert.koodies.isLazyInitialized
+import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.closingControlSequence
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.controlSequence
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.parseAnsiCodesAsSequence
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.unclosedCodes
 
 /**
@@ -16,15 +20,23 @@ import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.unclosedCodes
  * - [subSequence] returns the same char sequence as an unformatted [String] would do—but with the formatting ANSI escape sequences intact.
  * the sub sequence. Also escape sequences are ignored from [length].
  */
-open class AnsiString private constructor(private val tokens: List<Pair<CharSequence, Int>>) : CharSequence {
-    constructor(charSequence: CharSequence) : this("$charSequence".tokenize())
+open class AnsiString private constructor(val string: String) : CharSequence {
+    constructor(charSequence: CharSequence) : this("$charSequence")
+
+    private val tokens: Array<Pair<CharSequence, Int>> by lazy { string.tokenize() }
 
     companion object {
         val EMPTY = AnsiString("")
 
-        fun <T : CharSequence> T.asAnsiString(): AnsiString = if (this.isEmpty()) EMPTY else AnsiString(this)
+        private val ansiStringCache = mutableMapOf<Int, AnsiString>().synchronized()
+        fun <T : CharSequence> T.asAnsiString(): AnsiString = when {
+            this is AnsiString -> this
+            this.isEmpty() -> EMPTY
+            else -> ansiStringCache.computeIfAbsent(hashCode()) { AnsiString(this) }
+        }
 
-        fun String.tokenize(): List<Pair<CharSequence, Int>> {
+        private val tokenizationCache = mutableMapOf<Int, Array<Pair<CharSequence, Int>>>().synchronized()
+        fun String.tokenize(): Array<Pair<CharSequence, Int>> = tokenizationCache.computeIfAbsent(hashCode()) {
             val tokens = mutableListOf<Pair<CharSequence, Int>>()
             val codes = mutableListOf<Int>()
             var consumed = 0
@@ -48,82 +60,80 @@ open class AnsiString private constructor(private val tokens: List<Pair<CharSequ
                     tokens.add(ansiCodeFreeString to ansiCodeFreeString.length)
                 }
             }
-            return tokens
+            tokens.toTypedArray()
         }
 
-        val List<Pair<CharSequence, Int>>.length get():Int = sumBy { it.second }
+        val Array<Pair<CharSequence, Int>>.length get():Int = sumBy { it.second }
 
-        fun List<Pair<CharSequence, Int>>.subSequence(endIndex: Int): Pair<String, List<Int>> {
+        private fun Array<Pair<CharSequence, Int>>.subSequence(endIndex: Int): Pair<String, List<Int>> {
             if (endIndex == 0) return "" to emptyList()
             if (endIndex > length) throw IndexOutOfBoundsException(endIndex)
             var read = 0
             val codes = mutableListOf<Int>()
             val sb = StringBuilder()
-            forEach { token ->
+            forEach { (token, tokenLength) ->
                 val needed = endIndex - read
-                if (needed > 0 && token.second == 0) {
-                    sb.append(token.first)
-                    codes.addAll(token.first.parseAnsiCodesAsSequence())
+                if (needed > 0 && tokenLength == 0) {
+                    sb.append(token)
+                    codes.addAll(token.parseAnsiCodesAsSequence())
                 } else {
-                    if (needed <= token.second) {
-                        sb.append(token.first.subSequence(0, needed))
+                    if (needed <= tokenLength) {
+                        sb.append(token.subSequence(0, needed))
                         return@subSequence "$sb" + closingControlSequence(codes) to unclosedCodes(codes)
                     }
-                    sb.append(token.first)
-                    read += token.second
+                    sb.append(token)
+                    read += tokenLength
                 }
             }
             error("must not happen")
         }
 
-        fun List<Pair<CharSequence, Int>>.subSequence(startIndex: Int, endIndex: Int): String {
-            if (startIndex > 0) {
-                subSequence(startIndex).let { (prefix, unclosedCodes) ->
-                    val (full, _) = subSequence(endIndex)
-                    val controlSequence = controlSequence(unclosedCodes)
-                    val startIndex1 = prefix.length - closingControlSequence(unclosedCodes).length
-                    val endIndex1 = full.length
-                    val x =
+        private val subSequenceCache = mutableMapOf<Pair<Int, Pair<Int, Int>>, String>().synchronized()
+        fun Array<Pair<CharSequence, Int>>.subSequence(startIndex: Int, endIndex: Int): String =
+            subSequenceCache.computeIfAbsent(hashCode() to (startIndex to endIndex)) {
+                if (startIndex > 0) {
+                    subSequence(startIndex).let { (prefix, unclosedCodes) ->
+                        val (full, _) = subSequence(endIndex)
+                        val controlSequence = controlSequence(unclosedCodes)
+                        val startIndex1 = prefix.length - closingControlSequence(unclosedCodes).length
+                        val endIndex1 = full.length
                         controlSequence + full.subSequence(startIndex1, endIndex1)
-                    return x
+                    }
+                } else {
+                    subSequence(endIndex).first
                 }
-            } else {
-                return subSequence(endIndex).first
             }
-        }
 
-        fun List<Pair<CharSequence, Int>>.getChar(index: Int): Char {
+        fun Array<Pair<CharSequence, Int>>.getChar(index: Int): Char {
             if (index > length) throw IndexOutOfBoundsException(index)
             var read = 0
-            forEach { token ->
+            forEach { (token, tokenLength) ->
                 val needed = index - read
-                if (token.second >= 0) {
-                    if (needed <= token.second) {
-                        return token.first[needed]
+                if (tokenLength >= 0) {
+                    if (needed <= tokenLength) {
+                        return@getChar token[needed]
                     }
-                    read += token.second
+                    read += tokenLength
                 }
             }
             error("must not happen")
         }
 
-        fun List<Pair<CharSequence, Int>>.render(ansi: Boolean = true) =
+        fun Array<Pair<CharSequence, Int>>.render(ansi: Boolean = true) =
             if (ansi) subSequence(0, length)
             else filter { it.second != 0 }.joinToString("") { it.first }
     }
-
-    val string: String = tokens.render(ansi = true)
 
     /**
      * Contains this [string] with all [ANSI] escape sequences removed.
      */
     @Suppress("SpellCheckingInspection")
-    val unformatted = tokens.render(ansi = false)
+    val unformatted by lazy { if (::tokens.isLazyInitialized) tokens.render(ansi = false) else string.removeEscapeSequences() }
 
     /**
      * Returns the logical length of this string. That is, the same length as the unformatted [String] would return.
      */
-    override val length: Int get() = unformatted.length
+    override val length: Int by lazy { unformatted.length }
 
     /**
      * Returns the unformatted char at the specified [index].
@@ -159,4 +169,56 @@ open class AnsiString private constructor(private val tokens: List<Pair<CharSequ
     }
 
     override fun hashCode(): Int = string.hashCode()
+
+
+    /**
+     * Returns a ANSI string with content of this ANSI string padded at the beginning
+     * to the specified [length] with the specified character or space.
+     *
+     * @param length the desired string length.
+     * @param padChar the character to pad string with, if it has length less than the [length] specified. Space is used by default.
+     * @return Returns an ANSI string of length at least [length] consisting of `this` ANSI string prepended with [padChar] as many times
+     * as are necessary to reach that length.
+     */
+    fun CharSequence.padStart(length: Int, padChar: Char = ' '): CharSequence {
+        require(length >= 0) { "Desired length $length is less than zero." }
+        return if (length <= this.length) this.subSequence(0, this.length)
+        else padChar.repeat(length - this.length) + this
+    }
+
+    /**
+     * Returns an ANSI string with content of this ANSI string padded at the end
+     * to the specified [length] with the specified character or space.
+     *
+     * @param length the desired string length.
+     * @param padChar the character to pad string with, if it has length less than the [length] specified. Space is used by default.
+     * @return Returns an ANSI string of length at least [length] consisting of `this` ANSI string appended with [padChar] as many times
+     * as are necessary to reach that length.
+     */
+    fun padEnd(length: Int, padChar: Char = ' '): AnsiString {
+        require(length >= 0) { "Desired length $length is less than zero." }
+        return if (length <= this.length) this.subSequence(0, this.length)
+        else this + padChar.repeat(length - this.length)
+    }
+
+    /**
+     * Returns a sequence of strings of which each but possibly the last is of length [size].
+     */
+    fun chunkedSequence(size: Int): Sequence<AnsiString> {
+        var processed = 0
+        var unprocessed = length
+        return generateSequence {
+            if (unprocessed <= 0) {
+                null
+            } else {
+                val take = size.coerceAtMost(unprocessed)
+                subSequence(processed, processed + take).also {
+                    processed += take
+                    unprocessed -= take
+                }
+            }
+        }
+    }
+
+    operator fun plus(other: CharSequence): AnsiString = "$string$other".asAnsiString()
 }

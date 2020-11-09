@@ -30,6 +30,6 @@ class TruncateKtTest {
     fun `should throw if marker is longer than max length`() {
         expectCatching {
             "1234567890".truncate(maxLength = 1, marker = "XX")
-        }.isFailure().isA<IllegalArgumentException>()
+        }.isFailure().isA<StringIndexOutOfBoundsException>()
     }
 }

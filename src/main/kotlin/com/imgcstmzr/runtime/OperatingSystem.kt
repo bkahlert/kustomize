@@ -274,7 +274,10 @@ abstract class RunningOperatingSystem(
      * to the OS running process.
      */
     fun feedback(value: String) {
-        logger.logLine { LF + Kaomojis.Proud.random().thinking(value.capitalize().green()) + LF }
+        logger.logLine {
+            val kaomojiGroup = listOf(Kaomojis.Happy, Kaomojis.PeaceSign, Kaomojis.Smile, Kaomojis.ThumbsUp, Kaomojis.Proud).random()
+            LF + kaomojiGroup.random().thinking(value.capitalize().green()) + LF
+        }
     }
 
 

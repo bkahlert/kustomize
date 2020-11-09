@@ -8,5 +8,5 @@ fun CharSequence.padEndFixedLength(
     strategy: TruncationStrategy = TruncationStrategy.END,
     marker: String = "…",
     padChar: Char = ' ',
-): String =
-    strategy.truncate(toString(), length, marker).padEnd(length, padChar)
+): CharSequence =
+    strategy.truncate(toString(), length, marker).padEnd(length, padChar).toString()

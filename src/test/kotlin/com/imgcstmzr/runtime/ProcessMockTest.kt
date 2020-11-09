@@ -297,11 +297,11 @@ class ProcessMockTest {
 
         startAsDaemon {
             Thread.sleep(5000)
-            p.enter("password1234")
+            p.enter("password")
         }
 
         expectThat(reader.readLine()).isEqualTo("Welcome!")
-        expectThat(reader.readLine()).isEqualTo("Password? password1234")
+        expectThat(reader.readLine()).isEqualTo("Password? password")
         expectThat(reader.readLine()).isEqualTo("")
         expectThat(reader.readLine()).isEqualTo("Correct!")
         expectThat(reader.readLine()).isEqualTo(null)

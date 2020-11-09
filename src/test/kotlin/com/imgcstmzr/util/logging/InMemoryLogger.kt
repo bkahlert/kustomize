@@ -3,6 +3,7 @@ package com.imgcstmzr.util.logging
 import com.bkahlert.koodies.collections.withNegativeIndices
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
 import com.bkahlert.koodies.string.TruncationStrategy.MIDDLE
+import com.bkahlert.koodies.string.asString
 import com.bkahlert.koodies.string.padStartFixedLength
 import com.bkahlert.koodies.string.prefixLinesWith
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
@@ -21,25 +22,34 @@ import kotlin.reflect.KFunction3
 open class InMemoryLogger<T> private constructor(
     caption: CharSequence,
     borderedOutput: Boolean = false,
+    statusInformationColumn: Int = -1,
     private val outputStream: TeeOutputStream,
     private val captured: MutableList<CharSequence> = mutableListOf(),
     private val start: Long = System.currentTimeMillis(),
 ) : BlockRenderingLogger<T>(
     caption = caption,
     borderedOutput = borderedOutput,
+    statusInformationColumn = if (statusInformationColumn > 0) statusInformationColumn else 60,
     log = { message: CharSequence ->
-        val time = Thread.currentThread().name.padStartFixedLength(30, strategy = MIDDLE) + ":" + " ${Now.passedSince(start)}".padStartFixedLength(7)
+        val time = Thread.currentThread().name.padStartFixedLength(30, strategy = MIDDLE).asString() + ":" + " ${Now.passedSince(start)}".padStartFixedLength(7)
         outputStream.write(message.prefixLinesWith(prefix = "$time: ").toByteArray())
         captured.add(message.withoutTrailingLineSeparator)
     }
 ), Tracer<T> {
-    constructor(caption: String, borderedOutput: Boolean = true, outputStreams: List<OutputStream>) : this(
-        caption,
-        borderedOutput,
-        outputStreams.foldRight(TeeOutputStream(OutputStream.nullOutputStream(), OutputStream.nullOutputStream()), { os, tos -> TeeOutputStream(os, tos) })
+    constructor(
+        caption: String,
+        borderedOutput: Boolean = true,
+        statusInformationColumn: Int = -1,
+        outputStreams: List<OutputStream>,
+    ) : this(
+        caption = caption,
+        borderedOutput = borderedOutput,
+        statusInformationColumn = statusInformationColumn,
+        outputStream = outputStreams.foldRight(TeeOutputStream(OutputStream.nullOutputStream(), OutputStream.nullOutputStream()),
+            { os, tos -> TeeOutputStream(os, tos) })
     )
 
-    constructor() : this("Test", true, emptyList())
+    constructor() : this("Test", true, -1, emptyList())
 
     val messages: List<CharSequence> by withNegativeIndices { captured }
     val raw: String get() = messages.joinToString("\n")

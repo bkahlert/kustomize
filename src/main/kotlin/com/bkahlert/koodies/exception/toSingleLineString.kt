@@ -1,10 +1,8 @@
 package com.bkahlert.koodies.exception
 
-import com.imgcstmzr.util.debug
-
 fun Any?.toSingleLineString(): String {
     if (this == null || this == Unit) return ""
-    return this.debug
+    return this.toString()
 }
 
 fun Throwable?.toSingleLineString(): String {
