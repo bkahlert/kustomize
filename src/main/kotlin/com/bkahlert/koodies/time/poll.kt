@@ -2,6 +2,7 @@
 
 package com.bkahlert.koodies.time
 
+import com.bkahlert.koodies.time.IntervalPolling.Polling
 import java.util.concurrent.TimeoutException
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
@@ -9,34 +10,75 @@ import kotlin.time.milliseconds
 import kotlin.time.seconds
 
 /**
- * Make the current [Thread] sleep for this duration.
+ * Checks once per [interval][Duration] if the [targetState] evaluates to `true`
+ * [Polling.indefinitely] or [Polling.forAtMost] the specified [Duration].
  *
  * @sample PollSample.pollAtMostOneSecond
  */
 fun Duration.poll(targetState: () -> Boolean): Polling {
     require(this > Duration.ZERO) { "Interval to sleep must be positive." }
-    return Polling(this, targetState)
+    return IntervalPolling(targetState).every(this)
 }
 
-class Polling(val pollInterval: Duration, val targetState: () -> Boolean) {
-    var timeout: Duration = Duration.INFINITE
-    var timeoutCallback: (Duration) -> Unit = {}
+/**
+ * Checks in once per [interval][IntervalPolling.every] if the [targetState] evaluates to `true`
+ * [Polling.indefinitely] or [Polling.forAtMost] the specified [Duration].
+ *
+ * @sample PollSample.pollTargetState
+ */
+fun poll(targetState: () -> Boolean): IntervalPolling = IntervalPolling(targetState)
 
-    fun indefinitely() = poll()
-
-    fun forAtMost(timeout: Duration, timeoutCallback: (Duration) -> Unit) {
-        this.timeout = timeout
-        this.timeoutCallback = timeoutCallback
-        poll()
+/**
+ * Specifies the interval by which [targetState] should be polled.
+ *
+ * @sample PollSample.pollTargetState
+ */
+inline class IntervalPolling(private val targetState: () -> Boolean) {
+    /**
+     * Specifies the [pollInterval] by which [targetState] should be polled.
+     *
+     * @sample PollSample.pollAtMostOneSecond
+     * @sample PollSample.pollTargetState
+     */
+    fun every(pollInterval: Duration): Polling {
+        require(pollInterval > Duration.ZERO) { "Interval to sleep must be positive." }
+        return Polling(pollInterval, targetState)
     }
 
-    private fun poll() {
-        val startTime = System.currentTimeMillis()
-        while (!targetState() && Now.passedSince(startTime) < timeout) {
-            pollInterval.sleep()
+    /**
+     * Specifies the [Duration] the [targetState] should be polled for.
+     *
+     * @sample PollSample.pollAtMostOneSecond
+     * @sample PollSample.pollTargetState
+     */
+    class Polling(private val pollInterval: Duration, private val targetState: () -> Boolean) {
+        private var timeout: Duration = Duration.INFINITE
+        private var timeoutCallback: (Duration) -> Unit = {}
+
+        /**
+         * Polls the [targetState] indefinitely.
+         */
+        fun indefinitely(): Unit = poll()
+
+        /**
+         * Polls the [targetState] for at most the specified [timeout]
+         * and calls [timeoutCallback] if within that time the [targetState]
+         * did not evaluate to `true`.
+         */
+        fun forAtMost(timeout: Duration, timeoutCallback: (Duration) -> Unit) {
+            this.timeout = timeout
+            this.timeoutCallback = timeoutCallback
+            poll()
         }
-        if (!targetState()) {
-            timeoutCallback(Now.passedSince(startTime))
+
+        private fun poll() {
+            val startTime = System.currentTimeMillis()
+            while (!targetState() && Now.passedSince(startTime) < timeout) {
+                pollInterval.sleep()
+            }
+            if (!targetState()) {
+                timeoutCallback(Now.passedSince(startTime))
+            }
         }
     }
 }
@@ -48,6 +90,16 @@ private class PollSample {
         val condition: () -> Boolean = { listOf(true, false).random() }
 
         100.milliseconds.poll { condition() }.forAtMost(1.seconds) { passed ->
+            throw TimeoutException("Condition did not become true within $passed")
+        }
+    }
+
+    fun pollTargetState() {
+        // poll every 100 milliseconds for a condition to become true
+        // for at most 1 second
+        val condition: () -> Boolean = { listOf(true, false).random() }
+
+        poll { condition() }.every(100.milliseconds).forAtMost(1.seconds) { passed ->
             throw TimeoutException("Condition did not become true within $passed")
         }
     }

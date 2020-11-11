@@ -48,15 +48,19 @@ class DockerPsTest {
         "shared-prefix-boot-and-run" to true,
         "shared-prefix-boot-and-run-program" to false,
         "shared-prefix-boot-and-run-program-in-user-session" to true,
-    ).map { (name, expectedIsRunning) ->
-        dynamicTest("${expectedIsRunning.asEmoji} $name") {
-            expectThat(Docker.isContainerRunning(name)).isEqualTo(expectedIsRunning)
-        }
+    ).flatMap { (name, expectedIsRunning) ->
+        listOf(
+            dynamicTest("${expectedIsRunning.asEmoji} $name is running?") {
+                expectThat(Docker.isContainerRunning(name)).isEqualTo(expectedIsRunning)
+            },
+            dynamicTest("${expectedIsRunning.asEmoji} $name exists?") {
+                expectThat(Docker.exists(name)).isEqualTo(expectedIsRunning)
+            },
+        )
     }
 
     @AfterAll
     fun tearDown() {
-//        startAsThread { println("containers stopping") }
         containers.forEach { it.destroyForcibly() }
     }
 }

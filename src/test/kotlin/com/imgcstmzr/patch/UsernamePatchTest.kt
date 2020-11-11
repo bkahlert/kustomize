@@ -90,7 +90,7 @@ class UsernamePatchTest {
 
     @DockerRequired
     @Test
-    fun `should update log in was updated username`(@OS(RaspberryPiLite::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    fun `should log in with updated username`(@OS(RaspberryPiLite::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
         val newUsername = "ella".also { check(it != osImage.defaultUsername) { "$it is already the default username." } }
         val patch = UsernamePatch(osImage.defaultUsername, newUsername)
 

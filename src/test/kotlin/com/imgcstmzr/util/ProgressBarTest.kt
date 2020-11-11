@@ -6,7 +6,7 @@ import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
 import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.concurrent.startAsDaemon
 import com.bkahlert.koodies.test.junit.Slow
-import com.github.ajalt.clikt.output.TermUi
+import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
@@ -20,12 +20,12 @@ class ProgressBarTest {
 
     @Slow
     @Test
-    fun `should show progress bar`() {
+    fun `should show progress bar`(logger: InMemoryLogger<*>) {
         startShellScript(
             workingDirectory = Path.of("").toAbsolutePath().resolve("src/main/resources"),
             outputProcessor = { if (it.type == OUT) println(System.out) }) { !"progressbar.sh" }
         (0..100).forEach {
-            TermUi.echo("\u0013" + "X".repeat(it % 10))
+            logger.logLine { "\u0013" + "X".repeat(it % 10) }
             Thread.sleep(50)
         }
     }

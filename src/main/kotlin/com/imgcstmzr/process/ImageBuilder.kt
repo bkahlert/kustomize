@@ -1,13 +1,14 @@
 package com.imgcstmzr.process
 
-import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.colors.gray
 import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.Mebi
 import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.bytes
 import com.bkahlert.koodies.unit.size
-import com.github.ajalt.clikt.output.TermUi.echo
+import com.imgcstmzr.runtime.log.RenderingLogger
+import com.imgcstmzr.runtime.log.RenderingLogger.Companion.subLogger
 import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.removeExtension
 import java.nio.file.Path
@@ -33,9 +34,9 @@ object ImageBuilder {
     fun Size.toPartitions(sectorSize: Int = 512, ratio: Double, vararg ratios: Double): List<IntRange> {
         val partitionTableSectorCount = 4 * sectorSize
         val availableSectors = toSectors(sectorSize) - 2 * partitionTableSectorCount
-        val sectors = (doubleArrayOf(ratio) + ratios).map { ratio ->
-            round(availableSectors.toDouble() * ratio).toInt().also {
-                require(it > 0) { "$ratio is too small since it leads to non-positive sector $it" }
+        val sectors = (doubleArrayOf(ratio) + ratios).map { r ->
+            round(availableSectors.toDouble() * r).toInt().also {
+                require(it > 0) { "$r is too small since it leads to non-positive sector $it" }
             }
         }
         var currentSector: Int = partitionTableSectorCount
@@ -49,19 +50,22 @@ object ImageBuilder {
 
     fun buildFrom(
         bootDirectory: Path,
+        logger: RenderingLogger<*>,
         freeSpaceRatio: Double = 0.2,
         ratio: Pair<Double, FileSystemType> = 0.925 to FileSystemType.EXT4,
         vararg ratios: Pair<Double, FileSystemType> = arrayOf(0.075 to FileSystemType.FAT),
-    ): Path {
+    ): Path = logger.subLogger(
+        caption = "${Now.emoji} Preparing raw image using the content of ${bootDirectory.fileName}. This takes a moment...",
+        ansiCode = gray,
+    ) {
         require("$bootDirectory".endsWith(".tar.gz")) { "Currently only tar.gz files are supported." }
         require(ratio.second == FileSystemType.EXT4) { "Currently only ${FileSystemType.EXT4} is supported as the main partition." }
         require(ratios.size == 1) { "Currently only one further partition is supported." }
         require(ratios.first().second == FileSystemType.FAT) { "Currently only ${FileSystemType.FAT} is supported as the boot partition." }
 
         require(freeSpaceRatio >= 0) { "Free space ration must be at least 0.0" }
-        echo(IO.Type.META typed "${Now.emoji} Preparing raw image using the content of $bootDirectory. This takes a moment...")
         val hostDirectory = bootDirectory.parent
-        val addFilesCommand: String = "-tar-in ${Guestfish.DOCKER_MOUNT_ROOT.resolve(bootDirectory.fileName)} / compress:gzip"
+        val addFilesCommand = "-tar-in ${Guestfish.DOCKER_MOUNT_ROOT.resolve(bootDirectory.fileName)} / compress:gzip"
 
         val imgName = "${bootDirectory.fileName.removeExtension("tar.gz")}.img".also { hostDirectory.resolve(it).delete() }
         val supposedCompressionFactor = 2.5
@@ -69,6 +73,10 @@ object ImageBuilder {
         val partitions = size
             .toPartitions(ratio = ratio.first, ratios = ratios.map { it.first }.toDoubleArray())
             .zip(listOf(ratio.second) + ratios.map { it.second })
+
+        logLine { "${partitions.size} partitions with sectors: ${partitions.map { it.first }.joinToString(", ")}" }
+        logLine { "Compressed size: ${bootDirectory.size.toString(BinaryPrefix::class)}" }
+        logLine { "Final image size: ${size.round().toString(BinaryPrefix::class)}" }
 
         Guestfish.execute(
             containerName = Guestfish::class.simpleName + "-image-preparation---" + imgName,
@@ -92,10 +100,10 @@ object ImageBuilder {
                 "mount /dev/sda1 /boot",
                 addFilesCommand,
             )),
-            debug = true,
+            logger = this,
         )
-        echo(IO.Type.META typed "Finished test img creation.")
-        return hostDirectory.resolve(imgName)
+        logLine { "Finished test img creation." }
+        hostDirectory.resolve(imgName)
     }
 
     enum class FileSystemType(val mkfsName: String) {

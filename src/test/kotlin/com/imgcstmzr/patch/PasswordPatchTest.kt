@@ -77,7 +77,7 @@ class PasswordPatchTest {
 
         expectCatching {
             osImage.credentials = Credentials("pi", "wrong password")
-            osImage.boot(logger)
+            osImage.boot(logger = logger)
         }.isFailure()
             .isA<ExecutionException>()
             .rootCause

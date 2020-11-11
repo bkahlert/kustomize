@@ -4,7 +4,7 @@ import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
 import com.bkahlert.koodies.string.joinLinesToString
 import com.bkahlert.koodies.test.junit.Slow
 import com.imgcstmzr.runtime.ProcessMock
-import com.imgcstmzr.runtime.log.BlockRenderingLogger
+import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.notContainsLineSeparator
 import com.imgcstmzr.util.prefixes
@@ -27,7 +27,7 @@ import kotlin.time.toJavaDuration
 
 @OptIn(ExperimentalTime::class)
 @Disabled
-abstract class SharedReaderTest(val readerFactory: (InputStream, Duration, BlockRenderingLogger<String?>?) -> Reader) {
+abstract class SharedReaderTest(val readerFactory: (InputStream, Duration, RenderingLogger<String?>?) -> Reader) {
 
     @Slow
     @RepeatedTest(10)
@@ -35,7 +35,7 @@ abstract class SharedReaderTest(val readerFactory: (InputStream, Duration, Block
         val slowInputStream = ProcessMock.SlowInputStream("Hel", "lo\n", "World!\n",
             baseDelayPerInput = 1.seconds,
             logger = logger)
-        val reader = readerFactory(slowInputStream, 5.seconds, null)
+        val reader = readerFactory(slowInputStream, 5.seconds, logger)
 
         val read: MutableList<String> = mutableListOf()
         assertTimeoutPreemptively(100.seconds.toJavaDuration()) {

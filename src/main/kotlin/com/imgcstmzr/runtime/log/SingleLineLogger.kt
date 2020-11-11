@@ -20,10 +20,10 @@ abstract class SingleLineLogger<R>(caption: CharSequence) : RenderingLogger<R> {
         strings = strings?.plus("${block()}")
     }
 
-    override fun logStatus(items: List<HasStatus>, block: () -> IO): RenderingLogger<R> {
+    override fun logStatus(items: List<HasStatus>, block: () -> IO) {
         strings = strings?.plus(block().formatted.lines().joinToString(", "))
-        if (items.isNotEmpty()) strings = strings?.plus(items.status().lines().joinToString(", ", "(", ")"))
-        return this
+        if (items.isNotEmpty()) strings =
+            strings?.plus(items.status().lines().joinToString(", ", "(", ")")) // TODO: joinToString(prefix = "($symbol ", separator = " ˃ ", postfix = ")")
     }
 
     override fun logResult(block: () -> Result<R>): R {

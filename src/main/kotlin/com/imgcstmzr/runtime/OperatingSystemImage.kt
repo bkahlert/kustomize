@@ -35,9 +35,8 @@ class OperatingSystemImage(
     val shortName: String get() = "${operatingSystem.name}${if (updatedCredentials) "*".magenta() else ""} at ${image.fileName}"
     val path: String get() = "$image"
 
-    val defaultCredentials: Credentials = Credentials(operatingSystem.defaultUsername, operatingSystem.defaultPassword)
-
-    val updatedCredentials: Boolean get() = credentials != defaultCredentials
+    private val defaultCredentials: Credentials = Credentials(operatingSystem.defaultUsername, operatingSystem.defaultPassword)
+    private val updatedCredentials: Boolean get() = credentials != defaultCredentials
 
     fun boot(logger: RenderingLogger<Any>, vararg programs: Program): Int =
         ArmRunner.run(name = conditioned, osImage = this, logger = logger, programs = programs)
@@ -56,7 +55,7 @@ class OperatingSystemImage(
                     logStatus { IO.Type.OUT typed "${image.fileName} is has already ${image.size}" }
                 }
                 else -> {
-                    singleLineLogger<Any, Size>("Progress:") {
+                    singleLineLogger<Size>("Progress:") {
                         logStatus { IO.Type.OUT typed image.size.toString() }
                         while (missing > 0.bytes) {
                             val write = if (missing < bytesPerStep) missing.toZeroFilledByteArray() else oneHundredMegaBytes
@@ -69,8 +68,9 @@ class OperatingSystemImage(
 
                     logLine { "Image Disk Space Successfully increased to " + image.size.toString() + ". Booting OS to finalize..." }
 
+                    @Suppress("SpellCheckingInspection")
                     val compileScript = OperatingSystems.RaspberryPiLite.compileScript("expand-root", "sudo raspi-config --expand-rootfs")
-                    boot(this, compileScript)
+                    boot(logger = this, programs = arrayOf(compileScript))
                 }
             }
         }

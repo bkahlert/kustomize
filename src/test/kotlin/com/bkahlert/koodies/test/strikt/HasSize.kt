@@ -10,6 +10,6 @@ fun <T : Path> Assertion.Builder<T>.hasSize(size: Size) =
         val actualSize = it.size
         when (actualSize == size) {
             true -> pass()
-            else -> fail("was $actualSize (Δ: ${actualSize - size})")
+            else -> fail("was $actualSize (${actualSize.bytes} B; Δ: ${actualSize - size})")
         }
     }

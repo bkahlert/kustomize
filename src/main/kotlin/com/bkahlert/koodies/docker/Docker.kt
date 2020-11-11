@@ -35,7 +35,7 @@ object Docker {
      * Whether a Docker container—no matter if it's running or not—exists.
      */
     fun exists(name: String): Boolean =
-        checkIfOutputContains("""docker ps --no-trunc --format "{{.Names}}" --filter "name=^$name${'$'} --all"""", name)
+        checkIfOutputContains("""docker ps --no-trunc --format "{{.Names}}" --filter "name=^$name${'$'}" --all""", name)
 
     fun run(
         workingDirectory: Path = Paths.WORKING_DIRECTORY,

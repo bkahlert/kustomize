@@ -1,6 +1,7 @@
 package com.bkahlert.koodies.terminal.ansi
 
 import com.bkahlert.koodies.terminal.ANSI
+import com.bkahlert.koodies.terminal.IDE
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.dim
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.hidden
@@ -43,7 +44,7 @@ class AnsiFormatsTest {
 
     @Test
     fun `should format hidden`() {
-        expectThat("hidden".hidden()).isEqualTo(ANSI.termColors.hidden("hidden"))
+        expectThat("hidden".hidden()).isEqualTo(if (IDE.isIntelliJ) " ".repeat("hidden".length + 2) else ANSI.termColors.hidden("hidden"))
     }
 
     @Test

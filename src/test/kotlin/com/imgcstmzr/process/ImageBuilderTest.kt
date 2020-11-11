@@ -1,12 +1,14 @@
 package com.imgcstmzr.process
 
 import com.bkahlert.koodies.io.TarArchiveGzCompressor.tarGzip
+import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.strikt.hasSize
 import com.bkahlert.koodies.unit.Gibi
 import com.bkahlert.koodies.unit.Mebi
 import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.bytes
+import com.bkahlert.koodies.unit.size
 import com.imgcstmzr.process.ImageBuilder.FileSystemType.EXT4
 import com.imgcstmzr.process.ImageBuilder.FileSystemType.FAT
 import com.imgcstmzr.process.ImageBuilder.buildFrom
@@ -14,10 +16,13 @@ import com.imgcstmzr.process.ImageBuilder.format
 import com.imgcstmzr.process.ImageBuilder.toPartitions
 import com.imgcstmzr.process.ImageBuilder.toSectors
 import com.imgcstmzr.util.DockerRequired
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.addExtension
+import com.imgcstmzr.util.appendText
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.mkdirs
+import com.imgcstmzr.util.readAll
 import com.imgcstmzr.util.removeExtension
 import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.DynamicTest.dynamicTest
@@ -89,8 +94,8 @@ class ImageBuilderTest {
         ).map { (size: Size, ratios: DoubleArray) ->
             dynamicTest("$size ≟ ${ratios.toList()}") {
                 val ratio = ratios.first()
-                val ratios = ratios.drop(1).toDoubleArray()
-                expectCatching { (size.toPartitions(ratio = ratio, ratios = ratios)) }
+                val ratiosButFirst = ratios.drop(1).toDoubleArray()
+                expectCatching { (size.toPartitions(ratio = ratio, ratios = ratiosButFirst)) }
                     .isFailure().isA<java.lang.IllegalArgumentException>()
             }
         }
@@ -100,55 +105,57 @@ class ImageBuilderTest {
     inner class BuildFrom {
 
         @ConcurrentTestFactory
-        fun `should require positive partitions`() = listOf(
+        fun `should require positive partitions`(logger: InMemoryLogger<Path>) = listOf(
             4.Mebi.bytes to doubleArrayOf(.5, -.5),
             4.2.Mebi.bytes to doubleArrayOf(-1.0),
             1.5.Gibi.bytes to doubleArrayOf(.2, -.4, .4),
         ).map { (size: Size, ratios: DoubleArray) ->
             dynamicTest("$size ≟ ${ratios.toList()}") {
                 val ratio = ratios.first()
-                val ratios = ratios.drop(1).toDoubleArray()
+                val ratiosButFirst = ratios.drop(1).toDoubleArray()
                 expectCatching {
                     buildFrom(Path.of("/Users/bkahlert/.imgcstmzr.test/imgcstmzr2954831793874525391"),
+                        logger = logger,
                         ratio = ratio to FAT,
-                        ratios = ratios.map { it to EXT4 }.toTypedArray())
+                        ratios = ratiosButFirst.map { it to EXT4 }.toTypedArray())
                 }
                     .isFailure().isA<java.lang.IllegalArgumentException>()
             }
         }
 
         @Test
-        fun `should only accept tar gzip archive`() {
-            expectCatching { buildFrom(Path.of("archive.zip")) }.isFailure().isA<IllegalArgumentException>()
+        fun `should only accept tar gzip archive`(logger: InMemoryLogger<Path>) {
+            expectCatching { buildFrom(Path.of("archive.zip"), logger = logger) }.isFailure().isA<IllegalArgumentException>()
         }
 
         @Test
-        fun `should only accept two partitions`() {
-            expectCatching { buildFrom(Path.of("archive.tar.gz"), ratios = emptyArray()) }.isFailure().isA<IllegalArgumentException>()
+        fun `should only accept two partitions`(logger: InMemoryLogger<Path>) {
+            expectCatching { buildFrom(Path.of("archive.tar.gz"), logger = logger, ratios = emptyArray()) }.isFailure().isA<IllegalArgumentException>()
         }
 
         @Test
-        fun `should only accept EXT4 as first partition`() {
-            expectCatching { buildFrom(Path.of("archive.tar.gz"), ratio = 0.5 to FAT) }.isFailure().isA<IllegalArgumentException>()
+        fun `should only accept EXT4 as first partition`(logger: InMemoryLogger<Path>) {
+            expectCatching { buildFrom(Path.of("archive.tar.gz"), logger = logger, ratio = 0.5 to FAT) }.isFailure().isA<IllegalArgumentException>()
         }
 
         @Test
-        fun `should only accept FAT as boot partition`() {
-            expectCatching { buildFrom(Path.of("archive.tar.gz"), ratios = arrayOf(0.5 to EXT4)) }.isFailure().isA<IllegalArgumentException>()
+        fun `should only accept FAT as boot partition`(logger: InMemoryLogger<Path>) {
+            expectCatching { buildFrom(Path.of("archive.tar.gz"), logger = logger, ratios = arrayOf(0.5 to EXT4)) }.isFailure().isA<IllegalArgumentException>()
         }
 
         @DockerRequired
         @Test
-        fun `should build img from archive`(logger: InMemoryLogger<Any>) {
-            val archive = Paths.tempDir()
-                .also { it.resolve("cmdline.txt").also { it.writeText("console=serial0,115200 console=tty1 ...") } }
-                .also { it.resolve("boot").mkdirs() }
-                .also { it.resolve("boot/important.file").also { it.writeText("important content") } }
-                .tarGzip()
+        fun `should build img from archive`(logger: InMemoryLogger<Path>) {
+            val archive = Paths.tempDir().apply {
+                resolve("cmdline.txt").apply { writeText("console=serial0,115200 console=tty1 ...") }
+                resolve("boot").mkdirs()
+                resolve("boot/important.file").apply { writeText("important content") }
+                while (size < 4.Mebi.bytes) resolve("fill.txt").appendText(ClassPath("Journey to the West - Introduction.txt").readAll())
+            }.tarGzip()
 
-            val img = buildFrom(archive, freeSpaceRatio = 5000.0)
+            val img = buildFrom(archive, logger = logger, freeSpaceRatio = 0.20).deleteOnExit()
 
-            expectThat(img).endsWith(archive.removeExtension("tar.gz").addExtension("img")).hasSize(3_145_728.bytes)
+            expectThat(img).endsWith(archive.removeExtension("tar.gz").addExtension("img")).hasSize(6_291_456.bytes)
         }
     }
 }

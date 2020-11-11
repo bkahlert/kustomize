@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.patch.ini.RegexElement
 import com.imgcstmzr.process.ImageBuilder
 import com.imgcstmzr.process.ImageExtractor.extractImage
+import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.extension
@@ -21,8 +22,8 @@ import java.time.format.DateTimeFormatter.ofPattern
 
 class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: Int = 3) : ManagedDirectory(dir) {
 
-    fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> Path): Path =
-        ProjectDirectory(dir, name, reuseLastWorkingCopy, maxConcurrentWorkingDirectories).require(provider)
+    fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, logger: RenderingLogger<*>, provider: () -> Path): Path =
+        ProjectDirectory(dir, name, reuseLastWorkingCopy, maxConcurrentWorkingDirectories).require(logger, provider)
 
     companion object {
         val DEFAULT: Path = Paths.USER_HOME.resolve(".imgcstmzr")
@@ -41,8 +42,6 @@ open class ManagedDirectory(val dir: Path) {
         }
         check(file.canWrite()) { "Cannot write to $dir" }
     }
-
-    private val absDir: String = file.toString()
 
     fun delete() {
         if (file.exists()) file.deleteRecursively()
@@ -77,7 +76,7 @@ private class ProjectDirectory(parentDir: Path, dirName: String, private val reu
             }
     }
 
-    fun require(provider: () -> Path): Path {
+    fun require(logger: RenderingLogger<*>, provider: () -> Path): Path {
         deleteOldWorkDirs()
 
         val workDirs = workDirs()
@@ -97,7 +96,7 @@ private class ProjectDirectory(parentDir: Path, dirName: String, private val reu
 
         val img = rawDir.requireSingle {
             val downloadedFile = downloadDir.requireSingle(provider)
-            downloadedFile.extractImage { ImageBuilder.buildFrom(it) }
+            downloadedFile.extractImage { ImageBuilder.buildFrom(it, logger = logger) }
         }
 
         return WorkDirectory.from(dir, img).getSingle { it.extension.equals("img", ignoreCase = true) } ?: throw NoSuchElementException()
@@ -139,12 +138,14 @@ private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
 }
 
 private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireValidName(dir)) {
+    @Suppress("unused")
     private class WorkDirectoryName(name: String) : RegexElement(name, false) {
         constructor() : this(DATE_FORMATTER.format(now()) + SEPARATOR + String.random(4))
 
         companion object {
+            @Suppress("SpellCheckingInspection")
             private val DATE_FORMATTER = ofPattern("yyyy-MM-dd'T'HH-mm-ss").withZone(ZoneId.systemDefault())
-            private val SEPARATOR = "--"
+            private const val SEPARATOR = "--"
         }
 
         private val iso by regex("^\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}")

@@ -1,22 +1,25 @@
 package com.imgcstmzr.util
 
-import com.bkahlert.koodies.concurrent.process.IO.Type.META
+import com.bkahlert.koodies.io.TarArchiveGzCompressor.tarGzip
 import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
-import com.bkahlert.koodies.time.Now
-import com.github.ajalt.clikt.output.TermUi.echo
+import com.bkahlert.koodies.unit.Mebi
+import com.bkahlert.koodies.unit.bytes
+import com.bkahlert.koodies.unit.size
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.process.Downloader.download
-import com.imgcstmzr.process.Guestfish
-import com.imgcstmzr.process.GuestfishOperation
+import com.imgcstmzr.process.ImageBuilder
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
 import com.imgcstmzr.runtime.OperatingSystemMock
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
+import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
+import com.imgcstmzr.runtime.log.RenderingLogger
+import com.imgcstmzr.runtime.log.runLogging
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.logging.OutputCaptureExtension.Companion.isCapturingOutput
-import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
@@ -31,78 +34,52 @@ annotation class OS(
     val autoDelete: Boolean = true,
 )
 
-open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
+open class FixtureResolverExtension : ParameterResolver {
 
     init {
-        // provoking instantiation of FixtureLog to have it clean up first
+        // provokes instantiation of FixtureLog to have it clean up first
         FixtureLog.location
     }
 
     override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =
         parameterContext.parameter.type.isAssignableFrom(OperatingSystemImage::class.java)
 
-    override fun resolveParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Any? {
+    override fun resolveParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): OperatingSystemImage = synchronized(this) {
         val annotation = parameterContext.parameter.getAnnotation(OS::class.java)
         val operatingSystem: OperatingSystem = annotation?.value?.objectInstance ?: OperatingSystemMock()
         val autoDelete = annotation?.autoDelete ?: true
-        if (!extensionContext.isCapturingOutput()) echo("Provisioning an image containing ${operatingSystem.name.cyan()} (${operatingSystem.directoryName})...")
-        return operatingSystem.getCopy().also { if (autoDelete) saveReferenceForCleanup(extensionContext, it) }.also {
-            if (!extensionContext.isCapturingOutput()) echo("Provision completed: ${"$it".cyan()}")
+        val logger: RenderingLogger<OperatingSystemImage> = if (!extensionContext.isCapturingOutput()) {
+            BlockRenderingLogger("Provisioning an image containing ${operatingSystem.name.cyan()} (${operatingSystem.directoryName})...")
+        } else {
+            MutedBlockRenderingLogger()
         }
-    }
-
-    override fun afterEach(context: ExtensionContext) {
-        cleanUp(context)
+        logger.runLogging {
+            operatingSystem.getCopy(logger).apply {
+                if (autoDelete) deleteOnExit<Path>()
+                logger.logText { "Provisioning " }
+            }
+        }
     }
 
     companion object {
         val OperatingSystem.directoryName get() = downloadUrl?.let { Path.of(it).baseName } ?: "imgcstmzr"
 
         private val cache = Cache(Paths.TEST.resolve("test"), maxConcurrentWorkingDirectories = 500)
-        private fun OperatingSystem.getCopy(): OperatingSystemImage = synchronized(this) {
-            this based cache.provideCopy(directoryName, false) {
-                if (downloadUrl != null) {
-                    download()
-                } else {
-                    prepareImg("cmdline.txt", "config.txt") // TODO use ImageBuilder
-                }
+        private fun OperatingSystem.getCopy(logger: RenderingLogger<*>): OperatingSystemImage = synchronized(this) {
+            this based cache.provideCopy(directoryName, false, logger) {
+                if (downloadUrl != null) download() else prepareImg(logger, "cmdline.txt", "config.txt")
             }
         }
 
         /**
-         * Dynamically creates a raw image with two partitions containing the given [files].
+         * Dynamically creates a raw image with two partitions containing the given [classPathFiles].
          */
-        private fun prepareImg(vararg files: String): Path {
-            val basename = "imgcstmzr"
-            echo(META typed "${Now.emoji} Preparing test img with files ${files.joinToString(", ")}. This takes a moment...")
-            val hostDir = Paths.TEST.resolve(basename + String.random(4)).mkdirs()
-            val copyFileCommands: List<String> = files.map {
-                ClassPath.of(it).copyTo(hostDir.resolve(it))
-                "copy-in ${Guestfish.DOCKER_MOUNT_ROOT.resolve(it)} /boot"
-            }
-
-            val imgName = "$basename.img"
-            Guestfish.execute(
-                containerName = imgName,
-                volumes = mapOf(hostDir to Guestfish.DOCKER_MOUNT_ROOT),
-                GuestfishOperation(listOf(
-                    "sparse ${Guestfish.DOCKER_MOUNT_ROOT.resolve(imgName)} 4M", // = 8192 sectors
-                    "run",
-                    "part-init /dev/sda mbr",
-                    "echo \"num sectors:\"",
-                    "blockdev-getsz /dev/sda",
-                    "part-add /dev/sda p 2048 4095",
-                    "part-add /dev/sda p 4096 -2048",
-                    "mkfs vfat /dev/sda1",
-                    "mkfs ext4 /dev/sda2",
-                    "mount /dev/sda2 /",
-                    "mkdir /boot",
-                    "mount /dev/sda1 /boot",
-                    * copyFileCommands.toTypedArray())),
-            )
-            echo(META typed "Finished test img creation.")
-            return hostDir.resolve(imgName)
-        }
+        private fun prepareImg(logger: RenderingLogger<*>, vararg classPathFiles: String): Path =
+            ImageBuilder.buildFrom(Paths.TEMP.resolve("imgcstmzr-" + String.random(4)).mkdirs().run {
+                classPathFiles.forEach { classPathFile -> ClassPath.of(classPathFile).copyTo(resolve(classPathFile)) }
+                while (size < 4.Mebi.bytes) resolve("fill.txt").appendText(ClassPath("Journey to the West - Introduction.txt").readAll())
+                tarGzip()
+            }, logger, freeSpaceRatio = 0.20)
 
         fun prepareSharedDirectory(): Path {
             val root = createTempDir("imgcstmzr")
@@ -111,35 +88,5 @@ open class FixtureResolverExtension : ParameterResolver, AfterEachCallback {
             ClassPath.of("config.txt").copyToDirectory(boot)
             return root.toPath()
         }
-
-        private fun cleanUp(context: ExtensionContext) {
-            deleteImgRelatedDirectories(context)
-        }
-
-        private fun deleteImgRelatedDirectories(context: ExtensionContext) {
-//            loadImg(context)
-//                ?.let {
-//                    val imgDirectory = it.parent
-//                    val imgDirectoryContainer = imgDirectory.parent
-//                    imgDirectoryContainer.listFilesRecursively({ other ->
-//                        other.toString().startsWith(imgDirectory.toString())
-//                    }, comparator = Comparator.reverseOrder())
-//                }
-//                ?.onEach { imgDirectoryBasedCopy ->
-//                    if (!context.isCapturingOutput()) echo("Deleting $imgDirectoryBasedCopy")
-//                    imgDirectoryBasedCopy.delete(true)
-//                }
-        }
-
-        private fun loadImg(context: ExtensionContext): Path? =
-            getStore(context).get(context.requiredTestInstance, Path::class.java)
-
-        private fun saveReferenceForCleanup(context: ExtensionContext, img: Path) {
-            getStore(context).put(context.requiredTestInstance, img.deleteOnExit())
-        }
-
-        private fun getStore(context: ExtensionContext): ExtensionContext.Store =
-            context.getStore(ExtensionContext.Namespace.create(FixtureResolverExtension::class))
     }
-
 }

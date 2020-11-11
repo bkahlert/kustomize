@@ -20,6 +20,7 @@ inline fun <reified T> List<T>.withNegativeIndices(): List<T> {
  * 1) Negative indices are supported and start from the end of this list (e.g. `this[-1]` returns the last element, `this[-2]` returns the second, and so on).
  * 2) Modulus operation is applied. E.g. `listOf("a","b","c").withNegativeIndices(4)` returns `a`. `this[-4]` would return `c`.
  */
+@Suppress("unused")
 inline fun <reified T> (() -> List<T>).withNegativeIndices(): () -> List<T> = { this().withNegativeIndices() }
 
 /**
@@ -28,5 +29,6 @@ inline fun <reified T> (() -> List<T>).withNegativeIndices(): () -> List<T> = { 
  * 1) Negative indices are supported and start from the end of the list (e.g. `this[-1]` returns the last element, `this[-2]` returns the second, and so on).
  * 2) Modulus operation is applied. E.g. `listOf("a","b","c").withNegativeIndices(4)` returns `a`. `this[-4]` would return `c`.
  */
+@Suppress("unused")
 inline fun <reified T, reified V> withNegativeIndices(noinline listProvider: () -> List<V>): ReadOnlyProperty<T, List<V>> =
-    ReadOnlyProperty { thisRef: T, property: KProperty<*> -> listProvider().withNegativeIndices() }
+    ReadOnlyProperty { _: T, property: KProperty<*> -> listProvider().withNegativeIndices() }

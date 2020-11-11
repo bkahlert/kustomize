@@ -22,8 +22,12 @@ import java.nio.file.Path
  *   e.g. `completedProcess.contains("expected output")`.
  * * use a destructuring declaration
  *   e.g. `val (_, exitCode, _, _, _, output, _) = completedProcess`
+ *
+ * **No matter how the I/O is accessed only [all] contains the original ANSI escape sequences.**
+ *
+ * **All other means are ANSI free.**
  */
-class CompletedProcess(
+class CompletedProcess private constructor(
     /**
      * PID of the completed [Process] when it was running.
      */
@@ -34,25 +38,35 @@ class CompletedProcess(
     val exitCode: Int,
     /**
      * All [output] of the completed [Process].
+     *
+     * This field contains all original ANSI escapes sequences.
      */
     val all: List<IO>,
     /**
      * All [output] of type [META] of the completed [Process].
+     *
+     * In contrast to [all] this field contains no ANSI escapes sequences.
      */
     val meta: IO,
     /**
      * All [output] of type [IN] of the completed [Process].
+     *
+     * In contrast to [all] this field contains no ANSI escapes sequences.
      */
     val input: IO,
     /**
      * All [output] of type [OUT] of the completed [Process].
+     *
+     * In contrast to [all] this field contains no ANSI escapes sequences.
      */
     val output: IO,
     /**
      * All [output] of type [ERR] of the completed [Process].
+     *
+     * In contrast to [all] this field contains no ANSI escapes sequences.
      */
     val error: IO,
-) : CharSequence by all.joinToString("\n") {
+) : CharSequence by all.joinToString("\n", transform = { it.unformatted }) {
     constructor(pid: Long, exitCode: Int, io: List<IO>) : this(
         pid = pid,
         exitCode = exitCode,
@@ -75,26 +89,36 @@ class CompletedProcess(
 
     /**
      * All [output] of the completed [Process].
+     *
+     * This field contains all original ANSI escapes sequences.
      */
     operator fun component3(): List<IO> = all
 
     /**
-     * All [output] of the completed [Process].
+     * All [output] of type [META] the completed [Process].
+     *
+     * In contrast to [all] this field contains no ANSI escapes sequences.
      */
     operator fun component4(): IO = meta
 
     /**
      * All [output] of type [IN] of the completed [Process].
+     *
+     * In contrast to [all] this field contains no ANSI escapes sequences.
      */
     operator fun component5(): IO = input
 
     /**
      * All [output] of type [OUT] of the completed [Process].
+     *
+     * In contrast to [all] this field contains no ANSI escapes sequences.
      */
     operator fun component6(): IO = output
 
     /**
      * All [output] of type [ERR] of the completed [Process].
+     *
+     * In contrast to [all] this field contains no ANSI escapes sequences.
      */
     operator fun component7(): IO = error
 
@@ -144,11 +168,11 @@ class CompletedProcess(
                             all.take(recentLineCount).map { "  $it" }.joinLinesToString(postfix = LF)
                     }
                 }
-            }.recover {
+            }.recover { ex: Throwable ->
                 "An error occurred which led to exit code $exitCode although $requiredExitCode was expected.$LF" +
-                    "➜ Unfortunately also the I/O log could not be stored (${it.toSingleLineString()}).$LF" +
+                    "➜ Unfortunately also the I/O log could not be stored (${ex.toSingleLineString()}).$LF" +
                     "➜ Therefore the complete I/O log will be printed here:$LF" +
-                    all.map { "  $it" }.joinLinesToString(postfix = LF)
+                    all.map { io -> "  $io" }.joinLinesToString(postfix = LF)
             }.getOrThrow()
         }
     }

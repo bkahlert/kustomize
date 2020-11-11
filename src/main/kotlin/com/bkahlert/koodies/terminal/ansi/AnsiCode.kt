@@ -1,7 +1,8 @@
 package com.bkahlert.koodies.terminal.ansi
 
 import com.bkahlert.koodies.string.Unicode
-import com.bkahlert.koodies.terminal.ANSI.termColors
+import com.bkahlert.koodies.terminal.IDE
+import com.github.ajalt.mordant.TermColors
 import com.imgcstmzr.util.namedGroups
 import com.github.ajalt.mordant.AnsiCode as MordantAnsiCode
 
@@ -39,6 +40,34 @@ class AnsiCode(
     companion object {
         const val ESC = Unicode.escape // `ESC[` also called 7Bit Control Sequence Introducer
         const val CSI = Unicode.controlSequenceIntroducer
+        private val termColors by lazy { TermColors(IDE.ansiSupport) }
+
+        object colors {
+            val black: AnsiCode = AnsiCode(termColors.black)
+            val gray: AnsiCode = AnsiCode(termColors.gray)
+            val red: AnsiCode = AnsiCode(termColors.red)
+            val brightRed: AnsiCode = AnsiCode(termColors.brightRed)
+            val green: AnsiCode = AnsiCode(termColors.green)
+            val brightGreen: AnsiCode = AnsiCode(termColors.brightGreen)
+            val yellow: AnsiCode = AnsiCode(termColors.yellow)
+            val brightYellow: AnsiCode = AnsiCode(termColors.brightYellow)
+            val blue: AnsiCode = AnsiCode(termColors.blue)
+            val brightBlue: AnsiCode = AnsiCode(termColors.brightBlue)
+            val magenta: AnsiCode = AnsiCode(termColors.magenta)
+            val brightMagenta: AnsiCode = AnsiCode(termColors.brightMagenta)
+            val cyan: AnsiCode = AnsiCode(termColors.cyan)
+            val brightCyan: AnsiCode = AnsiCode(termColors.brightCyan)
+        }
+
+        object formats {
+            val bold: AnsiCode = AnsiCode(termColors.bold)
+            val dim: AnsiCode = AnsiCode(termColors.dim)
+            val italic: AnsiCode = AnsiCode(termColors.italic)
+            val underline: AnsiCode = AnsiCode(termColors.underline)
+            val inverse: AnsiCode = AnsiCode(termColors.inverse)
+            val hidden: AnsiCode = AnsiCode(termColors.hidden)
+        }
+
 
         /**
          * Partial Line Forward

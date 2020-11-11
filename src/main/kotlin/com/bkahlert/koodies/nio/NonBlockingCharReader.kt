@@ -2,9 +2,9 @@ package com.bkahlert.koodies.nio
 
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.string.random
-import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
-import com.imgcstmzr.runtime.log.miniSegment
+import com.imgcstmzr.runtime.log.RenderingLogger
+import com.imgcstmzr.runtime.log.RenderingLogger.Companion.singleLineLogger
 import com.imgcstmzr.util.debug
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.jline.utils.NonBlocking
@@ -30,14 +30,17 @@ class NonBlockingCharReader(
     name: String = "ImgCstmzr-${NonBlockingCharReader::class.simpleName}-${String.random()}",
 ) : Reader() {
 
+    val timeoutMillis = timeout.toLongMilliseconds()
+    inline val inlineTimeoutMillis get() = timeoutMillis
+
 //    private val reader: org.jline.utils.NonBlockingReader =
 //        NonBlocking.nonBlocking(name, BufferedReader(org.jline.utils.InputStreamReader(inputStream, charset)))
 
-    private var reader: org.jline.utils.NonBlockingReader? = NonBlocking.nonBlocking(name, inputStream, charset)
+    var reader: org.jline.utils.NonBlockingReader? = NonBlocking.nonBlocking(name, inputStream, charset)
 
-    fun read(cbuf: CharArray, off: Int, len: Int, logger: BlockRenderingLogger<String?>): Int = if (reader == null) -1 else
-        logger.miniSegment(NonBlockingCharReader::class.simpleName + ".read(CharArray, Int, Int, Logger)") {
-            when (val read = kotlin.runCatching { reader?.read(timeout.toLongMilliseconds()) ?: throw IOException("No reader. Likely already closed.") }
+    inline fun <reified T> read(buffer: CharArray, off: Int, logger: RenderingLogger<T>): Int = if (reader == null) -1 else
+        logger.singleLineLogger(NonBlockingCharReader::class.simpleName + ".read(CharArray, Int, Int, Logger)") {
+            when (val read = kotlin.runCatching { reader?.read(inlineTimeoutMillis) ?: throw IOException("No reader. Likely already closed.") }
                 .recover {
                     reader?.close()
                     -1
@@ -52,13 +55,13 @@ class NonBlockingCharReader(
                 }
                 else -> {
                     logStatus { META typed "SUCCESSFULLY READ ${read.debug}" }
-                    cbuf[off] = read.toChar()
+                    buffer[off] = read.toChar()
                     1
                 }
             }
         }
 
-    override fun read(cbuf: CharArray, off: Int, len: Int): Int = read(cbuf, off, len, MutedBlockRenderingLogger())
+    override fun read(cbuf: CharArray, off: Int, len: Int): Int = read(cbuf, off, MutedBlockRenderingLogger<Any?>())
 
     override fun close() {
         kotlin.runCatching { reader?.close() }

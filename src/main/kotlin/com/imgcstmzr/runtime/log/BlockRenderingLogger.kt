@@ -1,19 +1,15 @@
 package com.imgcstmzr.runtime.log
 
 import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.concurrent.synchronized
 import com.bkahlert.koodies.exception.toSingleLineString
-import com.bkahlert.koodies.nullable.letIfSet
 import com.bkahlert.koodies.string.LineSeparators.LF
 import com.bkahlert.koodies.string.TruncationStrategy.MIDDLE
 import com.bkahlert.koodies.string.addColumn
-import com.bkahlert.koodies.string.linesOfLength
 import com.bkahlert.koodies.string.mapLines
 import com.bkahlert.koodies.string.prefixLinesWith
 import com.bkahlert.koodies.string.prefixWith
 import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.string.truncate
-import com.bkahlert.koodies.string.truncateBy
 import com.bkahlert.koodies.string.wrapLines
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
@@ -29,7 +25,6 @@ import com.imgcstmzr.runtime.log.RenderingLogger.Companion.formatResult
 open class BlockRenderingLogger<R>(
     private val caption: CharSequence,
     val borderedOutput: Boolean = false,
-    val interceptor: (CharSequence) -> CharSequence? = { it },
     val statusInformationColumn: Int = 100,
     val statusInformationPadding: Int = 5,
     val statusInformationColumns: Int = 45,
@@ -43,16 +38,12 @@ open class BlockRenderingLogger<R>(
     override val nestingPrefix: String get() = if (borderedOutput) "├─╴ " else " :"
 
     override fun render(trailingNewline: Boolean, block: () -> CharSequence): Unit = block().let { message: CharSequence ->
-        val finalMessage: CharSequence? = interceptor.invoke("$message" + if (trailingNewline) "\n" else "")
+        val finalMessage: CharSequence? = "$message" + if (trailingNewline) "\n" else ""
         if (finalMessage != null) log.invoke(finalMessage)
     }
 
     private fun getStatusPadding(text: String): String =
         " ".repeat((statusInformationColumn - text.removeEscapeSequences().length).coerceAtLeast(10))
-
-    private fun CharSequence.wrap(rightPadding: Int = 0): List<CharSequence> { // TODO
-        return asAnsiString().linesOfLength(totalColumns, ignoreTrailingSeparator = false)
-    }
 
     private val blockStart
         get() = if (borderedOutput) "\n╭─────╴" + ANSI.termColors.bold("$caption") + "\n$prefix" else ANSI.termColors.bold("Started: $caption")
@@ -73,47 +64,40 @@ open class BlockRenderingLogger<R>(
         render(true) { blockStart }
     }
 
-    override fun logException(block: () -> Throwable): RenderingLogger<R> = block().let {
+    override fun logException(block: () -> Throwable): Unit = block().let {
         render(true) { IO.Type.ERR.format(it.stackTraceToString()).prefixLinesWith(ignoreTrailingSeparator = false, prefix) }
-        this
     }
 
-    override fun logLine(block: () -> CharSequence): RenderingLogger<R> = block().let {
+    override fun logLine(block: () -> CharSequence): Unit = block().let {
         render(true) {
             it.asAnsiString().wrapLines(totalColumns).prefixLinesWith(ignoreTrailingSeparator = false, prefix = prefix)
         }
-        this
     }
 
-    private val itemsCache = mutableMapOf<Pair<Int, Int>, CharSequence>().synchronized()
-    override fun logStatus(items: List<HasStatus>, block: () -> IO): BlockRenderingLogger<R> = block().let { output ->
+    override fun logStatus(items: List<HasStatus>, block: () -> IO): Unit = block().let { output ->
         if (output.unformatted.isNotBlank()) {
             render(true) {
                 val leftColumn = output.formatted.asAnsiString().wrapLines(statusInformationColumn).asAnsiString()
-                val statusColumn = itemsCache.computeIfAbsent(items.hashCode() to statusInformationColumns) {
-                    items.status().asAnsiString().truncate(maxLength = statusInformationColumns, MIDDLE)
-                }
+                val statusColumn = items.status().asAnsiString().truncate(maxLength = statusInformationColumns, MIDDLE)
                 leftColumn.addColumn(statusColumn, columnWidth = statusInformationColumn + statusInformationPadding).prefixLinesWith(prefix = prefix)
             }
         }
-        this
     }
 
     override fun logResult(block: () -> Result<R>): R {
         val result = block()
         render(true) {
-            getBlockEnd(result).asAnsiString().wrapLines(statusInformationColumn)
+            getBlockEnd(result).asAnsiString().wrapLines(totalColumns)
         }
         return result.getOrThrow()
     }
 }
 
-
+@Deprecated("replaced by subLogger", ReplaceWith("subLogger"))
 inline fun <R, R2> BlockRenderingLogger<R>?.segment(
     caption: CharSequence,
     ansiCode: AnsiCode? = ANSI.termColors.magenta,
     borderedOutput: Boolean = this?.borderedOutput ?: false,
-    noinline additionalInterceptor: ((CharSequence) -> CharSequence?)? = null,
     block: BlockRenderingLogger<R2>.() -> R2,
 ): R2 {
     val logger: BlockRenderingLogger<R2> =
@@ -121,26 +105,21 @@ inline fun <R, R2> BlockRenderingLogger<R>?.segment(
             this == null -> BlockRenderingLogger(
                 caption = caption,
                 borderedOutput = borderedOutput,
-                interceptor = additionalInterceptor ?: { it }
             )
             this is MutedBlockRenderingLogger -> {
                 MutedBlockRenderingLogger(
                     "$caption>",
                     borderedOutput = borderedOutput,
-                    interceptor = additionalInterceptor ?: { it })
+                )
             }
             else -> {
                 BlockRenderingLogger(
                     caption = caption,
                     borderedOutput = borderedOutput,
-                    interceptor = if (additionalInterceptor != null) {
-                        { it.letIfSet(additionalInterceptor).letIfSet(interceptor) }
-                    } else {
-                        interceptor
-                    },
                 ) { output ->
                     val indentedOutput = output.asAnsiString().mapLines {
-                        val truncateBy = it.truncateBy(prefix.length, minWhitespaceLength = 3).let { ansiCode?.invoke(it) ?: it }
+//                        val truncateBy = it.truncateBy(prefix.length, minWhitespaceLength = 3).let { ansiCode?.invoke(it) ?: it }
+                        val truncateBy = it.replaceFirst("\\s{3}".toRegex(), "").let { ansiCode?.invoke(it) ?: it }
                         truncateBy.prefixWith(prefix)
                     }
                     logText { indentedOutput }
@@ -150,7 +129,7 @@ inline fun <R, R2> BlockRenderingLogger<R>?.segment(
     return kotlin.runCatching { block(logger) }.also { logger.logResult { it } }.getOrThrow()
 }
 
-
+@Deprecated("replaced by singleLineLogger", ReplaceWith("singleLineLogger"))
 inline fun <reified R1, reified R2> BlockRenderingLogger<R1>?.miniSegment(
     caption: CharSequence,
     noinline block: SingleLineLogger<R2>.() -> R2,

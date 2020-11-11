@@ -110,7 +110,8 @@ class ImgCommand : CliktCommand(help = "Provides an IMG file containing the spec
     override fun run() {
         val cache: Cache = shared[Cache::class] as Cache
 
-        shared[Path::class] = cache.provideCopy(name, reuseLastWorkingCopy) { os.download().also { TermUi.echo("Download completed.") } }
+        shared[Path::class] =
+            cache.provideCopy(name, reuseLastWorkingCopy, BlockRenderingLogger<Any>("ImgCommand")) { os.download().also { TermUi.echo("Download completed.") } }
     }
 }
 

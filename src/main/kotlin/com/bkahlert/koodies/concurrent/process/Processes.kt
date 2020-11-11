@@ -72,7 +72,8 @@ object Processes {
         }.buildTo(Paths.tempFile(base = shellScriptPrefix, extension = shellScriptExtension)).conditioned
         return Commandline(command).apply {
             addArguments(arguments)
-            this.workingDirectory = workingDirectory?.toFile()
+            @Suppress("ExplicitThis")
+            this.workingDirectory = workingDirectory.toFile()
             env.forEach { addEnvironment(it.key, it.value) }
         }.execute()
     }
@@ -178,6 +179,7 @@ object Processes {
     ): RunningProcess {
         val commandline = Commandline(command).apply {
             addArguments(arguments)
+            @Suppress("ExplicitThis")
             this.workingDirectory = workingDirectory?.toFile()
             env.forEach { addEnvironment(it.key, it.value) }
         }
@@ -233,6 +235,9 @@ object Processes {
         val pid = process.pid()
 
         return object : RunningProcess() {
+            override val process: Process = process
+            override val ioLog: IOLog = IOLog()
+
             init {
                 "Executing $commandLine".log()
                 listOf(commandLine.executable, commandLine.arguments)
@@ -241,7 +246,6 @@ object Processes {
                     .joinToString("\n") { "📄 ${it.toUri()}" }.log()
             }
 
-            override val process: Process = process
             var disabled: Boolean = false
             override val result: CompletableFuture<CompletedProcess> = executor.startAsCompletableFuture {
                 val exceptionHandler: (Throwable) -> Unit = {
@@ -359,8 +363,8 @@ object Processes {
             .filter { it.isFile }
             .filter { file ->
                 file.fileName.toString().let {
-                    it.startsWith(Processes.shellScriptPrefix)
-                        && it.endsWith(Processes.shellScriptExtension)
+                    it.startsWith(shellScriptPrefix)
+                        && it.endsWith(shellScriptExtension)
                 }
             }
             .filter { it.age > 10.minutes }

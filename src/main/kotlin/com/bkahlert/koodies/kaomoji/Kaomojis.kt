@@ -1,10 +1,10 @@
 @file:Suppress("SpellCheckingInspection", "ObjectPropertyName", "HardCodedStringLiteral")
 
-package com.bkahlert.koodies.terminal.ascii
+package com.bkahlert.koodies.kaomoji
 
-import com.bkahlert.koodies.string.Unicode.noBreakSpace
-import com.bkahlert.koodies.string.repeat
+import com.bkahlert.koodies.kaomoji.Kaomojis.Generator.Companion.removeRightArm
 import com.bkahlert.koodies.terminal.ANSI
+import com.bkahlert.koodies.terminal.ansi.AnsiFormats.hidden
 import com.bkahlert.koodies.terminal.colorize
 import kotlin.properties.PropertyDelegateProvider
 import kotlin.reflect.KProperty
@@ -58,6 +58,11 @@ object Kaomojis {
             val leftEyes: List<String> = values().flatMap { it.leftEye }
             val rightEyes: List<String> = values().flatMap { it.rightEye }
             val mouths: List<String> = values().flatMap { it.mouth }
+
+            fun CharSequence.removeRightArm(): CharSequence {
+                val rightArm = rightArms.dropWhile { !this.endsWith(it) }
+                return if (rightArm.isNotEmpty()) this.removeSuffix(rightArm.first()) else this
+            }
         }
     }
 
@@ -97,7 +102,7 @@ object Kaomojis {
         leftArm: IntRange? = null, rightArm: IntRange? = null, leftEye: IntRange? = null, rightEye: IntRange? = null, mouth: IntRange? = null,
         wand: IntRange? = null,
     ): PropertyDelegateProvider<Kaomojis, Kaomoji> =
-        PropertyDelegateProvider { thisRef, property -> Kaomoji(property.name, leftArm, leftEye, rightEye, rightArm, mouth, wand) }
+        PropertyDelegateProvider { _, property -> Kaomoji(property.name, leftArm, leftEye, rightEye, rightArm, mouth, wand) }
 
     @Suppress("unused")
     val Wizards: List<CharSequence> = listOf(
@@ -120,10 +125,34 @@ object Kaomojis {
      * ```
      */
     fun CharSequence.thinking(value: String): String {
-        val kaomoji = "$this ˙"
-        val thinkLine = noBreakSpace.repeat(kaomoji.length * 2) + " ͚͔˱ ❨ ( $value )"
-        return "$thinkLine\n$kaomoji"
+        val kaomoji = this
+        val thinkLine = "${kaomoji.hidden()}   ͚͔˱ ❨ ( $value )"
+        return "$thinkLine\n$kaomoji ˙"
     }
+
+    /**
+     * Returns a fishing [Kaomoji] of the form:
+     *
+     * ```
+     * （♯▼皿▼）o/￣￣￣<゜)))彡
+     * ```
+     */
+    fun CharSequence.fishing(fish: String? = (this@Kaomojis.fish + whales).random()): String {
+        val fishingRod = "/￣￣￣"
+        val fishingArm = "o"
+        val notFishingKaomoji = (this ?: fishers.random()).removeSuffix(fishingRod)
+        val armLessFisher = notFishingKaomoji.removeRightArm()
+        return "$armLessFisher$fishingArm$fishingRod$fish"
+    }
+
+    /**
+     * Returns a random fishing [Kaomoji] of the form:
+     *
+     * ```
+     * （♯▼皿▼）o/￣￣￣<゜)))彡
+     * ```
+     */
+    fun fishing(fish: String? = (this.fish + whales).random()): String = fishers.random().fishing(fish)
 
     @Suppress("KDocMissingDocumentation", "unused")
     val Angry: List<CharSequence> = listOf(
@@ -3781,10 +3810,44 @@ object Kaomojis {
     )
 
     @Suppress("KDocMissingDocumentation", "unused")
+    val fishers: List<String> = listOf(
+        "(;`ー´)o/￣￣￣",
+    )
+
+    @Suppress("KDocMissingDocumentation", "unused")
     val fish: List<String> = listOf(
         "ϵ( 'Θ' )϶",
         "∋(°O°)∈",
         "(〠_〠)",
+        "(゜))<<",
+        "(°))<<",
+        "(°)#))<<",
+        "(Q )) >",
+        ">_)))彡",
+        ">゜))))彡",
+        "ζ°)))彡",
+        "❥᷁)͜͡˒ ⋊",
+        "┣⠉❥᷁)͜͡˒ ⋊",
+        "<º))))><",
+        "<゜)))彡",
+        "><((((●ﾟ<",
+        "><((((*ﾟ< >ﾟ*)))><",
+        "ζ`))))))<",
+        "♪ ε=>`)))>ﾟ)))彡~~",
+        "[<+))><< <*))>=<]",
+        ">ﾟ)##)彡",
+        ">ﾟ)))彡",
+        ">゜)))彡",
+        "゜~>゜))><",
+        ">゜)))><",
+        ">°))彡",
+        "<・)))><<",
+    )
+
+    @Suppress("KDocMissingDocumentation", "unused")
+    val whales: List<String> = listOf(
+        ". ><{{{.______)", ". ><{{{o ______)", ". ><{{{x_______)",
+        ". ><(((.______)", ". ><(((o ______)", ". ><(((x_______)",
     )
 
     @Suppress("KDocMissingDocumentation", "unused")

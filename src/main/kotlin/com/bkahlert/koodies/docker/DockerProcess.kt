@@ -1,6 +1,7 @@
 package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.concurrent.process.CompletedProcess
+import com.bkahlert.koodies.concurrent.process.IOLog
 import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.time.poll
 import java.util.concurrent.CompletableFuture
@@ -19,8 +20,9 @@ class DockerProcess(
     override val name: String,
     private val runningProcessProvider: () -> RunningProcess,
 ) : DockerContainer, RunningProcess() {
-    override val process: Process get() = runningProcessProvider()
+    override val process: RunningProcess get() = runningProcessProvider()
     override val result: CompletableFuture<CompletedProcess> get() = CompletableFuture.supplyAsync { runningProcessProvider().waitForCompletion() }
+    override val ioLog: IOLog get() = runningProcessProvider().ioLog
     override fun destroy(): Unit = cleanUp(forcibly = false).also { super.destroy() }
     override fun destroyForcibly(): Process = cleanUp(forcibly = true).let { super.destroyForcibly() }
 
@@ -30,9 +32,7 @@ class DockerProcess(
     private fun cleanUp(forcibly: Boolean) {
         stop() // asynchronous call; just trying to be nice to call stop
         remove(forcibly)
-        100.milliseconds.poll {
-            !isRunning
-        }.forAtMost(10.seconds) {
+        poll { !isRunning }.every(100.milliseconds).forAtMost(10.seconds) {
             throw TimeoutException("Could not clean up $this within $it.")
         }
     }

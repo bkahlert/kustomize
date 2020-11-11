@@ -7,11 +7,10 @@ import com.bkahlert.koodies.string.joinLinesToString
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
-import com.bkahlert.koodies.tracing.MiniTracer
 import com.imgcstmzr.runtime.ProcessExitMock.Companion.immediateExit
 import com.imgcstmzr.runtime.ProcessExitMock.Companion.immediateSuccess
 import com.imgcstmzr.runtime.ProcessMock.SlowInputStream.Companion.prompt
-import com.imgcstmzr.runtime.log.miniTrace
+import com.imgcstmzr.runtime.log.subTrace
 import com.imgcstmzr.util.isEqualToByteWise
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.apache.commons.io.output.ByteArrayOutputStream
@@ -272,7 +271,9 @@ class ProcessMockTest {
                 flush() // !
 
                 expectThat(p.received).isEqualTo("user input")
-                (p.inputStream as ProcessMock.SlowInputStream).processInput(logger.miniTrace("???") { MiniTracer.nullMiniTracer() })
+                logger.subTrace<Any?>("???") {
+                    (p.inputStream as ProcessMock.SlowInputStream).processInput(this)
+                }
                 expectThat(p.inputStream.available()).isEqualTo("user input".length)
             }
         }

@@ -1,4 +1,3 @@
-import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 @Suppress("SpellCheckingInspection")
@@ -6,9 +5,9 @@ plugins {
     kotlin("jvm") version "1.4.10"
     id("se.patrikerdes.use-latest-versions") version "0.2.14"
     id("com.github.ben-manes.versions") version "0.29.0"
-    application
     id("com.github.johnrengelman.shadow") version "6.0.0"
     id("org.mikeneck.graalvm-native-image") version "0.8.0"
+    application
 }
 
 group = "com.imgcstmzr"
@@ -53,68 +52,38 @@ dependencies {
 }
 
 tasks {
-    test {
-        jvmArgs("-XX:MaxPermSize=256m")
-        minHeapSize = "128m"
-        maxHeapSize = "512m"
-        failFast = false
-    }
-}
-
-allprojects {
-    fun emoji(value: Boolean?): String = when (value) {
-        true -> "✅"
-        false -> "❌"
-        null -> "⭕"
-    }
-
-    fun createTestTypeConfigurer(vararg testTypes: String): Test.() -> Unit = {
-        useJUnitPlatform {
-            println("System properties: ${System.getProperties()}")
-            testTypes.forEach { testType ->
-                val propertyName = "skip${testType}Tests"
-                val propertyValue = System.getProperty(propertyName)
-                val skipTestType: Boolean = propertyValue?.let { it == "" || it == "true" } ?: false
-                println("Checking $propertyName ... $propertyValue → ${emoji(!skipTestType)}   ")
-                if (skipTestType) {
-                    excludeTags(testType)
-                    systemProperties[propertyName] = "true"
-                } else {
-                    includeTags(testType)
-                    systemProperties[propertyName] = "false"
-                }
-            }
-            check(includeTags.all { !excludeTags.contains(it) } && excludeTags.all { !includeTags.contains(it) }) {
-                "includeTage $includeTags and excludeTags $excludeTags must be mutually exclusive!"
-            }
-            println("Running " + testTypes.joinToString("  ", postfix = "  ") {
-                it + " Tests? " + emoji(includeTags.contains(it))
-            })
-        }
-    }
-
-    plugins.withId("java") {
-        this@allprojects.tasks {
-            val test = "test"(Test::class, createTestTypeConfigurer("Unit", "Integration", "E2E"))
-        }
-    }
-
-    tasks.named("dependencyUpdates", DependencyUpdatesTask::class.java).configure {
+    dependencyUpdates {
         checkForGradleUpdate = true
         outputFormatter = "json"
         outputDir = "build/dependencyUpdates"
         reportfileName = "report"
     }
-}
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "11"
-    kotlinOptions.useIR = true
-    kotlinOptions.languageVersion = "1.4"
-    @Suppress("SpellCheckingInspection")
-    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.InlineClasses"
-    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
-    kotlinOptions.freeCompilerArgs += "-Xinline-classes"
+    withType<KotlinCompile> {
+        kotlinOptions {
+            jvmTarget = "11"
+            useIR = true
+            languageVersion = "1.4"
+            freeCompilerArgs = freeCompilerArgs + listOf(
+                "-Xopt-in=kotlin.InlineClasses",
+                "-Xopt-in=kotlin.RequiresOptIn",
+                "-Xinline-classes"
+            )
+        }
+    }
+
+    test {
+        minHeapSize = "128m"
+        maxHeapSize = "512m"
+        failFast = false
+        ignoreFailures = true
+        filter {
+            includeTestsMatching("com.imgcstmzr.AllTests")
+        }
+        useJUnitPlatform {
+            excludeTags("Slow", "E2E")
+        }
+    }
 }
 
 application {

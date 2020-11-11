@@ -9,7 +9,7 @@ import com.bkahlert.koodies.string.Unicode.Emojis.heavyCheckMark
 import com.bkahlert.koodies.string.Unicode.greekSmallLetterKoppa
 import com.bkahlert.koodies.string.mapLines
 import com.bkahlert.koodies.string.prefixWith
-import com.bkahlert.koodies.string.truncateBy
+import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
@@ -26,8 +26,11 @@ import kotlin.contracts.contract
  * Logger interface to implement loggers that don't just log
  * but render log messages to provide easier understandable feedback.
  */
-interface RenderingLogger<R> {
+interface RenderingLogger<R> { // TODO remove R?
 
+    /**
+     * Prefix used to signify a nested logger.
+     */
     val nestingPrefix: String get() = " :"
 
     /**
@@ -37,21 +40,32 @@ interface RenderingLogger<R> {
      */
     fun render(trailingNewline: Boolean, block: () -> CharSequence)
 
-    fun logText(block: () -> CharSequence): RenderingLogger<R> = block().let { output ->
+    /**
+     * Logs raw text.
+     *
+     * *Please note that in contrast to the other logging methods, **no line separator is added.**.*
+     */
+    fun logText(block: () -> CharSequence): Unit = block().let { output ->
         render(false) { output }
-        this
     }
 
-    fun logLine(block: () -> CharSequence): RenderingLogger<R> = block().let { output ->
+    /**
+     * Logs a line of text.
+     */
+    fun logLine(block: () -> CharSequence): Unit = block().let { output ->
         render(true) { output }
-        this
     }
 
-    fun logStatus(items: List<HasStatus> = emptyList(), block: () -> IO = { OUT typed "" }): RenderingLogger<R> = block().let { output ->
+    /**
+     * Logs some programs [IO] and the status of processed [items].
+     */
+    fun logStatus(items: List<HasStatus> = emptyList(), block: () -> IO = { OUT typed "" }): Unit = block().let { output ->
         render(true) { "${output.formatted} (${items.size})" }
-        this
     }
 
+    /**
+     * Logs the result of the process this logger is used for.
+     */
     fun logResult(block: () -> Result<R>): R {
         val result = block()
         render(true) { formatResult(result) }
@@ -62,19 +76,17 @@ interface RenderingLogger<R> {
      * Explicitly logs a [Throwable]. The behaviour is the same as simply throwing it,
      * which is covered by [logResult] with a failed [Result].
      */
-    fun logException(block: () -> Throwable): RenderingLogger<R> = block().let {
+    fun logException(block: () -> Throwable): Unit = block().let {
         logResult { Result.failure(it) }
-        this
     }
 
     /**
      * Logs a caught [Throwable]. In contrast to [logResult] with a failed [Result] and [logException]
      * this method only marks the current logging context as failed but does not escalate (rethrow).
      */
-    fun logCaughtException(block: () -> Throwable): RenderingLogger<R> = block().let { ex ->
+    fun logCaughtException(block: () -> Throwable): Unit = block().let { ex ->
         recoveredLoggers.add(this)
         render(true) { formatResult(Result.failure<R>(ex)) }
-        this
     }
 
     companion object {
@@ -101,13 +113,18 @@ interface RenderingLogger<R> {
             } ?: format("$greekSmallLetterKoppa")
         }
 
-        inline fun <R, R2> RenderingLogger<R>?.subLogger(
+        /**
+         * Creates a logger which serves for logging a sub-process and all of its corresponding events.
+         *
+         * This logger uses at least one line per log event. If less room is available [singleLineLogger] is more suitable.
+         */
+        inline fun <reified R> RenderingLogger<*>?.subLogger(
             caption: CharSequence,
             ansiCode: AnsiCode? = null,
             borderedOutput: Boolean = (this as? BlockRenderingLogger)?.borderedOutput ?: false,
-            block: RenderingLogger<R2>.() -> R2,
-        ): R2 {
-            val logger: RenderingLogger<R2> =
+            block: RenderingLogger<R>.() -> R,
+        ): R {
+            val logger: RenderingLogger<R> =
                 when {
                     this == null -> BlockRenderingLogger(
                         caption = caption,
@@ -118,13 +135,14 @@ interface RenderingLogger<R> {
                         borderedOutput = borderedOutput,
                     )
                     else -> ((this as? BlockRenderingLogger)?.prefix ?: "$this::").let { prefix ->
-                        val color = ansiCode
+                        val color = ansiCode // TODO
                         BlockRenderingLogger(
                             caption = caption,
                             borderedOutput = borderedOutput,
                         ) { output ->
                             val indentedOutput = output.asAnsiString().mapLines {
-                                val truncateBy = color.invoke(it.truncateBy(prefix.length, minWhitespaceLength = 3))
+                                val prefixLength = "5"
+                                val truncateBy = color.invoke(it.replaceFirst(("\\s{$prefixLength}").toRegex(), ' '.repeat(5 - prefix.length)))
                                 truncateBy.prefixWith(prefix)
                             }
                             logText { indentedOutput }
@@ -134,26 +152,23 @@ interface RenderingLogger<R> {
             return kotlin.runCatching { block(logger) }.also { logger.logResult { it } }.getOrThrow()
         }
 
-        @JvmName("simpleSubLogger")
-        inline fun <R> RenderingLogger<R>?.subLogger(
+        /**
+         * Creates a logger which serves for logging a sub-process and all of its corresponding events.
+         *
+         * This logger logs all events using a single line of text. If more room is needed [subLogger] is more suitable.
+         */
+        inline fun <reified R> RenderingLogger<*>?.singleLineLogger(
             caption: CharSequence,
-            ansiCode: AnsiCode? = null,
-            borderedOutput: Boolean = (this as? BlockRenderingLogger)?.borderedOutput ?: false,
-            block: RenderingLogger<R>.() -> R,
-        ): R = subLogger<R, R>(caption, ansiCode, borderedOutput, block)
-
-        inline fun <reified R1, reified R2> RenderingLogger<R1>?.singleLineLogger(
-            caption: CharSequence,
-            noinline block: SingleLineLogger<R2>.() -> R2,
-        ): R2 = if (this == null) {
-            val logger: SingleLineLogger<R2> =
-                object : SingleLineLogger<R2>(caption) {
+            noinline block: SingleLineLogger<R>.() -> R,
+        ): R = if (this == null) {
+            val logger: SingleLineLogger<R> =
+                object : SingleLineLogger<R>(caption) {
                     override fun render(block: () -> CharSequence) {
                     }
                 }
             kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
         } else {
-            val logger: SingleLineLogger<R2> = object : SingleLineLogger<R2>(caption) {
+            val logger: SingleLineLogger<R> = object : SingleLineLogger<R>(caption) {
                 override fun render(block: () -> CharSequence) {
                     val message = block()
                     val prefix = this@singleLineLogger.nestingPrefix
@@ -163,18 +178,18 @@ interface RenderingLogger<R> {
             }
             kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
         }
-
-        @JvmName("simpleSingleLineLogger")
-        inline fun <reified R> RenderingLogger<R>?.singleLineLogger(
-            caption: CharSequence,
-            noinline block: SingleLineLogger<R>.() -> R,
-        ): R = singleLineLogger<R, R>(caption, block)
     }
 }
 
 @OptIn(ExperimentalContracts::class)
-inline fun <T : RenderingLogger<R>, R> T.applyLogging(crossinline block: T.() -> R) {
+inline fun <reified R> RenderingLogger<R>.applyLogging(crossinline block: RenderingLogger<R>.() -> R) {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     logResult { runCatching { block() } }
+}
+
+@OptIn(ExperimentalContracts::class)
+inline fun <reified R> RenderingLogger<R>.runLogging(crossinline block: RenderingLogger<R>.() -> R): R {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+    return logResult { runCatching { block() } }
 }
 

@@ -4,12 +4,12 @@ import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.docker.Docker.toContainerName
+import com.bkahlert.koodies.kaomoji.Kaomojis
+import com.bkahlert.koodies.kaomoji.Kaomojis.thinking
 import com.bkahlert.koodies.string.LineSeparators.LF
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.green
-import com.bkahlert.koodies.terminal.ascii.Kaomojis
-import com.bkahlert.koodies.terminal.ascii.Kaomojis.thinking
 import com.bkahlert.koodies.time.Now
 import com.imgcstmzr.process.CommandLineRunner
 import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
@@ -250,9 +250,7 @@ sealed class OperatingSystems : OperatingSystem {
 }
 
 
-abstract class RunningOperatingSystem(
-    val shutdownCommand: String = "sudo shutdown -h now",
-) {
+abstract class RunningOperatingSystem(val shutdownCommand: String = "sudo shutdown -h now") {
     abstract val logger: RenderingLogger<*>
     abstract val process: Process
 
@@ -276,6 +274,17 @@ abstract class RunningOperatingSystem(
     fun feedback(value: String) {
         logger.logLine {
             val kaomojiGroup = listOf(Kaomojis.Happy, Kaomojis.PeaceSign, Kaomojis.Smile, Kaomojis.ThumbsUp, Kaomojis.Proud).random()
+            LF + kaomojiGroup.random().thinking(value.capitalize().green()) + LF
+        }
+    }
+
+    /**
+     * Prints [value] on the output without actually forwarding it
+     * to the OS running process.
+     */
+    fun negativeFeedback(value: String) {
+        logger.logLine {
+            val kaomojiGroup = listOf(Kaomojis.Cry, Kaomojis.Depressed, Kaomojis.Disappointed, Kaomojis.Sad).random()
             LF + kaomojiGroup.random().thinking(value.capitalize().green()) + LF
         }
     }
@@ -309,7 +318,7 @@ abstract class RunningOperatingSystem(
         process.destroyForcibly()
     }
 
-    var shuttingDown: Boolean by observable(false) { _, oldValue, newValue ->
+    var shuttingDown: Boolean by observable(false) { _, _, _ ->
         feedback("Shutdown invoked")
     }
 
@@ -338,6 +347,8 @@ interface OperatingSystem {
         get() = Regex("Password:(?<optWhitespace>\\s*)")
     val readyPattern: Regex
         get() = Regex("(?<user>[\\w-_]+)@(?<host>[\\w-_]+):(?<path>[^#$]+?)[#$](?<optWhitespace>\\s*)")
+    val deadEndPattern: Regex
+        get() = Regex(".*" + Regex.escape("[ TIME ] Timed out waiting for device ") + ".*")
 
     /**
      * Boots the [OperatingSystem] on the [img] and performs the needed steps to get to the command prompt.
@@ -397,7 +408,7 @@ interface OperatingSystem {
 
         var pwLineExpectationFailed = 0
         return Program(
-            "login", { output -> "1/4: waiting for prompt" },
+            "login", { "1/4: waiting for prompt" },
             "1/4: waiting for prompt" to { output ->
                 when {
                     output.matches(loginPattern) -> {
@@ -470,11 +481,7 @@ interface OperatingSystem {
         }
 
         return Program(
-            "shutdown",
-            { output ->
-                enterShutdown()
-                "shutting down"
-            },
+            "shutdown", { "shutting down" },
             "shutting down" to { output ->
                 when {
                     output.matches(readyPattern) -> {

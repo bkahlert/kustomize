@@ -57,7 +57,7 @@ object TarArchiveGzCompressor {
      */
     fun Path.listArchive(): List<ArchiveEntry> {
         requireExists()
-        var archiveEntries: List<ArchiveEntry> = emptyList()
+        var archiveEntries: List<ArchiveEntry>
         GzipCompressorInputStream(bufferedInputStream()).use { gzipInput ->
             TarArchiveInputStream(gzipInput).use { archiveEntries = it.list() }
         }

@@ -47,7 +47,7 @@ class Watchdog(
                         lastEvent = RESET
                     }
                     STOP -> {
-                        renderingLogger.logStatus { IO.Type.META typed "Watchdog stopped." }
+                        renderingLogger.logLine { IO.Type.META typed "Watchdog stopped." }
                         lastEvent = STOP
                         return@Thread
                     }
@@ -59,7 +59,7 @@ class Watchdog(
                 }
             } catch (e: InterruptedException) {
                 with(TC) {
-                    echo(red("Watchdog was interrupted. Stopping."))
+                    echo(red("Watchdog was interrupted (last event: $lastEvent). Stopping."))
                 }
                 return@Thread
             }

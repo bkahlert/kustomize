@@ -45,7 +45,7 @@ class RenderingLoggerIntTest {
     @Test
     fun `should allow single line logging`(@Columns(100) logger: InMemoryLogger<Unit>) {
         logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
-        logger.singleLineLogger<Unit, Unit>("mini") {
+        logger.singleLineLogger<Any>("mini") {
             logStatus { OUT typed "A" }
             logStatus { OUT typed "bb" }
             logStatus { OUT typed " " }
@@ -71,7 +71,7 @@ class RenderingLoggerIntTest {
     fun `should allow nested logging`(@Columns(100) logger: InMemoryLogger<String>) {
         logger.logStatus { OUT typed "outer 1" }
         logger.logStatus { OUT typed "outer 2" }
-        logger.subLogger<String, Unit>("nested log", null) {
+        logger.subLogger<Any>("nested log", null) {
             logStatus { OUT typed "nested 1" }
             logStatus { OUT typed "nested 2" }
             logStatus { OUT typed "nested 3" }
@@ -160,15 +160,15 @@ class RenderingLoggerIntTest {
             dynamicTest("should allow complex layout—$label") {
                 logger.logStatus { OUT typed "outer 1" }
                 logger.logLine { "outer 2" }
-                logger.subLogger<Unit, Unit>("nested log") {
+                logger.subLogger<Any>("nested log") {
                     logStatus { OUT typed "nested 1" }
-                    singleLineLogger<Unit, Unit>("mini segment") {
+                    singleLineLogger<Any>("mini segment") {
                         logStatus { ERR typed "12345" }
                         logStatus { META typed "sample" }
                     }
-                    subLogger<Unit, Unit>("nested log") {
+                    subLogger<Any>("nested log") {
                         logStatus { OUT typed "nested 1" }
-                        singleLineLogger<Unit, Unit>("mini segment") {
+                        singleLineLogger<Any>("mini segment") {
                             logStatus { ERR typed "12345" }
                             logStatus { META typed "sample" }
                         }
@@ -187,7 +187,7 @@ class RenderingLoggerIntTest {
         }
 
     @Test
-    fun `should log status`(@Columns(100) logger: InMemoryLogger<Unit>) {
+    fun `should log status`(@Columns(100) logger: InMemoryLogger<Any>) {
         logger.logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logger.logResult { Result.success(Unit) }
 
@@ -202,9 +202,9 @@ class RenderingLoggerIntTest {
     }
 
     @Test
-    fun `should log status in same column`(@Columns(100) logger: InMemoryLogger<Unit>) {
+    fun `should log status in same column`(@Columns(100) logger: InMemoryLogger<Any>) {
         logger.logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
-        logger.subLogger<Unit, Unit>("nested", null) {
+        logger.subLogger<Any>("nested", null) {
             logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         }
         logger.logResult { Result.success(Unit) }
@@ -221,7 +221,7 @@ class RenderingLoggerIntTest {
         kotlin.runCatching {
             logger.logStatus { OUT typed "outer 1" }
             logger.logStatus { OUT typed "outer 2" }
-            logger.subLogger<String, Unit>("nested log", null) {
+            logger.subLogger<Any>("nested log", null) {
                 logStatus { OUT typed "nested 1" }
                 throw IllegalStateException("an exception")
             }
@@ -258,7 +258,7 @@ class RenderingLoggerIntTest {
     @Test
     fun `should simply log multiple calls to logResult`(@Columns(100) logger: InMemoryLogger<String>) {
         expectCatching {
-            logger.singleLineLogger<String, Int>("close twice") {
+            logger.singleLineLogger<Int>("close twice") {
                 logStatus { META typed "line" }
                 logResult { Result.success(1) }
                 logResult { Result.success(2) }
@@ -309,10 +309,8 @@ class RenderingLoggerIntTest {
                 │   、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀          
                 │   、ヽ｀、ヽ                                                                 
                 │
-                ╰─────╴✔ returned ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、
-                ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽノ＞＜)ノ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ
-                ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ
-                ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ
+                ╰─────╴✔ returned ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽノ＞＜)ノ ｀、ヽ｀、ヽ
+                ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ
                 """.trimIndent())
     }
 }

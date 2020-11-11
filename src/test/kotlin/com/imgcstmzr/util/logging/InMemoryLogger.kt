@@ -67,27 +67,27 @@ open class InMemoryLogger<T> private constructor(
         logLine { input }
     }
 
-    override fun <MR> Tracer<T>.macroTrace(f: String, block: MacroTracer<MR>.() -> MR): MR {
+    override fun <MR> macroTrace(f: String, block: MacroTracer<MR>.() -> MR): MR {
         TODO()
     }
 
-    override fun <MR> Tracer<T>.macroTrace(f: KCallable<MR>, block: MacroTracer<MR>.() -> MR): MR {
+    override fun <MR> macroTrace(f: KCallable<MR>, block: MacroTracer<MR>.() -> MR): MR {
         TODO()
     }
 
-    override fun <MR> Tracer<T>.macroTrace(f: KFunction0<MR>, block: MacroTracer<MR>.() -> MR): MR {
+    override fun <MR> macroTrace(f: KFunction0<MR>, block: MacroTracer<MR>.() -> MR): MR {
         TODO()
     }
 
-    override fun <MR> Tracer<T>.macroTrace1(f: KFunction1<*, MR>, block: MacroTracer<MR>.() -> MR): MR {
+    override fun <MR> macroTrace1(f: KFunction1<*, MR>, block: MacroTracer<MR>.() -> MR): MR {
         TODO()
     }
 
-    override fun <MR> Tracer<T>.macroTrace2(f: KFunction2<*, *, MR>, block: MacroTracer<MR>.() -> MR): MR {
+    override fun <MR> macroTrace2(f: KFunction2<*, *, MR>, block: MacroTracer<MR>.() -> MR): MR {
         TODO()
     }
 
-    override fun <MR> Tracer<T>.macroTrace3(f: KFunction3<*, *, *, MR>, block: MacroTracer<MR>.() -> MR): MR {
+    override fun <MR> macroTrace3(f: KFunction3<*, *, *, MR>, block: MacroTracer<MR>.() -> MR): MR {
         TODO()
     }
 }

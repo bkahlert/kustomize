@@ -63,7 +63,7 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
             osImage = this,
             logger = logger,
             programs = arrayOf(
-                Program("test", verificationStep, "testing" to verificationStep),//.logging(),
+                Program("test", { "testing" }, "testing" to verificationStep),//.logging(),
             ))
     }
 

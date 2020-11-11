@@ -68,7 +68,7 @@ inline class CodePoint(val codePoint: Int) : Comparable<CodePoint> {
      * @return `true` if this code point is between a high surrogate
      * @see isHighSurrogate
      */
-    val isWhitespace: Boolean get() = Character.isWhitespace(codePoint)
+    val isWhitespace: Boolean get() = Character.isWhitespace(codePoint) || Unicode.whitespaces.contains(char)
 
     /**
      * Contains the character pointed to and represented by a [String].

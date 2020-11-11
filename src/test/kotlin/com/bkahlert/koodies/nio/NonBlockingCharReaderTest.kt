@@ -29,16 +29,16 @@ class NonBlockingCharReaderTest {
     @Test
     fun `should read null if empty`(logger: InMemoryLogger<String?>) {
         val reader = NonBlockingCharReader("".byteInputStream(), 100.milliseconds)
-        5 times { expectThat(reader.read(CharArray(1), 0, 1, logger)).isLessThanOrEqualTo(0) }
-        10 times { expectThat(reader.read(CharArray(1), 0, 1, logger)).isEqualTo(-1) }
+        5 times { expectThat(reader.read(CharArray(1), 0, logger)).isLessThanOrEqualTo(0) }
+        10 times { expectThat(reader.read(CharArray(1), 0, logger)).isEqualTo(-1) }
     }
 
     @Test
     fun `should return null if source is closed`(logger: InMemoryLogger<String?>) {
         val reader = NonBlockingCharReader("123".byteInputStream(), 100.milliseconds)
         expectThat(reader.readText()).isEqualTo("123")
-        5 times { expectThat(reader.read(CharArray(1), 0, 1, logger)).isLessThanOrEqualTo(0) }
-        10 times { expectThat(reader.read(CharArray(1), 0, 1, logger)).isEqualTo(-1) }
+        5 times { expectThat(reader.read(CharArray(1), 0, logger)).isLessThanOrEqualTo(0) }
+        10 times { expectThat(reader.read(CharArray(1), 0, logger)).isEqualTo(-1) }
     }
 
     @Test

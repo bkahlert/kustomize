@@ -36,7 +36,7 @@ object ImageExtractor {
                 unarchive(temp)
             }
             else -> {
-                echo("Multiple image candidates found (${filteredArchiveEntries.joinToString { it.name }}) found. Extracting and choosing the largest one.")
+                echo("Multiple image candidates (${filteredArchiveEntries.joinToString { it.name }}) found. Extracting and choosing the largest one.")
                 unarchive(temp)
             }
         }

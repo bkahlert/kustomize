@@ -3,6 +3,7 @@ package com.bkahlert.koodies.concurrent.process
 import com.bkahlert.koodies.io.RedirectingOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.io.OutputStream.nullOutputStream
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
@@ -19,42 +20,23 @@ abstract class RunningProcess : Process() {
     protected abstract val process: Process
     protected abstract val result: CompletableFuture<CompletedProcess>
 
-    protected val ioLog: IOLog = IOLog()
+    /**
+     * Contains the currently logged I/O.
+     */
+    abstract val ioLog: IOLog
 
-    class TeeOutputStream(outputStream: OutputStream, branch: OutputStream) : CommonsTeeOutputStream(outputStream, branch) {
-        override fun close() {
-            kotlin.runCatching { super.close() }
-                .onFailure {
-                    (0 until 10).forEach { println("caught close error $it") }
-                }
-        }
-    }
-
-    class TeeInputStream(inputStream: InputStream, branch: OutputStream) : CommonsTeeInputStream(inputStream, branch, false) {
-        override fun close() {
-            kotlin.runCatching { super.close() }
-                .onFailure {
-                    (0 until 10).forEach { println("caught close error: $it") }
-                }
-        }
-    }
+    private class TeeOutputStream(outputStream: OutputStream, branch: OutputStream) : CommonsTeeOutputStream(outputStream, branch)
+    private class TeeInputStream(inputStream: InputStream, branch: OutputStream) : CommonsTeeInputStream(inputStream, branch, false)
 
     val metaStream: OutputStream get() = capturingMetaStream
-    private val capturingMetaStream: OutputStream by lazy {
-        TeeOutputStream(OutputStream.nullOutputStream(), RedirectingOutputStream {
-            ioLog.add(IO.Type.META, it)
-        })
-    }
+    private val capturingMetaStream: OutputStream by lazy { TeeOutputStream(nullOutputStream(), RedirectingOutputStream { ioLog.add(IO.Type.META, it) }) }
 
     override fun getOutputStream(): OutputStream = capturingOutputStream
-    private val capturingOutputStream: OutputStream by lazy {
-        TeeOutputStream(process.outputStream, RedirectingOutputStream {
-            ioLog.add(IO.Type.IN, it)
-        })
-    }
+    private val capturingOutputStream: OutputStream by lazy { TeeOutputStream(process.outputStream, RedirectingOutputStream { ioLog.add(IO.Type.IN, it) }) }
 
     override fun getInputStream(): InputStream = capturingInputStream
     private val capturingInputStream: InputStream by lazy { TeeInputStream(process.inputStream, RedirectingOutputStream { ioLog.add(IO.Type.OUT, it) }) }
+
     override fun getErrorStream(): InputStream = capturingErrorStream
     private val capturingErrorStream: InputStream by lazy { TeeInputStream(process.errorStream, RedirectingOutputStream { ioLog.add(IO.Type.ERR, it) }) }
 
@@ -69,7 +51,7 @@ abstract class RunningProcess : Process() {
     override fun info(): ProcessHandle.Info = process.info()
     override fun children(): Stream<ProcessHandle> = process.children()
     override fun descendants(): Stream<ProcessHandle> = process.descendants()
-    override fun toString(): String = "RunningProcess(process=$process, result=${result.toSimpleString()})"
+    override fun toString(): String = "RunningProcess($process; ${result.toSimpleString()}; $ioLog)"
 
     /**
      * Causes the current thread to wait, if necessary, until the
@@ -156,9 +138,8 @@ abstract class RunningProcess : Process() {
          * Simplified version of [CompletableFuture.toString]. Here only the state is kept and
          * the surrounding `CompletableFuture133sds982[` stuff trashed.
          */
-        private fun <T> CompletableFuture<T>.toSimpleString(): String {
-            return Regex(".*\\[(.*)]").matchEntire(toString())?.groupValues?.last() ?: toString()
-        }
+        private fun <T> CompletableFuture<T>.toSimpleString(): String =
+            Regex(".*\\[(.*)]").matchEntire(toString())?.groupValues?.last() ?: toString()
 
         /**
          * A non existent [Process] that serves as a not-null instance but whose methods are never meant to be called.
@@ -179,6 +160,7 @@ abstract class RunningProcess : Process() {
         val nullRunningProcess: RunningProcess = object : RunningProcess() {
             override val process: Process = nullProcess
             override val result: CompletableFuture<CompletedProcess> = CompletableFuture.completedFuture(CompletedProcess(-1L, -1, emptyList()))
+            override val ioLog: IOLog = IOLog()
         }
     }
 }

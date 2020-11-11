@@ -21,7 +21,7 @@ import kotlin.time.seconds
 
 @OptIn(ExperimentalTime::class)
 @Execution(CONCURRENT)
-class PollTest {
+class PollTestKt {
     @Test
     fun `should complete if condition becomes true`() {
         var counter = Random(12).nextInt(5, 10)
@@ -68,5 +68,12 @@ class PollTest {
     fun `should only accept positive interval`() {
         expectCatching { measureTime { 0.milliseconds.poll { true } } }
             .isFailure().isA<IllegalArgumentException>()
+    }
+
+    @Test
+    fun `should poll using alternative syntax`() {
+        var counter = 0
+        poll { counter++; false }.every(100.milliseconds).forAtMost(1.seconds) {}
+        expectThat(counter).isGreaterThan(5).isLessThan(15)
     }
 }

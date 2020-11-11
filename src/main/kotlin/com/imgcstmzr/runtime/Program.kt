@@ -30,19 +30,19 @@ import com.imgcstmzr.util.quoted
  */
 class Program(
     val name: String,
-    private val initialState: RunningOperatingSystem.(String) -> String?,
+    private val initialState: RunningOperatingSystem.() -> String?,
     private val states: List<ProgramState>,
 ) : HasStatus {
 
     constructor(
         purpose: String,
-        initialState: RunningOperatingSystem.(String) -> String?,
+        initialState: RunningOperatingSystem.() -> String?,
         vararg states: ProgramState,
     ) : this(purpose, initialState, states.toList())
 
     private var logging = false
     private var initiating: Boolean = true
-    val stateCount: Int
+    private val stateCount: Int
         get() = states.size
     var state: String? = null
     val halted: Boolean
@@ -51,20 +51,21 @@ class Program(
     private val stateMachine: Map<String, RunningOperatingSystem.(String) -> String?> = states.associate { it }
     private var stateHistory: MutableList<HistoryElement> = mutableListOf()
 
-    private fun handler(): RunningOperatingSystem.(String) -> String? {
+    @Suppress("SpellCheckingInspection")
+    private fun handler(runningOperatingSystem: RunningOperatingSystem): RunningOperatingSystem.(String) -> String? {
         if (initiating) {
             initiating = false
-            return initialState
+            state = initialState(runningOperatingSystem)
         }
         if (halted) {
-            return { output -> echo("Execution of ${name.quoted} already stopped. No more processing.".red()); null }
+            return { output -> echo("Execution of ${name.quoted} already stopped. No more processing ${output.quoted}".red()); null }
         }
         return stateMachine[state] ?: throw IllegalStateException("Unknown state $state. Available: ${stateMachine.keys}. History: $stateHistory")
     }
 
     fun compute(runningOperatingSystem: RunningOperatingSystem, IO: IO): Boolean {
         val oldState = state
-        state = handler().invoke(runningOperatingSystem, IO.unformatted)
+        state = handler(runningOperatingSystem).invoke(runningOperatingSystem, IO.unformatted)
         val historyElement = HistoryElement(oldState, IO, state)
         if (logging) TermUi.debug("$name execution step #${stateHistory.size}: $historyElement")
         stateHistory.add(historyElement)
@@ -147,6 +148,7 @@ class Program(
          * apt-get autoremove -y -m
          * ```
          */
+        @Suppress("SpellCheckingInspection")
         fun fromSetupScript(name: String, readyPattern: Regex, labelledScripts: String): Array<Program> {
             return splitScripts(labelledScripts).map { labelledScript ->
                 splitLabel(labelledScript).let { (label, script) -> fromScript(label ?: "$name—$script", readyPattern, script) }
@@ -168,7 +170,7 @@ class Program(
             val states: List<ProgramState> = commands.flatMapIndexed { index, command ->
                 val currentStateName: String = stateName(index, commands)
                 val currentCompletionStateName: String = stateName(index, commands) + "…"
-                val nextStateName: String? =
+                val nextStateName: String =
                     if (index + 1 < commands.size) stateName(index + 1, commands)
                     else completionState.first
 
@@ -193,7 +195,7 @@ class Program(
 
             return Program(
                 name = name.removePrefix(":").trim(),
-                initialState = { output -> if (commands.isEmpty()) null else stateName(0, commands) },
+                initialState = { if (commands.isEmpty()) null else stateName(0, commands) },
                 states = states
             )
         }

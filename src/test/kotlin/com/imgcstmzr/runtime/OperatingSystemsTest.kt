@@ -9,6 +9,7 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
+import com.bkahlert.koodies.tracing.trace
 import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.imgcstmzr.cli.TestCli
 import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
@@ -109,6 +110,29 @@ class OperatingSystemsTest {
             }
         }
 
+        @ConcurrentTestFactory
+        fun `should detect dead end line`() = mapOf(
+            true to listOf(
+                "[ TIME ] Timed out waiting for device ",
+                "[ TIME ] Timed out waiting for device /dev/serial1.  ",
+                "*[ TIME ] Timed out waiting for device /dev/serial1.",
+                "[ TIME ] Timed out waiting for device /dev/serial5.",
+            ),
+            false to listOf(
+                "",
+                "   ",
+                "anything",
+                "anything else:",
+                "[ ON TIME ] Timed out waiting for device /dev/serial1.\r",
+            )
+        ).flatMap { (expected, values) ->
+            values.map {
+                dynamicTest(expected.asEmoji + " $it") {
+                    expectThat(RaspberryPiLite.deadEndPattern.matches(it)).isEqualTo(expected)
+                }
+            }
+        }
+
         @Test
         fun `should be provided with programs in correct order`() {
             TestCli.cmd.main(emptyList())
@@ -136,7 +160,7 @@ class OperatingSystemsTest {
             ).map { baseDelayPerWord ->
                 val name = "$case + $baseDelayPerWord line delay"
                 dynamicTest(name) {
-                    val workflow = os.loginProgram(Credentials("john", "passwd123")).logging()
+                    val workflow = os.loginProgram(Credentials("john", "passwd123"))//.logging()
                     val logger = loggerFactory.createLogger(name)
                     val processMock = ProcessMock.withIndividuallySlowInput(
                         inputs = inputs,
@@ -154,7 +178,7 @@ class OperatingSystemsTest {
                     assertTimeoutPreemptively(2.minutes, {
                         var finished = false
                         reader.forEachLine { line ->
-                            logger.miniTrace<String?, Unit>("read<<") {
+                            logger.miniTrace("read<<") {
                                 if (finished) {
                                     trace(line.debug.magenta())
                                 } else {
@@ -184,7 +208,7 @@ class OperatingSystemsTest {
         fun `should finish program`(logger: InMemoryLogger<String?>) {
             TestCli.cmd.main(emptyList())
             val scriptContent = TestCli.cmd.scripts["the-basics"] ?: throw NoSuchElementException("Could not load program")
-            val script = os.compileSetupScript("test", scriptContent)[1].logging()
+            val script = os.compileSetupScript("test", scriptContent)[1]//.logging()
             val processMock = ProcessMock(logger = logger, processExit = { computing() })
             val runningOS = object : RunningOperatingSystem() {
                 override val logger: RenderingLogger<*> = logger

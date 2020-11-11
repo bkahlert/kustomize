@@ -7,6 +7,7 @@ import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.util.DockerRequired
 import com.imgcstmzr.util.OS
+import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
@@ -19,12 +20,12 @@ class ImgResizePatchTest {
 
     @Test
     @DockerRequired
-    fun `should increase size`(@OS(RaspberryPiLite::class) osImage: OperatingSystemImage) {
+    fun `should increase size`(@OS(RaspberryPiLite::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
         val oldSize = osImage.size
         val newSize = osImage.size + 10.Mebi.bytes
         val patch = ImgResizePatch(newSize)
 
-        patch.patch(osImage)
+        patch.patch(osImage, logger)
 
         expectThat(osImage.size)
             .isEqualTo(newSize)

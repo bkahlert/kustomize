@@ -47,23 +47,23 @@ class PatchesKtTest {
     @Isolated // flaky OutputCapture
     inner class ConsoleLoggingByDefault {
         @Test
-        fun `should only log to console by default`(img: OperatingSystemImage, capturedOutput: CapturedOutput) {
+        fun `should only log to console by default`(osImage: OperatingSystemImage, capturedOutput: CapturedOutput) {
             val nullPatch = buildPatch("No-Op Patch") {}
-            nullPatch.patch(img)
+            nullPatch.patch(osImage)
             expectThat(capturedOutput.out.removeEscapeSequences()).isNotEmpty()
         }
 
         @Test
-        fun `should log bordered by default`(img: OperatingSystemImage, capturedOutput: CapturedOutput) {
+        fun `should log bordered by default`(osImage: OperatingSystemImage, capturedOutput: CapturedOutput) {
             val nullPatch = buildPatch("No-Op Patch") {}
-            nullPatch.patch(img)
+            nullPatch.patch(osImage)
             expectThat(capturedOutput.out.trim().removeEscapeSequences()).matchesCurlyPattern("""
             Started: NO-OP PATCH
              IMG Operations: —
              File System Operations: —
              IMG Operations II: —
              Scripts: —
-            Completed: ✔ returned 0
+            Completed: ✔
         """.trimIndent())
         }
     }
@@ -72,9 +72,9 @@ class PatchesKtTest {
     @Isolated // flaky OutputCapture
     inner class NoSystemOut {
         @Test
-        fun `should only log using specified logger`(img: OperatingSystemImage, logger: InMemoryLogger<Any>, capturedOutput: CapturedOutput) {
+        fun `should only log using specified logger`(osImage: OperatingSystemImage, logger: InMemoryLogger<Any>, capturedOutput: CapturedOutput) {
             val nullPatch = buildPatch("No-Op Patch") {}
-            nullPatch.patch(img, logger)
+            nullPatch.patch(osImage, logger)
             expectThat(logger.logged.removeEscapeSequences()).isNotEmpty()
             expectThat(capturedOutput.out.removeEscapeSequences()).isEmpty()
         }
@@ -92,7 +92,7 @@ class PatchesKtTest {
           File System Operations: —
           IMG Operations II: —
           Scripts: —
-         Completed: ✔ returned 0
+         Completed: ✔
         """.trimIndent())
     }
 

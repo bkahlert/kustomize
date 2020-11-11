@@ -5,7 +5,8 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.IN
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
-import com.bkahlert.koodies.concurrent.process.RunningProcess
+import com.bkahlert.koodies.concurrent.process.RunningProcess.Companion.nullRunningProcess
+import com.bkahlert.koodies.concurrent.startAsThread
 import com.bkahlert.koodies.docker.Docker
 import com.bkahlert.koodies.docker.DockerProcess
 import com.bkahlert.koodies.terminal.ANSI
@@ -30,6 +31,8 @@ object ArmRunner {
     @Suppress("SpellCheckingInspection")
     private const val DOCKER_IMAGE = "lukechilds/dockerpi:vm"
 
+    private val nullDockerProcess: DockerProcess = DockerProcess("NULL") { nullRunningProcess }
+
     /**
      * Starts a [DockerProcess] with [name] that boots the [osImage].
      * All [IO] is passed to the [outputProcessor] which has an instance
@@ -42,15 +45,26 @@ object ArmRunner {
         logger: RenderingLogger<T>? = null,
         outputProcessor: (RunningOperatingSystem.(IO) -> Any)? = null,
     ): DockerProcess {
-        var runningProcess: RunningProcess = RunningProcess.nullRunningProcess
+        var dockerProcess: DockerProcess = nullDockerProcess
         val runningOperatingSystem = object : RunningOperatingSystem() {
-            override val process: Process get() = runningProcess
+            override val process: Process get() = dockerProcess
             override val logger: RenderingLogger<T> = logger ?: MutedBlockRenderingLogger()
         }
         return Docker.run(
-            outputProcessor = outputProcessor?.let {
-                { IO: IO ->
-                    it(runningOperatingSystem, IO)
+            outputProcessor = outputProcessor.let {
+                var dying = false
+                { io: IO ->
+                    if (!dying) {
+                        if (io.unformatted.matches(osImage.deadEndPattern)) {
+                            startAsThread {
+                                dying = true
+                                runningOperatingSystem.negativeFeedback("The VM is stuck. Chances are the VM starts correctly with less load on this machine.")
+                            }
+                            dockerProcess.destroy()
+                            throw IllegalStateException(io.unformatted)
+                        }
+                        it?.invoke(runningOperatingSystem, io)
+                    }
                 }
             },
             init = {
@@ -60,14 +74,14 @@ object ArmRunner {
                     image = DOCKER_IMAGE,
                 )
             }
-        ).also { runningProcess = it }
+        ).also { dockerProcess = it }
     }
 
     /**
      * Starts a [DockerProcess] with [name] that boots the [osImage] and
      * runs all provided [programs].
      *
-     * Before the [programs] the [osImage] will be booted and a login takes place.
+     * Before the [programs] the [osImage] will be booted and an [autoLogin] takes place.
      * After the execution of all [programs] finishes the [osImage] will
      * be shutdown.
      *
@@ -77,10 +91,11 @@ object ArmRunner {
         name: String,
         osImage: OperatingSystemImage,
         logger: RenderingLogger<Any>,
+        autoLogin: Boolean = true,
         vararg programs: Program,
-    ): Int = logger.subLogger<Any, Int>("Running ${osImage.shortName} with ${programs.format()}", ansiCode = ANSI.termColors.cyan) {
+    ): Int = logger.subLogger("Running ${osImage.shortName} with ${programs.format()}", ansiCode = ANSI.termColors.cyan) {
         val unfinished: MutableList<Program> = mutableListOf(
-            osImage.loginProgram(osImage.credentials),/*.logging()*/
+            *(if (autoLogin) arrayOf(osImage.loginProgram(osImage.credentials)/*.logging()*/) else emptyArray()),
             *programs,
             osImage.shutdownProgram(),/*.logging()*/
         )
@@ -109,5 +124,10 @@ object ArmRunner {
     fun Program.runOn(
         osImage: OperatingSystemImage,
         logger: RenderingLogger<Any>,
-    ): Int = run(name, osImage, logger, this)
+    ): Int = run(
+        name = name,
+        osImage = osImage,
+        logger = logger,
+        programs = arrayOf(this)
+    )
 }

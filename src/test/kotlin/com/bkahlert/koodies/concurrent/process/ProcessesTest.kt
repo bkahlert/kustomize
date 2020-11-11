@@ -20,6 +20,7 @@ import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequenc
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.strikt.containsExactlyInSomeOrder
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
+import com.bkahlert.koodies.time.poll
 import com.bkahlert.koodies.time.sleep
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.containsAtLeast
@@ -170,13 +171,10 @@ class ProcessesTest {
     }
 
     @OptIn(ExperimentalTime::class)
-    @Slow @Test
+    @Test
     fun `should be destroyable`() {
         measureTime {
-            val output = mutableSetOf<String>().synchronized()
-            val process = startShellScript(outputProcessor = {
-                if (it.type != META) output.add(it.unformatted)
-            }) {
+            val process = startShellScript {
                 !"""
                 while true; do
                     >&1 echo "test out"
@@ -185,12 +183,15 @@ class ProcessesTest {
                 done
                 """.trimIndent()
             }
-            startAsDaemon(2.seconds) {
-                process.destroy()
+            poll { process.ioLog.logged.any { it.type != META } }.every(500.milliseconds).forAtMost(5.seconds) {
+                fail("No I/O logged within 5 seconds.")
             }
-            process.waitForCompletion()
-            expectThat(output).containsExactlyInAnyOrder("test out", "test err")
-        }.let { expectThat(it).isLessThanOrEqualTo(2.5.seconds) }
+            process.destroy()
+            expectThat(process.waitForCompletion()) {
+                get { output }.contains("test out")
+                get { error }.contains("test err")
+            }
+        }.let { expectThat(it).isLessThanOrEqualTo(5.seconds) }
     }
 
     @Nested
@@ -207,7 +208,12 @@ class ProcessesTest {
                     done
                 """.trimIndent()
             }
-            startAsDaemon(2.seconds) {
+            startAsDaemon {
+                poll { process.ioLog.logged.size >= 6 }
+                    .every(100.milliseconds)
+                    .forAtMost(50.seconds) {
+                        fail("Not enough log lines were recorded in time.")
+                    }
                 process.destroyForcibly()
             }
             expectCatching { process.waitForExitCode(143) }
@@ -215,7 +221,7 @@ class ProcessesTest {
                 .isA<IllegalStateException>()
                 .message
                 .isNotNull()
-                .contains("last 6 I/O lines")
+                .contains("last ${process.ioLog.logged.size} I/O lines")
                 .containsAtLeast("koodies.process")
                 .containsAtLeast(OUT.format("test out"), 2)
                 .containsAtLeast(ERR.format("test err"), 2)
@@ -362,8 +368,7 @@ class ProcessesTest {
         5.5.seconds.sleep()
         process.destroy()
 
-        val (_, exitCode, io, _, _, _, _) = process.waitForCompletion()
-        expectThat(exitCode).isEqualTo(143)
+        val (_, _, io, _, _, _, _) = process.waitForCompletion()
         expectThat(io.drop(2)).containsExactlyInSomeOrder {
             +(OUT typed "test out") + (ERR typed "test err")
             +(IN typed "just read ${OUT.format("test out")}") + (IN typed "just read ${ERR.format("test err")}")

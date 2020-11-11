@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.string
 
-import com.bkahlert.koodies.terminal.ascii.Kaomojis
+import com.bkahlert.koodies.kaomoji.Kaomojis
 import com.imgcstmzr.util.containsOnlyCharacters
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.RepeatedTest

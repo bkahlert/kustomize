@@ -2,13 +2,15 @@ package com.imgcstmzr.process
 
 import com.bkahlert.koodies.concurrent.process.CompletedProcess
 import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
+import com.bkahlert.koodies.concurrent.process.IO.Type.IN
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
+import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.docker.Docker
+import com.bkahlert.koodies.kaomoji.Kaomojis
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.string.match
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
-import com.github.ajalt.clikt.output.TermUi
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
 import com.imgcstmzr.runtime.log.RenderingLogger
@@ -60,7 +62,7 @@ class Guestfish(
     /**
      * Runs the given [guestfishOperation] on a [Guestfish] instance with [imgPathOnHost] mounted.
      */
-    fun run(guestfishOperation: GuestfishOperation) {
+    fun run(guestfishOperation: GuestfishOperation) { // TODO check why no logger is used
         if (guestfishOperation.commandCount == 0) {
             logger.logStatus { META typed "No commands specified to run inside ${imgPathOnHost.fileName}. Skipping." }
             return
@@ -99,7 +101,6 @@ class Guestfish(
                     logStatus { META typed "Password of user ${credentials.username.quoted} updated." }
                     imgPathOnHost.credentials = credentials
                 }
-            0
         }
         if (debug) logger.subLogger(caption = caption, ansiCode = null, block = block)
         else logger.singleLineLogger(caption = caption, block = block)
@@ -178,12 +179,17 @@ class Guestfish(
             volumes: Map<Path, Path>,
             operation: GuestfishOperation,
             workingDirectory: Path = Paths.WORKING_DIRECTORY,
-            debug: Boolean = false,
-        ): CompletedProcess =
+            logger: RenderingLogger<*>,
+        ): CompletedProcess = logger.subLogger("Running ${operation.commandCount} guestfish operations... ${Kaomojis.fishing()}") {
             Docker.run(
                 workingDirectory = workingDirectory,
-                outputProcessor = { output ->
-                    if (debug || output.type == ERR) TermUi.echo(output)
+                outputProcessor = { io ->
+                    when (io.type) {
+                        META -> logLine { io }
+                        IN -> logLine { io }
+                        OUT -> logLine { io }
+                        ERR -> throw IllegalStateException(io.unformatted)
+                    }
                 }
             ) {
                 run(
@@ -194,6 +200,7 @@ class Guestfish(
                     args = listOf("--", (operation + shutdownOperation).asHereDoc()),
                 )
             }.waitForExitCode()
+        }
     }
 }
 

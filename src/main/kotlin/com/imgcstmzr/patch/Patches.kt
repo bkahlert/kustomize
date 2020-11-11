@@ -34,8 +34,8 @@ fun Patch.banner() { // TODO make use of it or delete
     echo("")
 }
 
-fun Patch.patch(osImage: OperatingSystemImage, logger: RenderingLogger<Any>? = null) {
-    logger.subLogger(name.toUpperCase(), null, borderedOutput = false) {
+fun Patch.patch(osImage: OperatingSystemImage, logger: RenderingLogger<*>? = null) {
+    logger.subLogger<Any>(name.toUpperCase(), null, borderedOutput = false) {
         applyPreFileImgOperations(osImage, this@patch)
         applyGuestfishAndFileSystemOperations(osImage, this@patch)
         applyPostFileImgOperations(osImage, this@patch)
@@ -43,100 +43,85 @@ fun Patch.patch(osImage: OperatingSystemImage, logger: RenderingLogger<Any>? = n
     }
 }
 
-fun RenderingLogger<Any>.applyPreFileImgOperations(osImage: OperatingSystemImage, patch: Patch) {
-    val count = patch.preFileImgOperations.size
-    if (count == 0) {
+fun RenderingLogger<*>.applyPreFileImgOperations(osImage: OperatingSystemImage, patch: Patch): Any =
+    if (patch.preFileImgOperations.isEmpty()) {
         logLine { META typed "IMG Operations: —" }
-        return
-    }
-
-    subLogger("IMG Operations ($count)", null, borderedOutput = false) {
-        patch.preFileImgOperations.onEachIndexed { index, op ->
-            op(osImage, this)
+    } else {
+        subLogger("IMG Operations (${patch.preFileImgOperations.size})", null, borderedOutput = false) {
+            patch.preFileImgOperations.onEachIndexed { index, op ->
+                op(osImage, this)
+            }
         }
-        0
     }
-}
 
-fun RenderingLogger<Any>.applyGuestfishAndFileSystemOperations(osImage: OperatingSystemImage, patch: Patch): Any {
-    val count = patch.guestfishOperations.size + patch.fileSystemOperations.size
-    if (count == 0) {
+fun RenderingLogger<*>.applyGuestfishAndFileSystemOperations(osImage: OperatingSystemImage, patch: Patch): Any =
+    if (patch.guestfishOperations.isEmpty() && patch.fileSystemOperations.isEmpty()) {
         logLine { META typed "File System Operations: —" }
-        return 0
+    } else {
+        subLogger("File System Operations (${patch.guestfishOperations.size + patch.fileSystemOperations.size})", null) {
+            logLine { META typed "Starting Guestfish VM..." }
+            val guestfish = Guestfish(osImage, this, this::class.qualifiedName + "." + String.random(16))
+
+            val remainingGuestfishOperations = patch.guestfishOperations.toMutableList()
+            if (remainingGuestfishOperations.isNotEmpty()) {
+                while (remainingGuestfishOperations.isNotEmpty()) {
+                    val op = remainingGuestfishOperations.removeFirst()
+                    guestfish.run(op) // TODO
+                }
+            } else {
+                logLine { META typed "No Guestfish operations to run." }
+            }
+
+            val guestPaths = patch.fileSystemOperations.map { it.target }
+            if (guestPaths.isNotEmpty()) {
+                guestfish.run(Guestfish.copyOutCommands(guestPaths))
+            } else {
+                logLine { META typed "No files to extract." }
+            }
+
+            val root = guestfish.guestRootOnHost
+            val filesToPatch = patch.fileSystemOperations.toMutableList()
+            if (filesToPatch.isNotEmpty()) {
+                val unprocessedActions: MutableList<PathOperation> = filesToPatch
+                while (unprocessedActions.isNotEmpty()) {
+                    val action = unprocessedActions.removeFirst()
+                    val path = action.target
+                    action.invoke(root.asRootFor(path), this)
+                }
+            } else {
+                logLine { META typed "No files to patch." }
+            }
+
+            val changedFiles = root.listFilesRecursively({ it.isFile }).map { root.relativize(it) }.toList()
+            if (changedFiles.isNotEmpty()) {
+                guestfish.run(Guestfish.copyInCommands(changedFiles))
+            } else {
+                logLine { META typed "No changed files to copy back." }
+            }
+        }
     }
 
-    return subLogger("File System Operations", null) {
-        logLine { META typed "Starting Guestfish VM..." }
-        val guestfish = Guestfish(osImage, this, this::class.qualifiedName + "." + String.random(16))
-
-        val remainingGuestfishOperations = patch.guestfishOperations.toMutableList()
-        if (remainingGuestfishOperations.isNotEmpty()) {
-            while (remainingGuestfishOperations.isNotEmpty()) {
-                val op = remainingGuestfishOperations.removeFirst()
-                guestfish.run(op) // TODO
-            }
-        } else {
-            logLine { META typed "No Guestfish operations to run." }
-        }
-
-        val guestPaths = patch.fileSystemOperations.map { it.target }
-        if (guestPaths.isNotEmpty()) {
-            guestfish.run(Guestfish.copyOutCommands(guestPaths))
-        } else {
-            logLine { META typed "No files to extract." }
-        }
-
-        val root = guestfish.guestRootOnHost
-        val filesToPatch = patch.fileSystemOperations.toMutableList()
-        if (filesToPatch.isNotEmpty()) {
-            val unprocessedActions: MutableList<PathOperation> = filesToPatch
-            while (unprocessedActions.isNotEmpty()) {
-                val action = unprocessedActions.removeFirst()
-                val path = action.target
-                action.invoke(root.asRootFor(path), this)
-            }
-        } else {
-            logLine { META typed "No files to patch." }
-        }
-
-        val changedFiles = root.listFilesRecursively({ it.isFile }).map { root.relativize(it) }.toList()
-        if (changedFiles.isNotEmpty()) {
-            guestfish.run(Guestfish.copyInCommands(changedFiles))
-        } else {
-            logLine { META typed "No changed files to copy back." }
-        }
-    }
-}
-
-fun RenderingLogger<Any>.applyPostFileImgOperations(osImage: OperatingSystemImage, patch: Patch) {
-    val count = patch.postFileImgOperations.size
-    if (count == 0) {
+fun RenderingLogger<*>.applyPostFileImgOperations(osImage: OperatingSystemImage, patch: Patch): Any =
+    if (patch.postFileImgOperations.isEmpty()) {
         logLine { META typed "IMG Operations II: —" }
-        return
-    }
-
-    subLogger("IMG Operations II ($count)", null, borderedOutput = false) {
-        patch.postFileImgOperations.onEachIndexed { index, op ->
-            op(osImage, this)
+    } else {
+        subLogger<Any>("IMG Operations II (${patch.postFileImgOperations.size})", null, borderedOutput = false) {
+            patch.postFileImgOperations.onEachIndexed { index, op ->
+                op(osImage, this)
+            }
         }
-        0
     }
-}
 
-fun RenderingLogger<Any>.applyPrograms(osImage: OperatingSystemImage, patch: Patch): Any {
-    val count = patch.programs.size
-    if (count == 0) {
+fun RenderingLogger<*>.applyPrograms(osImage: OperatingSystemImage, patch: Patch): Any =
+    if (patch.programs.isEmpty()) {
         logLine { META typed "Scripts: —" }
-        return 0
-    }
-
-    return subLogger("Scripts", null) {
-        patch.programs.onEach { program ->
-            program.runOn(osImage, this)
+    } else {
+        subLogger("Scripts (${patch.programs.size})", null) {
+            patch.programs.onEach { program ->
+                program.runOn(osImage, this)
+            }
         }
-        patch.programs.size
     }
-}
 
 fun <E : Patch> Collection<E>.merge(): Patch = CompositePatch(this)
 
@@ -166,7 +151,7 @@ class PathOperation(override val target: Path, val verifier: (Path) -> Any, val 
     override var currentStatus: Operation.Status = Ready
 
     override operator fun invoke(target: Path, log: RenderingLogger<Any>) {
-        log.singleLineLogger(target.fileName.toString()) {
+        log.singleLineLogger<Any>(target.fileName.toString()) {
             logLine { OUT typed ANSI.termColors.yellow("Action needed? ...") }
             val result = runCatching { verifier.invoke(target) }
             if (result.isFailure) {

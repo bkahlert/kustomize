@@ -1,7 +1,8 @@
 package com.imgcstmzr.runtime.log
 
-import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.string.Grapheme
+import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
+import com.bkahlert.koodies.tracing.trace
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -11,44 +12,21 @@ import strikt.api.expectThat
 @Execution(CONCURRENT)
 class MicroTracerKtTest {
     @Test
-    fun `should micro seq`(logger: InMemoryLogger<Unit>) {
-        logger.miniSegment<Unit, Unit>("segment") {
-            logStatus { IO.Type.OUT typed "@" }
-            microSequence(Grapheme("🤠")) {
+    fun `should micro seq`(logger: InMemoryLogger<Any>) {
+        logger.subTrace<Any?>("segment") {
+            trace("@")
+            microTrace<Any?>(Grapheme("🤠")) {
                 trace("a")
                 trace("")
                 trace("b c")
             }
-            logStatus { IO.Type.OUT typed "@" }
+            trace("@")
         }
 
-        expectThat(logger).matches("""
+        expectThat(logger.logged).matchesCurlyPattern("""
             ╭─────╴{}
             │   
             ├─╴ segment: @ (🤠 a ˃  ˃ b c) @ {}
-            │
-            ╰─────╴{}
-        """.trimIndent())
-    }
-
-    @Test
-    fun `should micro trace`(logger: InMemoryLogger<Unit>) {
-        logger.miniTrace(::`should micro trace`) {
-            trace("X")
-            microTrace<Unit>(Grapheme("🤠")) {
-                trace("a")
-                trace("")
-                trace("b c")
-            }
-            trace("Y")
-        }
-
-        expectThat(logger).matches("""
-            ╭─────╴{}
-            │   
-            ├─╴ ${MicroTracerKtTest::class.simpleName}.${::`should micro trace`.name}(${InMemoryLogger::class.simpleName}): X (🤠 a ˃  ˃ b c) Y {}
-            │
-            ╰─────╴{}
         """.trimIndent())
     }
 }

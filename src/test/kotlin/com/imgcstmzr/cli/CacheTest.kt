@@ -5,6 +5,7 @@ import com.imgcstmzr.util.hasContent
 import com.imgcstmzr.util.isDirectory
 import com.imgcstmzr.util.isInside
 import com.imgcstmzr.util.isWritable
+import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
@@ -37,11 +38,11 @@ class CacheTest {
     }
 
     @Test
-    fun `should provide a retrieved copy`() {
+    fun `should provide a retrieved copy`(logger: InMemoryLogger<*>) {
         val cache = Cache(createTempDir().toPath())
         val path = prepareTestImgZip()
 
-        val copy = cache.provideCopy("my-copy") {
+        val copy = cache.provideCopy("my-copy", logger = logger) {
             path
         }
 
@@ -51,7 +52,7 @@ class CacheTest {
     }
 
     @Test
-    fun `should only retrieve copy once`() {
+    fun `should only retrieve copy once`(logger: InMemoryLogger<*>) {
         val cache = Cache(createTempDir().toPath())
         val path = prepareTestImgZip()
         var providerCalls = 0
@@ -61,7 +62,7 @@ class CacheTest {
         }
 
         val copies = (0..2).map {
-            cache.provideCopy("my-copy", false, provider)
+            cache.provideCopy("my-copy", false, logger, provider)
         }
 
         expectThat(providerCalls).isEqualTo(1)

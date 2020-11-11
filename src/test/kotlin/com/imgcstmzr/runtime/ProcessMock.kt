@@ -5,6 +5,7 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
 import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.tracing.MiniTracer
+import com.bkahlert.koodies.tracing.trace
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.microTrace
 import com.imgcstmzr.runtime.log.miniTrace
@@ -127,7 +128,7 @@ class ProcessMock(
         private val blockedByPrompt get() = unread.isNotEmpty() && unread.first().first == Duration.INFINITE
         val Int.padded get() = this.toString().padStart(originalCountLength)
 
-        fun processInput(logger: MiniTracer<Boolean>): Boolean = logger.microTrace(Grapheme("✏️")) {
+        fun processInput(logger: MiniTracer<*>?): Boolean = logger.microTrace(Grapheme("✏️")) {
             val input = byteArrayOutputStream?.toString() ?: ""
             if (input.isNotEmpty()) {
                 trace(input.debug)

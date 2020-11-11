@@ -155,7 +155,7 @@ class ProgramsBuilder(private val programs: MutableList<Program>) {
 
     fun program(
         purpose: String,
-        initialState: RunningOperatingSystem.(String) -> String?,
+        initialState: RunningOperatingSystem.() -> String?,
         vararg states: Pair<String, RunningOperatingSystem.(String) -> String?>,
     ) {
         programs += Program(purpose, initialState, *states)

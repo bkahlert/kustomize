@@ -9,10 +9,10 @@ import com.bkahlert.koodies.string.LineSeparators.hasTrailingLineSeparator
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.time.Now
-import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
-import com.imgcstmzr.runtime.log.miniSegment
-import com.imgcstmzr.runtime.log.segment
+import com.imgcstmzr.runtime.log.RenderingLogger
+import com.imgcstmzr.runtime.log.RenderingLogger.Companion.singleLineLogger
+import com.imgcstmzr.runtime.log.RenderingLogger.Companion.subLogger
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.quoted
 import java.io.BufferedReader
@@ -33,7 +33,7 @@ import kotlin.time.seconds
 class NonBlockingReader(
     inputStream: InputStream,
     private val timeout: Duration = 6.seconds,
-    private val logger: BlockRenderingLogger<String?>? = MutedBlockRenderingLogger("NonBlockingReader"),
+    private val logger: RenderingLogger<String?>? = MutedBlockRenderingLogger("NonBlockingReader"),
     private val blockOnEmptyLine: Boolean = false,
 ) : BufferedReader(Reader.nullReader()) {
     private var reader: NonBlockingCharReader? = NonBlockingCharReader(inputStream, timeout = timeout / 3)
@@ -59,16 +59,16 @@ class NonBlockingReader(
      * or EOF was encountered.
      */
     override fun readLine(): String? = if (reader == null) null else
-        logger.segment(NonBlockingReader::class.simpleName + "." + ::readLine.name + "()", ansiCode = ANSI.termColors.cyan) {
+        logger.subLogger(NonBlockingReader::class.simpleName + "." + ::readLine.name + "()", ansiCode = ANSI.termColors.cyan) {
             val maxTimeMillis = System.currentTimeMillis() + timeout.toLongMilliseconds()
             logStatus { META typed "Starting to read line for at most $timeout" }
             while (true) {
-                val read: Int = reader?.read(charArray, 0, 1, this@segment)!!
+                val read: Int = reader?.read(charArray, 0, this@subLogger)!!
 
                 if (read == -1) {
                     logStatus { META typed "InputStream Depleted. Closing. Unfinished Line: ${unfinishedLine.quoted}" }
                     close()
-                    return@segment if (unfinishedLine.isEmpty()) {
+                    return@subLogger if (unfinishedLine.isEmpty()) {
                         lastReadLineDueTimeout = false
                         lastReadLine = null
                         lastReadLine
@@ -91,7 +91,7 @@ class NonBlockingReader(
                         unfinishedLine.append(charArray)
                         logStatus { META typed "Line Completed: ${lastReadLine.quoted}" }
                         if (!lineAlreadyRead) {
-                            return@segment lastReadLine!!.withoutTrailingLineSeparator
+                            return@subLogger lastReadLine!!.withoutTrailingLineSeparator
                         }
                     }
                     if (!lineAlreadyRead) {
@@ -102,7 +102,7 @@ class NonBlockingReader(
                     logStatus { META typed "${Now.emoji} Timed out. Returning ${unfinishedLine.quoted}" }
                     lastReadLineDueTimeout = true
                     lastReadLine = unfinishedLine.toString()
-                    return@segment lastReadLine!!.withoutTrailingLineSeparator
+                    return@subLogger lastReadLine!!.withoutTrailingLineSeparator
                 }
             }
             @Suppress("UNREACHABLE_CODE")
@@ -116,13 +116,14 @@ class NonBlockingReader(
      * for the next attempt. The unfinished line will be completed until a line separator
      * or EOF was encountered.
      */
-    fun forEachLine(block: (String) -> Unit): Unit = logger.miniSegment(NonBlockingReader::class.simpleName + "." + ::readLine.name + "()") {
+    fun forEachLine(block: (String) -> Unit): String? = logger.singleLineLogger(NonBlockingReader::class.simpleName + "." + ::readLine.name + "()") {
         while (true) {
             val readLine: String? = readLine()
             val line = readLine ?: break
             block(line)
             logLine { "Finished processing $line" }
         }
+        null
     }
 
     override fun close() {

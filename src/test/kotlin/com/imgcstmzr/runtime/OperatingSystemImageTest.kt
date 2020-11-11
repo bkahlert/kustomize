@@ -44,7 +44,7 @@ class OperatingSystemImageTest {
     @Test
     fun `should boot using extension function`(@OS(OperatingSystems.TinyCore::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
 
-        val exitCode = osImage.boot(logger)
+        val exitCode = osImage.boot(logger = logger)
 
         expectThat(exitCode).isEqualTo(0)
         expectThat(logger.logged).contains("mounted filesystem with ordered data mode")

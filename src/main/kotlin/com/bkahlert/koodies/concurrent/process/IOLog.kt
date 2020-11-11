@@ -4,6 +4,7 @@ import com.bkahlert.koodies.concurrent.process.IO.Type
 import com.bkahlert.koodies.concurrent.synchronized
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.LineSeparators.lines
+import com.bkahlert.koodies.string.Unicode.Emojis.heavyCheckMark
 import org.apache.commons.io.output.ByteArrayOutputStream
 import kotlin.collections.Map.Entry
 
@@ -73,5 +74,8 @@ class IOLog {
             write(read.last().toByteArray(Charsets.UTF_8))
         }
     }
+
+    override fun toString(): String =
+        "${this::class.simpleName}(${log.size} $heavyCheckMark; ${incompleteLines.filterValues { it.toByteArray().isNotEmpty() }.size} …)"
 }
 

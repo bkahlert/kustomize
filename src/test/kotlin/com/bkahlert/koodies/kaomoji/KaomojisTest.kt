@@ -1,12 +1,21 @@
-package com.bkahlert.koodies.terminal.ascii
+package com.bkahlert.koodies.kaomoji
 
+import com.bkahlert.koodies.kaomoji.Kaomojis.fishing
+import com.bkahlert.koodies.kaomoji.Kaomojis.thinking
+import com.bkahlert.koodies.terminal.IDE
+import com.bkahlert.koodies.terminal.ansi.AnsiFormats.hidden
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
+import strikt.assertions.endsWith
+import strikt.assertions.isEqualTo
 import strikt.assertions.isGreaterThanOrEqualTo
+import strikt.assertions.startsWith
 
 @Execution(CONCURRENT)
 class KaomojisTest {
@@ -42,6 +51,31 @@ class KaomojisTest {
         val kaomoji = Kaomojis.`(＃￣_￣)o︠・━・・━・━━・━☆`.random()
         dynamicTest(kaomoji) {
             expectThat(kaomoji).get { length }.isGreaterThanOrEqualTo(5)
+        }
+    }
+
+    @Nested
+    inner class RandomThinkingKaomoji {
+        @Test
+        fun `should create thinking Kaomoji`() {
+            val hidden = if (IDE.isIntelliJ) "    " else "・㉨・".hidden()
+            expectThat(Kaomojis.Bear[0].thinking("oh no")).isEqualTo("""
+                $hidden   ͚͔˱ ❨ ( oh no )
+                ・㉨・ ˙
+            """.trimIndent())
+        }
+    }
+
+    @Nested
+    inner class RandomFishingKaomoji {
+        @Test
+        fun `should be created with random fisher and specified fish`() {
+            expectThat(fishing("❮°«⠶＞˝")).endsWith("o/￣￣￣❮°«⠶＞˝")
+        }
+
+        @Test
+        fun `should be created with specified fisher and random fish`() {
+            expectThat(Kaomojis.Shrug[0].fishing()).startsWith("┐(´д｀)o/￣￣￣")
         }
     }
 }

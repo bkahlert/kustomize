@@ -20,7 +20,7 @@ class ShellScript {
         lines.add("#!${interpreter.conditioned}")
     }
 
-    fun changeDirectoryOrExit(directory: Path, errorCode: Int = 1) {
+    fun changeDirectoryOrExit(directory: Path, @Suppress("UNUSED_PARAMETER") errorCode: Int = 1) {
         lines.add("cd \"$directory\" || exit 1")
     }
 
