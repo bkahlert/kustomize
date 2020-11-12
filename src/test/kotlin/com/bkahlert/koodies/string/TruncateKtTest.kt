@@ -2,14 +2,14 @@ package com.bkahlert.koodies.string
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class TruncateKtTest {
     @Test
     fun `should truncate`() {

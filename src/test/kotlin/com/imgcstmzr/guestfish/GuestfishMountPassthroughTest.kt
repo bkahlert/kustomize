@@ -1,11 +1,13 @@
-package com.imgcstmzr.process
+package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.concurrent.process.Processes
 import com.bkahlert.koodies.shell.toHereDoc
 import com.bkahlert.koodies.string.joinLinesToString
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
-import com.imgcstmzr.process.Guestfish.Companion.SHARED_DIRECTORY_NAME
+import com.bkahlert.koodies.test.junit.FifteenMinutesTimeout
+import com.imgcstmzr.E2E
+import com.imgcstmzr.guestfish.Guestfish.Companion.SHARED_DIRECTORY_NAME
 import com.imgcstmzr.runtime.OperatingSystems.DietPi
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.copyToTempSiblingDirectory
@@ -18,7 +20,8 @@ class GuestfishMountPassthroughTest {
     /**
      * Experiment to [mount disk image to host using Guestfish](https://medium.com/@kumar_pravin/mount-disk-image-to-host-using-guestfish-d5f33c0297e0).
      */
-    fun `should provide access to filesystem`(@OS(DietPi::class, autoDelete = false) img: Path): List<DynamicTest> {
+    @FifteenMinutesTimeout @E2E
+    fun `should provide access to filesystem`(@OS(DietPi, autoDelete = false) img: Path): List<DynamicTest> {
         val dockerImageName = "cmattoon/guestfish"
 
         return listOf(

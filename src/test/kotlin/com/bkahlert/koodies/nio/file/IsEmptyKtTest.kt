@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.nio.file
 
 import com.bkahlert.koodies.nio.ClassPath
-import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.copyToTempFile
 import com.imgcstmzr.util.delete
 import org.junit.jupiter.api.Nested
@@ -18,16 +18,19 @@ import java.nio.file.Files
 
 @Execution(CONCURRENT)
 class IsEmptyKtTest {
+
+    private val tempDir = tempDir().deleteOnExit()
+
     @Nested
     inner class WithFile {
         @Test
         fun `should return true on empty`() {
-            expectThat(Paths.tempFile().isEmpty).isTrue()
+            expectThat(tempDir.tempFile().isEmpty).isTrue()
         }
 
         @Test
         fun `should return false on non-empty`() {
-            expectThat(ClassPath("example.html").copyToTempFile().isEmpty).isFalse()
+            expectThat(ClassPath("example.html").copyToTempFile().deleteOnExit().isEmpty).isFalse()
         }
     }
 
@@ -35,23 +38,23 @@ class IsEmptyKtTest {
     inner class WithDirectory {
         @Test
         fun `should return true on empty`() {
-            expectThat(Paths.tempDir().isEmpty).isTrue()
+            expectThat(tempDir.tempDir().isEmpty).isTrue()
         }
 
         @Test
         fun `should return false on non-empty`() {
-            expectThat(Paths.tempDir().parent.isEmpty).isFalse()
+            expectThat(tempDir.tempDir().parent.isEmpty).isFalse()
         }
     }
 
     @Test
     fun `should throw on missing`() {
-        expectCatching { Paths.tempFile().also { it.delete() }.isEmpty }.isFailure().isA<IllegalArgumentException>()
+        expectCatching { tempDir.tempFile().also { it.delete() }.isEmpty }.isFailure().isA<IllegalArgumentException>()
     }
 
     @Test
     fun `should throw in different type`() {
         @Suppress("BlockingMethodInNonBlockingContext")
-        expectCatching { Files.createSymbolicLink(Paths.tempFile().also { it.delete() }, Paths.tempFile()).isEmpty }
+        expectCatching { Files.createSymbolicLink(tempDir.tempFile().also { it.delete() }, tempDir.tempFile()).isEmpty }
     }
 }

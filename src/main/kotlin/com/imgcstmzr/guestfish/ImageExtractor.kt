@@ -1,4 +1,4 @@
-package com.imgcstmzr.process
+package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.io.Archiver.listArchive
 import com.bkahlert.koodies.io.Archiver.unarchive

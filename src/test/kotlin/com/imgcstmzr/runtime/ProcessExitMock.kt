@@ -2,10 +2,8 @@ package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.time.busyWait
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
 
-@OptIn(ExperimentalTime::class)
 data class ProcessExitMock(val exitCode: Int, val delay: Duration) {
     operator fun invoke(): Int {
         delay.busyWait()

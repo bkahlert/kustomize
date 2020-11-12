@@ -1,4 +1,4 @@
-package com.imgcstmzr.process
+package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import org.junit.jupiter.api.Test

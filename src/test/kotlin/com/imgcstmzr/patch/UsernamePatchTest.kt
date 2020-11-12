@@ -1,9 +1,10 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.test.junit.FifteenMinutesTimeout
+import com.imgcstmzr.E2E
+import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.util.DockerRequired
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.containsContent
@@ -17,7 +18,7 @@ import com.imgcstmzr.util.mkdirs
 import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.all
@@ -27,7 +28,7 @@ import strikt.assertions.isSuccess
 import strikt.assertions.none
 import java.nio.file.Path
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class UsernamePatchTest {
 
     @Test
@@ -78,25 +79,24 @@ class UsernamePatchTest {
         val patch = UsernamePatch("pi", "ella")
 
         patch.fileSystemOperations.onEach { op ->
-            val target = root.asRootFor(op.target)
             op(root.asRootFor(op.target), logger)
         }
 
+        @Suppress("SpellCheckingInspection")
         expectThat(root.listFilesRecursively(Path::isFile)) {
             all { containsContent("dietpi:") }
             none { containsContent("dietella:") }
         }
     }
 
-    @DockerRequired
-    @Test
-    fun `should log in with updated username`(@OS(RaspberryPiLite::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
-        val newUsername = "ella".also { check(it != osImage.defaultUsername) { "$it is already the default username." } }
-        val patch = UsernamePatch(osImage.defaultUsername, newUsername)
+    @FifteenMinutesTimeout @E2E @Test
+    fun `should log in with updated username`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+        val newUsername = "ella".also { check(it != osImage.defaultCredentials.username) { "$it is already the default username." } }
+        val patch = UsernamePatch(osImage.defaultCredentials.username, newUsername)
 
         patch.patch(osImage, logger)
 
-        expectThat(osImage.credentials).isEqualTo(OperatingSystems.Companion.Credentials(newUsername, osImage.defaultPassword))
+        expectThat(osImage.credentials).isEqualTo(OperatingSystem.Credentials(newUsername, osImage.defaultCredentials.password))
         expectThat(osImage).booted(logger) {
             command("echo 'Hi $newUsername 👋'");
             { true }

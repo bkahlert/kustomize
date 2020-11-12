@@ -7,6 +7,6 @@ import com.imgcstmzr.runtime.OperatingSystems
 
 object Options {
     fun RawOption.os(
-        choices: Map<String, OperatingSystems> = OperatingSystems.supported.associateBy { it::class.simpleName!! },
+        choices: Map<String, OperatingSystems> = OperatingSystems.values().associateBy { it.name },
     ): NullableOption<OperatingSystems, OperatingSystems> = choice(choices = choices, ignoreCase = true)
 }

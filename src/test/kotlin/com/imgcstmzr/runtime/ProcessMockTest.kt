@@ -9,7 +9,8 @@ import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
 import com.imgcstmzr.runtime.ProcessExitMock.Companion.immediateExit
 import com.imgcstmzr.runtime.ProcessExitMock.Companion.immediateSuccess
-import com.imgcstmzr.runtime.ProcessMock.SlowInputStream.Companion.prompt
+import com.imgcstmzr.runtime.ProcessMock.Companion.withIndividuallySlowInput
+import com.imgcstmzr.runtime.SlowInputStream.Companion.prompt
 import com.imgcstmzr.runtime.log.subTrace
 import com.imgcstmzr.util.isEqualToByteWise
 import com.imgcstmzr.util.logging.InMemoryLogger
@@ -18,7 +19,7 @@ import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import org.junit.jupiter.api.parallel.Isolated
 import strikt.api.expectCatching
 import strikt.api.expectThat
@@ -32,20 +33,18 @@ import strikt.assertions.isLessThan
 import strikt.assertions.isLessThanOrEqualTo
 import strikt.assertions.isTrue
 import java.util.concurrent.TimeUnit
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 import kotlin.time.milliseconds
 import kotlin.time.seconds
 
-@ExperimentalTime
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class ProcessMockTest {
 
     @Nested
-    inner class SlowInputStream {
+    inner class WithSlowInputStream {
         @Test
         fun `should provide input correctly`(logger: InMemoryLogger<String?>) {
-            val slowInputStream = ProcessMock.SlowInputStream("Hello\n", "World!\n", baseDelayPerInput = 1.seconds, logger = logger)
+            val slowInputStream = SlowInputStream("Hello\n", "World!\n", baseDelayPerInput = 1.seconds, logger = logger)
 
             assertTimeoutPreemptively(10.seconds) {
                 val read = String(slowInputStream.readBytes())
@@ -57,7 +56,7 @@ class ProcessMockTest {
         @Test
         fun `should provide input slowly`(logger: InMemoryLogger<String?>) {
             val delay = 1.seconds
-            val slowInputStream = ProcessMock.SlowInputStream("Hello\n", "World!\n", baseDelayPerInput = delay, logger = logger)
+            val slowInputStream = SlowInputStream("Hello\n", "World!\n", baseDelayPerInput = delay, logger = logger)
 
             assertTimeoutPreemptively(delay * 5) {
                 val duration = measureTime {
@@ -73,7 +72,7 @@ class ProcessMockTest {
                 "without echoed input" to false).map { (name, echoOption) ->
                 dynamicTest(name) {
                     val byteArrayOutputStream = ByteArrayOutputStream()
-                    val slowInputStream = ProcessMock.SlowInputStream(
+                    val slowInputStream = SlowInputStream(
                         0.seconds to "Password? ",
                         prompt(),
                         0.seconds to "\r",
@@ -110,18 +109,18 @@ class ProcessMockTest {
         @Test
         fun `should produce same byte sequence as ByteArrayInputStream`(logger: InMemoryLogger<String?>) {
             val input = "A𝌪𝌫𝌬𝌭𝌮Z"
-            val inputStream = ProcessMock.SlowInputStream(input, baseDelayPerInput = 2.seconds, logger = logger)
+            val inputStream = SlowInputStream(input, baseDelayPerInput = 2.seconds, logger = logger)
             expectThat(input.byteInputStream().readAllBytes()).isEqualTo(inputStream.readAllBytes())
         }
 
         @ConcurrentTestFactory
         fun `should never apply delay at at end stream`(logger: InMemoryLogger<String?>) = "𝌪".let { input ->
             listOf(
-                ProcessMock.SlowInputStream(input,
+                SlowInputStream(input,
                     logger = logger,
                     baseDelayPerInput = 5.seconds,
                     echoInput = true),
-                ProcessMock.SlowInputStream(0.seconds to input,
+                SlowInputStream(0.seconds to input,
                     logger = logger,
                     baseDelayPerInput = 5.seconds,
                     echoInput = true),
@@ -262,7 +261,7 @@ class ProcessMockTest {
     inner class OutputStreamWiring {
         @Test
         fun `should allow SlowInputStream to read process's input stream`(logger: InMemoryLogger<String?>) {
-            val p = ProcessMock.withIndividuallySlowInput(prompt(), processExit = { immediateSuccess() }, echoInput = true, logger = logger)
+            val p = withIndividuallySlowInput(prompt(), processExit = { immediateSuccess() }, echoInput = true, logger = logger)
             with(p.outputStream.writer()) {
                 expectThat(p.received).isEmpty()
                 expectThat(p.inputStream.available()).isEqualTo(0)
@@ -272,7 +271,7 @@ class ProcessMockTest {
 
                 expectThat(p.received).isEqualTo("user input")
                 logger.subTrace<Any?>("???") {
-                    (p.inputStream as ProcessMock.SlowInputStream).processInput(this)
+                    (p.inputStream as SlowInputStream).processInput(this)
                 }
                 expectThat(p.inputStream.available()).isEqualTo("user input".length)
             }
@@ -282,7 +281,7 @@ class ProcessMockTest {
     @Slow
     @Test
     fun `should terminate if all output is manually read`(logger: InMemoryLogger<String?>) {
-        val p = ProcessMock.withIndividuallySlowInput(
+        val p = withIndividuallySlowInput(
             500.milliseconds to "Welcome!\n",
             500.milliseconds to "Password? ",
             prompt(),
@@ -312,7 +311,7 @@ class ProcessMockTest {
     @Slow
     @Test
     fun `should terminate if all output is consumed`(logger: InMemoryLogger<String?>) {
-        val p = ProcessMock.withIndividuallySlowInput(
+        val p = withIndividuallySlowInput(
             500.milliseconds to "Welcome!\n",
             500.milliseconds to "Password? ",
             prompt(),
@@ -343,7 +342,7 @@ class ProcessMockTest {
 
     @Test
     fun `should provide access to unfiltered output stream`(logger: InMemoryLogger<String?>) {
-        val p = ProcessMock.withIndividuallySlowInput(
+        val p = withIndividuallySlowInput(
             baseDelayPerInput = 1.seconds,
             echoInput = true,
             processExit = { immediateSuccess() },
@@ -354,7 +353,7 @@ class ProcessMockTest {
         p.outputStream.write("Just in case\n".toByteArray())
         p.outputStream.flush()
 
-        (p.inputStream as ProcessMock.SlowInputStream).available()
+        (p.inputStream as SlowInputStream).available()
         expectThat(p.received).isEqualTo("Test1234\rJust in case\n")
     }
 }

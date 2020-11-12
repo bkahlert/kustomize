@@ -1,19 +1,14 @@
 package com.imgcstmzr.util
 
-import com.bkahlert.koodies.io.TarArchiveGzCompressor.tarGzip
 import com.bkahlert.koodies.nio.ClassPath
-import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
-import com.bkahlert.koodies.unit.Mebi
-import com.bkahlert.koodies.unit.bytes
-import com.bkahlert.koodies.unit.size
 import com.imgcstmzr.cli.Cache
-import com.imgcstmzr.process.Downloader.download
-import com.imgcstmzr.process.ImageBuilder
+import com.imgcstmzr.guestfish.ImageBuilder
+import com.imgcstmzr.process.Downloader
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
-import com.imgcstmzr.runtime.OperatingSystemMock
+import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
@@ -25,12 +20,11 @@ import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
 import java.nio.file.Path
 import kotlin.annotation.AnnotationRetention.RUNTIME
-import kotlin.reflect.KClass
 
 @Retention(RUNTIME)
 @Target(AnnotationTarget.VALUE_PARAMETER)
 annotation class OS(
-    val value: KClass<out OperatingSystem> = OperatingSystemMock::class,
+    val value: OperatingSystems = OperatingSystems.ImgCstmzrTestOS,
     val autoDelete: Boolean = true,
 )
 
@@ -46,10 +40,10 @@ open class FixtureResolverExtension : ParameterResolver {
 
     override fun resolveParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): OperatingSystemImage = synchronized(this) {
         val annotation = parameterContext.parameter.getAnnotation(OS::class.java)
-        val operatingSystem: OperatingSystem = annotation?.value?.objectInstance ?: OperatingSystemMock()
+        val operatingSystem: OperatingSystem = annotation?.value ?: OperatingSystems.ImgCstmzrTestOS
         val autoDelete = annotation?.autoDelete ?: true
         val logger: RenderingLogger<OperatingSystemImage> = if (!extensionContext.isCapturingOutput()) {
-            BlockRenderingLogger("Provisioning an image containing ${operatingSystem.name.cyan()} (${operatingSystem.directoryName})...")
+            BlockRenderingLogger("Provisioning an image containing ${operatingSystem.fullName.cyan()} (${operatingSystem.name})...")
         } else {
             MutedBlockRenderingLogger()
         }
@@ -62,24 +56,16 @@ open class FixtureResolverExtension : ParameterResolver {
     }
 
     companion object {
-        val OperatingSystem.directoryName get() = downloadUrl?.let { Path.of(it).baseName } ?: "imgcstmzr"
+        val downloader = Downloader(ImageBuilder.schema to { uri, logger -> ImageBuilder.buildFrom(uri, logger) })
 
         private val cache = Cache(Paths.TEST.resolve("test"), maxConcurrentWorkingDirectories = 500)
         private fun OperatingSystem.getCopy(logger: RenderingLogger<*>): OperatingSystemImage = synchronized(this) {
-            this based cache.provideCopy(directoryName, false, logger) {
-                if (downloadUrl != null) download() else prepareImg(logger, "cmdline.txt", "config.txt")
+            this based cache.provideCopy(name, false, logger) {
+                with(downloader) {
+                    download(logger)
+                }
             }
         }
-
-        /**
-         * Dynamically creates a raw image with two partitions containing the given [classPathFiles].
-         */
-        private fun prepareImg(logger: RenderingLogger<*>, vararg classPathFiles: String): Path =
-            ImageBuilder.buildFrom(Paths.TEMP.resolve("imgcstmzr-" + String.random(4)).mkdirs().run {
-                classPathFiles.forEach { classPathFile -> ClassPath.of(classPathFile).copyTo(resolve(classPathFile)) }
-                while (size < 4.Mebi.bytes) resolve("fill.txt").appendText(ClassPath("Journey to the West - Introduction.txt").readAll())
-                tarGzip()
-            }, logger, freeSpaceRatio = 0.20)
 
         fun prepareSharedDirectory(): Path {
             val root = createTempDir("imgcstmzr")

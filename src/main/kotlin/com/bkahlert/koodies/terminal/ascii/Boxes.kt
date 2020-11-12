@@ -3,7 +3,46 @@ package com.bkahlert.koodies.terminal.ascii
 import com.bkahlert.koodies.number.isEven
 import com.bkahlert.koodies.string.asString
 import com.bkahlert.koodies.string.repeat
+import com.bkahlert.koodies.terminal.ascii.Boxes.FAIL
+import com.bkahlert.koodies.terminal.ascii.Boxes.PILLARS
+import com.bkahlert.koodies.terminal.ascii.Boxes.SINGLE_LINE_SPHERICAL
+import com.bkahlert.koodies.terminal.ascii.Boxes.SPHERICAL
+import com.bkahlert.koodies.terminal.ascii.Boxes.WIDE_PILLARS
 
+
+/**
+ * # Boxes
+ *
+ * ## [FAIL]
+ * ```
+ * ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+ * ████▌▄▌▄▐▐▌█████
+ * ████▌▄▌▄▐▐▌▀████
+ * ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+ * ```
+ *
+ * ## [SPHERICAL]
+ * ```
+ *   █ ▉▕▊▕▋▕▌▕▍▕▎▕▏ ▏  ▏  ▕  ▕  ▏▕▎▕▍▕▌▕▋▕▊▕▉ █
+ * █ ▉ ▊ ▋ ▌ ▍ ▎ ▏   SPHERE BOX    ▏ ▎ ▍ ▌ ▋ ▊ ▉ █
+ *   █ ▉▕▊▕▋▕▌▕▍▕▎▕▏ ▏  ▏  ▕  ▕  ▏▕▎▕▍▕▌▕▋▕▊▕▉ █
+ * ```
+ *
+ * ## [SINGLE_LINE_SPHERICAL]
+ * ```
+ * ▎ ▍ ▌ ▋ ▊ ▉ █ ▇ ▆ ▅ ▄ ▃ ▂ ▁  SINGLE LINE SPHERICAL  ▁ ▂ ▃ ▄ ▅ ▆ ▇ █ ▉ ▊ ▋ ▌ ▍ ▎
+ * ```
+ *
+ * ## [WIDE_PILLARS]
+ * ```
+ * █ █ ▉▕▉ ▊▕▊▕▋ ▋▕▌ ▌ ▍▕▎ ▍ ▎▕▏ ▏ WIDE PILLARS  ▏ ▏▕▎ ▍ ▎▕▍ ▌ ▌▕▋ ▋▕▊▕▊ ▉▕▉ █ █
+ * ```
+ *
+ * ## [PILLARS]
+ * ```
+ * █ ▉ ▊ ▋ ▌ ▍ ▎ ▏ PILLARS  ▏ ▎ ▍ ▌ ▋ ▊ ▉ █
+ * ```
+ */
 enum class Boxes(private var render: (String) -> String) {
     /**
      * ```
@@ -75,6 +114,9 @@ enum class Boxes(private var render: (String) -> String) {
         private const val sphericalMiddleLeft = """█ ▉ ▊ ▋ ▌ ▍ ▎ ▏ """
         private const val sphericalMiddleRight = """  ▏ ▎ ▍ ▌ ▋ ▊ ▉ █"""
 
+        /**
+         * Centers this [CharSequence] and puts a styled [box] (see [Boxes]) around it.
+         */
         fun <T : CharSequence> T.wrapWithBox(
             box: Boxes = SPHERICAL,
         ): String = box(this)

@@ -20,7 +20,7 @@ class OutputCapture : CapturedOutput {
 
     val isCapturing: Boolean get() = systemCaptures.isNotEmpty()
 
-    override val all: String get() = getFilteredCapture { type: Type? -> true }
+    override val all: String get() = getFilteredCapture { true }
     override val allLines: List<String> by withNegativeIndices { splitOutput(all) }
 
     override val out: String get() = getFilteredCapture { other: Type? -> Type.OUT == other }

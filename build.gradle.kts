@@ -39,13 +39,13 @@ dependencies {
 
     testImplementation(platform("org.junit:junit-bom:5.7.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation("org.junit.jupiter:junit-jupiter-params")
+    testImplementation("org.junit.platform:junit-platform-commons")
     testImplementation("org.junit.platform:junit-platform-launcher")
     testRuntimeOnly("org.junit.platform:junit-platform-console") {
         because("needed to launch the JUnit Platform Console program")
     }
-    testImplementation("org.junit.platform:junit-platform-commons")
-    testImplementation("org.junit.jupiter:junit-jupiter-api")
-    testImplementation("org.junit.jupiter:junit-jupiter-params")
 
     testImplementation("io.strikt:strikt-core:0.27.0")
     testImplementation("io.strikt:strikt-mockk:0.27.0")
@@ -64,9 +64,14 @@ tasks {
             jvmTarget = "11"
             useIR = true
             languageVersion = "1.4"
+            @Suppress("SpellCheckingInspection")
             freeCompilerArgs = freeCompilerArgs + listOf(
-                "-Xopt-in=kotlin.InlineClasses",
+                "-Xjvm-default=all",
                 "-Xopt-in=kotlin.RequiresOptIn",
+                "-Xopt-in=kotlin.ExperimentalUnsignedTypes",
+                "-Xopt-in=kotlin.time.ExperimentalTime",
+                "-Xopt-in=kotlin.contracts.ExperimentalContracts",
+                "-Xopt-in=com.github.ajalt.clikt.sources.ExperimentalValueSourceApi",
                 "-Xinline-classes"
             )
         }

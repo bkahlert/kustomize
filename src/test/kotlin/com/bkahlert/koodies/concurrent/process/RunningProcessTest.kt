@@ -1,60 +1,109 @@
 package com.bkahlert.koodies.concurrent.process
 
-import com.bkahlert.koodies.concurrent.startAsDaemon
-import com.bkahlert.koodies.time.poll
-import com.bkahlert.koodies.time.sleep
+import com.bkahlert.koodies.regex.RegularExpressions
+import com.bkahlert.koodies.regex.sequenceOfAllMatches
+import com.bkahlert.koodies.string.LineSeparators.LF
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import strikt.api.expectCatching
 import strikt.api.expectThat
+import strikt.assertions.all
 import strikt.assertions.contains
-import strikt.assertions.isNotEmpty
+import strikt.assertions.containsExactly
+import strikt.assertions.hasSize
+import strikt.assertions.isA
+import strikt.assertions.isFailure
+import strikt.assertions.isNotNull
+import strikt.assertions.message
+import java.net.URL
 import java.util.concurrent.CompletableFuture
-import kotlin.time.ExperimentalTime
-import kotlin.time.milliseconds
-import kotlin.time.seconds
 
 @Execution(CONCURRENT)
 class RunningProcessTest {
-    @Test
-    fun `should format CompleteFuture simplified`() {
-        val runningProcess: RunningProcess = object : RunningProcess() {
-            override val process: Process = nullProcess
-            override val result: CompletableFuture<CompletedProcess> = CompletableFuture.completedFuture(CompletedProcess(-1, -1, emptyList()))
-            override val ioLog: IOLog = IOLog()
-        }
 
-        expectThat(runningProcess.toString()).contains("; Completed normally;")
+    private fun getRunningProcess(vararg io: IO) = object : RunningProcess() {
+        override val process: Process = nullProcess
+        override val ioLog: IOLog = IOLog().apply { io.forEach { add(it.type, it.string.toByteArray()) } }
+        override val result: CompletableFuture<CompletedProcess>
+            get() {
+                return CompletableFuture.completedFuture(CompletedProcess(-1, -1, ioLog.logged))
+            }
     }
 
-    @OptIn(ExperimentalTime::class)
     @Test
-    fun `should provide thread-safe access to log`() {
-        var stop = false
-        val runningProcess: RunningProcess = object : RunningProcess() {
-            override val process: Process get() = nullProcess
-            override val result: CompletableFuture<CompletedProcess> = CompletableFuture.completedFuture(CompletedProcess(-1, -1, emptyList()))
-            override val ioLog: IOLog = IOLog()
+    fun `should format CompleteFuture simplified`() {
+        val runningProcess = getRunningProcess()
 
-            init {
-                startAsDaemon {
-                    var i = 0
-                    while (!stop) {
-                        ioLog.add(IO.Type.META, "being busy $i times\n".toByteArray())
-                        10.milliseconds.sleep()
-                        i++
-                    }
-                }
+        expectThat("$runningProcess").contains("; Completed normally;")
+    }
+
+    @Nested
+    inner class OnExitCodeMismatch {
+
+        @Test
+        fun `should print last IO lines`() {
+            expectCatching {
+                getRunningProcess(
+                    IO.Type.META typed "test 1$LF",
+                    IO.Type.IN typed "test 2$LF",
+                    IO.Type.OUT typed "test 3$LF",
+                    IO.Type.ERR typed "test 4$LF",
+                    IO.Type.META typed "test 5$LF",
+                    IO.Type.IN typed "test 6$LF",
+                    IO.Type.OUT typed "test 7$LF",
+                    IO.Type.ERR typed "test 8$LF",
+                    IO.Type.META typed "test 9$LF",
+                    IO.Type.IN typed "test 10$LF",
+                    IO.Type.OUT typed "test 11$LF",
+                    IO.Type.ERR typed "test 12$LF",
+                ).waitForExitCode(143)
             }
+                .isFailure()
+                .isA<IllegalStateException>()
+                .message
+                .isNotNull()
+                .contains("last 10 lines")
+                .get { lines().dropLast(1).takeLast(10).map { it.trim() } }
+                .containsExactly(
+                    IO.Type.OUT formatted "test 3",
+                    IO.Type.ERR formatted "test 4",
+                    IO.Type.META formatted "test 5",
+                    IO.Type.IN formatted "test 6",
+                    IO.Type.OUT formatted "test 7",
+                    IO.Type.ERR formatted "test 8",
+                    IO.Type.META formatted "test 9",
+                    IO.Type.IN formatted "test 10",
+                    IO.Type.OUT formatted "test 11",
+                    IO.Type.ERR formatted "test 12",
+                )
         }
 
-        poll { runningProcess.ioLog.logged.isNotEmpty() }.every(10.milliseconds).forAtMost(1.seconds) { fail("No I/O logged in one second.") }
-
-        expectThat(runningProcess.ioLog.logged) {
-            isNotEmpty()
-            contains(IO.Type.META typed "being busy 0 times")
+        @Test
+        fun `should save IO log`() {
+            expectCatching {
+                getRunningProcess(
+                    IO.Type.OUT typed "test out$LF",
+                    IO.Type.ERR typed "test err$LF",
+                ).waitForExitCode(143)
+            }
+                .isFailure()
+                .isA<IllegalStateException>()
+                .message.get {
+                    this?.let { message ->
+                        RegularExpressions.urlRegex.sequenceOfAllMatches(message)
+                            .map { URL(it) }
+                            .map { it.openStream().reader().readText() }
+                            .map { it.removeEscapeSequences() }
+                            .toList()
+                    } ?: fail("error message missing")
+                }.hasSize(2).all {
+                    contains("test out")
+                    contains("test err")
+                }
         }
-        stop = true
     }
 }

@@ -2,7 +2,7 @@ package com.bkahlert.koodies.concurrent
 
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.time.sleep
-import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -12,7 +12,6 @@ import strikt.assertions.isLessThan
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 import kotlin.time.milliseconds
 
@@ -21,14 +20,13 @@ class StartAsCompletableFutureKtTest {
 
     private val executor = Executors.newCachedThreadPool()
 
-    @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
     fun `should start immediately`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsCompletableFuture() },
-        "postfix form" to { finished: AtomicBoolean -> startAsCompletableFuture() { finished.set(true) } },
-        "executor form" to { finished: AtomicBoolean -> executor.startAsCompletableFuture() { finished.set(true) } },
+        "postfix form" to { finished: AtomicBoolean -> startAsCompletableFuture { finished.set(true) } },
+        "executor form" to { finished: AtomicBoolean -> executor.startAsCompletableFuture { finished.set(true) } },
     ).map { (caption, exec) ->
-        DynamicTest.dynamicTest(caption) {
+        dynamicTest(caption) {
             val finished = AtomicBoolean(false)
             measureTime {
                 exec(finished)
@@ -39,14 +37,13 @@ class StartAsCompletableFutureKtTest {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
     fun `should start delayed`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsCompletableFuture(500.milliseconds) },
         "postfix form" to { finished: AtomicBoolean -> startAsCompletableFuture(500.milliseconds) { finished.set(true) } },
         "executor form" to { finished: AtomicBoolean -> executor.startAsCompletableFuture(500.milliseconds) { finished.set(true) } },
     ).map { (caption, exec) ->
-        DynamicTest.dynamicTest(caption) {
+        dynamicTest(caption) {
             val finished = AtomicBoolean(false)
             measureTime {
                 exec(finished)
@@ -57,14 +54,13 @@ class StartAsCompletableFutureKtTest {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
     fun `should block until value is returned`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true); "Hello World" }.startAsCompletableFuture() },
         "postfix form" to { finished: AtomicBoolean -> startAsCompletableFuture { finished.set(true); "Hello World" } },
         "executor form" to { finished: AtomicBoolean -> executor.startAsCompletableFuture { finished.set(true); "Hello World" } },
     ).map { (caption: String, exec: (AtomicBoolean) -> CompletableFuture<String>) ->
-        DynamicTest.dynamicTest(caption) {
+        dynamicTest(caption) {
             val finished = AtomicBoolean(false)
             val value = exec(finished).get()
             expectThat(value).isEqualTo("Hello World")

@@ -15,7 +15,7 @@ import com.github.ajalt.mordant.AnsiCode
 
 
 /**
- * Centers this [CharSequence] and the specified [padding] and puts a [ansiCode] styled [border] around it.
+ * Centers this [CharSequence] and the specified [padding] and puts a [ansiCode] styled [border] (see [Borders] for predefined one) around it.
  * Furthermore a [margin] can be set to distance the bordered text.
  */
 fun <T : CharSequence> T.wrapWithBorder(
@@ -45,7 +45,7 @@ fun <T : CharSequence> T.wrapWithBorder(
 }
 
 /**
- * Centers this list of [CharSequence] and the specified [padding] and puts a [ansiCode] styled [border] around it.
+ * Centers this list of [CharSequence] and the specified [padding] and puts a [ansiCode] styled [border] (see [Borders] for predefined one) around it.
  * Furthermore a [margin] can be set to distance the bordered text.
  */
 fun <T : CharSequence> Iterable<T>.wrapWithBorder(

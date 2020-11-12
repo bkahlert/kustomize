@@ -7,10 +7,10 @@ import com.bkahlert.koodies.unit.Mega
 import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.bytes
 import com.bkahlert.koodies.unit.size
-import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
+import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.singleLineLogger
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.subLogger
+import com.imgcstmzr.runtime.log.singleLineLogger
+import com.imgcstmzr.runtime.log.subLogger
 import java.nio.file.Path
 
 /**
@@ -21,7 +21,7 @@ class OperatingSystemImage(
     /**
      * The credentials that give access to the [OperatingSystem].
      */
-    var credentials: Credentials = Credentials(operatingSystem.defaultUsername, operatingSystem.defaultPassword),
+    var credentials: Credentials = operatingSystem.defaultCredentials,
     private val image: Path,
 ) : Path by image, OperatingSystem by operatingSystem {
     companion object {
@@ -31,11 +31,10 @@ class OperatingSystemImage(
         )
     }
 
-    val fullName: String get() = "${operatingSystem.name}${if (updatedCredentials) "*".magenta() else ""} at ${image.toUri()}"
-    val shortName: String get() = "${operatingSystem.name}${if (updatedCredentials) "*".magenta() else ""} at ${image.fileName}"
+    override val fullName: String get() = "${operatingSystem.fullName}${if (updatedCredentials) "*".magenta() else ""} at ${image.toUri()}"
+    val shortName: String get() = "${operatingSystem.fullName}${if (updatedCredentials) "*".magenta() else ""} at ${image.fileName}"
     val path: String get() = "$image"
 
-    private val defaultCredentials: Credentials = Credentials(operatingSystem.defaultUsername, operatingSystem.defaultPassword)
     private val updatedCredentials: Boolean get() = credentials != defaultCredentials
 
     fun boot(logger: RenderingLogger<Any>, vararg programs: Program): Int =

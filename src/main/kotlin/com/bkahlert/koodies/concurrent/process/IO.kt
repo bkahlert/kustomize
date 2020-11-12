@@ -110,6 +110,8 @@ class IO(
          */
         infix fun <T : CharSequence> typed(value: Iterable<T>): List<IO> = value.map { typed(it) }
 
+        infix fun formatted(string: String): String = formatAnsi(string.asAnsiString())
+        infix fun formatted(string: AnsiString): String = formatAnsi(string)
         fun format(string: String): String = formatAnsi(string.asAnsiString())
         fun format(string: AnsiString): String = formatAnsi(string)
     }

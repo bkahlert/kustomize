@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.api.fail
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import org.junit.jupiter.api.parallel.Isolated
 import org.junit.platform.engine.FilterResult
 import org.junit.platform.engine.TestDescriptor
@@ -26,7 +26,7 @@ import strikt.assertions.isTrue
 import java.util.logging.LogManager
 
 @Isolated
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class DebugSkipTest {
 
     private var skipTestsRun = false
@@ -69,7 +69,7 @@ class DebugSkipTest {
 
 
     @TestMethodOrder(OrderAnnotation::class)
-    @Execution(ExecutionMode.CONCURRENT)
+    @Execution(CONCURRENT)
     class HiddenSkipTests : PostDiscoveryFilter {
         companion object {
             var hidden = true

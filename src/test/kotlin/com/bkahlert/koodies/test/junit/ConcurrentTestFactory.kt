@@ -2,9 +2,9 @@ package com.bkahlert.koodies.test.junit
 
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 @TestFactory
 @Target(
     AnnotationTarget.ANNOTATION_CLASS,

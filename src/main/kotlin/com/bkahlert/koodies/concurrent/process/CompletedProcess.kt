@@ -4,13 +4,10 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.IN
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
-import com.bkahlert.koodies.exception.toSingleLineString
-import com.bkahlert.koodies.string.LineSeparators.LF
+import com.bkahlert.koodies.exception.dump
+import com.bkahlert.koodies.exception.persistDump
+import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.string.joinLinesToString
-import com.imgcstmzr.util.Paths
-import com.imgcstmzr.util.withExtension
-import com.imgcstmzr.util.writeText
-import java.io.IOException
 import java.nio.file.Path
 
 /**
@@ -124,21 +121,8 @@ class CompletedProcess private constructor(
 
     /**
      * Saves the IO log to the specified [path].
-     *
-     * The log is written twice:
-     * 1) [path] with `.log` as its extension contains the "black/white" version
-     * 2) [path] with `.ansi.log` contains the version if format relevant ANSI control sequences intact
      */
-    fun saveIO(path: Path = Paths.tempFile("koodies.process.$pid.", ".log")): List<Path> =
-        kotlin.runCatching {
-            listOf(
-                path.withExtension("ansi.log").writeText(all.joinLinesToString { it.formatted }),
-                path.withExtension("log").writeText(all.joinLinesToString { it.unformatted })
-            )
-        }.getOrElse {
-            if (it is IOException) throw it
-            throw IOException(it)
-        }
+    fun saveIO(path: Path = tempFile("koodies.process.$pid.", ".log")): Map<String, Path> = persistDump(path) { all.joinLinesToString { it.formatted } }
 
     /**
      * Checks if the specified [requiredExitCode] was returned.
@@ -156,24 +140,9 @@ class CompletedProcess private constructor(
      * Returns the default lazy message used by [checkExitCode] to
      * check the [requiredExitCode].
      */
-    fun defaultLazyMessage(requiredExitCode: Int): CompletedProcess.() -> String {
-        return {
-            kotlin.runCatching {
-                saveIO().let { logPaths ->
-                    all.size.coerceAtMost(10).let { recentLineCount ->
-                        "An error occurred which led to exit code $exitCode although $requiredExitCode was expected.$LF" +
-                            "➜ The I/O log has been written once with and once without ANSI control sequences to:$LF" +
-                            logPaths.joinLinesToString(postfix = LF) { "  - ${it.toUri()}" } +
-                            "➜ The last $recentLineCount I/O lines were:$LF" +
-                            all.take(recentLineCount).map { "  $it" }.joinLinesToString(postfix = LF)
-                    }
-                }
-            }.recover { ex: Throwable ->
-                "An error occurred which led to exit code $exitCode although $requiredExitCode was expected.$LF" +
-                    "➜ Unfortunately also the I/O log could not be stored (${ex.toSingleLineString()}).$LF" +
-                    "➜ Therefore the complete I/O log will be printed here:$LF" +
-                    all.map { io -> "  $io" }.joinLinesToString(postfix = LF)
-            }.getOrThrow()
+    fun defaultLazyMessage(requiredExitCode: Int): CompletedProcess.() -> String = {
+        dump("An error occurred which led to exit code $exitCode although $requiredExitCode was expected") {
+            all.joinLinesToString { it.formatted }
         }
     }
 

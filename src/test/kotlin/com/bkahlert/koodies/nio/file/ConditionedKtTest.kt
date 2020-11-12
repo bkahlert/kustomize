@@ -4,7 +4,6 @@ import com.bkahlert.koodies.nio.ClassPath
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.containsContent
-import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -21,8 +20,6 @@ import java.nio.file.Path
 
 @Execution(CONCURRENT)
 class ConditionedKtTest {
-
-    val tmpDir: Path = File.createTempFile("file", ".txt").toPath().also { it.delete() }.parent
 
     @Test
     fun `should return normalized`() {

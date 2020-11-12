@@ -23,7 +23,7 @@ abstract class SingleLineLogger<R>(caption: CharSequence) : RenderingLogger<R> {
     override fun logStatus(items: List<HasStatus>, block: () -> IO) {
         strings = strings?.plus(block().formatted.lines().joinToString(", "))
         if (items.isNotEmpty()) strings =
-            strings?.plus(items.status().lines().joinToString(", ", "(", ")")) // TODO: joinToString(prefix = "($symbol ", separator = " ˃ ", postfix = ")")
+            strings?.plus(items.status().lines().joinToString(", ", "(", ")"))
     }
 
     override fun logResult(block: () -> Result<R>): R {

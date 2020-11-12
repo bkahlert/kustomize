@@ -1,10 +1,13 @@
 package com.imgcstmzr.util
 
 import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.nio.file.tempDir
+import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.strikt.hasSize
 import com.bkahlert.koodies.unit.bytes
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest
@@ -12,7 +15,7 @@ import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.contains
@@ -29,19 +32,19 @@ import strikt.assertions.message
 import java.io.File
 import java.io.IOException
 import java.nio.file.Path
-import java.time.Instant
-import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class PathExtensionsKtTest {
+
+    private val tempDir = tempDir().deleteOnExit()
 
     @Nested
     inner class Executables {
 
         @Test
         fun `should assert isExecutable`() {
-            val path = Paths.tempFile()
+            val path = tempDir.tempFile()
             expectThat(path.isExecutable).isFalse()
 
             path.makeExecutable()
@@ -124,38 +127,35 @@ class PathExtensionsKtTest {
 
     @Nested
     inner class Creation {
-        @ExperimentalTime
         @Nested
         inner class Touch {
-            val somewhereInThePast = Instant.parse("1984-01-01T00:00:00Z").toEpochMilli()
-
             @Test
             fun `should update modification timestamp`() {
-                expectThat(createTempFile().toPath().touch()).lastModified(1.seconds)
+                expectThat(tempDir.tempFile()).lastModified(1.seconds)
             }
 
             @Test
             fun `should throw if file is directory`() {
-                expectThat(createTempFile().also { it.delete() }.toPath().mkdirs().touch()).lastModified(1.seconds)
+                expectThat(tempDir.tempFile().also { it.delete() }.mkdirs().touch()).lastModified(1.seconds)
             }
 
             @Test
             fun `should create file if missing`() {
-                val path = createTempFile().also { it.delete() }.toPath()
+                val path = tempDir.tempFile().also { it.delete() }
                 path.touch()
                 expectThat(path).exists()
             }
 
             @Test
             fun `should leave file unchanged if exists`() {
-                val path = createTempFile().also { it.writeText("Test") }.toPath()
+                val path = tempDir.tempFile().also { it.writeText("Test") }
                 path.touch()
                 expectThat(path).hasContent("Test")
             }
 
             @Test
             fun `should append text to file`() {
-                val path = createTempFile().toPath()
+                val path = tempDir.tempFile()
                 path.appendText("text 1")
                 path.appendText("text 2")
                 expectThat(path).hasContent("text 1text 2")
@@ -163,7 +163,7 @@ class PathExtensionsKtTest {
 
             @Test
             fun `should append line to file`() {
-                val path = createTempFile().toPath()
+                val path = tempDir.tempFile()
                 path.appendLine("line 1")
                 path.appendLine("line 2")
                 expectThat(path).hasContent("line 1\nline 2\n")
@@ -174,7 +174,7 @@ class PathExtensionsKtTest {
     @Nested
     inner class InputStreaming {
 
-        val testFile: Path = ClassPath.of("classpath:/cmdline.txt").copyToTempFile()
+        private val testFile: Path = ClassPath.of("classpath:/cmdline.txt").copyToTempFile().deleteOnExit()
 
         @Suppress("SpellCheckingInspection")
         val expected = "console=serial0,115200 console=tty1 root=PARTUUID=907af7d0-02 rootfstype=ext4 elevator=deadline " +
@@ -269,8 +269,8 @@ class PathExtensionsKtTest {
     @Nested
     inner class ReadAllBytes {
 
-        val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
-        val tempFile = File.createTempFile(tempFilePrefix, ".txt").also { it.writeBytes(ByteArray(10)); it.deleteOnExit() }
+        private val tempFilePrefix: String = PathExtensionsKtTest::class.simpleName!!
+        val tempFile: File = File.createTempFile(tempFilePrefix, ".txt").also { it.writeBytes(ByteArray(10)); it.deleteOnExit() }
 
         @ConcurrentTestFactory
         fun `should read bytes`() = mapOf(
@@ -288,7 +288,7 @@ class PathExtensionsKtTest {
 
         @Test
         fun `should throw on missing file`() {
-            val deletedFile = File.createTempFile(tempFilePrefix, ".txt").also { it.delete() }.toPath()
+            val deletedFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.delete() }
             expectCatching { deletedFile.readAllBytes() }.isFailure().isA<IOException>()
         }
     }
@@ -298,6 +298,7 @@ class PathExtensionsKtTest {
 
         @ConcurrentTestFactory
         fun `should read complete string`() {
+            @Suppress("SpellCheckingInspection", "LongLine")
             val expected = """
                 console=serial0,115200 console=tty1 root=PARTUUID=907af7d0-02 rootfstype=ext4 elevator=deadline fsck.repair=yes rootwait quiet init=/usr/lib/raspi-config/init_resize.sh
 
@@ -368,19 +369,19 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
     @Nested
     inner class Copy {
 
-        val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
-        val tempFile = File.createTempFile(tempFilePrefix, ".txt").also { it.writeBytes(ByteArray(10)); it.deleteOnExit() }.toPath()
+        private val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
+        val tempFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.toFile().writeBytes(ByteArray(10)); it.deleteOnExit() }
 
         @Test
         fun `should copy file if destination not exists`() {
-            val deletedFile = File.createTempFile(tempFilePrefix, ".txt").also { it.delete() }.toPath()
+            val deletedFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.delete() }
             tempFile.copyTo(deletedFile)
             expectThat(deletedFile).get { readAllBytes().size }.isEqualTo(10)
         }
 
         @Test
         fun `should throw on missing file`() {
-            val deletedFile = File.createTempFile(tempFilePrefix, ".txt").also { it.delete() }.toPath()
+            val deletedFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.delete() }
             expectCatching { deletedFile.copyTo(tempFile) }.isFailure().isA<IOException>()
         }
 
@@ -406,12 +407,12 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
     @Nested
     inner class Move {
 
-        val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
-        fun tempFile() = File.createTempFile(tempFilePrefix, ".txt").also { it.writeBytes(ByteArray(10)); it.deleteOnExit() }.toPath()
+        private val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
+        fun tempFile() = tempDir.tempFile(tempFilePrefix, ".txt").also { it.toFile().writeBytes(ByteArray(10)); it.deleteOnExit() }
 
         @Test
         fun `should copy file if destination not exists`() {
-            val deletedFile = File.createTempFile(tempFilePrefix, ".txt").also { it.delete() }.toPath()
+            val deletedFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.delete() }
             val tempFile = tempFile()
             tempFile.moveTo(deletedFile)
             expectThat(deletedFile).get { readAllBytes().size }.isEqualTo(10)
@@ -420,7 +421,7 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
 
         @Test
         fun `should throw on missing file`() {
-            val deletedFile = File.createTempFile(tempFilePrefix, ".txt").also { it.delete() }.toPath()
+            val deletedFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.delete() }
             expectCatching { deletedFile.moveTo(tempFile()) }.isFailure().isA<IOException>()
         }
     }
@@ -428,20 +429,20 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
     @Nested
     inner class Rename {
 
-        val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
-        val tempFile = File.createTempFile(tempFilePrefix, ".txt").also { it.writeBytes(ByteArray(10)); it.deleteOnExit() }.toPath()
+        private val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
+        val tempFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.toFile().writeBytes(ByteArray(10)); it.deleteOnExit() }
 
         @Test
         fun `should rename file if destination not exists`() {
             val renamedFilename = String.random()
-            val renamedFile = tempFile.renameTo("${renamedFilename}.txt")
+            val renamedFile = tempFile.renameTo("$renamedFilename.txt")
             expectThat(tempFile).not { exists() }
             expectThat(renamedFile).exists().get { readAllBytes().size }.isEqualTo(10)
         }
 
         @Test
         fun `should throw on missing file`() {
-            val deletedFile = File.createTempFile(tempFilePrefix, ".txt").also { it.delete() }.toPath()
+            val deletedFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.delete() }
             expectCatching { deletedFile.renameTo("filename") }.isFailure().isA<IllegalArgumentException>()
         }
 
@@ -454,10 +455,11 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
     @Nested
     inner class Cleanup {
 
-        val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
-        fun getTempFile(additionalSuffix: String) = File.createTempFile(tempFilePrefix, ".txt$additionalSuffix")
-            .also { it.writeBytes(ByteArray(10)); it.deleteOnExit() }.toPath()
+        private val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
+        private fun getTempFile(additionalSuffix: String) = tempDir.tempFile(tempFilePrefix, ".txt$additionalSuffix")
+            .also { it.toFile().writeBytes(ByteArray(10)); it.deleteOnExit() }
 
+        @Suppress("LongLine")
         @Test
         fun `should rename file if trailing dirt`() {
             val file = getTempFile("?x")
@@ -466,7 +468,7 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
             expectThat(cleanedFile)
                 .exists()
                 .hasSize(10.bytes)
-                .get { fileName.toString() }.not { contains("?") }
+                .get { "$fileName" }.not { contains("?") }
         }
 
         @Test
@@ -484,16 +486,15 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
 
         @Test
         fun `should create empty temp file`() {
-            val path = File.createTempFile(prefix, ".txt").also { it.writeText("Test") }.toPath()
+            val path = tempDir.tempFile(prefix, ".txt").also { it.writeText("Test") }
             expectThat(path.asEmptyTempFile())
                 .isRegularFile()
                 .hasContent("")
-                .isInside(path.parent)
         }
 
         @Test
         fun `should create empty temp file in isolated directory`() {
-            val path = File.createTempFile(prefix, ".txt").also { it.writeText("Test") }.toPath()
+            val path = tempDir.tempFile(prefix, ".txt").also { it.writeText("Test") }
             val temp = path.asEmptyTempFile(isolated = true)
             expectThat(temp)
                 .isRegularFile()
@@ -506,17 +507,16 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
 
         @Test
         fun `should create temp copy`() {
-            val path = File.createTempFile(prefix, ".txt").also { it.writeText("Test") }.toPath()
+            val path = tempDir.tempFile(prefix, ".txt").also { it.writeText("Test") }
             val tempCopy = path.copyToTempFile()
             expectThat(tempCopy)
                 .isRegularFile()
                 .hasContent("Test")
-                .isInside(path.parent)
         }
 
         @Test
         fun `should create temp copy in isolated directory`() {
-            val path = File.createTempFile(prefix, ".txt").also { it.writeText("Test") }.toPath()
+            val path = tempFile(prefix, ".txt").also { it.writeText("Test") }.deleteOnExit()
             val tempCopy = path.copyToTempFile(isolated = true)
             expectThat(tempCopy)
                 .isRegularFile()
@@ -529,7 +529,7 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
 
         @Test
         fun `should create temp sibling`() {
-            val path = File.createTempFile(prefix, ".txt").also { it.writeText("Test") }.toPath()
+            val path = tempDir.tempFile(prefix, ".txt").also { it.writeText("Test") }
             val tempSiblingCopy = path.copyToTempSiblingDirectory()
             expectThat(tempSiblingCopy)
                 .isRegularFile()
@@ -545,20 +545,20 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
     inner class CheckSingleFile {
         @Test
         fun `should return single file`() {
-            val dir = Paths.tempFile().copyToTempSiblingDirectory().parent
+            val dir = tempDir.tempFile().copyToTempSiblingDirectory().parent
             expectThat(dir.checkSingleFile { "File not found." }).isInside(dir)
         }
 
         @Test
         fun `should throw on missing file`() {
-            val dir = Paths.tempFile().copyToTempSiblingDirectory().also { it.delete() }.parent
+            val dir = tempDir.tempFile().copyToTempSiblingDirectory().also { it.delete() }.parent
             expectCatching { dir.checkSingleFile { "File not found." } }.isFailure().isA<IllegalStateException>()
                 .message.assert("") { expectThat(it).isEqualTo("File not found.") }
         }
 
         @Test
         fun `should throw on too many files`() {
-            val dir = Paths.tempFile().copyToTempSiblingDirectory().also { it.parent.resolve("second.file").touch() }.parent
+            val dir = tempDir.tempFile().copyToTempSiblingDirectory().also { it.parent.resolve("second.file").touch() }.parent
             expectCatching { dir.checkSingleFile { "File not found." } }.isFailure().isA<IllegalStateException>()
                 .message.assert("") { expectThat(it).isEqualTo("File not found.") }
         }

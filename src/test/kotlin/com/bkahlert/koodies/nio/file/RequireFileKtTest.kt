@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.nio.file
 
-import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.delete
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -11,18 +11,21 @@ import strikt.assertions.isFailure
 
 @Execution(CONCURRENT)
 class RequireFileKtTest {
+
+    private val tempDir = tempDir().deleteOnExit()
+
     @Test
     fun `should throw on directory`() {
-        expectCatching { Paths.tempDir().requireFile() }.isFailure().isA<IllegalArgumentException>()
+        expectCatching { tempDir.tempDir().requireFile() }.isFailure().isA<IllegalArgumentException>()
     }
 
     @Test
     fun `should throw on file`() {
-        Paths.tempFile().requireFile()
+        tempDir.tempFile().requireFile()
     }
 
     @Test
     fun `should throw on missing`() {
-        expectCatching { Paths.tempFile().also { it.delete() }.requireFile() }.isFailure().isA<IllegalArgumentException>()
+        expectCatching { tempDir.tempFile().also { it.delete() }.requireFile() }.isFailure().isA<IllegalArgumentException>()
     }
 }

@@ -15,7 +15,7 @@ import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.contains
@@ -27,7 +27,7 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import strikt.assertions.isNull
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class IniDocumentTest {
 
     @Suppress("SpellCheckingInspection") val rawDocument = """

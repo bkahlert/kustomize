@@ -15,10 +15,10 @@ import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.Size
+import com.imgcstmzr.guestfish.GuestfishOperation
 import com.imgcstmzr.patch.PathOperation
 import com.imgcstmzr.patch.new.ImgOperation
 import com.imgcstmzr.patch.new.Patch
-import com.imgcstmzr.process.GuestfishOperation
 import com.imgcstmzr.runtime.Program
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
@@ -28,7 +28,6 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 
 // TODO improve compatibility with https://github.com/JetBrains/intellij-community/blob/3f7e93e20b7e79ba389adf593b3b59e46a3e01d1/plugins/testng/src/com/theoryinpractice/testng/model/TestProxy.java#L50 in order to always trigger the "Click here to compare" link
 fun Assertion.Builder<*>.asString(trim: Boolean = true): DescribeableBuilder<String> {
@@ -242,7 +241,6 @@ fun Assertion.Builder<Path>.isEmptyDirectory() =
         }
     }
 
-@ExperimentalTime
 fun Assertion.Builder<Path>.lastModified(duration: Duration) =
     assert("was last modified at most $duration ago") {
         val now = System.currentTimeMillis()

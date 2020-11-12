@@ -3,7 +3,7 @@ package com.imgcstmzr.patch.ini
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
@@ -14,7 +14,7 @@ import strikt.assertions.isFailure
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class RegexParserTest {
 
     val regexParser = RegexParser(
@@ -103,7 +103,7 @@ class RegexParserTest {
         @Test
         fun `should return unchanged if no replacements`() {
             val parsed = regexParser.replace(regexParser.parseSingle("   ab=c"))
-            expectThat(parsed.toString()).isEqualTo("   ab=c")
+            expectThat("$parsed").isEqualTo("   ab=c")
         }
 
         @Test
@@ -124,18 +124,18 @@ class RegexParserTest {
         fun `should replace all groups`() {
             val parsed = regexParser.transform(
                 regexParser.parseSingle("   ab=c"),
-                "margin" to { value -> "\n" },
-                "name" to { value -> "key" },
+                "margin" to { "\n" },
+                "name" to { "key" },
                 "assignmentSymbol" to { "=" },
                 "value" to { "value" },
             )
-            expectThat(parsed.toString()).isEqualTo("\nkey=value")
+            expectThat("$parsed").isEqualTo("\nkey=value")
         }
 
         @Test
         fun `should return unchanged if no transformations`() {
             val parsed = regexParser.transform(regexParser.parseSingle("   ab=c"))
-            expectThat(parsed.toString()).isEqualTo("   ab=c")
+            expectThat("$parsed").isEqualTo("   ab=c")
         }
     }
 
@@ -149,13 +149,13 @@ class RegexParserTest {
                 "name" to "empty",
                 "value" to "\"\""
             )
-            expectThat(parsed.toString()).isEqualTo("\tempty=\"\"")
+            expectThat("$parsed").isEqualTo("\tempty=\"\"")
         }
 
         @Test
         fun `should return unchanged if no replacements`() {
             val parsed = regexParser.replaceAll("   ab=c")
-            expectThat(parsed.toString()).isEqualTo("   ab=c")
+            expectThat("$parsed").isEqualTo("   ab=c")
         }
 
         @Test
@@ -201,24 +201,24 @@ class RegexParserTest {
                     }
                 },
             )
-            expectThat(parsed.toString()).isEqualTo("   ab=c\nkey=value1")
+            expectThat("$parsed").isEqualTo("   ab=c\nkey=value1")
         }
 
         @Test
         fun `should return unchanged if no transformations`() {
             val parsed = regexParser.transformAll("   ab=c d:")
-            expectThat(parsed.toString()).isEqualTo("   ab=c d:")
+            expectThat("$parsed").isEqualTo("   ab=c d:")
         }
     }
 
     @Nested
     inner class AParsedElement {
 
-        val parsedElement = regexParser.parseSingle(" key='value'")
+        private val parsedElement = regexParser.parseSingle(" key='value'")
 
         @Test
         fun `should render as unchanged`() {
-            expectThat(parsedElement.toString()).isEqualTo(" key='value'")
+            expectThat("$parsedElement").isEqualTo(" key='value'")
         }
 
         @Test
@@ -230,12 +230,12 @@ class RegexParserTest {
     @Nested
     inner class AParsedElements {
 
-        val parsedElements = regexParser.parseAll(" key='value'\na=b")
+        private val parsedElements = regexParser.parseAll(" key='value'\na=b")
 
         @Test
         fun `should render as unchanged`() {
 
-            expectThat(parsedElements.toString()).isEqualTo(" key='value'\na=b")
+            expectThat("$parsedElements").isEqualTo(" key='value'\na=b")
         }
 
         @Test

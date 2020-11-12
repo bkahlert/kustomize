@@ -6,7 +6,7 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.terminal.ascii.Borders.SpikedOutward
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.bkahlert.koodies.test.junit.Slow
-import com.imgcstmzr.runtime.ProcessMock
+import com.imgcstmzr.runtime.SlowInputStream
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -18,11 +18,9 @@ import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
 import strikt.assertions.isLessThanOrEqualTo
-import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
 import kotlin.time.seconds
 
-@ExperimentalTime
 @Execution(CONCURRENT)
 class NonBlockingCharReaderTest {
 
@@ -48,11 +46,10 @@ class NonBlockingCharReaderTest {
         expectThat(reader.readLines()).containsExactly("line #壹", "line #❷")
     }
 
-    @Slow
-    @Test
+    @Slow @Test
     fun `should read in a non-greedy fashion resp just as much as needed to avoid blocking`(logger: InMemoryLogger<String?>) {
         val inputStream =
-            ProcessMock.SlowInputStream(
+            SlowInputStream(
                 1.seconds to "123",
                 2.seconds to "abc",
                 3.seconds to "!§\"",

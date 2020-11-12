@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.nio.file
 
-import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.delete
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -11,13 +11,16 @@ import strikt.assertions.isFailure
 
 @Execution(CONCURRENT)
 class RequireExistsNotKtTest {
+
+    private val tempDir = tempDir().deleteOnExit()
+
     @Test
     fun `should throw if exists`() {
-        expectCatching { Paths.tempDir().requireExistsNot() }.isFailure().isA<IllegalArgumentException>()
+        expectCatching { tempDir.tempDir().requireExistsNot() }.isFailure().isA<IllegalArgumentException>()
     }
 
     @Test
     fun `should not throw if not exists`() {
-        Paths.tempDir().also { it.delete() }.requireExistsNot()
+        tempDir.tempDir().also { it.delete() }.requireExistsNot()
     }
 }

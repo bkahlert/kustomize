@@ -1,11 +1,8 @@
-@file:OptIn(ExperimentalTime::class)
-
 package com.bkahlert.koodies.time
 
 import com.bkahlert.koodies.time.IntervalPolling.Polling
 import java.util.concurrent.TimeoutException
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
 import kotlin.time.seconds
 

@@ -7,7 +7,7 @@ import com.imgcstmzr.util.quoted
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.exists
@@ -18,13 +18,17 @@ import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 import java.io.File
 import java.io.IOException
+import java.io.InputStreamReader
 import java.nio.file.Path
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class ClassPathTest {
 
-    data class Spec(val exists: Boolean, val resource: String, val size: Int?)
+    data class Spec(val exists: Boolean, val resource: String, val size: Int?) {
+        fun reader(): InputStreamReader = ClassLoader.getSystemResourceAsStream(resource)?.reader()!!
+    }
 
+    @Execution(CONCURRENT)
     @ConcurrentTestFactory
     fun `fulfills specification`() = listOf(
         "cmdline.txt" to Spec(true, "cmdline.txt", 169),
@@ -56,6 +60,14 @@ class ClassPathTest {
                     if (spec.exists) expectThat(classPath).get { readAllBytes().size }.isEqualTo(spec.size)
                     else expectCatching { classPath.readAllBytes() }.isFailure().isA<IOException>()
                 },
+                dynamicTest("should read text from ${path.quoted}") {
+                    if (spec.exists) expectThat(classPath).get { readText() }.isEqualTo(spec.reader().readText())
+                    else expectCatching { classPath.readText() }.isFailure().isA<IOException>()
+                },
+                dynamicTest("should read lines from ${path.quoted}") {
+                    if (spec.exists) expectThat(classPath).get { readAllLines() }.isEqualTo(spec.reader().readLines())
+                    else expectCatching { classPath.readAllLines() }.isFailure().isA<IOException>()
+                },
                 dynamicTest("should $not copy ${path.quoted}") {
                     val dest: Path = File.createTempFile("class-path-copy-dest", "").toPath()
                     dest.delete()
@@ -64,4 +76,6 @@ class ClassPathTest {
                 },
             ))
     }
+
+
 }

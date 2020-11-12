@@ -2,7 +2,6 @@ package com.imgcstmzr.cli
 
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.Option
-import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.github.ajalt.clikt.sources.ValueSource
 import com.github.ajalt.clikt.sources.ValueSource.Invocation
 import com.typesafe.config.Config
@@ -16,7 +15,6 @@ import java.net.URL
  *
  * **Important:** The first config level is treated as a config name—similar to documents in YAML.
  */
-@OptIn(ExperimentalValueSourceApi::class)
 class Config4kValueSource(private val name: String, private val config: Config) : ValueSource {
     private val prefix = "$name.$name."
     private val nameKey = "$name.$name.name"
@@ -76,12 +74,10 @@ class Config4kValueSource(private val name: String, private val config: Config) 
         fun proxy(): ValueSource = Proxy()
     }
 
-    @OptIn(ExperimentalValueSourceApi::class)
     private class Proxy() : ValueSource {
         var delegate: ValueSource? = null
 
         override fun getValues(context: Context, option: Option): List<ValueSource.Invocation> =
             delegate?.getValues(context, option) ?: emptyList()
     }
-
 }

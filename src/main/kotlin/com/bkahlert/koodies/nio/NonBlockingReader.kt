@@ -11,15 +11,15 @@ import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.time.Now
 import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.singleLineLogger
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.subLogger
+import com.imgcstmzr.runtime.log.singleLineLogger
+import com.imgcstmzr.runtime.log.subLogger
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.quoted
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.Reader
+import java.lang.System.currentTimeMillis
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
 import kotlin.time.seconds
 
@@ -29,11 +29,10 @@ import kotlin.time.seconds
  * [LineSeparators] will also be read by [readLine], [readLines] and usual
  * helper functions.
  */
-@OptIn(ExperimentalTime::class)
 class NonBlockingReader(
     inputStream: InputStream,
     private val timeout: Duration = 6.seconds,
-    private val logger: RenderingLogger<String?>? = MutedBlockRenderingLogger("NonBlockingReader"),
+    private val logger: RenderingLogger<*> = MutedBlockRenderingLogger<Any>("NonBlockingReader"),
     private val blockOnEmptyLine: Boolean = false,
 ) : BufferedReader(Reader.nullReader()) {
     private var reader: NonBlockingCharReader? = NonBlockingCharReader(inputStream, timeout = timeout / 3)
@@ -43,10 +42,8 @@ class NonBlockingReader(
     private var charArray: CharArray = CharArray(1)
     private val lastRead get() = unfinishedLine.substring((unfinishedLine.length - 1).coerceAtLeast(0), unfinishedLine.length)
     private val lastReadCR get() = lastRead == CR
-    private val lastReadLF get() = lastRead == LF
     private val linePotentiallyComplete get() = unfinishedLine.matches(LineSeparators.INTERMEDIARY_LINE_PATTERN)
     private val justRead get() = String(charArray, 0, 1)
-    private val justReadCR get() = justRead == CR
     private val justReadLF get() = justRead == LF
     private val justReadCRLF get() = lastReadCR && justReadLF
     private val lineComplete get() = linePotentiallyComplete && !justReadCRLF
@@ -60,7 +57,7 @@ class NonBlockingReader(
      */
     override fun readLine(): String? = if (reader == null) null else
         logger.subLogger(NonBlockingReader::class.simpleName + "." + ::readLine.name + "()", ansiCode = ANSI.termColors.cyan) {
-            val maxTimeMillis = System.currentTimeMillis() + timeout.toLongMilliseconds()
+            val maxTimeMillis = currentTimeMillis() + timeout.toLongMilliseconds()
             logStatus { META typed "Starting to read line for at most $timeout" }
             while (true) {
                 val read: Int = reader?.read(charArray, 0, this@subLogger)!!
@@ -74,19 +71,19 @@ class NonBlockingReader(
                         lastReadLine
                     } else {
                         lastReadLineDueTimeout = false
-                        lastReadLine = unfinishedLine.toString()
+                        lastReadLine = "$unfinishedLine"
                         unfinishedLine.clear()
                         lastReadLine!!.withoutTrailingLineSeparator
                     }
                 }
-                logStatus { META typed "${Now.emoji} ${(maxTimeMillis - System.currentTimeMillis()).milliseconds}; 📋 ${unfinishedLine.debug}; 🆕 ${justRead.debug}" }
+                logStatus { META typed "${Now.emoji} ${(maxTimeMillis - currentTimeMillis()).milliseconds}; 📋 ${unfinishedLine.debug}; 🆕 ${justRead.debug}" }
                 if (read == 1) {
 //                    println(this@NonBlockingReader)
                     val lineAlreadyRead = lastReadLineDueTimeout == true && lastReadLine?.hasTrailingLineSeparator == true && !justReadCRLF
 
                     if (lineComplete) {
                         lastReadLineDueTimeout = false
-                        lastReadLine = unfinishedLine.toString()
+                        lastReadLine = "$unfinishedLine"
                         unfinishedLine.clear()
                         unfinishedLine.append(charArray)
                         logStatus { META typed "Line Completed: ${lastReadLine.quoted}" }
@@ -98,10 +95,10 @@ class NonBlockingReader(
                         unfinishedLine.append(charArray)
                     }
                 }
-                if (System.currentTimeMillis() >= maxTimeMillis && !(blockOnEmptyLine && unfinishedLine.isEmpty())) {
+                if (currentTimeMillis() >= maxTimeMillis && !(blockOnEmptyLine && unfinishedLine.isEmpty())) {
                     logStatus { META typed "${Now.emoji} Timed out. Returning ${unfinishedLine.quoted}" }
                     lastReadLineDueTimeout = true
-                    lastReadLine = unfinishedLine.toString()
+                    lastReadLine = "$unfinishedLine"
                     return@subLogger lastReadLine!!.withoutTrailingLineSeparator
                 }
             }
@@ -126,6 +123,9 @@ class NonBlockingReader(
         null
     }
 
+    /**
+     * Closes this reader without throwing any exception.
+     */
     override fun close() {
         kotlin.runCatching { reader?.close() }
         reader = null

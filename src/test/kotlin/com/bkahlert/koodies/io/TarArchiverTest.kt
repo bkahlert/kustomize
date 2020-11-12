@@ -4,9 +4,11 @@ import com.bkahlert.koodies.io.PathFixtures.archiveWithTwoFiles
 import com.bkahlert.koodies.io.PathFixtures.directoryWithTwoFiles
 import com.bkahlert.koodies.io.TarArchiver.tar
 import com.bkahlert.koodies.io.TarArchiver.untar
+import com.bkahlert.koodies.nio.file.tempDir
+import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.unit.size
-import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.addExtension
 import com.imgcstmzr.util.copyTo
 import com.imgcstmzr.util.delete
@@ -28,10 +30,13 @@ import strikt.assertions.isGreaterThan
 
 @Execution(CONCURRENT)
 class TarArchiverTest {
+
+    private val tempDir = tempDir().deleteOnExit()
+
     @ConcurrentTestFactory
     fun `should throw on missing source`() = listOf(
-        { Paths.tempDir().also { it.delete() }.tar() },
-        { Paths.tempFile(extension = ".tar").also { it.delete() }.untar() },
+        { tempDir.tempDir().also { it.delete() }.tar() },
+        { tempDir.tempFile(extension = ".tar").also { it.delete() }.untar() },
     ).map { call ->
         dynamicTest("$call") {
             expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
@@ -40,8 +45,8 @@ class TarArchiverTest {
 
     @ConcurrentTestFactory
     fun `should throw on non-empty destination`() = listOf(
-        { directoryWithTwoFiles().also { it.addExtension("tar").touch().writeText("content") }.tar() },
-        { archiveWithTwoFiles("tar").also { it.copyTo(it.removeExtension("tar")) }.untar() },
+        { tempDir.directoryWithTwoFiles().also { it.addExtension("tar").deleteOnExit().touch().writeText("content") }.tar() },
+        { tempDir.archiveWithTwoFiles("tar").also { it.copyTo(it.removeExtension("tar")).deleteOnExit() }.untar() },
     ).map { call ->
         dynamicTest("$call") {
             expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
@@ -50,8 +55,8 @@ class TarArchiverTest {
 
     @ConcurrentTestFactory
     fun `should overwrite non-empty destination`() = listOf(
-        { directoryWithTwoFiles().also { it.addExtension("tar").touch().writeText("content") }.tar(overwrite = true) },
-        { archiveWithTwoFiles("tar").also { it.copyTo(it.removeExtension("tar")) }.untar(overwrite = true) },
+        { tempDir.directoryWithTwoFiles().also { it.addExtension("tar").deleteOnExit().touch().writeText("content") }.tar(overwrite = true) },
+        { tempDir.archiveWithTwoFiles("tar").also { it.copyTo(it.removeExtension("tar")).deleteOnExit() }.untar(overwrite = true) },
     ).map { call ->
         dynamicTest("$call") {
             expectThat(call()).exists()
@@ -60,7 +65,7 @@ class TarArchiverTest {
 
     @Test
     fun `should tar and untar`() {
-        val dir = directoryWithTwoFiles()
+        val dir = tempDir.directoryWithTwoFiles()
 
         val archivedDir = dir.tar()
         expectThat(archivedDir.size).isGreaterThan(dir.size)

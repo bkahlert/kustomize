@@ -1,32 +1,31 @@
 package com.bkahlert.koodies.concurrent
 
-import com.bkahlert.koodies.tracing.Tracer
-import com.bkahlert.koodies.tracing.trace
+import com.imgcstmzr.runtime.log.RenderingLogger
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * [Thread] that drains your battery and can only be stopped by calling [stop].
  */
-class BusyThread private constructor(private var stopped: AtomicBoolean, private val tracer: Tracer<*>? = null) : Thread({
+class BusyThread private constructor(private var stopped: AtomicBoolean, private val logger: RenderingLogger<*>? = null) : Thread({
     while (!stopped.get()) {
-        tracer.trace("THREAD $stopped")
+        logger?.logLine { "THREAD $stopped" }
         try {
-            tracer.trace("busy")
+            logger?.logLine { "busy" }
         } catch (e: InterruptedException) {
             if (!stopped.get()) currentThread().interrupt()
         }
     }
 }) {
-    constructor(tracer: Tracer<*>? = null) : this(AtomicBoolean(false), tracer)
+    constructor(logger: RenderingLogger<*>? = null) : this(AtomicBoolean(false), logger)
 
     init {
         start()
     }
 
     fun stopFussFree() {
-        tracer.trace("stopping")
+        logger?.logLine { "stopping" }
         stopped.set(true)
         interrupt()
-        tracer.trace("stopped")
+        logger?.logLine { "stopped" }
     }
 }

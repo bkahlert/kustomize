@@ -9,11 +9,11 @@ import com.bkahlert.koodies.terminal.ansi.AnsiFormats.underline
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class AnsiCodeTest {
 
     val italicCyan = with(ANSI.termColors) { italic + cyan }

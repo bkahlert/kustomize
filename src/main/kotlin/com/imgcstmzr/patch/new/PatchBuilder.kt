@@ -5,9 +5,9 @@ import com.bkahlert.koodies.string.mapLines
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.unit.Size
+import com.imgcstmzr.guestfish.Guestfish
+import com.imgcstmzr.guestfish.GuestfishOperation
 import com.imgcstmzr.patch.PathOperation
-import com.imgcstmzr.process.Guestfish
-import com.imgcstmzr.process.GuestfishOperation
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.Program

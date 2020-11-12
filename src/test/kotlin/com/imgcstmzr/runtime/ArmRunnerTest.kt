@@ -3,12 +3,13 @@ package com.imgcstmzr.runtime
 import com.bkahlert.koodies.docker.Docker
 import com.bkahlert.koodies.docker.DockerProcess
 import com.bkahlert.koodies.exception.rootCause
+import com.bkahlert.koodies.test.junit.FifteenMinutesTimeout
 import com.bkahlert.koodies.time.sleep
-import com.imgcstmzr.runtime.ArmRunner.runOn
+import com.imgcstmzr.E2E
 import com.imgcstmzr.runtime.OperatingSystems.DietPi
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.runtime.OperatingSystems.TinyCore
-import com.imgcstmzr.util.DockerRequired
+import com.imgcstmzr.util.DockerRequiring
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.AfterAll
@@ -29,18 +30,15 @@ import strikt.assertions.message
 import java.nio.file.Path
 import java.util.concurrent.ExecutionException
 import kotlin.reflect.KFunction
-import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
 import kotlin.time.minutes
 import kotlin.time.seconds
 
-@DockerRequired
 @Execution(CONCURRENT)
-@OptIn(ExperimentalTime::class)
 class ArmRunnerTest {
 
-    @Test
-    fun `should boot`(@OS(DietPi::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    @FifteenMinutesTimeout @E2E @Test
+    fun `should boot`(@OS(DietPi) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
         val bootedPatterns = listOf(osImage.loginPattern, osImage.passwordPattern, osImage.readyPattern)
         var booted = false
 
@@ -49,7 +47,7 @@ class ArmRunnerTest {
             process = ArmRunner.run(
                 name = name(test = ArmRunnerTest::`should boot`),
                 osImage = osImage,
-                logger = logger, outputProcessor = { output ->
+                logger = logger, ioProcessor = { output ->
                     logger.logLine { output.formatted }
                     if (bootedPatterns.any { output.unformatted.matches(it) }) {
                         booted = true
@@ -67,8 +65,8 @@ class ArmRunnerTest {
         }.onFailure { process?.destroyForcibly() }.getOrThrow()
     }
 
-    @Test
-    fun `should boot and run program in user session`(@OS(RaspberryPiLite::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    @FifteenMinutesTimeout @E2E @Test
+    fun `should boot and run program in user session`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
 
         val exitCode = ArmRunner.run(
             name = name(ArmRunnerTest::`should boot and run program in user session`),
@@ -95,19 +93,8 @@ class ArmRunnerTest {
         }
     }
 
-    @Test
-    fun `should run program in user session`(@OS(TinyCore::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
-
-        osImage.compileScript("demo train", "sudo apt-get install -y -m sl", "sl").runOn(osImage, logger)
-
-        expectThat(logger.logged) {
-            contains("Running Tiny Core at piCore-12.0.img with ◀◀ demo train")
-            contains("Booting QEMU machine")
-        }
-    }
-
-    @Test
-    fun `should terminate if obviously stuck`(@OS(TinyCore::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    @DockerRequiring @Test
+    fun `should terminate if obviously stuck`(@OS(TinyCore) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
         val corruptingString = "Booting Linux"
         val corruptedOsImage = OperatingSystemImage(object : OperatingSystem by osImage {
             override val deadEndPattern: Regex get() = ".*$corruptingString.*".toRegex()

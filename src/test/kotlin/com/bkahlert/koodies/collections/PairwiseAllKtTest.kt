@@ -3,13 +3,13 @@ package com.bkahlert.koodies.collections
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class PairwiseAllKtTest {
 
     @Test

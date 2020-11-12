@@ -13,20 +13,17 @@ import strikt.assertions.isBlank
 import strikt.assertions.none
 import java.io.InputStream
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 import kotlin.time.toJavaDuration
 
-@OptIn(ExperimentalTime::class)
 @Execution(CONCURRENT)
 class BlockOnEmptyLineOtherwiseNonBlockingReaderTest :
-    SharedReaderTest({ inputStream: InputStream, timeout: Duration, logger: RenderingLogger<String?>? ->
+    SharedReaderTest({ inputStream: InputStream, timeout: Duration, logger: RenderingLogger<*> ->
         NonBlockingReader(inputStream = inputStream, timeout = timeout, logger = logger, blockOnEmptyLine = true)
     }) {
 
-    @OptIn(ExperimentalTime::class)
     @Slow @Test
-    fun `should not read empty lines due to timeout`(logger: InMemoryLogger<String?>) {
+    fun `should not read empty lines due to timeout`(logger: InMemoryLogger<*>) {
         val reader = readerFactory(object : InputStream() {
             override fun read(): Int {
                 5.seconds.sleep()

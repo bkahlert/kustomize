@@ -8,14 +8,14 @@ import com.imgcstmzr.util.isWritable
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class CacheTest {
     @Test
     fun `should instantiate in user home by default`() {

@@ -1,6 +1,7 @@
 package com.bkahlert.koodies.concurrent.process
 
 import com.bkahlert.koodies.io.RedirectingOutputStream
+import com.imgcstmzr.util.group
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.OutputStream.nullOutputStream
@@ -139,7 +140,7 @@ abstract class RunningProcess : Process() {
          * the surrounding `CompletableFuture133sds982[` stuff trashed.
          */
         private fun <T> CompletableFuture<T>.toSimpleString(): String =
-            Regex(".*\\[(.*)]").matchEntire(toString())?.groupValues?.last() ?: toString()
+            "status".let { field -> Regex(".*\\[(?<$field>.*)]").matchEntire(toString())?.group(field)?.value ?: toString() }
 
         /**
          * A non existent [Process] that serves as a not-null instance but whose methods are never meant to be called.

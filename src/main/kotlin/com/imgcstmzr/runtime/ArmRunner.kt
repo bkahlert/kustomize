@@ -5,16 +5,16 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.IN
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
-import com.bkahlert.koodies.concurrent.process.RunningProcess.Companion.nullRunningProcess
 import com.bkahlert.koodies.concurrent.startAsThread
 import com.bkahlert.koodies.docker.Docker
 import com.bkahlert.koodies.docker.DockerProcess
+import com.bkahlert.koodies.docker.DockerProcess.Companion.nullDockerProcess
 import com.bkahlert.koodies.terminal.ANSI
 import com.imgcstmzr.runtime.Program.Companion.compute
 import com.imgcstmzr.runtime.Program.Companion.format
 import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.subLogger
+import com.imgcstmzr.runtime.log.subLogger
 import java.nio.file.Path
 
 /**
@@ -31,11 +31,9 @@ object ArmRunner {
     @Suppress("SpellCheckingInspection")
     private const val DOCKER_IMAGE = "lukechilds/dockerpi:vm"
 
-    private val nullDockerProcess: DockerProcess = DockerProcess("NULL") { nullRunningProcess }
-
     /**
      * Starts a [DockerProcess] with [name] that boots the [osImage].
-     * All [IO] is passed to the [outputProcessor] which has an instance
+     * All [IO] is passed to the [ioProcessor] which has an instance
      * of [RunningOperatingSystem] as its receiver. The [RunningOperatingSystem]
      * also forwards all logging calls to [logger].
      */
@@ -43,7 +41,7 @@ object ArmRunner {
         name: String,
         osImage: OperatingSystemImage,
         logger: RenderingLogger<T>? = null,
-        outputProcessor: (RunningOperatingSystem.(IO) -> Any)? = null,
+        ioProcessor: (RunningOperatingSystem.(IO) -> Any)? = null,
     ): DockerProcess {
         var dockerProcess: DockerProcess = nullDockerProcess
         val runningOperatingSystem = object : RunningOperatingSystem() {
@@ -51,11 +49,12 @@ object ArmRunner {
             override val logger: RenderingLogger<T> = logger ?: MutedBlockRenderingLogger()
         }
         return Docker.run(
-            outputProcessor = outputProcessor.let {
+            ioProcessor = ioProcessor.let {
+                val deadEndPattern = osImage.deadEndPattern
                 var dying = false
                 { io: IO ->
-                    if (!dying) {
-                        if (io.unformatted.matches(osImage.deadEndPattern)) {
+                    if (!dying && deadEndPattern != null) {
+                        if (io.unformatted.matches(deadEndPattern)) {
                             startAsThread {
                                 dying = true
                                 runningOperatingSystem.negativeFeedback("The VM is stuck. Chances are the VM starts correctly with less load on this machine.")

@@ -9,7 +9,7 @@ import com.imgcstmzr.util.logging.OutputCaptureExtension
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import org.junit.jupiter.api.parallel.Isolated
 import org.junit.platform.commons.support.AnnotationSupport
 import strikt.api.expectCatching
@@ -19,7 +19,7 @@ import strikt.assertions.isA
 import strikt.assertions.isFailure
 import strikt.assertions.isNotNull
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 @ExtendWith(OutputCaptureExtension::class)
 class DebugTest {
 

@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.nio.file
 
 import com.bkahlert.koodies.nio.ClassPath
-import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.copyToTempFile
 import com.imgcstmzr.util.delete
 import org.junit.jupiter.api.Nested
@@ -18,16 +18,19 @@ import java.nio.file.Files
 
 @Execution(CONCURRENT)
 class IsNotEmptyKtTest {
+
+    private val tempDir = tempDir().deleteOnExit()
+
     @Nested
     inner class WithFile {
         @Test
         fun `should return true on non-empty`() {
-            expectThat(ClassPath("example.html").copyToTempFile().isNotEmpty).isTrue()
+            expectThat(ClassPath("example.html").copyToTempFile().deleteOnExit().isNotEmpty).isTrue()
         }
 
         @Test
         fun `should return false on empty`() {
-            expectThat(Paths.tempFile().isNotEmpty).isFalse()
+            expectThat(tempDir.tempFile().isNotEmpty).isFalse()
         }
     }
 
@@ -35,24 +38,24 @@ class IsNotEmptyKtTest {
     inner class WithDirectory {
         @Test
         fun `should return true on non-empty`() {
-            expectThat(Paths.tempDir().parent.isNotEmpty).isTrue()
+            expectThat(tempDir.tempDir().parent.isNotEmpty).isTrue()
         }
 
         @Test
         fun `should return false on empty`() {
-            expectThat(Paths.tempDir().isNotEmpty).isFalse()
+            expectThat(tempDir.tempDir().isNotEmpty).isFalse()
         }
     }
 
     @Test
     fun `should throw on missing`() {
-        expectCatching { Paths.tempFile().also { it.delete() }.isNotEmpty }.isFailure().isA<IllegalArgumentException>()
+        expectCatching { tempDir.tempFile().also { it.delete() }.isNotEmpty }.isFailure().isA<IllegalArgumentException>()
     }
 
     @Test
     fun `should throw in different type`() {
         @Suppress("BlockingMethodInNonBlockingContext")
-        (expectCatching { Files.createSymbolicLink(Paths.tempFile().also { it.delete() }, Paths.tempFile()).isNotEmpty })
+        (expectCatching { Files.createSymbolicLink(tempDir.tempFile().also { it.delete() }, tempDir.tempFile()).isNotEmpty })
     }
 }
 

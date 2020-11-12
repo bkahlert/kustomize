@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.concurrent.process
 
+import com.bkahlert.koodies.concurrent.cleanUpOldTempFiles
 import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
@@ -7,19 +8,15 @@ import com.bkahlert.koodies.concurrent.process.RunningProcess.Companion.nullRunn
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.startAsCompletableFuture
 import com.bkahlert.koodies.nio.NonBlockingReader
-import com.bkahlert.koodies.nio.file.age
 import com.bkahlert.koodies.nio.file.conditioned
 import com.bkahlert.koodies.nio.file.exists
-import com.bkahlert.koodies.nio.file.list
+import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ansi.AnsiStyles.tag
 import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.time.poll
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.Paths.WORKING_DIRECTORY
-import com.imgcstmzr.util.delete
-import com.imgcstmzr.util.isFile
 import com.imgcstmzr.util.unquoted
 import org.codehaus.plexus.util.cli.Commandline
 import java.io.InputStream
@@ -31,15 +28,20 @@ import java.util.concurrent.CompletionException
 import java.util.concurrent.Executors
 import kotlin.streams.asSequence
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
-import kotlin.time.minutes
 
 /**
  * Provides methods to start a new [Process] and to access running ones.
  */
-@OptIn(ExperimentalTime::class)
 object Processes {
+
+    const val shellScriptPrefix: String = "koodies.process."
+    const val shellScriptExtension: String = ".sh"
+
+    init {
+        cleanUpOldTempFiles(shellScriptPrefix, shellScriptExtension)
+    }
+
     val current: ProcessHandle get() = ProcessHandle.current()
 
     val descendants: Sequence<ProcessHandle>
@@ -50,10 +52,6 @@ object Processes {
 
     val recentChildren: List<ProcessHandle>
         get() = children.toList().sortedByDescending { it.info().startInstant().get() }
-
-    val mostRecentChild: ProcessHandle
-        get() = recentChildren.firstOrNull()
-            ?: throw IllegalStateException("This process $current has no recent child processes!\nChildren: ${children.toList()}")
 
     /**
      * Runs the [shellScript] asynchronously and with no helping wrapper.
@@ -69,7 +67,7 @@ object Processes {
             shebang()
             changeDirectoryOrExit(directory = workingDirectory)
             shellScript()
-        }.buildTo(Paths.tempFile(base = shellScriptPrefix, extension = shellScriptExtension)).conditioned
+        }.buildTo(tempFile(base = shellScriptPrefix, extension = shellScriptExtension)).conditioned
         return Commandline(command).apply {
             addArguments(arguments)
             @Suppress("ExplicitThis")
@@ -126,11 +124,11 @@ object Processes {
         env: Map<String, String> = emptyMap(),
         runAfterProcessTermination: (() -> Unit)? = null,
         inputStream: InputStream? = null,
-        outputProcessor: (RunningProcess.(IO) -> Unit)? = null,
+        ioProcessor: (RunningProcess.(IO) -> Unit)? = null,
         shellScript: ShellScript.() -> Unit,
     ): RunningProcess = startShellScriptLines(
         inputStream = inputStream,
-        outputProcessor = outputProcessor,
+        ioProcessor = ioProcessor,
         *(ShellScript().apply(shellScript)).lines.toTypedArray(),
         workingDirectory = workingDirectory,
         env = env,
@@ -142,7 +140,7 @@ object Processes {
      */
     private fun startShellScriptLines(
         inputStream: InputStream? = null,
-        outputProcessor: (RunningProcess.(IO) -> Unit)? = null,
+        ioProcessor: (RunningProcess.(IO) -> Unit)? = null,
         vararg shellScriptLines: String,
         workingDirectory: Path = WORKING_DIRECTORY,
         env: Map<String, String> = emptyMap(),
@@ -152,12 +150,12 @@ object Processes {
             shebang()
             changeDirectoryOrExit(workingDirectory)
             shellScriptLines.forEach { line(it) }
-        }.buildTo(Paths.tempFile(base = shellScriptPrefix, extension = shellScriptExtension)).conditioned,
+        }.buildTo(tempFile(base = shellScriptPrefix, extension = shellScriptExtension)).conditioned,
         workingDirectory = null, // part of the shell script
         env = env,
         runAfterProcessTermination = runAfterProcessTermination,
         inputStream = inputStream,
-        outputProcessor = outputProcessor,
+        ioProcessor = ioProcessor,
     )
 
     /**
@@ -167,7 +165,6 @@ object Processes {
      * The command and arguments are forwarded as is. That means the [command] has to be a binary (that is, no built-in shell command)
      * and its arguments are also passed unchanged. Possibly existing whitespaces will **not** be tokenized which circumvents a lot of pitfalls.
      */
-    @OptIn(ExperimentalTime::class)
     private fun startCommand(
         command: String,
         vararg arguments: String,
@@ -175,7 +172,7 @@ object Processes {
         env: Map<String, String> = emptyMap(),
         runAfterProcessTermination: (() -> Unit)? = null,
         inputStream: InputStream? = InputStream.nullInputStream(),
-        outputProcessor: (RunningProcess.(IO) -> Unit)? = { line -> echo(line) },
+        ioProcessor: (RunningProcess.(IO) -> Unit)? = { line -> echo(line) },
     ): RunningProcess {
         val commandline = Commandline(command).apply {
             addArguments(arguments)
@@ -187,10 +184,10 @@ object Processes {
         lateinit var runningProcess: RunningProcess
         return executeCommandLine(
             commandLine = commandline,
-            metaProcessor = { line -> outputProcessor?.let { it(runCatching { runningProcess }.getOrElse { nullRunningProcess }, META typed line) } },
+            metaProcessor = { line -> ioProcessor?.let { it(runCatching { runningProcess }.getOrElse { nullRunningProcess }, META typed line) } },
             inputProvider = inputStream,
-            systemOutProcessor = { line -> outputProcessor?.let { it(runningProcess, OUT typed line) } },
-            systemErrProcessor = { line -> outputProcessor?.let { it(runningProcess, ERR typed line) } },
+            systemOutProcessor = { line -> ioProcessor?.let { it(runningProcess, OUT typed line) } },
+            systemErrProcessor = { line -> ioProcessor?.let { it(runningProcess, ERR typed line) } },
             timeout = Duration.ZERO,
             runAfterProcessTermination = runAfterProcessTermination,
         ).also { runningProcess = it }
@@ -218,7 +215,6 @@ object Processes {
      *
      * @return A [RunningProcess] with a couple of convenience functionality.
      */
-    @ExperimentalTime
     private fun executeCommandLine(
         commandLine: Commandline,
         metaProcessor: (String) -> Unit,
@@ -338,36 +334,8 @@ object Processes {
                 }.onFailure { exceptionHandler(it) }.getOrThrow()
             }
 
-            @OptIn(ExperimentalTime::class)
             private fun InputStream.readerForStream(nonBlockingReader: Boolean): Reader =
                 if (nonBlockingReader) NonBlockingReader(this, blockOnEmptyLine = true) else InputStreamReader(this)
         }
-    }
-
-    const val shellScriptPrefix: String = "koodies.process."
-    const val shellScriptExtension: String = ".sh"
-
-    init {
-        cleanUp()
-        ShutdownHookUtils.addShutDownHook { cleanUp() }
-    }
-
-    /**
-     * Deletes temporary shell scripts created during [Process] generation
-     * that are older than 10 minutes.
-     *
-     * This method is automatically called during startup and shutdown.
-     */
-    fun cleanUp() {
-        Paths.TEMP.list()
-            .filter { it.isFile }
-            .filter { file ->
-                file.fileName.toString().let {
-                    it.startsWith(shellScriptPrefix)
-                        && it.endsWith(shellScriptExtension)
-                }
-            }
-            .filter { it.age > 10.minutes }
-            .forEach { it.delete() }
     }
 }

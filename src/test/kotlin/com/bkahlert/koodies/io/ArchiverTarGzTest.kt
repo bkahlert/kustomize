@@ -5,10 +5,11 @@ import com.bkahlert.koodies.io.Archiver.listArchive
 import com.bkahlert.koodies.io.Archiver.unarchive
 import com.bkahlert.koodies.io.PathFixtures.archiveWithTwoFiles
 import com.bkahlert.koodies.io.PathFixtures.directoryWithTwoFiles
+import com.bkahlert.koodies.nio.file.tempDir
+import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.unit.size
-import com.imgcstmzr.util.Paths
-import com.imgcstmzr.util.Paths.tempFile
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.addExtension
 import com.imgcstmzr.util.copyTo
 import com.imgcstmzr.util.delete
@@ -30,12 +31,14 @@ import strikt.assertions.isLessThan
 
 @Execution(CONCURRENT)
 class ArchiverTarGzTest {
+    private val tempDir = tempDir().deleteOnExit()
+
     @ConcurrentTestFactory
     fun `should throw on missing source`() = listOf(
-        { Paths.tempDir().also { it.delete() }.archive() },
-        { tempFile(extension = ".tar.gz").also { it.delete() }.unarchive() },
-        { tempFile(extension = ".tar.gz").also { it.delete() }.listArchive() },
-        { tempFile(extension = ".tar.gz").also { it.writeText("crap") }.listArchive() },
+        { tempDir.tempDir().also { it.delete() }.archive() },
+        { tempDir.tempFile(extension = ".tar.gz").also { it.delete() }.unarchive() },
+        { tempDir.tempFile(extension = ".tar.gz").also { it.delete() }.listArchive() },
+        { tempDir.tempFile(extension = ".tar.gz").also { it.writeText("crap") }.listArchive() },
     ).map { call ->
         dynamicTest("$call") {
             expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
@@ -44,8 +47,8 @@ class ArchiverTarGzTest {
 
     @ConcurrentTestFactory
     fun `should throw on non-empty destination`() = listOf(
-        { directoryWithTwoFiles().also { it.addExtension("tar.gz").touch().writeText("content") }.archive("tar.gz") },
-        { archiveWithTwoFiles("tar.gz").also { it.copyTo(it.removeExtension("tar.gz")) }.unarchive() },
+        { tempDir.directoryWithTwoFiles().also { it.addExtension("tar.gz").touch().writeText("content") }.archive("tar.gz") },
+        { tempDir.archiveWithTwoFiles("tar.gz").also { it.copyTo(it.removeExtension("tar.gz")) }.unarchive() },
     ).map { call ->
         dynamicTest("$call") {
             expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
@@ -54,8 +57,8 @@ class ArchiverTarGzTest {
 
     @ConcurrentTestFactory
     fun `should overwrite non-empty destination`() = listOf(
-        { directoryWithTwoFiles().also { it.addExtension("tar.gz").touch().writeText("content") }.archive("tar.gz", overwrite = true) },
-        { archiveWithTwoFiles("tar.gz").also { it.copyTo(it.removeExtension("tar.gz")) }.unarchive(overwrite = true) },
+        { tempDir.directoryWithTwoFiles().also { it.addExtension("tar.gz").touch().writeText("content") }.archive("tar.gz", overwrite = true) },
+        { tempDir.archiveWithTwoFiles("tar.gz").also { it.copyTo(it.removeExtension("tar.gz")) }.unarchive(overwrite = true) },
     ).map { call ->
         dynamicTest("$call") {
             expectThat(call()).exists()
@@ -64,7 +67,7 @@ class ArchiverTarGzTest {
 
     @Test
     fun `should tar-gzip and untar-gunzip`() {
-        val dir = directoryWithTwoFiles()
+        val dir = tempDir.directoryWithTwoFiles()
 
         val archivedDir = dir.archive()
         expectThat(archivedDir.size).isLessThan(dir.size)

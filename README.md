@@ -38,6 +38,37 @@ Alternatively run `--config=bother-you.json
 - [Gradle Shadow](https://github.com/johnrengelman/shadow) and [GraalVM Native Image Plugin](https://github.com/mike-neck/graalvm-native-image-plugin) to
   generate a native self-enclosed binary provided as a [Docker](https://www.docker.com/) image
 
+### Testing
+
+```text
+                                                                                                                            
+                        ●                                                                                                   
+                       ╱ ╲                                                                                                  
+                      ╱   ╲        __ \             |               __ )                      |                             
+                     ╱     ╲       |   |  _ \   __| |  /  _ \  __|  __ \   _` |  __|  _ \  _` |                             
+                    ╱       ╲      |   | (   | (      <   __/ |     |   | (   |\__ \  __/ (   |                             
+                   ╱         ╲    ____/ \___/ \___|_|\_\\___|_|    ____/ \__,_|____/\___|\__,_|                             
+                  ╱   ≤ 15'   ╲                                                                                             
+                 ╱  @E2E @Test ╲                     __ __|         |                                                       
+                ╱               ╲                       |  _ \  __| __|  __|                                                
+               ╱ ─ ─ ─ ─ ─ ─ ─ ─ ╲                      |  __/\__ \ |  \__ \                                                
+              ╱                   ╲                    _|\___|____/\__|____/                                                
+             ╱                     ╲                                                                                        
+            ╱          ≤ 2'         ╲                             ##        .                                               
+           ╱  @DockerRequiring @Test ╲                      ## ## ##       ==                                               
+          ╱                           ╲                  ## ## ## ##      ===                                               
+         ╱                             ╲             /""""""""""""""""\___/ ===                                             
+        ╱ ~~ ~~~ ~~~  ~~~~ ~~~~~ ~~~~ ~ ~~~~ ~  ~~~ {~~ ~~~~ ~~~ ~~~~ ~~ ~ /  ===- ~~~                                      
+       ╱                                 ╲           \______ o          __/                                                 
+      ╱                                   ╲            \    \        __/                                                    
+     ╱                                     ╲            \____\______/                                                       
+    ╱                 ≤ 10"                 ╲                                                                               
+   ╱                  @Test                  ╲       _ \          |                |                 __ __|        |        
+  ╱                                           ╲      |  | _ \  _| | /  -_)  _|____||     -_)(_-<(_-<    |  -_)(_-<  _|(_-<  
+ ╱                                             ╲    ___/\___/\__|_\_\\___|_|      ____|\___|___/___/   _|\___|___/\__|___/  
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━●                                                                           
+```
+
 ### Debugging
 
 Running all tests will despite the number hardly leave any output.  

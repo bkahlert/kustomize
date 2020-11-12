@@ -16,23 +16,23 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.prompt
 import com.github.ajalt.clikt.parameters.types.file
-import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.cli.ColorHelpFormatter
 import com.imgcstmzr.cli.Config4kValueSource
 import com.imgcstmzr.cli.Config4kValueSource.Companion.update
 import com.imgcstmzr.cli.Env
 import com.imgcstmzr.cli.Options.os
+import com.imgcstmzr.guestfish.Guestfish
+import com.imgcstmzr.guestfish.Guestfish.Companion.copyOutCommands
 import com.imgcstmzr.patch.PasswordPatch
 import com.imgcstmzr.patch.SshPatch
 import com.imgcstmzr.patch.UsbOnTheGoPatch
 import com.imgcstmzr.patch.UsernamePatch
-import com.imgcstmzr.process.Downloader.download
-import com.imgcstmzr.process.Guestfish
-import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
+import com.imgcstmzr.process.Downloader
 import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
+import com.imgcstmzr.runtime.log.applyLogging
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.debug
 import java.io.File
@@ -56,7 +56,6 @@ fun main() {
 }
 
 
-@OptIn(ExperimentalValueSourceApi::class)
 class CliCommand : NoOpCliktCommand(
     epilog = "((ε(*･ω･)_/${ANSI.termColors.colorize("ﾟ･.*･･｡☆")}",
     name = "imgcstmzr",
@@ -86,14 +85,16 @@ class CliCommand : NoOpCliktCommand(
     private val shared by findOrSetObject { mutableMapOf<KClass<*>, Any>() }
 
     override fun run() {
-        configFile?.also {
-            currentContext.valueSource.update(it)
-            echo((ANSI.termColors.cyan + ANSI.termColors.bold)("Using config (file: $it, name: $name, size: ${it.readText().length})"))
+        BlockRenderingLogger<Any?>("ImgCstmzr").applyLogging {
+            configFile?.also {
+                currentContext.valueSource.update(it)
+                echo((ANSI.termColors.cyan + ANSI.termColors.bold)("Using config (file: $it, name: $name, size: ${it.readText().length})"))
+            }
+            logLine { "Checking $envFile for .env file" }
+            shared[Env::class] = Env(this, envFile.toPath())
+            shared[Cache::class] = Cache(cacheDir.toPath())
+            logLine { "Using cache (path: $cacheDir)" }
         }
-        echo("Checking $envFile for .env file")
-        shared[Env::class] = Env(envFile.toPath())
-        shared[Cache::class] = Cache(cacheDir.toPath())
-        echo("Using cache (path: $cacheDir)")
     }
 }
 
@@ -102,6 +103,7 @@ class ImgCommand : CliktCommand(help = "Provides an IMG file containing the spec
         "image" to listOf("img"),
     )
 
+    private val downloader = Downloader()
     private val name by option().default("my-img")
     private val os by option().os().default(OperatingSystems.RaspberryPiLite)
     private val reuseLastWorkingCopy: Boolean by option().flag(default = false)
@@ -110,8 +112,13 @@ class ImgCommand : CliktCommand(help = "Provides an IMG file containing the spec
     override fun run() {
         val cache: Cache = shared[Cache::class] as Cache
 
+        val logger = BlockRenderingLogger<Any>("ImgCommand")
         shared[Path::class] =
-            cache.provideCopy(name, reuseLastWorkingCopy, BlockRenderingLogger<Any>("ImgCommand")) { os.download().also { TermUi.echo("Download completed.") } }
+            cache.provideCopy(name, reuseLastWorkingCopy, logger) {
+                with(downloader) {
+                    os.download(logger).also { TermUi.echo("Download completed.") }
+                }
+            }
     }
 }
 
@@ -163,9 +170,9 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
 
             exitProcess(0)
 
-            val logger = BlockRenderingLogger<Any>("Project: $name")
+            val logger = BlockRenderingLogger<Any>("Project: $fullName")
 
-            val guestfish = Guestfish(this, logger, "$name-guestfish")
+            val guestfish = Guestfish(this, logger, "$fullName-guestfish")
             guestfish.run(copyOutCommands(listOf("/etc/hostname", "/boot/cmdline.txt", "/boot/config.txt").map(Path::of)))
             guestfish.guestRootOnHost
                 .also { echo("Success $it") }

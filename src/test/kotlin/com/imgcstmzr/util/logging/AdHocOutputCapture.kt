@@ -17,6 +17,7 @@ class AdHocOutputCapture : CapturedOutput {
     private var oldOut: PrintStream? = null
     private var oldErr: PrintStream? = null
 
+    @Suppress("SameParameterValue")
     private fun startCapturing(redirect: Boolean = false, out: PrintStream = System.out, err: PrintStream = System.err) {
         oldOut = out
         oldErr = err
@@ -36,13 +37,13 @@ class AdHocOutputCapture : CapturedOutput {
         return result.getOrThrow()
     }
 
-    override val all: String get() = allStream.toString()
+    override val all: String get() = allStream.toString(Charsets.UTF_8)
     override val allLines: List<String> by withNegativeIndices { splitOutput(all) }
 
-    override val out: String get() = outStream.toString()
+    override val out: String get() = outStream.toString(Charsets.UTF_8)
     override val outLines: List<String> by withNegativeIndices { splitOutput(out) }
 
-    override val err: String get() = errStream.toString()
+    override val err: String get() = errStream.toString(Charsets.UTF_8)
     override val errLines: List<String> by withNegativeIndices { splitOutput(err) }
 
     /**

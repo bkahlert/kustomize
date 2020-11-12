@@ -4,7 +4,7 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.string.random
 import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.singleLineLogger
+import com.imgcstmzr.runtime.log.singleLineLogger
 import com.imgcstmzr.util.debug
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.jline.utils.NonBlocking
@@ -13,7 +13,6 @@ import java.io.InputStream
 import java.io.Reader
 import java.nio.charset.Charset
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
 /**
@@ -22,7 +21,6 @@ import kotlin.time.seconds
  * This happens all over again until that line is complete, that is, terminated
  * by `\r\n` or `\n`.
  */
-@ExperimentalTime
 class NonBlockingCharReader(
     private val inputStream: InputStream,
     private val timeout: Duration = 6.seconds,
@@ -32,9 +30,6 @@ class NonBlockingCharReader(
 
     val timeoutMillis = timeout.toLongMilliseconds()
     inline val inlineTimeoutMillis get() = timeoutMillis
-
-//    private val reader: org.jline.utils.NonBlockingReader =
-//        NonBlocking.nonBlocking(name, BufferedReader(org.jline.utils.InputStreamReader(inputStream, charset)))
 
     var reader: org.jline.utils.NonBlockingReader? = NonBlocking.nonBlocking(name, inputStream, charset)
 

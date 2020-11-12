@@ -3,20 +3,23 @@ package com.imgcstmzr.patch
 import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
+import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
+import com.bkahlert.koodies.test.junit.ThirtyMinutesTimeout
 import com.bkahlert.koodies.test.strikt.hasSize
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.bkahlert.koodies.time.format
 import com.bkahlert.koodies.time.parseableInstant
 import com.bkahlert.koodies.unit.Giga
 import com.bkahlert.koodies.unit.bytes
+import com.imgcstmzr.E2E
+import com.imgcstmzr.guestfish.Guestfish
+import com.imgcstmzr.guestfish.Guestfish.Companion.copyOutCommands
 import com.imgcstmzr.patch.new.buildPatch
-import com.imgcstmzr.process.Guestfish
-import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.runtime.Program
-import com.imgcstmzr.util.DockerRequired
+import com.imgcstmzr.util.DockerRequiring
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.copyToTempSiblingDirectory
 import com.imgcstmzr.util.logging.CapturedOutput
@@ -29,7 +32,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import org.junit.jupiter.api.parallel.Isolated
 import strikt.api.expectThat
 import strikt.assertions.exists
@@ -37,9 +40,8 @@ import strikt.assertions.isEmpty
 import strikt.assertions.isNotEmpty
 import java.nio.file.Path
 import java.time.Instant
-import kotlin.time.ExperimentalTime
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 @ExtendWith(OutputCaptureExtension::class)
 class PatchesKtTest {
 
@@ -96,8 +98,7 @@ class PatchesKtTest {
         """.trimIndent())
     }
 
-    @DockerRequired
-    @Test
+    @FiveMinutesTimeout @DockerRequiring @Test
     fun `should prepare root directory then patch and copy everything back`(osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
         val sshPatch = SshPatch()
 
@@ -108,10 +109,8 @@ class PatchesKtTest {
         expectThat(guestfish.guestRootOnHost).get { resolve("boot/ssh") }.exists().get { }
     }
 
-    @ExperimentalTime
-    @DockerRequired
-    @Test
-    fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    @ThirtyMinutesTimeout @E2E @Test
+    fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
         val timestamp = Instant.now()
 
         val patch = buildPatch("Try Everything Patch") {
@@ -145,13 +144,13 @@ class PatchesKtTest {
             .hasSize(2.Giga.bytes)
             .booted(logger, Program("check",
                 { "init" },
-                "init" to { read ->
+                "init" to { _ ->
                     enter("sudo cat /root/.imgcstmzr.created")
                     "demo"
                 },
                 "validate" to {
                     if (it != timestamp.format()) "validate"
-                    null
+                    else null
                 }
             ))
     }

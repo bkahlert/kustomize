@@ -6,9 +6,7 @@ import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.parameters.options.OptionWithValues
 import com.github.ajalt.clikt.parameters.options.associate
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 
-@ExperimentalValueSourceApi
 class TestCli {
     class TestCommand : NoOpCliktCommand() {
         init {

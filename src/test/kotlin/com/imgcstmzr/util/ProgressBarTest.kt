@@ -9,13 +9,13 @@ import com.bkahlert.koodies.test.junit.Slow
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import org.junit.jupiter.api.parallel.Isolated
 import java.nio.file.Path
 import kotlin.streams.asSequence
 
 @Isolated
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class ProgressBarTest {
 
     @Slow
@@ -23,7 +23,7 @@ class ProgressBarTest {
     fun `should show progress bar`(logger: InMemoryLogger<*>) {
         startShellScript(
             workingDirectory = Path.of("").toAbsolutePath().resolve("src/main/resources"),
-            outputProcessor = { if (it.type == OUT) println(System.out) }) { !"progressbar.sh" }
+            ioProcessor = { if (it.type == OUT) println(System.out) }) { !"progressbar.sh" }
         (0..100).forEach {
             logger.logLine { "\u0013" + "X".repeat(it % 10) }
             Thread.sleep(50)
@@ -40,7 +40,7 @@ fun main() {
         .toList()
     println(ownProcesses.map { it.info() })
     println(ownProcesses.size)
-    val x: RunningProcess = startShellScript(outputProcessor = {
+    val x: RunningProcess = startShellScript(ioProcessor = {
         println(it)
     }) {
         !"stty size"
@@ -71,7 +71,7 @@ fun main() {
         0
     }
     x.destroy()
-    startShellScript(outputProcessor = {
+    startShellScript(ioProcessor = {
         println(it)
     }) {
         !"stty size"

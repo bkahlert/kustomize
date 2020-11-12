@@ -12,13 +12,11 @@ import com.bkahlert.koodies.time.sleep
 import com.imgcstmzr.util.Paths
 import org.codehaus.plexus.util.cli.Commandline
 import java.nio.file.Path
-import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
 /**
  * Provides methods to create and interact with a [DockerProcess].
  */
-@OptIn(ExperimentalTime::class)
 object Docker {
     /**
      * Whether the Docker engine itself is running.
@@ -39,7 +37,7 @@ object Docker {
 
     fun run(
         workingDirectory: Path = Paths.WORKING_DIRECTORY,
-        outputProcessor: (DockerProcess.(IO) -> Unit)? = null,
+        ioProcessor: (DockerProcess.(IO) -> Unit)? = null,
         init: DockerBuilder.() -> Unit,
     ): DockerProcess {
         var runningProcess: RunningProcess = RunningProcess.nullRunningProcess
@@ -48,7 +46,7 @@ object Docker {
             runningProcess = startShellScript(
                 workingDirectory = workingDirectory,
                 shellScript = { docker(init) },
-                outputProcessor = outputProcessor?.let { { output -> it(dockerProcess, output) } },
+                ioProcessor = ioProcessor?.let { { output -> it(dockerProcess, output) } },
                 runAfterProcessTermination = {
                     stop(name)
                     remove(name, forcibly = true)

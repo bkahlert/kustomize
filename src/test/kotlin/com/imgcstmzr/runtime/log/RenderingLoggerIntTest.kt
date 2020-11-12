@@ -7,8 +7,6 @@ import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.imgcstmzr.runtime.HasStatus
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.singleLineLogger
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.subLogger
 import com.imgcstmzr.util.containsAtMost
 import com.imgcstmzr.util.logging.Columns
 import com.imgcstmzr.util.logging.InMemoryLogger
@@ -16,13 +14,13 @@ import com.imgcstmzr.util.logging.InMemoryLoggerFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.isSuccess
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class RenderingLoggerIntTest {
 
     @Test

@@ -2,16 +2,19 @@ package com.bkahlert.koodies.io
 
 import com.bkahlert.koodies.io.GzCompressor.gunzip
 import com.bkahlert.koodies.io.GzCompressor.gzip
+import com.bkahlert.koodies.io.PathFixtures.archiveWithSingleFile
+import com.bkahlert.koodies.io.PathFixtures.singleFile
 import com.bkahlert.koodies.nio.file.requireNotEmpty
+import com.bkahlert.koodies.nio.file.tempDir
+import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.unit.size
-import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.addExtension
 import com.imgcstmzr.util.copyTo
 import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.hasEqualContent
-import com.imgcstmzr.util.mkdirs
 import com.imgcstmzr.util.removeExtension
 import com.imgcstmzr.util.renameTo
 import com.imgcstmzr.util.touch
@@ -31,10 +34,13 @@ import java.nio.file.Path
 
 @Execution(CONCURRENT)
 class GzCompressorTest {
+
+    private val tempDir = tempDir().deleteOnExit()
+
     @ConcurrentTestFactory
     fun `should throw on missing source`() = listOf(
-        { Paths.tempFile().also { it.delete() }.gzip() },
-        { Paths.tempFile(extension = ".gz").also { it.delete() }.gunzip() },
+        { tempDir.tempFile().also { it.delete() }.gzip() },
+        { tempDir.tempFile(extension = ".gz").also { it.delete() }.gunzip() },
     ).map { call ->
         dynamicTest("$call") {
             expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
@@ -43,40 +49,27 @@ class GzCompressorTest {
 
     @ConcurrentTestFactory
     fun `should throw on non-empty destination`() = listOf(
-        { PathFixtures.singleFile().also { it.addExtension("gz").touch().writeText("content") }.gzip() },
-        { PathFixtures.archiveWithSingleFile("gz").also { it.copyTo(it.removeExtension("gz").mkdirs().resolve(it.fileName)) }.gunzip() },
-    ).map { call ->
-        dynamicTest("$call") {
-            expectCatching {
-                val call1 = call()
-                call1
-            }.isFailure().isA<IllegalArgumentException>()
-        }
-    }
-
-    @ConcurrentTestFactory
-    fun `should overwrite non-empty destination`() = listOf(
-        { PathFixtures.singleFile().also { it.addExtension("gz").touch().writeText("content") }.gzip(overwrite = true) },
-        { PathFixtures.archiveWithSingleFile("gz").also { it.copyTo(it.removeExtension("gz")) }.gunzip(overwrite = true) },
-    ).map { call ->
-        dynamicTest("$call") {
-            expectThat(call()).exists()
-        }
-    }
-
-    @ConcurrentTestFactory
-    fun `should throw on existing destination`() = listOf(
-        { Paths.tempFile().also { it.copyTo(it.addExtension("gz")) }.gzip() },
-        { Paths.tempFile(extension = ".gz").also { it.copyTo(it.removeExtension("gz")) }.gunzip() },
+        { tempDir.singleFile().also { it.addExtension("gz").deleteOnExit().touch().writeText("content") }.gzip() },
+        { tempDir.archiveWithSingleFile("gz").also { it.copyTo(it.removeExtension("gz")).deleteOnExit() }.gunzip() },
     ).map { call ->
         dynamicTest("$call") {
             expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
         }
     }
 
+    @ConcurrentTestFactory
+    fun `should overwrite non-empty destination`() = listOf(
+        { tempDir.singleFile().also { it.addExtension("gz").touch().deleteOnExit().writeText("content") }.gzip(overwrite = true) },
+        { tempDir.archiveWithSingleFile("gz").also { it.copyTo(it.removeExtension("gz")).deleteOnExit() }.gunzip(overwrite = true) },
+    ).map { call ->
+        dynamicTest("$call") {
+            expectThat(call()).exists()
+        }
+    }
+
     @Test
     fun `should gzip and gunzip`() {
-        val file: Path = PathFixtures.singleFile()
+        val file: Path = tempDir.singleFile()
         file.requireNotEmpty()
 
         val gzippedFile = file.gzip()

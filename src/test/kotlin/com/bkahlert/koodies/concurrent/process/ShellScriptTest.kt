@@ -1,9 +1,10 @@
 package com.bkahlert.koodies.concurrent.process
 
+import com.bkahlert.koodies.nio.file.tempDir
+import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.shell.toHereDoc
 import com.imgcstmzr.patch.isEqualTo
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.hasContent
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -16,6 +17,8 @@ import java.nio.file.Path
 
 @Execution(CONCURRENT)
 class ShellScriptTest {
+
+    private val tempDir = tempDir().deleteOnExit()
 
     private fun shellScript() = ShellScript().apply {
         shebang()
@@ -41,7 +44,7 @@ class ShellScriptTest {
 
     @Test
     fun `should write valid script`() {
-        val file = Paths.tempFile(extension = ".sh").deleteOnExit()
+        val file = tempDir.tempFile(extension = ".sh").deleteOnExit()
         shellScript().buildTo(file)
         expectThat(file).hasContent("""
             #!/bin/sh
@@ -55,14 +58,14 @@ class ShellScriptTest {
 
     @Test
     fun `should write executable script`() {
-        val file = Paths.tempFile(extension = ".sh").deleteOnExit()
+        val file = tempDir.tempFile(extension = ".sh").deleteOnExit()
         val returnedScript = shellScript().buildTo(file)
         expectThat(returnedScript).isExecutable()
     }
 
     @Test
     fun `should return same file as saved to file`() {
-        val file = Paths.tempFile(extension = ".sh").deleteOnExit()
+        val file = tempDir.tempFile(extension = ".sh").deleteOnExit()
         val returnedScript = shellScript().buildTo(file)
         expectThat(returnedScript).isEqualTo(file)
     }

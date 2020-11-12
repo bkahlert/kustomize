@@ -1,11 +1,12 @@
 package com.bkahlert.koodies.concurrent.process
 
 import com.bkahlert.koodies.nio.file.conditioned
+import com.bkahlert.koodies.nio.file.tempDir
+import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.regex.RegularExpressions
 import com.bkahlert.koodies.regex.sequenceOfAllMatches
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.hasContent
 import com.imgcstmzr.util.isEqualToStringWise
@@ -35,14 +36,16 @@ import java.net.URL
 @Execution(CONCURRENT)
 class CompletedProcessTest {
 
+    private val tempDir = tempDir().deleteOnExit()
+
     @Nested
-    inner class SaveIO {
+    inner class DumpIO {
 
         @Test
-        fun `should save IO to specified file`() {
+        fun `should dump IO to specified file`() {
             val completedProcess = createCompletedTestProcess()
-            val logPaths = completedProcess.saveIO(path = Paths.tempFile(CompletedProcess::class.simpleName!!, ".txt").apply { delete() }.deleteOnExit())
-            expectThat(logPaths.map { it.deleteOnExit().readAll().removeEscapeSequences() }).hasSize(2).all {
+            val dumps = completedProcess.saveIO(path = tempFile(CompletedProcess::class.toString(), ".txt").apply { delete() }.deleteOnExit())
+            expectThat(dumps.values.map { it.deleteOnExit().readAll().removeEscapeSequences() }).hasSize(2).all {
                 isEqualTo("""
                 Starting process...
                 processing
@@ -51,13 +54,13 @@ class CompletedProcessTest {
                 invalid input
                 an abnormal error has occurred (errno 99)
             """.trimIndent())
-            }.get { CompletedProcess::class.simpleName!! }
+            }
         }
 
         @Test
-        fun `should  throw if IO could not be saved`() {
+        fun `should throw if IO could not be dumped`() {
             val completedProcess = createCompletedTestProcess()
-            val logPath = Paths.tempFile(CompletedProcess::class.simpleName!!, ".log").writeText("already exists")
+            val logPath = tempDir.tempFile(CompletedProcess::class.toString(), ".log").writeText("already exists")
             logPath.toFile().setReadOnly()
             expectCatching {
                 completedProcess.saveIO(path = logPath.deleteOnExit())
@@ -66,10 +69,10 @@ class CompletedProcessTest {
         }
 
         @Test
-        fun `should save IO to file with ansi formatting`() {
+        fun `should dump IO to file with ansi formatting`() {
             val completedProcess = createCompletedTestProcess()
-            val logPaths = completedProcess.saveIO().onEach { it.deleteOnExit() }
-            expectThat(logPaths).filter { it.conditioned.endsWith("ansi.log") }.single().hasContent("""
+            val dumps = completedProcess.saveIO().values.onEach { it.deleteOnExit() }
+            expectThat(dumps).filter { !it.conditioned.endsWith("no-ansi.log") }.single().hasContent("""
                 ${IO.Type.META.format("Starting process...")}
                 ${IO.Type.OUT.format("processing")}
                 ${IO.Type.OUT.format("awaiting input: ")}
@@ -80,10 +83,10 @@ class CompletedProcessTest {
         }
 
         @Test
-        fun `should save IO to file without ansi formatting`() {
+        fun `should dump IO to file without ansi formatting`() {
             val completedProcess = createCompletedTestProcess()
-            val logPaths = completedProcess.saveIO().onEach { it.deleteOnExit() }
-            expectThat(logPaths).filter { !it.conditioned.endsWith("ansi.log") }.single().hasContent("""
+            val dumps = completedProcess.saveIO().values.onEach { it.deleteOnExit() }
+            expectThat(dumps).filter { it.conditioned.endsWith("no-ansi.log") }.single().hasContent("""
                 Starting process...
                 processing
                 awaiting input: 
@@ -124,11 +127,11 @@ class CompletedProcessTest {
                 .isFailure()
                 .isA<IllegalStateException>()
                 .message.get {
-                    this?.let {
-                        RegularExpressions.urlRegex.sequenceOfAllMatches(it)
-                            .map { URL(it) }
-                            .map { it.openStream().reader().readText() }
-                            .map { it.removeEscapeSequences() }
+                    this?.let { errorMessage ->
+                        RegularExpressions.urlRegex.sequenceOfAllMatches(errorMessage)
+                            .map { url -> URL(url) }
+                            .map { url -> url.openStream().reader().readText() }
+                            .map { content -> content.removeEscapeSequences() }
                             .toList()
                     } ?: fail("error message missing")
                 }.hasSize(2).all {
@@ -162,7 +165,7 @@ class CompletedProcessTest {
         @Test
         fun `should log all lines if problem saving the log`() {
             val completedProcess = createCompletedTestProcess()
-            val logPaths = Paths.tempFile(CompletedProcess::class.simpleName!!, ".txt").writeText("already exists")
+            val logPaths = tempDir.tempFile(CompletedProcess::class.toString(), ".txt").writeText("already exists")
             logPaths.toFile().setReadOnly()
             expectCatching { completedProcess.checkExitCode() }
                 .isFailure()
@@ -181,9 +184,9 @@ class CompletedProcessTest {
         @Test
         fun `should run custom callback on mismatch`() {
             val completedProcess = createCompletedTestProcess()
-            val path = Paths.tempFile(CompletedProcess::class.simpleName!!, ".txt").writeText("already exists")
+            val path = tempDir.tempFile(CompletedProcess::class.toString(), ".txt").writeText("already exists")
             path.toFile().setReadOnly()
-            expectCatching { completedProcess.checkExitCode() { "custom message" } }
+            expectCatching { completedProcess.checkExitCode { "custom message" } }
                 .isFailure()
                 .isA<IllegalStateException>()
                 .message

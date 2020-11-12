@@ -1,6 +1,6 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.process.Guestfish
+import com.imgcstmzr.guestfish.Guestfish
 import com.imgcstmzr.runtime.ArmRunner
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.Program

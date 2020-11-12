@@ -2,7 +2,7 @@ package com.bkahlert.koodies.test.junit.debug
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD
 import org.junit.jupiter.api.parallel.Isolated
 
 /**
@@ -10,5 +10,5 @@ import org.junit.jupiter.api.parallel.Isolated
  * are ignored.
  */
 @Isolated
-@Execution(ExecutionMode.SAME_THREAD)
+@Execution(SAME_THREAD)
 annotation class Debug(val includeInReport: Boolean = true)

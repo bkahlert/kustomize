@@ -14,12 +14,10 @@ import strikt.assertions.isNotNull
 import strikt.assertions.isTrue
 import kotlin.random.Random
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 import kotlin.time.milliseconds
 import kotlin.time.seconds
 
-@OptIn(ExperimentalTime::class)
 @Execution(CONCURRENT)
 class PollTestKt {
     @Test

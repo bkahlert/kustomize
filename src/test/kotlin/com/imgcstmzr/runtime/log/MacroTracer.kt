@@ -5,7 +5,6 @@ package com.imgcstmzr.runtime.log
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.tracing.MacroTracer
 import com.bkahlert.koodies.tracing.MiniTracer
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.subLogger
 import com.imgcstmzr.util.format
 import kotlin.reflect.KCallable
 import kotlin.reflect.KFunction0

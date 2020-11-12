@@ -42,7 +42,7 @@ fun <T : Iterable<E>, E> Assertion.Builder<T>.containsExactlyInSomeOrder(init: E
  * @sample [ContainsExactlyInSomeOrderKtTest.PassingAssertion]
  */
 fun <T : Iterable<E>, E> Assertion.Builder<T>.containsExactlyInSomeOrder(vararg elementGroups: Iterable<E>): Assertion.Builder<T> =
-    compose("contains exactly the elements %s", elementGroups.toList()) { subject ->
+    compose("contains exactly the elements %s in some order", elementGroups.toList()) { subject ->
         val original = subject.toList()
         if (original.isEmpty() && elementGroups.isNotEmpty()) fail("is empty but ${elementGroups.sumBy { it.count() }} elements expected")
         val remaining = subject.toMutableList()

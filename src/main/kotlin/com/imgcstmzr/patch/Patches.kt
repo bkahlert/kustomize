@@ -8,18 +8,18 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.github.ajalt.clikt.output.TermUi.echo
+import com.imgcstmzr.guestfish.Guestfish
 import com.imgcstmzr.patch.Operation.Status.Failure
 import com.imgcstmzr.patch.Operation.Status.Finished
 import com.imgcstmzr.patch.Operation.Status.Ready
 import com.imgcstmzr.patch.Operation.Status.Running
 import com.imgcstmzr.patch.new.Patch
-import com.imgcstmzr.process.Guestfish
 import com.imgcstmzr.runtime.ArmRunner.runOn
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.singleLineLogger
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.subLogger
+import com.imgcstmzr.runtime.log.singleLineLogger
+import com.imgcstmzr.runtime.log.subLogger
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.isFile
 import com.imgcstmzr.util.listFilesRecursively
@@ -60,7 +60,7 @@ fun RenderingLogger<*>.applyGuestfishAndFileSystemOperations(osImage: OperatingS
     } else {
         subLogger("File System Operations (${patch.guestfishOperations.size + patch.fileSystemOperations.size})", null) {
             logLine { META typed "Starting Guestfish VM..." }
-            val guestfish = Guestfish(osImage, this, this::class.qualifiedName + "." + String.random(16))
+            val guestfish = Guestfish(osImage, this, patch.name + "." + String.random(16))
 
             val remainingGuestfishOperations = patch.guestfishOperations.toMutableList()
             if (remainingGuestfishOperations.isNotEmpty()) {

@@ -1,13 +1,12 @@
 package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.concurrent.process.IO
-import com.github.ajalt.clikt.output.TermUi.echo
-import com.github.ajalt.mordant.TermColors
+import com.bkahlert.koodies.concurrent.startAsThread
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
 import com.imgcstmzr.runtime.Watchdog.Command.RESET
 import com.imgcstmzr.runtime.Watchdog.Command.STOP
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger.Companion.DEFAULT
-import java.time.Duration
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -17,11 +16,11 @@ import java.util.concurrent.TimeUnit
  * Should the time between the start of this watchdog or the last [reset] call surpass the [timeout]
  * the watchdog calls [timedOut].
  */
-class Watchdog(
+open class Watchdog(
     /**
      * Duration that needs to pass until [timeout] is called.
      */
-    private val timeout: Duration,
+    private val timeout: kotlin.time.Duration,
     /**
      * If set to `true` this watchdog does not stop working after having been triggered.
      * Instead the watch period starts again after [timedOut] finished.
@@ -37,11 +36,11 @@ class Watchdog(
     val timedOut: RenderingLogger<*>.() -> Any,
 ) {
     private val blockingQueue = LinkedBlockingQueue<Command>()
-    private val thread = Thread {
+    private val thread = startAsThread {
         var lastEvent: Command? = RESET
         while (true) {
             try {
-                when (blockingQueue.poll(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                when (blockingQueue.poll(timeout.toLongMilliseconds(), TimeUnit.MILLISECONDS)) {
                     RESET -> {
                         // start another poll
                         lastEvent = RESET
@@ -49,22 +48,20 @@ class Watchdog(
                     STOP -> {
                         renderingLogger.logLine { IO.Type.META typed "Watchdog stopped." }
                         lastEvent = STOP
-                        return@Thread
+                        break
                     }
                     null -> {
                         if (lastEvent != null) renderingLogger.timedOut()
                         lastEvent = null
-                        if (!repeating) return@Thread
+                        if (!repeating) break
                     }
                 }
             } catch (e: InterruptedException) {
-                with(TC) {
-                    echo(red("Watchdog was interrupted (last event: $lastEvent). Stopping."))
-                }
-                return@Thread
+                "Watchdog was interrupted (last event: $lastEvent). Stopping.".red()
+                break
             }
         }
-    }.apply { start() }
+    }
 
     /**
      * A call to [reset] resets the timer that ticks against [timeout].
@@ -89,9 +86,5 @@ class Watchdog(
 
     private enum class Command {
         RESET, STOP
-    }
-
-    companion object {
-        private val TC = TermColors(TermColors.Level.ANSI16)
     }
 }

@@ -9,17 +9,15 @@ import strikt.api.expectThat
 import strikt.assertions.isGreaterThan
 import strikt.assertions.isLessThan
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 import kotlin.time.milliseconds
 
 @Execution(CONCURRENT)
 class StartAsDaemonKtTest {
-    @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
     fun `should start daemon`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(Thread.currentThread().isDaemon) }.startAsDaemon() },
-        "postfix form" to { finished: AtomicBoolean -> startAsDaemon() { finished.set(Thread.currentThread().isDaemon) } },
+        "postfix form" to { finished: AtomicBoolean -> startAsDaemon { finished.set(Thread.currentThread().isDaemon) } },
     ).map { (caption, exec) ->
         dynamicTest(caption) {
             val isDaemon = AtomicBoolean(false)
@@ -32,11 +30,10 @@ class StartAsDaemonKtTest {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
     fun `should start immediately`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsDaemon() },
-        "postfix form" to { finished: AtomicBoolean -> startAsDaemon() { finished.set(true) } },
+        "postfix form" to { finished: AtomicBoolean -> startAsDaemon { finished.set(true) } },
     ).map { (caption, exec) ->
         dynamicTest(caption) {
             val finished = AtomicBoolean(false)
@@ -49,7 +46,6 @@ class StartAsDaemonKtTest {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
     fun `should start delayed`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsDaemon(500.milliseconds) },

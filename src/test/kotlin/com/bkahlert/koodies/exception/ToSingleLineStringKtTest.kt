@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.exception
 
+import com.bkahlert.koodies.concurrent.process.CompletedProcess
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -9,6 +10,7 @@ import strikt.api.expectThat
 import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 import strikt.assertions.startsWith
+import java.nio.file.Path
 
 @Execution(CONCURRENT)
 class ToSingleLineStringKtTest {
@@ -18,7 +20,18 @@ class ToSingleLineStringKtTest {
         @Test
         fun `should format as a single line`() {
             val actual = RuntimeException("test").toSingleLineString()
-            expectThat(actual).startsWith("RuntimeException: test at.(ToSingleLineStringKtTest.kt:20)")
+            expectThat(actual).startsWith("RuntimeException: test at.(ToSingleLineStringKtTest.kt:22)")
+            expectThat(actual.lines()).hasSize(1)
+        }
+    }
+
+    @Nested
+    inner class WithException {
+
+        @Test
+        fun `should format as a single line`() {
+            val actual = Result.failure<String>(RuntimeException("test")).toSingleLineString()
+            expectThat(actual).startsWith("RuntimeException: test at.(ToSingleLineStringKtTest.kt:33)")
             expectThat(actual.lines()).hasSize(1)
         }
     }
@@ -35,16 +48,18 @@ class ToSingleLineStringKtTest {
                 expectThat(actual.removeEscapeSequences()).isEqualTo("good")
                 expectThat(actual.lines()).hasSize(1)
             }
-        }
-
-
-        @Nested
-        inner class WithException {
 
             @Test
-            fun `should format as a single line`() {
-                val actual = Result.failure<String>(RuntimeException("test")).toSingleLineString()
-                expectThat(actual).startsWith("RuntimeException: test at.(ToSingleLineStringKtTest.kt:46)")
+            fun `should format Path instances as URI`() {
+                val actual = Result.success(Path.of("/path")).toSingleLineString()
+                expectThat(actual.removeEscapeSequences()).isEqualTo("file:///path")
+                expectThat(actual.lines()).hasSize(1)
+            }
+
+            @Test
+            fun `should format CompletedProcess as exit code`() {
+                val actual = Result.success(CompletedProcess(123, 42, emptyList())).toSingleLineString()
+                expectThat(actual.removeEscapeSequences()).isEqualTo("42")
                 expectThat(actual.lines()).hasSize(1)
             }
         }

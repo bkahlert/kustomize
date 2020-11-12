@@ -1,32 +1,31 @@
 package com.imgcstmzr.cli
 
-import com.github.ajalt.clikt.sources.ExperimentalValueSourceApi
 import com.github.ajalt.clikt.sources.ValueSource.Invocation
 import com.imgcstmzr.cli.Config4kValueSource.Companion.update
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class Config4kValueSourceTest {
 
-    val config4kValueSource = Config4kValueSource.proxy().also {
+    private val config4kValueSource = Config4kValueSource.proxy().also {
         it.update(javaClass.getResource("/sample.conf"))
     }
 
-    @ExperimentalValueSourceApi
     @Test
     fun `should load simple property`() {
         val values = config4kValueSource.getValues(TestCli.ctx, TestCli.cmd.os)
         expectThat(values).isEqualTo(listOf(Invocation(listOf("RASPBERRY_PI_OS_LITE"))))
     }
 
-    @ExperimentalValueSourceApi
+    @Suppress("SpellCheckingInspection")
     @Test
     fun `should load complex property`() {
         val values = config4kValueSource.getValues(TestCli.ctx, TestCli.cmd.scripts_)
+
         expectThat(values).isEqualTo(listOf(Invocation(listOf("the-basics=\n" + """
             sudo -i
             :

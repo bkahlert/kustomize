@@ -1,30 +1,13 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.concurrent.process.IO
-import com.imgcstmzr.runtime.log.BlockRenderingLogger
-import java.nio.file.Path
+import com.bkahlert.koodies.unit.Size
 
-open class OperatingSystemMock(
-    override val name: String = "ImgCstmzr Test OS",
-    override val downloadUrl: String? = null,
-    override val defaultUsername: String = "",
-    override val defaultPassword: String = "",
+class OperatingSystemMock(
+    override val name: String,
+    override val fullName: String = OperatingSystems.ImgCstmzrTestOS.fullName,
+    override val downloadUrl: String = OperatingSystems.ImgCstmzrTestOS.downloadUrl,
+    override val approximateImageSize: Size = OperatingSystems.ImgCstmzrTestOS.approximateImageSize,
+    override val defaultCredentials: OperatingSystem.Credentials = OperatingSystems.ImgCstmzrTestOS.defaultCredentials,
 ) : OperatingSystem {
-
-    override fun bootToUserSession(
-        scenario: String,
-        img: Path,
-        parentLogger: BlockRenderingLogger<Any>?,
-        processor: RunningOperatingSystem.(IO) -> Any,
-    ): Any {
-        error(::bootToUserSession.name + " not implemented in mock")
-    }
-
-    override fun compileSetupScript(name: String, commandBlocks: String): Array<Program> {
-        error(::compileSetupScript.name + " not implemented in mock")
-    }
-
-    override fun compileScript(name: String, vararg commands: String): Program {
-        error(::compileScript.name + " not implemented in mock")
-    }
+    override fun toString(): String = fullName
 }

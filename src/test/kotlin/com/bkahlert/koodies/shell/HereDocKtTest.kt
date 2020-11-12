@@ -4,11 +4,11 @@ import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class HereDocKtTest {
 
     @Test

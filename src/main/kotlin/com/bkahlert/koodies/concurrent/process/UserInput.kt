@@ -8,7 +8,6 @@ import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
 
 /**
@@ -19,14 +18,12 @@ object UserInput {
      * Write the given [input] strings with a slight delay between
      * each input on the [Process]'s [InputStream].
      */
-    @OptIn(ExperimentalTime::class)
     fun Process.enter(vararg input: String, delay: Duration = 10.milliseconds): Unit = outputStream.enter(*input, delay = delay)
 
     /**
      * Write the given [input] strings with a slight delay between
      * each input on the [Process]'s [InputStream].
      */
-    @OptIn(ExperimentalTime::class)
     fun OutputStream.enter(vararg input: String, delay: Duration = 10.milliseconds) {
         val stdin = BufferedWriter(OutputStreamWriter(this))
         input.forEach {

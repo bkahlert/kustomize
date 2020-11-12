@@ -5,6 +5,7 @@ import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.string.LineSeparators.LF
 import com.bkahlert.koodies.string.random
+import org.apache.commons.io.FileUtils
 import java.awt.datatransfer.MimeTypeParseException
 import java.io.BufferedInputStream
 import java.io.File
@@ -49,7 +50,7 @@ fun Path.touch(): Path {
 }
 
 fun Path.mkdirs(): Path {
-    toFile().mkdirs()
+    FileUtils.forceMkdir(toFile())
     return this
 }
 

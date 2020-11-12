@@ -3,8 +3,12 @@ package com.bkahlert.koodies.io
 import com.bkahlert.koodies.io.Archiver.archive
 import com.bkahlert.koodies.io.Archiver.listArchive
 import com.bkahlert.koodies.io.Archiver.unarchive
+import com.bkahlert.koodies.io.PathFixtures.archiveWithTwoFiles
+import com.bkahlert.koodies.io.PathFixtures.directoryWithTwoFiles
+import com.bkahlert.koodies.nio.file.tempDir
+import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
-import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.addExtension
 import com.imgcstmzr.util.copyTo
 import com.imgcstmzr.util.delete
@@ -26,12 +30,14 @@ import strikt.assertions.isFailure
 
 @Execution(CONCURRENT)
 class ArchiverTest {
+    private val tempDir = tempDir().deleteOnExit()
+
     @ConcurrentTestFactory
     fun `should throw on missing source`() = listOf(
-        { Paths.tempDir().also { it.delete() }.archive() },
-        { Paths.tempFile(extension = ".zip").also { it.delete() }.unarchive() },
-        { Paths.tempFile(extension = ".tar.gz").also { it.delete() }.listArchive() },
-        { Paths.tempFile(extension = ".tar.gz").also { it.writeText("crap") }.listArchive() },
+        { tempDir.tempDir().also { it.delete() }.archive() },
+        { tempDir.tempFile(extension = ".zip").also { it.delete() }.unarchive() },
+        { tempDir.tempFile(extension = ".tar.gz").also { it.delete() }.listArchive() },
+        { tempDir.tempFile(extension = ".tar.gz").also { it.writeText("crap") }.listArchive() },
     ).map { call ->
         dynamicTest("$call") {
             expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
@@ -40,8 +46,8 @@ class ArchiverTest {
 
     @ConcurrentTestFactory
     fun `should throw on non-empty destination`() = listOf(
-        { PathFixtures.directoryWithTwoFiles().also { it.addExtension("zip").touch().writeText("content") }.archive("zip") },
-        { PathFixtures.archiveWithTwoFiles("zip").also { it.copyTo(it.removeExtension("zip")) }.unarchive() },
+        { tempDir.directoryWithTwoFiles().also { it.addExtension("zip").touch().writeText("content") }.archive("zip") },
+        { tempDir.archiveWithTwoFiles("zip").also { it.copyTo(it.removeExtension("zip")) }.unarchive() },
     ).map { call ->
         dynamicTest("$call") {
             expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
@@ -50,8 +56,8 @@ class ArchiverTest {
 
     @ConcurrentTestFactory
     fun `should overwrite non-empty destination`() = listOf(
-        { PathFixtures.directoryWithTwoFiles().also { it.addExtension("zip").touch().writeText("content") }.archive("zip", overwrite = true) },
-        { PathFixtures.archiveWithTwoFiles("zip").also { it.copyTo(it.removeExtension("zip")) }.unarchive(overwrite = true) },
+        { tempDir.directoryWithTwoFiles().also { it.addExtension("zip").touch().writeText("content") }.archive("zip", overwrite = true) },
+        { tempDir.archiveWithTwoFiles("zip").also { it.copyTo(it.removeExtension("zip")) }.unarchive(overwrite = true) },
     ).map { call ->
         dynamicTest("$call") {
             expectThat(call()).exists()
@@ -60,7 +66,7 @@ class ArchiverTest {
 
     @Test
     fun `should archive and unarchive`() {
-        val dir = PathFixtures.directoryWithTwoFiles()
+        val dir = tempDir.directoryWithTwoFiles()
 
         val archivedDir = dir.archive()
 

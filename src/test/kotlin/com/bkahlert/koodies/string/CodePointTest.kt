@@ -8,7 +8,7 @@ import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.isA
@@ -17,7 +17,7 @@ import strikt.assertions.isFailure
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class CodePointTest {
 
     @Test

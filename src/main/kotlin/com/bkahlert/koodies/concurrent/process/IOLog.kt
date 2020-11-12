@@ -1,7 +1,6 @@
 package com.bkahlert.koodies.concurrent.process
 
 import com.bkahlert.koodies.concurrent.process.IO.Type
-import com.bkahlert.koodies.concurrent.synchronized
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.LineSeparators.lines
 import com.bkahlert.koodies.string.Unicode.Emojis.heavyCheckMark
@@ -20,12 +19,12 @@ class IOLog {
      * **Important:** Only complete lines can be accessed as this is considered to be the only safe way
      * to have non-corrupted data (e.g. split characters).
      */
-    val logged: List<IO> get() = log
+    val logged: List<IO> get() = log.toList()
 
     /**
      * Contains the currently logged I/O. See [logged] for more details.
      */
-    private val log = mutableListOf<IO>().synchronized()
+    private val log = mutableListOf<IO>()
 
     /**
      * Contains not yet fully logged I/O, that is, data not yet terminated by one of the [LineSeparators].
@@ -39,25 +38,17 @@ class IOLog {
      * in chunks of any size. The I/O will be correctly reconstructed and can be accessed using [logged].
      */
     fun add(type: Type, content: ByteArray) {
-        synchronized(incompleteLines) {
+        synchronized(log) {
             with(incompleteLines.getOrPut(type, { ByteArrayOutputStream() })) {
                 write(content)
                 while (true) {
                     val justCompletedLines = incompleteLines.findCompletedLines()
-                    if (justCompletedLines != null) log.add(justCompletedLines)
-                    else break
+                    if (justCompletedLines != null) {
+                        val completedLines = justCompletedLines.value.removeCompletedLines()
+                        log.addAll(justCompletedLines.key typed completedLines)
+                    } else break
                 }
             }
-        }
-    }
-
-    /**
-     * Helper to thread-safely
-     */
-    private fun MutableList<IO>.add(justCompletedLines: Entry<Type, ByteArrayOutputStream>) {
-        synchronized(this) {
-            val completedLines = justCompletedLines.value.removeCompletedLines()
-            log.addAll(justCompletedLines.key typed completedLines)
         }
     }
 

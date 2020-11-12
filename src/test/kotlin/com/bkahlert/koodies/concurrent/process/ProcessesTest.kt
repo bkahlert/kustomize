@@ -10,21 +10,15 @@ import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
 import com.bkahlert.koodies.concurrent.process.Processes.startShellScriptDetached
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.startAsDaemon
-import com.bkahlert.koodies.concurrent.synchronized
-import com.bkahlert.koodies.nio.file.age
-import com.bkahlert.koodies.nio.file.list
-import com.bkahlert.koodies.regex.RegularExpressions
-import com.bkahlert.koodies.regex.sequenceOfAllMatches
-import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.nio.file.tempDir
+import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.strikt.containsExactlyInSomeOrder
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.bkahlert.koodies.time.poll
-import com.bkahlert.koodies.time.sleep
-import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.containsAtLeast
-import com.imgcstmzr.util.extension
 import com.imgcstmzr.util.isEqualToStringWise
 import com.imgcstmzr.util.logging.CapturedOutput
 import com.imgcstmzr.util.logging.OutputCaptureExtension
@@ -34,15 +28,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import org.junit.jupiter.api.parallel.Isolated
 import strikt.api.expectCatching
 import strikt.api.expectThat
-import strikt.assertions.all
+import strikt.assertions.any
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
-import strikt.assertions.containsExactlyInAnyOrder
-import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
@@ -54,17 +46,15 @@ import strikt.assertions.isLessThanOrEqualTo
 import strikt.assertions.isNotNull
 import strikt.assertions.isTrue
 import strikt.assertions.message
-import java.net.URL
-import java.nio.file.Path
 import java.util.Collections
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 import kotlin.time.milliseconds
-import kotlin.time.minutes
 import kotlin.time.seconds
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class ProcessesTest {
+
+    private val tempDir = tempDir().deleteOnExit()
 
     @Nested
     @ExtendWith(OutputCaptureExtension::class)
@@ -100,9 +90,9 @@ class ProcessesTest {
         @Test
         fun `should process without logging to System out or in`(output: CapturedOutput) {
             val redirectedOutput = Collections.synchronizedList(mutableListOf<IO>())
-            val outputProcessor: RunningProcess.(IO) -> Unit = { redirectedOutput.add(it) }
+            val ioProcessor: RunningProcess.(IO) -> Unit = { redirectedOutput.add(it) }
 
-            startShellScript(outputProcessor = outputProcessor) { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.waitForCompletion()
+            startShellScript(ioProcessor = ioProcessor) { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.waitForCompletion()
 
             expectThat(output).get { out }.isEmpty()
             expectThat(output).get { err }.isEmpty()
@@ -111,9 +101,9 @@ class ProcessesTest {
         @Test
         fun `should format merged output`(output: CapturedOutput) {
             val redirectedOutput = Collections.synchronizedList(mutableListOf<IO>())
-            val outputProcessor: RunningProcess.(IO) -> Unit = { redirectedOutput.add(it) }
+            val ioProcessor: RunningProcess.(IO) -> Unit = { redirectedOutput.add(it) }
 
-            startShellScript(outputProcessor = outputProcessor) { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.waitForCompletion()
+            startShellScript(ioProcessor = ioProcessor) { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.waitForCompletion()
 
             expectThat(redirectedOutput.first { it.type == META }).matchesCurlyPattern("Executing {}")
             expectThat(redirectedOutput.first { it.type == OUT }).isEqualToStringWise(OUT.format("test output"), removeAnsi = false)
@@ -121,22 +111,23 @@ class ProcessesTest {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     @Slow @Test
     fun `should run detached scripts`() {
-        val path = Paths.tempFile()
+        val path = tempDir.tempFile()
         val process = startShellScriptDetached {
             !"""sleep 3"""
             !"""echo $$ > "$path""""
         }
-        var content: String
+        var content = ""
         var waitCount = 0
         var aliveCount = 0
         val pid = process.pid()
-        while (path.readAll().also { content = it.trim() }.isBlank()) {
+        poll {
             waitCount++
             if (process.isAlive) aliveCount++
-            500.milliseconds.sleep()
+            path.readAll().also { content = it.trim() }.isNotBlank()
+        }.every(500.milliseconds).forAtMost(8.seconds) {
+            fail("No content was written to $path within 8 seconds.")
         }
         expectThat(waitCount).isGreaterThanOrEqualTo(4)
         expectThat(aliveCount).isGreaterThanOrEqualTo(4)
@@ -144,7 +135,6 @@ class ProcessesTest {
         expectThat(content).isEqualTo("$pid")
     }
 
-    @OptIn(ExperimentalTime::class)
     @Test
     fun `should cheap eval script`() {
         val output = cheapEvalShellScript {
@@ -170,7 +160,6 @@ class ProcessesTest {
         expectThat(completedProcess.error.lines()).containsExactly(ERR typed "test error")
     }
 
-    @OptIn(ExperimentalTime::class)
     @Test
     fun `should be destroyable`() {
         measureTime {
@@ -196,78 +185,38 @@ class ProcessesTest {
 
     @Nested
     inner class OnExitCodeMismatch {
-        @OptIn(ExperimentalTime::class)
-        @Slow @Test
-        fun `should print last IO lines`() {
-            val process = startShellScript {
-                !"""
-                    while true; do
-                        >&1 echo "test out"
-                        >&2 echo "test err"
-                        sleep 1
-                    done
-                """.trimIndent()
-            }
-            startAsDaemon {
-                poll { process.ioLog.logged.size >= 6 }
-                    .every(100.milliseconds)
-                    .forAtMost(50.seconds) {
-                        fail("Not enough log lines were recorded in time.")
-                    }
-                process.destroyForcibly()
-            }
+        @Test
+        fun `should print script location`() {
+            val process = startShellScript { }
             expectCatching { process.waitForExitCode(143) }
                 .isFailure()
                 .isA<IllegalStateException>()
                 .message
                 .isNotNull()
-                .contains("last ${process.ioLog.logged.size} I/O lines")
-                .containsAtLeast("koodies.process")
-                .containsAtLeast(OUT.format("test out"), 2)
-                .containsAtLeast(ERR.format("test err"), 2)
+                .get { lines() }.any {
+                    contains("📄 file:///")
+                    contains(".sh")
+                }
         }
 
-        @OptIn(ExperimentalTime::class)
-        @Slow @Test
-        fun `should save IO log`() {
-            val process = startShellScript {
-                !"""
-                while true; do
-                    >&1 echo "test out"
-                    >&2 echo "test err"
-                    sleep 1
-                done
-                """.trimIndent()
-            }
-            startAsDaemon(2.seconds) {
-                process.destroyForcibly()
-            }
-            process.waitForCompletion()
+        @Test
+        fun `should dump IO`() {
+            val process = startShellScript { !"echo \"test\"" }
             expectCatching { process.waitForExitCode(143) }
                 .isFailure()
                 .isA<IllegalStateException>()
-                .message.get {
-                    this?.let { message ->
-                        RegularExpressions.urlRegex.sequenceOfAllMatches(message)
-                            .map { URL(it) }
-                            .map { it.openStream().reader().readText() }
-                            .map { it.removeEscapeSequences() }
-                            .toList()
-                    } ?: fail("error message missing")
-                }.hasSize(3).all {
-                    contains("test out")
-                    contains("test err")
-                }
+                .message
+                .isNotNull()
+                .contains("dump has been written")
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     @Test
     fun `should run after process termination on normal termination`() {
         measureTime {
             var ranAfterProcessTermination = false
             val process = startShellScript(
-                outputProcessor = { },
+                ioProcessor = { },
                 runAfterProcessTermination = { ranAfterProcessTermination = true }
             ) {
                 !"""
@@ -280,13 +229,12 @@ class ProcessesTest {
         }.let { expectThat(it).isLessThanOrEqualTo(2.5.seconds) }
     }
 
-    @OptIn(ExperimentalTime::class)
     @Slow @Test
     fun `should run after process termination on destruction`() {
         measureTime {
             var ranAfterProcessTermination = false
             val process = startShellScript(
-                outputProcessor = { },
+                ioProcessor = { },
                 runAfterProcessTermination = { ranAfterProcessTermination = true }
             ) {
                 !"""
@@ -305,13 +253,9 @@ class ProcessesTest {
         }.let { expectThat(it).isLessThanOrEqualTo(3.seconds) }
     }
 
-    @OptIn(ExperimentalTime::class)
     @Slow @Test
     fun `should process input`() {
-        val output = mutableSetOf<String>().synchronized()
-        val process = startShellScript(outputProcessor = {
-            if (it.type != META) output.add(it.unformatted)
-        }) {
+        val process = startShellScript {
             !"""
                  while true; do
                     >&1 echo "test out"
@@ -326,25 +270,26 @@ class ProcessesTest {
                 """.trimIndent()
         }
 
-        (0 until 2).map { i ->
-            process.enter("test in $i")
-            1.seconds.sleep()
-        }
-        1.seconds.sleep()
+        poll {
+            with(process.ioLog.logged) {
+                any { it.type == OUT && it.unformatted == "test out" } && any { it.type == ERR && it.unformatted == "test err" }
+            }
+        }.every(100.milliseconds).forAtMost(5.seconds) { fail("Did not log I/O \"test out\"/\"test err\"") }
+
+        process.enter("test in 0")
+        poll { process.ioLog.logged.lastOrNull { it.unformatted.isNotBlank() }?.unformatted == "test in 0" }
+            .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not log I/O \"test in 0\"") }
+
+        process.enter("test in 1")
+        poll { process.ioLog.logged.lastOrNull { it.unformatted.isNotBlank() }?.unformatted == "test in 1" }
+            .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not log I/O \"test in 1\"") }
+
         process.destroy()
-        process.waitFor()
-        expectThat(output.also { it.remove("") }).containsExactlyInAnyOrder(
-            "test out",
-            "test err",
-            "test in 0",
-            "test in 1",
-        )
     }
 
-    @OptIn(ExperimentalTime::class)
     @Slow @Test
     fun `should provide output processor access to own running process`() {
-        val process = startShellScript(outputProcessor = { output ->
+        val process = startShellScript(ioProcessor = { output ->
             if (output.type != META) {
                 kotlin.runCatching {
                     enter("just read $output")
@@ -359,24 +304,20 @@ class ProcessesTest {
                     read -p "Prompt: " READ
                     >&2 echo "${'$'}READ"
                     >&1 echo "${'$'}READ"
-       
-                    sleep 1
                 done
                 """.trimIndent()
         }
-
-        5.5.seconds.sleep()
+        poll { process.ioLog.logged.size >= 6 }.every(100.milliseconds)
+            .forAtMost(8.seconds) { fail("Less than 6x I/O logged within 8 seconds.") }
         process.destroy()
 
         val (_, _, io, _, _, _, _) = process.waitForCompletion()
-        expectThat(io.drop(2)).containsExactlyInSomeOrder {
+        expectThat(io.drop(2).take(4)).containsExactlyInSomeOrder {
             +(OUT typed "test out") + (ERR typed "test err")
             +(IN typed "just read ${OUT.format("test out")}") + (IN typed "just read ${ERR.format("test err")}")
         }
     }
 
-
-    @OptIn(ExperimentalTime::class)
     @Test
     fun `should provide PID`() {
         val process = startShellScript {
@@ -388,7 +329,6 @@ class ProcessesTest {
         expectThat(process.waitForCompletion().pid).isGreaterThan(0)
     }
 
-    @OptIn(ExperimentalTime::class)
     @Test
     fun `should provide exit code`() {
         val process = startShellScript {
@@ -400,7 +340,6 @@ class ProcessesTest {
         expectThat(process.waitForCompletion().exitCode).isEqualTo(23)
     }
 
-    @OptIn(ExperimentalTime::class)
     @Slow @Test
     fun `should provide IO`() {
         val process = startShellScript {
@@ -421,8 +360,7 @@ class ProcessesTest {
         val (_, _, io, _, _, _, _) = process.waitForCompletion()
 
         expectThat(io.drop(2)).containsExactlyInSomeOrder {
-            +(IN typed "test in")
-            +(OUT typed "test out") + (ERR typed "test err")
+            +(OUT typed "test out") + (ERR typed "test err") + (IN typed "test in")
             +(OUT typed "test in") + (ERR typed "test in") + (OUT typed "") + (ERR typed "")
         }
         expectThat(process.waitForCompletion().meta.removeEscapeSequences())
@@ -457,30 +395,5 @@ class ProcessesTest {
                 test in
                 
             """.trimIndent().let { ERR typed it })
-    }
-
-    @Isolated
-    @Nested
-    inner class CleanUp {
-        @OptIn(ExperimentalTime::class)
-        @Test
-        fun `should cleanup shell scripts`() {
-            val id = String.random(32)
-            val scripts = fun(): List<Path> = Paths.TEMP.list().filter {
-                it.extension == "sh"
-            }.filter {
-                val readAll = it.readAll()
-                readAll.contains(id)
-            }.toList()
-            startShellScript { !"echo '$id'" }
-            scripts().apply {
-                check(size == 1)
-                check(all { it.age < 10.seconds })
-                onEach { it.age = 11.minutes }
-            }
-
-            Processes.cleanUp()
-            expectThat(scripts()).isEmpty()
-        }
     }
 }

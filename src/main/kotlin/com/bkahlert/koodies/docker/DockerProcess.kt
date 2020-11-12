@@ -6,7 +6,6 @@ import com.bkahlert.koodies.concurrent.process.RunningProcess
 import com.bkahlert.koodies.time.poll
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeoutException
-import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
 import kotlin.time.seconds
 
@@ -28,12 +27,15 @@ class DockerProcess(
 
     override fun toString(): String = "DockerProcess(name='$name', runningProcess=$process)"
 
-    @OptIn(ExperimentalTime::class)
     private fun cleanUp(forcibly: Boolean) {
         stop() // asynchronous call; just trying to be nice to call stop
         remove(forcibly)
         poll { !isRunning }.every(100.milliseconds).forAtMost(10.seconds) {
             throw TimeoutException("Could not clean up $this within $it.")
         }
+    }
+
+    companion object {
+        val nullDockerProcess: DockerProcess = DockerProcess("NULL") { nullRunningProcess }
     }
 }

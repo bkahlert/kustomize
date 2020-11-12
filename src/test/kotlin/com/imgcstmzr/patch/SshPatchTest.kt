@@ -7,11 +7,11 @@ import com.imgcstmzr.util.matches
 import com.imgcstmzr.util.single
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.exists
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class SshPatchTest {
 
     @Test

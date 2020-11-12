@@ -11,9 +11,8 @@ import com.bkahlert.koodies.time.sleep
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.DietPi
 import com.imgcstmzr.runtime.OperatingSystems.RiscOsPicoRc5
-import com.imgcstmzr.util.DockerRequired
+import com.imgcstmzr.util.DockerRequiring
 import com.imgcstmzr.util.OS
-import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -27,11 +26,9 @@ import strikt.assertions.isLessThan
 import strikt.assertions.isTrue
 import java.nio.file.Path
 import kotlin.reflect.KFunction
-import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
 import kotlin.time.seconds
 
-@DockerRequired
 @Execution(CONCURRENT)
 class DockerTest {
 
@@ -45,9 +42,8 @@ class DockerTest {
     @Nested
     inner class Lifecycle {
 
-        @OptIn(ExperimentalTime::class)
-        @Test
-        fun `should start docker and pass arguments`(logger: InMemoryLogger<String>) {
+        @DockerRequiring @Test
+        fun `should start docker and pass arguments`() {
             val dockerProcess = Docker.run {
                 run(name = testName(Lifecycle::`should start docker and pass arguments`), volumes = emptyMap(), image = "busybox", args = listOf(
                     listOf(
@@ -60,12 +56,11 @@ class DockerTest {
 
             kotlin.runCatching {
                 poll { dockerProcess.ioLog.logged.any { it.type == OUT && it.unformatted == "test" } }
-                    .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not log \"test\" output within 5 seconds.") }
+                    .every(100.milliseconds).forAtMost(8.seconds) { fail("Did not log \"test\" output within 8 seconds.") }
             }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
         }
 
-        @OptIn(ExperimentalTime::class)
-        @Test
+        @DockerRequiring @Test
         fun `should start docker and process input`() {
             val dockerProcess = Docker.run {
                 run(name = testName(Lifecycle::`should start docker and process input`), volumes = emptyMap(), image = "busybox")
@@ -75,12 +70,12 @@ class DockerTest {
                 dockerProcess.enter("echo 'test'")
                 poll { dockerProcess.ioLog.logged.any { it.type == OUT && it.unformatted == "test" } }
                     .every(100.milliseconds).forAtMost(8.seconds) { fail("Did not log self-induced \"test\" output within 8 seconds.") }
+                dockerProcess.destroy()
             }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
         }
 
-        @OptIn(ExperimentalTime::class)
-        @Test
-        fun `should start docker and process output`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
+        @DockerRequiring @Test
+        fun `should start docker and process output`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
             val dockerProcess = runOsImage(testName(Lifecycle::`should start docker and process output`), osImage)
 
             kotlin.runCatching {
@@ -89,10 +84,9 @@ class DockerTest {
             }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
         }
 
-        @OptIn(ExperimentalTime::class)
-        @Slow @Test
-        fun `should start docker and process output produced by own input`(logger: InMemoryLogger<*>) {
-            val dockerProcess = Docker.run(outputProcessor = {
+        @DockerRequiring @Test
+        fun `should start docker and process output produced by own input`() {
+            val dockerProcess = Docker.run(ioProcessor = {
                 if (it.type == OUT) {
                     if (ioLog.logged.any { output -> output.unformatted == "test 4 6" }) destroy()
                     val message = "echo '${it.unformatted} ${it.unformatted.length}'"
@@ -115,18 +109,16 @@ class DockerTest {
         @Nested
         inner class IsRunning {
 
-            @OptIn(ExperimentalTime::class)
-            @Test
-            fun `should return false on not yet started container container`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
+            @DockerRequiring @Test
+            fun `should return false on not yet started container container`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
                 val dockerProcess = runOsImage(testName(IsRunning::`should return false on not yet started container container`), osImage)
                 kotlin.runCatching {
                     expectThat(dockerProcess.isRunning).isFalse()
                 }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
             }
 
-            @OptIn(ExperimentalTime::class)
-            @Test
-            fun `should return true on running container`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
+            @DockerRequiring @Test
+            fun `should return true on running container`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
                 val dockerProcess = runOsImage(testName(IsRunning()::`should return true on running container`), osImage)
                 kotlin.runCatching {
                     poll { dockerProcess.isRunning }
@@ -135,9 +127,8 @@ class DockerTest {
                 }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
             }
 
-            @OptIn(ExperimentalTime::class)
-            @Slow @Test
-            fun `should return false on completed container`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
+            @DockerRequiring @Test
+            fun `should return false on completed container`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
                 val dockerProcess = runOsImage(testName(IsRunning::`should return false on completed container`), osImage)
                 kotlin.runCatching {
                     poll { dockerProcess.isRunning }
@@ -151,9 +142,8 @@ class DockerTest {
                 }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
             }
 
-            @OptIn(ExperimentalTime::class)
-            @Test
-            fun `should stop started container`(@OS(DietPi::class) osImage: OperatingSystemImage) {
+            @DockerRequiring @Test
+            fun `should stop started container`(@OS(DietPi) osImage: OperatingSystemImage) {
                 val dockerProcess = runOsImage(testName(IsRunning::`should stop started container`), osImage)
                 kotlin.runCatching {
                     poll { dockerProcess.isRunning }
@@ -168,10 +158,8 @@ class DockerTest {
             }
         }
 
-        @Slow
-        @OptIn(ExperimentalTime::class)
-        @Test
-        fun `should remove docker container after completion`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
+        @DockerRequiring @Test
+        fun `should remove docker container after completion`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
             val dockerProcess = runOsImage(testName(Lifecycle::`should remove docker container after completion`), osImage)
             kotlin.runCatching {
                 poll { Docker.exists(dockerProcess.name) }
@@ -187,15 +175,14 @@ class DockerTest {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
-    @Test
-    fun `should not produce incorrect empty lines`(@OS(RiscOsPicoRc5::class) osImage: OperatingSystemImage) {
+    @Slow @DockerRequiring @Test
+    fun `should not produce incorrect empty lines`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
         val output = mutableListOf<IO>().synchronized()
         val dockerProcess = runOsImage(testName(DockerTest::`should not produce incorrect empty lines`), osImage) { output.add(it) }
         kotlin.runCatching {
-            6.seconds.sleep()
+            20.seconds.sleep()
             dockerProcess.destroy()
-            expectThat(output.size).isGreaterThan(20)
+            expectThat(output).get { size }.isGreaterThan(20)
             expectThat(output.filter { it.isBlank }.size).isLessThan(output.size / 4)
         }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
     }
@@ -205,8 +192,8 @@ class DockerTest {
 }
 
 @Suppress("SpellCheckingInspection")
-private fun runOsImage(name: String, osImage: OperatingSystemImage, outputProcessor: (DockerProcess.(IO) -> Unit)? = null): DockerProcess {
-    return Docker.run(outputProcessor = outputProcessor) {
+private fun runOsImage(name: String, osImage: OperatingSystemImage, ioProcessor: (DockerProcess.(IO) -> Unit)? = null): DockerProcess {
+    return Docker.run(ioProcessor = ioProcessor) {
         run(name = name, volumes = listOf(osImage.toAbsolutePath() to Path.of("/sdcard/filesystem.img")).toMap(), image = "lukechilds/dockerpi:vm")
     }
 }

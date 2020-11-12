@@ -1,5 +1,3 @@
-@file:Suppress("EXPERIMENTAL_UNSIGNED_LITERALS")
-
 package com.bkahlert.koodies.string
 
 import org.junit.jupiter.api.Test

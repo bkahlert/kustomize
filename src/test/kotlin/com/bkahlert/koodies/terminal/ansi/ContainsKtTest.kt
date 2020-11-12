@@ -4,11 +4,11 @@ import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.ESC
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class ContainsKtTest {
 
     @ConcurrentTestFactory

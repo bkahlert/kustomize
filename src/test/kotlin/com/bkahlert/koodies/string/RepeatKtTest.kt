@@ -4,12 +4,12 @@ import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class RepeatKtTest {
 
     @ConcurrentTestFactory

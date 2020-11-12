@@ -1,6 +1,5 @@
 package com.bkahlert.koodies.concurrent
 
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
@@ -18,7 +17,7 @@ class StartAsCoroutineKtTest {
             val sum = AtomicLong()
             startAsCoroutine {
                 for (i in 1..1_000L)
-                    GlobalScope.launch {
+                    launch {
                         sum.addAndGet(i)
                     }
             }.join()

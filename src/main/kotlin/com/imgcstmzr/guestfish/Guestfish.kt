@@ -1,21 +1,18 @@
-package com.imgcstmzr.process
+package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.concurrent.process.CompletedProcess
-import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
-import com.bkahlert.koodies.concurrent.process.IO.Type.IN
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
-import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.docker.Docker
 import com.bkahlert.koodies.kaomoji.Kaomojis
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.string.match
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
+import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.runtime.OperatingSystems.Companion.Credentials
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.singleLineLogger
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.subLogger
+import com.imgcstmzr.runtime.log.singleLineLogger
+import com.imgcstmzr.runtime.log.subLogger
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.quoted
@@ -28,9 +25,17 @@ import java.nio.file.Path
  * Instances use [containerName] for the underlying Docker container (any existing container gets removed).
  * [imgPathOnHost] will be mounted before running any command.
  *
- * *Developer Note:*
- * Run `docker run --rm -v $(PWD):/work --entrypoint /bin/bash -it cmattoon/guestfish` if you want to
- * play around with Guestfish interactively.
+ * ## Developer Note
+ * The following command starts Guestfish on a proper command line interactively:
+ * ```bash
+ * docker run --rm -v $(PWD):/work --entrypoint /usr/bin/guestfish -it cmattoon/guestfish
+ * docker run --rm -v $(PWD):/work --entrypoint /usr/bin/guestfish -it cmattoon/guestfish -N /work/my.img=bootroot:vfat:ext4:6M:3M:mbr
+ * ```
+ *
+ * For even more freedom the next command starts the bash:
+ * ```bash
+ * docker run --rm -v $(PWD):/work --entrypoint /bin/bash -it cmattoon/guestfish
+ * ```
  */
 class Guestfish(
     /**
@@ -62,7 +67,7 @@ class Guestfish(
     /**
      * Runs the given [guestfishOperation] on a [Guestfish] instance with [imgPathOnHost] mounted.
      */
-    fun run(guestfishOperation: GuestfishOperation) { // TODO check why no logger is used
+    fun run(guestfishOperation: GuestfishOperation) {
         if (guestfishOperation.commandCount == 0) {
             logger.logStatus { META typed "No commands specified to run inside ${imgPathOnHost.fileName}. Skipping." }
             return
@@ -74,11 +79,12 @@ class Guestfish(
 
             Docker.run(
                 workingDirectory = imgPathOnHost.parent,
-                outputProcessor = { output -> if (debug || output.type == ERR) logStatus { output } },
+                ioProcessor = GuestfishIoProcessor(this, verbose = false),
             ) {
                 run(
                     redirectStdErrToStdOut = true, // needed since some commandrvf writes all output to stderr
                     name = containerName,
+                    autoCleanup = false,
                     volumes = mapOf(
                         imgPathOnHost to imgPathOnDocker,
                         imgPathOnHost.parent.resolve(SHARED_DIRECTORY_NAME) to GUEST_ROOT_ON_DOCKER,
@@ -172,35 +178,31 @@ class Guestfish(
         }
 
         /**
-         * Executes the given [operation] on a [Guestfish] instance with just [volumes] mounted.
+         * Executes the given [commands] on a [Guestfish] instance with just [volumes] mounted.
          */
         fun execute(
             containerName: String,
             volumes: Map<Path, Path>,
-            operation: GuestfishOperation,
+            options: List<String> = emptyList(),
+            commands: GuestfishOperation,
             workingDirectory: Path = Paths.WORKING_DIRECTORY,
             logger: RenderingLogger<*>,
-        ): CompletedProcess = logger.subLogger("Running ${operation.commandCount} guestfish operations... ${Kaomojis.fishing()}") {
+        ): CompletedProcess = logger.subLogger("Running ${commands.commandCount} guestfish operations... ${Kaomojis.fishing()}") {
             Docker.run(
                 workingDirectory = workingDirectory,
-                outputProcessor = { io ->
-                    when (io.type) {
-                        META -> logLine { io }
-                        IN -> logLine { io }
-                        OUT -> logLine { io }
-                        ERR -> throw IllegalStateException(io.unformatted)
-                    }
-                }
+                ioProcessor = GuestfishIoProcessor(this, verbose = false)
             ) {
                 run(
                     redirectStdErrToStdOut = true, // needed since some commandrvf writes all output to stderr
                     name = containerName,
+                    autoCleanup = false,
                     volumes = volumes,
                     image = IMAGE_NAME,
-                    args = listOf("--", (operation + shutdownOperation).asHereDoc()),
+                    args = listOf(*options.toTypedArray(), "--", (commands + shutdownOperation).asHereDoc()),
                 )
             }.waitForExitCode()
         }
+
     }
 }
 

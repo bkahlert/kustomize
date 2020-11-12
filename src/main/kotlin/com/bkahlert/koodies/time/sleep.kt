@@ -1,9 +1,6 @@
-@file:OptIn(ExperimentalTime::class)
-
 package com.bkahlert.koodies.time
 
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 
 /**
  * Make the current [Thread] sleep for this duration.

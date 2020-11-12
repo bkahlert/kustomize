@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.nio.file
 
-import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.delete
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -12,18 +12,21 @@ import java.nio.file.NotDirectoryException
 
 @Execution(CONCURRENT)
 class RequireDirectoryKtTest {
+
+    private val tempDir = tempDir().deleteOnExit()
+
     @Test
     fun `should throw on file`() {
-        expectCatching { Paths.tempFile().requireDirectory() }.isFailure().isA<NotDirectoryException>()
+        expectCatching { tempDir.tempFile().requireDirectory() }.isFailure().isA<NotDirectoryException>()
     }
 
     @Test
     fun `should not throw on directory`() {
-        Paths.tempDir().requireDirectory()
+        tempDir.tempDir().requireDirectory()
     }
 
     @Test
     fun `should throw on missing`() {
-        expectCatching { Paths.tempDir().also { it.delete() }.requireDirectory() }.isFailure().isA<NotDirectoryException>()
+        expectCatching { tempDir.tempDir().also { it.delete() }.requireDirectory() }.isFailure().isA<NotDirectoryException>()
     }
 }

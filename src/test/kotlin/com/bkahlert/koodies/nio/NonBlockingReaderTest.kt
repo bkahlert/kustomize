@@ -5,10 +5,8 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import java.io.InputStream
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 
-@OptIn(ExperimentalTime::class)
 @Execution(CONCURRENT)
-class NonBlockingReaderTest : SharedReaderTest({ inputStream: InputStream, timeout: Duration, logger: RenderingLogger<String?>? ->
+class NonBlockingReaderTest : SharedReaderTest({ inputStream: InputStream, timeout: Duration, logger: RenderingLogger<*> ->
     NonBlockingReader(inputStream = inputStream, timeout = timeout, logger = logger, blockOnEmptyLine = false)
 })

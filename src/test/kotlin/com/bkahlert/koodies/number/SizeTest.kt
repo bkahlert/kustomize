@@ -1,5 +1,7 @@
 package com.bkahlert.koodies.number
 
+import com.bkahlert.koodies.nio.file.tempDir
+import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.DecimalPrefix
@@ -43,7 +45,7 @@ import com.bkahlert.koodies.unit.yobi_
 import com.bkahlert.koodies.unit.yocto
 import com.bkahlert.koodies.unit.zebi_
 import com.bkahlert.koodies.unit.zepto
-import com.imgcstmzr.util.Paths
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.appendText
 import com.imgcstmzr.util.times
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
@@ -51,7 +53,7 @@ import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.isA
@@ -60,8 +62,10 @@ import strikt.assertions.isFailure
 import strikt.assertions.message
 import java.nio.file.Path
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class SizeTest {
+
+    private val tempDir = tempDir().deleteOnExit()
 
     @Test
     fun `should use decimal unit by default`() {
@@ -293,7 +297,7 @@ class SizeTest {
     @Nested
     inner class AsSize {
 
-        val tempFile: Path = Paths.tempFile().apply { 2500.times { appendText("1234567890") } }
+        val tempFile: Path = tempDir.tempFile().apply { 2500.times { appendText("1234567890") } }
 
         @Test
         fun `should format size human-readable (10^x)`() {

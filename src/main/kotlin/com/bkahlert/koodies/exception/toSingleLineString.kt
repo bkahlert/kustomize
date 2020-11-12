@@ -1,7 +1,12 @@
 package com.bkahlert.koodies.exception
 
+import com.bkahlert.koodies.concurrent.process.CompletedProcess
+import java.nio.file.Path
+
 fun Any?.toSingleLineString(): String {
     if (this == null || this == Unit) return ""
+    if (this is Path) return "${toUri()}"
+    if (this is CompletedProcess) return this.exitCode.toString()
     return this.toString()
 }
 

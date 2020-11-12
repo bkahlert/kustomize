@@ -4,7 +4,6 @@ import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.tracing.MicroTracer
 import com.bkahlert.koodies.tracing.MiniTracer
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.singleLineLogger
 import com.imgcstmzr.util.format
 import kotlin.reflect.KCallable
 import kotlin.reflect.KFunction0

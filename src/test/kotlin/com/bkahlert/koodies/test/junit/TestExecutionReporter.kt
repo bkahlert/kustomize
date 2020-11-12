@@ -14,10 +14,8 @@ import org.junit.platform.launcher.TestIdentifier
 import org.junit.platform.launcher.TestPlan
 import java.lang.reflect.AnnotatedElement
 import kotlin.properties.Delegates
-import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
 
-@ExperimentalTime
 class TestExecutionReporter : TestExecutionListener, TestWatcher {
 
     private var startTimestamp by Delegates.notNull<Long>()
@@ -90,5 +88,5 @@ class TestExecutionReporter : TestExecutionListener, TestWatcher {
     private fun format(nonConcurrentTestClasses: List<AnnotatedElement>): String =
         if (nonConcurrentTestClasses.isEmpty()) "—" else nonConcurrentTestClasses.joinToString("\n",
             prefix = "\n",
-            limit = 10) { it.toString() }
+            limit = 10) { "$it" }
 }

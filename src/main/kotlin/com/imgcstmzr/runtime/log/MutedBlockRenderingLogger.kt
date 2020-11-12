@@ -9,7 +9,7 @@ import com.imgcstmzr.runtime.HasStatus
 open class MutedBlockRenderingLogger<R>(
     caption: CharSequence = "",
     borderedOutput: Boolean = false,
-    log: (CharSequence) -> Any = { },
+    log: (String) -> Any = { },
 ) : BlockRenderingLogger<R>(
     caption = caption,
     borderedOutput = borderedOutput,

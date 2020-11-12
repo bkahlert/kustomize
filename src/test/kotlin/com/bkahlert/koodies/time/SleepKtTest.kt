@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalTime::class)
-
 package com.bkahlert.koodies.time
 
 import org.junit.jupiter.api.Test
@@ -13,7 +11,6 @@ import strikt.assertions.isGreaterThan
 import strikt.assertions.isLessThan
 import strikt.assertions.isLessThanOrEqualTo
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 import kotlin.time.milliseconds
 import kotlin.time.seconds

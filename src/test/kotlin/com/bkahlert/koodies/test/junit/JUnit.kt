@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.test.junit
 
+import org.apache.commons.io.output.ByteArrayOutputStream
 import org.junit.platform.engine.DiscoverySelector
 import org.junit.platform.launcher.Launcher
 import org.junit.platform.launcher.core.LauncherConfig
@@ -10,6 +11,11 @@ import org.junit.platform.launcher.listeners.TestExecutionSummary
 import java.io.PrintWriter
 
 object JUnit {
+    enum class ExecutionMode(private val value: String) {
+        Concurrent("concurrent"), SameThread("same_thread");
+
+        override fun toString(): String = value
+    }
 
     fun runTests(
         vararg selectors: DiscoverySelector,
@@ -32,6 +38,28 @@ object JUnit {
                     }
                 }
         }
+
+    fun LauncherDiscoveryRequestBuilder.disableConcurrency() {
+        configurationParameter("junit.jupiter.execution.parallel.enabled", "false")
+    }
+
+    fun LauncherDiscoveryRequestBuilder.concurrentMode(factor: ExecutionMode = ExecutionMode.Concurrent) {
+        configurationParameter("junit.jupiter.execution.parallel.mode.default", "$factor")
+    }
+
+    fun LauncherDiscoveryRequestBuilder.concurrentClassMode(factor: ExecutionMode = ExecutionMode.Concurrent) {
+        configurationParameter("junit.jupiter.execution.parallel.mode.classes.default", "$factor")
+    }
+
+    fun LauncherDiscoveryRequestBuilder.concurrentDynamicFactor(factor: Int = 10) {
+        configurationParameter("junit.jupiter.execution.parallel.config.dynamic.factor", "$factor")
+    }
+
+    fun TestExecutionSummary.render(): String {
+        val buffer = ByteArrayOutputStream()
+        printTo(PrintWriter(buffer))
+        return buffer.toString(Charsets.UTF_8)
+    }
 
     fun TestExecutionSummary.print() {
         printTo(PrintWriter(System.out))

@@ -6,7 +6,7 @@ import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.doesNotContain
 import strikt.assertions.hasLength
@@ -14,7 +14,7 @@ import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class RandomKtTest {
 
     @Test

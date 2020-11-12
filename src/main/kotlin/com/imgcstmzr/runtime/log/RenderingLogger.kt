@@ -4,6 +4,7 @@ import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.exception.toSingleLineString
 import com.bkahlert.koodies.nullable.invoke
+import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.string.Unicode.Emojis.heavyBallotX
 import com.bkahlert.koodies.string.Unicode.Emojis.heavyCheckMark
 import com.bkahlert.koodies.string.Unicode.greekSmallLetterKoppa
@@ -18,7 +19,6 @@ import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.asAnsiString
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.mordant.AnsiCode
 import com.imgcstmzr.runtime.HasStatus
-import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
@@ -112,84 +112,136 @@ interface RenderingLogger<R> { // TODO remove R?
                 format("$greekSmallLetterKoppa") + prefix + "$event ${it.red()}"
             } ?: format("$greekSmallLetterKoppa")
         }
-
-        /**
-         * Creates a logger which serves for logging a sub-process and all of its corresponding events.
-         *
-         * This logger uses at least one line per log event. If less room is available [singleLineLogger] is more suitable.
-         */
-        inline fun <reified R> RenderingLogger<*>?.subLogger(
-            caption: CharSequence,
-            ansiCode: AnsiCode? = null,
-            borderedOutput: Boolean = (this as? BlockRenderingLogger)?.borderedOutput ?: false,
-            block: RenderingLogger<R>.() -> R,
-        ): R {
-            val logger: RenderingLogger<R> =
-                when {
-                    this == null -> BlockRenderingLogger(
-                        caption = caption,
-                        borderedOutput = borderedOutput,
-                    )
-                    this is MutedBlockRenderingLogger -> MutedBlockRenderingLogger(
-                        caption = caption,
-                        borderedOutput = borderedOutput,
-                    )
-                    else -> ((this as? BlockRenderingLogger)?.prefix ?: "$this::").let { prefix ->
-                        val color = ansiCode // TODO
-                        BlockRenderingLogger(
-                            caption = caption,
-                            borderedOutput = borderedOutput,
-                        ) { output ->
-                            val indentedOutput = output.asAnsiString().mapLines {
-                                val prefixLength = "5"
-                                val truncateBy = color.invoke(it.replaceFirst(("\\s{$prefixLength}").toRegex(), ' '.repeat(5 - prefix.length)))
-                                truncateBy.prefixWith(prefix)
-                            }
-                            logText { indentedOutput }
-                        }
-                    }
-                }
-            return kotlin.runCatching { block(logger) }.also { logger.logResult { it } }.getOrThrow()
-        }
-
-        /**
-         * Creates a logger which serves for logging a sub-process and all of its corresponding events.
-         *
-         * This logger logs all events using a single line of text. If more room is needed [subLogger] is more suitable.
-         */
-        inline fun <reified R> RenderingLogger<*>?.singleLineLogger(
-            caption: CharSequence,
-            noinline block: SingleLineLogger<R>.() -> R,
-        ): R = if (this == null) {
-            val logger: SingleLineLogger<R> =
-                object : SingleLineLogger<R>(caption) {
-                    override fun render(block: () -> CharSequence) {
-                    }
-                }
-            kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
-        } else {
-            val logger: SingleLineLogger<R> = object : SingleLineLogger<R>(caption) {
-                override fun render(block: () -> CharSequence) {
-                    val message = block()
-                    val prefix = this@singleLineLogger.nestingPrefix
-                    val logMessage = prefix + message.bold()
-                    this@singleLineLogger.render(true) { logMessage }
-                }
-            }
-            kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
-        }
     }
 }
 
-@OptIn(ExperimentalContracts::class)
 inline fun <reified R> RenderingLogger<R>.applyLogging(crossinline block: RenderingLogger<R>.() -> R) {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     logResult { runCatching { block() } }
 }
 
-@OptIn(ExperimentalContracts::class)
 inline fun <reified R> RenderingLogger<R>.runLogging(crossinline block: RenderingLogger<R>.() -> R): R {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     return logResult { runCatching { block() } }
 }
 
+
+/**
+ * Creates a logger which serves for logging a sub-process and all of its corresponding events.
+ *
+ * This logger uses at least one line per log event. If less room is available [singleLineLogger] is more suitable.
+ */
+inline fun <reified R> RenderingLogger<*>?.subLogger(
+    caption: CharSequence,
+    ansiCode: AnsiCode? = null,
+    borderedOutput: Boolean = (this as? BlockRenderingLogger<*>)?.borderedOutput ?: false,
+    block: RenderingLogger<R>.() -> R,
+): R {
+    val logger: RenderingLogger<R> =
+        when {
+            this == null -> BlockRenderingLogger(
+                caption = caption,
+                borderedOutput = borderedOutput,
+            )
+            this is MutedBlockRenderingLogger -> MutedBlockRenderingLogger(
+                caption = caption,
+                borderedOutput = borderedOutput,
+            )
+            else -> ((this as? BlockRenderingLogger)?.prefix ?: "$this::").let { prefix ->
+                val color = ansiCode // TODO
+                BlockRenderingLogger(
+                    caption = caption,
+                    borderedOutput = borderedOutput,
+                ) { output ->
+                    val indentedOutput = output.asAnsiString().mapLines {
+                        val prefixLength = "5"
+                        val truncateBy = color.invoke(it.replaceFirst(("\\s{$prefixLength}").toRegex(), ' '.repeat(5 - prefix.length)))
+                        truncateBy.prefixWith(prefix)
+                    }
+                    logText { indentedOutput }
+                }
+            }
+        }
+    return kotlin.runCatching { block(logger) }.also { logger.logResult { it } }.getOrThrow()
+}
+
+
+/**
+ * Creates a logger which serves for logging a sub-process and all of its corresponding events.
+ *
+ * This logger logs all events using a single line of text. If more room is needed [subLogger] is more suitable.
+ */
+inline fun <reified R> RenderingLogger<*>?.singleLineLogger(
+    caption: CharSequence,
+    noinline block: SingleLineLogger<R>.() -> R,
+): R = if (this == null) {
+    val logger: SingleLineLogger<R> =
+        object : SingleLineLogger<R>(caption) {
+            override fun render(block: () -> CharSequence) {
+            }
+        }
+    kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
+} else {
+    val logger: SingleLineLogger<R> = object : SingleLineLogger<R>(caption) {
+        override fun render(block: () -> CharSequence) {
+            val message = block()
+            val prefix = this@singleLineLogger.nestingPrefix
+            val logMessage = prefix + message.bold()
+            this@singleLineLogger.render(true) { logMessage }
+        }
+    }
+    kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
+}
+
+/**
+ * Creates a logger which serves for logging a very short sub-process and all of its corresponding events.
+ *
+ * This logger logs all events using only a couple of characters. If more room is needed [singleLineLogger] or even [subLogger] is more suitable.
+ */
+inline fun <reified R> RenderingLogger<*>?.microLog(
+    symbol: Grapheme,
+    noinline block: MicroLogger<R>.() -> R,
+): R = if (this == null) {
+    val logger: MicroLogger<R> =
+        object : MicroLogger<R>(symbol) {
+            override fun render(block: () -> CharSequence) {
+            }
+        }
+    kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
+} else {
+    val logger: MicroLogger<R> = object : MicroLogger<R>(symbol) {
+        override fun render(block: () -> CharSequence) {
+            val message = block()
+            val prefix = this@microLog.nestingPrefix
+            val logMessage = prefix + message.bold()
+            this@microLog.render(true) { logMessage }
+        }
+    }
+    kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
+}
+
+/**
+ * Creates a logger which serves for logging a very short sub-process and all of its corresponding events.
+ *
+ * This logger logs all events using only a couple of characters. If more room is needed [singleLineLogger] or even [subLogger] is more suitable.
+ */
+inline fun <reified R> RenderingLogger<*>?.microLog(
+    noinline block: MicroLogger<R>.() -> R,
+): R = if (this == null) {
+    val logger: MicroLogger<R> =
+        object : MicroLogger<R>() {
+            override fun render(block: () -> CharSequence) {
+            }
+        }
+    kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
+} else {
+    val logger: MicroLogger<R> = object : MicroLogger<R>() {
+        override fun render(block: () -> CharSequence) {
+            val message = block()
+            val prefix = this@microLog.nestingPrefix
+            val logMessage = prefix + message.bold()
+            this@microLog.render(true) { logMessage }
+        }
+    }
+    kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
+}

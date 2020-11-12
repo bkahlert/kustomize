@@ -1,4 +1,4 @@
-package com.imgcstmzr.process
+package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.shell.toHereDoc
 import com.imgcstmzr.runtime.HasStatus.Companion.asStatus

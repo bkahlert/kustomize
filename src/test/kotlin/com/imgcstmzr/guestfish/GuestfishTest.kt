@@ -1,15 +1,16 @@
-package com.imgcstmzr.process
+package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
 import com.bkahlert.koodies.test.junit.debug.Debug
-import com.imgcstmzr.process.Guestfish.Companion.changePasswordCommand
-import com.imgcstmzr.process.Guestfish.Companion.copyInCommands
-import com.imgcstmzr.process.Guestfish.Companion.copyOutCommands
+import com.imgcstmzr.guestfish.Guestfish.Companion.changePasswordCommand
+import com.imgcstmzr.guestfish.Guestfish.Companion.copyInCommands
+import com.imgcstmzr.guestfish.Guestfish.Companion.copyOutCommands
+import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.OperatingSystems.DietPi
-import com.imgcstmzr.util.DockerRequired
+import com.imgcstmzr.util.DockerRequiring
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.delete
@@ -22,13 +23,13 @@ import com.imgcstmzr.util.withExtension
 import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
 import java.nio.file.Path
 
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class GuestfishTest {
 
     @Test
@@ -50,8 +51,7 @@ class GuestfishTest {
         }
     }
 
-    @Test
-    @DockerRequired
+    @FiveMinutesTimeout @DockerRequiring @Test
     fun `should copy file from osImage, skip non-existing and override one`(osImage: OperatingSystemImage, logger: InMemoryLogger<Any>, @Debug debug: Boolean) {
         val guestfish = Guestfish(osImage, logger, debug = debug).withRandomSuffix()
         guestfish.run(copyOutCommands(listOf(Path.of("/boot/cmdline.txt"), Path.of("/non/existing.txt"))))
@@ -64,8 +64,7 @@ class GuestfishTest {
         expectThat(dir.resolve("boot/config.txt")).hasEqualContent(ClassPath.of("config.txt")).not { hasContent("overwrite") }
     }
 
-    @Test
-    @DockerRequired
+    @FiveMinutesTimeout @DockerRequiring @Test
     fun `should copy new file to osImage and overwrite a second one`(osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
         val guestfish = Guestfish(osImage, logger).withRandomSuffix()
         val exampleHtml = Path.of("/example.html")
@@ -83,9 +82,8 @@ class GuestfishTest {
         expectThat(configTxtOnHost).hasContent("overwrite guest").not { hasEqualContent(ClassPath.of("/config.txt")) }
     }
 
-    @Test
-    @DockerRequired
-    fun `should change password`(@OS(DietPi::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    @FiveMinutesTimeout @DockerRequiring @Test
+    fun `should change password`(@OS(DietPi) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
         val guestfish = Guestfish(osImage, logger).withRandomSuffix()
         val shadowPath = Path.of("/etc/shadow")
         val hostShadow = guestfish.guestRootOnHost.asRootFor(shadowPath)
@@ -94,14 +92,13 @@ class GuestfishTest {
         expectThat(hostShadow).not { hasEqualContent(hostShadow.withExtension("bak")) }
     }
 
-    @Test
-    @DockerRequired
-    fun `should update credentials password`(@OS(DietPi::class) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    @FiveMinutesTimeout @DockerRequiring @Test
+    fun `should update credentials password`(@OS(DietPi) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
         val guestfish = Guestfish(osImage, logger).withRandomSuffix()
         val password = String.random()
 
         guestfish.run(changePasswordCommand("root", password, String.random(32)))
 
-        expectThat(osImage.credentials).isEqualTo(OperatingSystems.Companion.Credentials("root", password))
+        expectThat(osImage.credentials).isEqualTo(OperatingSystem.Credentials("root", password))
     }
 }

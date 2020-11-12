@@ -10,6 +10,7 @@ import strikt.api.expectThat
 
 @Execution(CONCURRENT)
 class RedirectingOutputStreamTest {
+    
     @Test
     fun `should redirect`() {
         val text = ClassPath("Macbeth - Chapter I.txt").readAll()

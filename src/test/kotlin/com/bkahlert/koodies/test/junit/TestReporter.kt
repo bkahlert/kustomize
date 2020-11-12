@@ -8,7 +8,7 @@ import org.junit.platform.launcher.TestPlan
 
 class TestReporter : TestExecutionListener {
     override fun testPlanExecutionFinished(testPlan: TestPlan) {
-        val type = TagDistributionReportRenderer.bySystemProperty("typedTestReport", TagDistributionReportRenderer.SUMMARY)
+        val type = TagDistributionReportRenderer.bySystemProperty("typedTestReport", TagDistributionReportRenderer.NONE)
         print(type.render(testPlan))
     }
 }

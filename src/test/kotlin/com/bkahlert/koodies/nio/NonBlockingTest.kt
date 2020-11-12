@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.nio
 
 import com.bkahlert.koodies.string.random
-import com.imgcstmzr.runtime.ProcessMock
+import com.imgcstmzr.runtime.SlowInputStream
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.jline.utils.InputStreamReader
 import org.jline.utils.NonBlocking
@@ -9,22 +9,20 @@ import org.jline.utils.NonBlockingReader
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import java.io.BufferedInputStream
 import java.io.BufferedReader
 import java.io.Reader
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
 
 
 /**
  * Tests mainly JLine functionality / findings / working patterns.
  */
-@OptIn(ExperimentalTime::class)
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(CONCURRENT)
 class NonBlockingTest {
 
     @Nested
@@ -50,21 +48,19 @@ class NonBlockingTest {
             expectThat(linesExpected).isEqualTo(linesActual)
         }
 
-        @ExperimentalTime
         @Test
         fun `should read no non-BEM unicode extremely slow input streams`(logger: InMemoryLogger<String?>) {
             val input = "A𝌪\n𝌫\n𝌬𝌭𝌮\nZ"
-            val inputStream = ProcessMock.SlowInputStream(0.seconds to input, baseDelayPerInput = 1.seconds, logger = logger)
+            val inputStream = SlowInputStream(0.seconds to input, baseDelayPerInput = 1.seconds, logger = logger)
             val reader = NonBlocking.nonBlocking(String.random(), NonBlocking.nonBlocking(String.random(), BufferedInputStream(inputStream)), Charsets.UTF_8)
             val readLines = reader.readLines()
             expectThat(readLines).isEqualTo(listOf("A\uD834\uDF2A", "\uD834\uDF2B", "\uD834\uDF2C\uD834\uDF2D\uD834\uDF2E", "Z"))
         }
 
-        @ExperimentalTime
         @Test
         fun `should read no non-BEM unicode extremely slow input streams if buffered`(logger: InMemoryLogger<String?>) {
             val input = "A𝌪\n𝌫\n𝌬𝌭𝌮\nZ"
-            val inputStream = ProcessMock.SlowInputStream(0.seconds to input, baseDelayPerInput = 1.seconds, logger = logger)
+            val inputStream = SlowInputStream(0.seconds to input, baseDelayPerInput = 1.seconds, logger = logger)
             val reader =
                 NonBlocking.nonBlocking(::`should read no non-BEM unicode extremely slow input streams if buffered`.toString(),
                     BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)))
@@ -72,11 +68,10 @@ class NonBlockingTest {
             expectThat(readLines).isEqualTo(listOf("A\uD834\uDF2A", "\uD834\uDF2B", "\uD834\uDF2C\uD834\uDF2D\uD834\uDF2E", "Z"))
         }
 
-        @ExperimentalTime
         @Test
         fun `should be equally readable like any other byte input stream`(logger: InMemoryLogger<String?>) {
             val input = "A𝌪\n𝌫\n𝌬𝌭𝌮\nZ"
-            val inputStream = ProcessMock.SlowInputStream(0.seconds to input, baseDelayPerInput = 10.seconds, logger = logger)
+            val inputStream = SlowInputStream(0.seconds to input, baseDelayPerInput = 10.seconds, logger = logger)
 
             val readFromSlowInput =
                 NonBlocking.nonBlocking(String.random(), BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8))).readAll(2.seconds)

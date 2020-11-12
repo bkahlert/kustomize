@@ -9,10 +9,8 @@ import strikt.assertions.isFalse
 import strikt.assertions.isGreaterThanOrEqualTo
 import strikt.assertions.isTrue
 import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
 import kotlin.time.milliseconds
 
-@OptIn(ExperimentalTime::class)
 @Execution(CONCURRENT)
 class ProcessExitMockTest {
     @Test

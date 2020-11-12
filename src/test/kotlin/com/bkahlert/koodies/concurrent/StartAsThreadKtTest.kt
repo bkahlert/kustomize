@@ -9,7 +9,6 @@ import strikt.api.expectThat
 import strikt.assertions.isGreaterThan
 import strikt.assertions.isLessThan
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 import kotlin.time.milliseconds
 
@@ -18,11 +17,10 @@ class StartAsThreadKtTest {
 
     // can't check if not daemon as it might be inherited from parent thread
 
-    @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
     fun `should start immediately`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsThread() },
-        "postfix form" to { finished: AtomicBoolean -> startAsThread() { finished.set(true) } },
+        "postfix form" to { finished: AtomicBoolean -> startAsThread { finished.set(true) } },
     ).map { (caption, exec) ->
         dynamicTest(caption) {
             val finished = AtomicBoolean(false)
@@ -35,7 +33,6 @@ class StartAsThreadKtTest {
         }
     }
 
-    @OptIn(ExperimentalTime::class)
     @ConcurrentTestFactory
     fun `should start delayed`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsThread(500.milliseconds) },

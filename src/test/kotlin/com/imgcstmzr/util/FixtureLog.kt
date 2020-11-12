@@ -4,10 +4,11 @@ import com.bkahlert.koodies.concurrent.process.ShutdownHookUtils.addShutDownHook
 import com.bkahlert.koodies.nio.file.conditioned
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.list
+import com.bkahlert.koodies.nio.file.sameFile
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.singleLineLogger
 import com.imgcstmzr.runtime.log.applyLogging
+import com.imgcstmzr.runtime.log.singleLineLogger
 import java.nio.file.Path
 
 /**
@@ -16,7 +17,7 @@ import java.nio.file.Path
  * As soon as an instance is created, all not yet deleted fixtures will be removed.
  */
 object FixtureLog : (Path) -> Path {
-    val location = Paths.TEST.resolve("fixture.log")
+    val location = sameFile("fixture.log")
 
     init {
         val renderingLogger: RenderingLogger<Any> = BlockRenderingLogger<Any>("Fixture Leftovers Cleanup 🧻", borderedOutput = true)
@@ -54,7 +55,6 @@ object FixtureLog : (Path) -> Path {
                 }
             }
 
-        // TODO kill Docker container
         return "$deleted items deleted"
     }
 
