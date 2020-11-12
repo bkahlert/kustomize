@@ -39,12 +39,16 @@ object Archiver {
      *
      * By default the existing file name is used and the appropriate extension (e.g. `.tar` or `.zip`) appended.
      */
-    fun Path.archive(format: String = ArchiveStreamFactory.ZIP, destination: Path = addExtension(format)): Path =
+    fun Path.archive(
+        format: String = ArchiveStreamFactory.ZIP,
+        destination: Path = addExtension(format),
+        overwrite: Boolean = false,
+    ): Path =
         if (format == "tar.gz") {
-            tarGzip(destination)
+            tarGzip(destination, overwrite = overwrite)
         } else {
             requireExists()
-            destination.requireExistsNot()
+            if (overwrite) destination.delete(true) else destination.requireExistsNot()
             ArchiveStreamFactory().createArchiveOutputStream(format, destination.outputStream()).use { addToArchive(it) }
             destination
         }
@@ -68,15 +72,17 @@ object Archiver {
      * By default the existing file name is used with the extension removed.
      */
     fun Path.unarchive(
-        destination: Path = removeExtension(extension
+        destination: Path = removeExtension(if ("$fileName".endsWith("tar.gz")) "tar.gz" else extension
             ?: throw IllegalArgumentException("Cannot auto-detect the archive format due to missing file extension.")),
+        overwrite: Boolean = false,
     ): Path =
         if ("$fileName".endsWith("tar.gz")) {
-            tarGunzip(destination)
+            tarGunzip(destination, overwrite = overwrite)
         } else {
             requireExists()
+            if (overwrite) destination.delete(true)
             if (!destination.exists) destination.mkdirs()
-            destination.requireEmpty()
+            if (!overwrite) destination.requireEmpty()
             ArchiveStreamFactory().createArchiveInputStream(bufferedInputStream()).use { it.unarchiveTo(destination) }
             destination
         }
@@ -84,7 +90,9 @@ object Archiver {
     /**
      * Unarchives this archive input stream to [destination].
      */
-    fun ArchiveInputStream.unarchiveTo(destination: Path) {
+    fun ArchiveInputStream.unarchiveTo(
+        destination: Path,
+    ) {
         var archiveEntry: ArchiveEntry?
         while (nextEntry.also { archiveEntry = it } != null) {
             if (!canReadEntryData(archiveEntry)) {

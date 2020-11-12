@@ -10,6 +10,7 @@ import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.nio.file.requireExistsNot
 import com.bkahlert.koodies.nio.outputStream
 import com.imgcstmzr.util.addExtension
+import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.mkdirs
 import com.imgcstmzr.util.removeExtension
 import org.apache.commons.compress.archivers.ArchiveEntry
@@ -28,9 +29,12 @@ object TarArchiveGzCompressor {
      *
      * By default the existing file name is used and `.tar.gz` appended.
      */
-    fun Path.tarGzip(destination: Path = addExtension("tar.gz")): Path {
+    fun Path.tarGzip(
+        destination: Path = addExtension("tar.gz"),
+        overwrite: Boolean = false,
+    ): Path {
         requireExists()
-        destination.requireExistsNot()
+        if (overwrite) destination.delete(true) else destination.requireExistsNot()
         GzipCompressorOutputStream(destination.outputStream()).use { gzipOutput ->
             TarArchiveOutputStream(gzipOutput).use { addToArchive(it) }
         }
@@ -42,10 +46,14 @@ object TarArchiveGzCompressor {
      *
      * By default the existing file name is used with the `.tar.gz` suffix removed.
      */
-    fun Path.tarGunzip(destination: Path = removeExtension("tar.gz")): Path {
+    fun Path.tarGunzip(
+        destination: Path = removeExtension("tar.gz"),
+        overwrite: Boolean = false,
+    ): Path {
         requireExists()
+        if (overwrite) destination.delete(true)
         if (!destination.exists) destination.mkdirs()
-        destination.requireEmpty()
+        if (!overwrite) destination.requireEmpty()
         GzipCompressorInputStream(bufferedInputStream()).use { gzipInput ->
             TarArchiveInputStream(gzipInput).use { it.unarchiveTo(destination) }
         }

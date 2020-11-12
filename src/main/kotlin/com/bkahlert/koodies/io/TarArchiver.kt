@@ -9,6 +9,7 @@ import com.bkahlert.koodies.nio.file.requireEmpty
 import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.nio.file.requireExistsNot
 import com.imgcstmzr.util.addExtension
+import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.mkdirs
 import com.imgcstmzr.util.removeExtension
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
@@ -25,9 +26,12 @@ object TarArchiver {
      *
      * By default the existing directory name is used and `.tar` appended.
      */
-    fun Path.tar(destination: Path = addExtension("tar")): Path {
+    fun Path.tar(
+        destination: Path = addExtension("tar"),
+        overwrite: Boolean = false,
+    ): Path {
         requireExists()
-        destination.requireExistsNot()
+        if (overwrite) destination.delete(true) else destination.requireExistsNot()
         TarArchiveOutputStream(destination.bufferedOutputStream()).use { addToArchive(it) }
         return destination
     }
@@ -37,10 +41,14 @@ object TarArchiver {
      *
      * By default the existing file name is used with the `.tar` suffix removed.
      */
-    fun Path.untar(destination: Path = removeExtension("tar")): Path {
+    fun Path.untar(
+        destination: Path = removeExtension("tar"),
+        overwrite: Boolean = false,
+    ): Path {
         requireExists()
+        if (overwrite) destination.delete(true)
         if (!destination.exists) destination.mkdirs()
-        destination.requireEmpty()
+        if (!overwrite) destination.requireEmpty()
         TarArchiveInputStream(bufferedInputStream()).use { it.unarchiveTo(destination) }
         return destination
     }
