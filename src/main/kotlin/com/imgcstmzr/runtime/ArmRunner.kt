@@ -53,8 +53,8 @@ object ArmRunner {
                 val deadEndPattern = osImage.deadEndPattern
                 var dying = false
                 { io: IO ->
-                    if (!dying && deadEndPattern != null) {
-                        if (io.unformatted.matches(deadEndPattern)) {
+                    if (!dying) {
+                        if (deadEndPattern?.matches(io.unformatted) == true) {
                             startAsThread {
                                 dying = true
                                 runningOperatingSystem.negativeFeedback("The VM is stuck. Chances are the VM starts correctly with less load on this machine.")

@@ -33,22 +33,22 @@ abstract class RunningOperatingSystem(val shutdownCommand: String = "sudo shutdo
      * Prints [value] on the output without actually forwarding it
      * to the OS running process.
      */
-    fun feedback(value: String) {
-        logger.logLine {
-            val kaomojiGroup = listOf(Kaomojis.Happy, Kaomojis.PeaceSign, Kaomojis.Smile, Kaomojis.ThumbsUp, Kaomojis.Proud).random()
-            LF + kaomojiGroup.random().thinking(value.capitalize().green()) + LF
-        }
+    fun feedback(
+        value: String,
+        kaomoji: CharSequence = listOf(Kaomojis.Happy, Kaomojis.PeaceSign, Kaomojis.Smile, Kaomojis.ThumbsUp, Kaomojis.Proud).random().random(),
+    ) {
+        logger.logLine { LF + kaomoji.thinking(value.capitalize().green()) + LF }
     }
 
     /**
      * Prints [value] on the output without actually forwarding it
      * to the OS running process.
      */
-    fun negativeFeedback(value: String) {
-        logger.logLine {
-            val kaomojiGroup = listOf(Kaomojis.Cry, Kaomojis.Depressed, Kaomojis.Disappointed, Kaomojis.Sad).random()
-            LF + kaomojiGroup.random().thinking(value.capitalize().green()) + LF
-        }
+    fun negativeFeedback(
+        value: String,
+        kaomoji: CharSequence = listOf(Kaomojis.Cry, Kaomojis.Depressed, Kaomojis.Disappointed, Kaomojis.Sad).random().random(),
+    ) {
+        logger.logLine { LF + kaomoji.thinking(value.capitalize().green()) + LF }
     }
 
 

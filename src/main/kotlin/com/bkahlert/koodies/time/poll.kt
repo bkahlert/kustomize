@@ -54,27 +54,36 @@ inline class IntervalPolling(private val targetState: () -> Boolean) {
 
         /**
          * Polls the [targetState] indefinitely.
+         *
+         * Returns whether the [targetState] was reached in time.
+         * Since this method only returns in case of success, *if* this
+         * method returns, the return value is always `true`.
          */
-        fun indefinitely(): Unit = poll()
+        fun indefinitely(): Boolean = poll()
 
         /**
          * Polls the [targetState] for at most the specified [timeout]
          * and calls [timeoutCallback] if within that time the [targetState]
          * did not evaluate to `true`.
+         *
+         * Returns whether the [targetState] was reached in time.
          */
-        fun forAtMost(timeout: Duration, timeoutCallback: (Duration) -> Unit) {
+        fun forAtMost(timeout: Duration, timeoutCallback: (Duration) -> Unit): Boolean {
             this.timeout = timeout
             this.timeoutCallback = timeoutCallback
-            poll()
+            return poll()
         }
 
-        private fun poll() {
+        private fun poll(): Boolean {
             val startTime = System.currentTimeMillis()
             while (!targetState() && Now.passedSince(startTime) < timeout) {
                 pollInterval.sleep()
             }
-            if (!targetState()) {
+            return if (!targetState()) {
                 timeoutCallback(Now.passedSince(startTime))
+                false
+            } else {
+                true
             }
         }
     }

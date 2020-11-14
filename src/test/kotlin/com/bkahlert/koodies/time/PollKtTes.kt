@@ -19,7 +19,7 @@ import kotlin.time.milliseconds
 import kotlin.time.seconds
 
 @Execution(CONCURRENT)
-class PollTestKt {
+class PollKtTes {
     @Test
     fun `should complete if condition becomes true`() {
         var counter = Random(12).nextInt(5, 10)
@@ -28,9 +28,20 @@ class PollTestKt {
     }
 
     @Test
+    fun `should return true if condition becomes true`() {
+        expectThat(poll { true }.every(100.milliseconds).indefinitely()).isTrue()
+    }
+
+    @Test
     fun `should complete if time is up`() {
         val timePassed = measureTime { 100.milliseconds.poll { false }.forAtMost(1.seconds) {} }
         expectThat(timePassed).isGreaterThan(800.milliseconds).isLessThan(1200.milliseconds)
+    }
+
+
+    @Test
+    fun `should return false if time is up`() {
+        expectThat(poll { false }.every(100.milliseconds).forAtMost(1.seconds) {}).isFalse()
     }
 
     @Test
