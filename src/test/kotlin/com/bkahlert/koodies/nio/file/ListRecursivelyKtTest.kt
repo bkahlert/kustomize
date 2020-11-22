@@ -20,7 +20,10 @@ class ListRecursivelyKtTest {
     @Test
     fun `should list all entries recursively`() {
         val dir = tempDir.directoryWithTwoFiles()
-        expectThat(dir.listRecursively().toList()).containsExactly(dir.resolve("sub-dir"), dir.resolve("sub-dir/config.txt"), dir.resolve("example.html"))
+        expectThat(dir.listRecursively().toList()).containsExactly(
+            dir.resolve("sub-dir"),
+            dir.resolve("sub-dir/config.txt"),
+            dir.resolve("example.html"))
     }
 
     @Test

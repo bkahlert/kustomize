@@ -28,7 +28,7 @@ class RandomKtTest {
     }
 
     @Test
-    fun `should only alphanumeric on default`() {
+    fun `should only alphanumeric by default`() {
         expectThat(String.random(10000)).containsOnlyCharacters(String.random.alphanumericCharacters)
     }
 

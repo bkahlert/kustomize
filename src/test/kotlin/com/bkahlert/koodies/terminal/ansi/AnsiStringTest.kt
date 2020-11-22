@@ -15,7 +15,6 @@ import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.getChar
 import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.render
 import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.subSequence
 import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.tokenize
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.util.quoted
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicNode
@@ -23,6 +22,7 @@ import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.Assertion
@@ -122,7 +122,7 @@ class AnsiStringTest {
 
     @Nested
     inner class Length {
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should return length`(): List<DynamicTest> {
             return listOf(
                 41 to AnsiString("$ESC[3;36m$ESC[4mImportant:$ESC[24m This line has $ESC[9mno$ESC[29m ANSI escapes.$ESC[23;39m"),
@@ -144,7 +144,7 @@ class AnsiStringTest {
     inner class Get {
         val ansiString = AnsiString("${"Important:".underline()} This line has ${"no".strikethrough()} ANSI escapes.")
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should char at position`(): List<DynamicTest> {
             return listOf(
                 40 to '.',
@@ -172,7 +172,7 @@ class AnsiStringTest {
     inner class SubSequence {
         val ansiString = AnsiString("$ESC[3;36m$ESC[4mImportant:$ESC[24m This line has $ESC[9mno$ESC[29m ANSI escapes.$ESC[0m")
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should product right substring`(): List<DynamicNode> {
             return listOf(
                 41 to AnsiString("$ESC[3;36m$ESC[4mImportant:$ESC[24m This line has $ESC[9mno$ESC[29m ANSI escapes.$ESC[23;39m"),
@@ -205,7 +205,7 @@ class AnsiStringTest {
             }
         }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should product right non zero start substring`(): List<DynamicNode> {
             return listOf(
                 0 to AnsiString("$ESC[3;36m$ESC[4mImportant:$ESC[24m This line has $ESC[23;39m"),
@@ -244,7 +244,7 @@ class AnsiStringTest {
     inner class Unformatted {
 
         @Suppress("SpellCheckingInspection", "LongLine")
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should strip ANSI escape sequences off`() = listOf(
             ansiString to nonAnsiString,
             AnsiString("[$ESC[0;32m  OK  $ESC[0m] Listening on $ESC[0;1;39mudev Control Socket$ESC[0m.") to

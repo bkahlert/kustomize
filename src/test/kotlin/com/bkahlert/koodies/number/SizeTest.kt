@@ -1,8 +1,9 @@
 package com.bkahlert.koodies.number
 
+import com.bkahlert.koodies.nio.file.appendText
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
+import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.DecimalPrefix
 import com.bkahlert.koodies.unit.Exa
@@ -15,7 +16,9 @@ import com.bkahlert.koodies.unit.Mega
 import com.bkahlert.koodies.unit.Pebi
 import com.bkahlert.koodies.unit.Peta
 import com.bkahlert.koodies.unit.Size
-import com.bkahlert.koodies.unit.Size.Companion.times
+import com.bkahlert.koodies.unit.Size.Companion.bytes
+import com.bkahlert.koodies.unit.Size.Companion.size
+import com.bkahlert.koodies.unit.Size.Companion.toSize
 import com.bkahlert.koodies.unit.Tebi
 import com.bkahlert.koodies.unit.Tera
 import com.bkahlert.koodies.unit.Yobi
@@ -24,7 +27,6 @@ import com.bkahlert.koodies.unit.Zebi
 import com.bkahlert.koodies.unit.Zetta
 import com.bkahlert.koodies.unit.abi
 import com.bkahlert.koodies.unit.atto
-import com.bkahlert.koodies.unit.bytes
 import com.bkahlert.koodies.unit.centi
 import com.bkahlert.koodies.unit.deca
 import com.bkahlert.koodies.unit.deci
@@ -40,22 +42,23 @@ import com.bkahlert.koodies.unit.nabi
 import com.bkahlert.koodies.unit.nano
 import com.bkahlert.koodies.unit.pibi
 import com.bkahlert.koodies.unit.pico
-import com.bkahlert.koodies.unit.size
 import com.bkahlert.koodies.unit.yobi_
 import com.bkahlert.koodies.unit.yocto
 import com.bkahlert.koodies.unit.zebi_
 import com.bkahlert.koodies.unit.zepto
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.appendText
 import com.imgcstmzr.util.times
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import strikt.api.Assertion
 import strikt.api.expectCatching
 import strikt.api.expectThat
+import strikt.assertions.containsExactly
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
@@ -75,7 +78,7 @@ class SizeTest {
     @Nested
     inner class WithBinaryPrefix {
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should format integer binary form`() = listOf(
             4_200_000.Yobi.bytes to "4.20e+6 YiB",
             42.Yobi.bytes to "42.0 YiB",
@@ -104,7 +107,7 @@ class SizeTest {
             }
 
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should format fraction binary form`() = listOf(
             4_200.Gibi.bytes to "4.10 TiB",
             420.Gibi.bytes to "420 GiB",
@@ -129,7 +132,7 @@ class SizeTest {
                 )
             }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should format 0 binary form`() = listOf(
             0.Yobi.bytes to "0 B",
             0.Kibi.bytes to "0 B",
@@ -141,7 +144,7 @@ class SizeTest {
             }
         }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should throw on yet unsupported prefixes`() = listOf(
             BinaryPrefix.mibi to { number: Int -> number.mibi },
             BinaryPrefix.mubi to { number: Int -> number.mubi },
@@ -159,7 +162,7 @@ class SizeTest {
             }
         }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should format to specific unit`() = listOf(
             4_200_000.Yobi.bytes to "4.84e+24 MiB",
             42.Yobi.bytes to "4.84e+19 MiB",
@@ -184,7 +187,7 @@ class SizeTest {
     @Nested
     inner class WithDecimalPrefix {
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should format integer decimal form`() = listOf(
             4_200_000.Yotta.bytes to "4.20e+6 YB",
             42.Yotta.bytes to "42.0 YB",
@@ -213,7 +216,7 @@ class SizeTest {
             }
 
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should format fraction decimal form`() = listOf(
             4_200.Giga.bytes to "4.20 TB",
             420.Giga.bytes to "420 GB",
@@ -238,19 +241,19 @@ class SizeTest {
                 )
             }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should format 0 decimal form`() = listOf(
             0.Yotta.bytes to "0 B",
             0.kilo.bytes to "0 B",
             0.bytes to "0 B",
         ).map { (size: Size, expected: String) ->
-            val actual = size.toString()
+            val actual = "$size"
             dynamicTest("$expected == $actual ← ${size.bytes}") {
                 expectThat(actual).isEqualTo(expected)
             }
         }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should throw on yet unsupported prefixes`() = listOf(
             DecimalPrefix.deci to { number: Int -> number.deci },
             DecimalPrefix.centi to { number: Int -> number.centi },
@@ -270,7 +273,7 @@ class SizeTest {
             }
         }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should format to specific unit`() = listOf(
             4_200_000.Yotta.bytes to "4.20e+24 MB",
             42.Yotta.bytes to "4.20e+19 MB",
@@ -312,31 +315,31 @@ class SizeTest {
 
     @Nested
     inner class Conversion {
-        val binFactor = BinaryPrefix.Kibi.factor
-        val decFactor = DecimalPrefix.kilo.factor
+        private val binFactor = BinaryPrefix.Kibi.factor
+        private val decFactor = DecimalPrefix.kilo.factor
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should format to specific unit`() = listOf(
-            42.Yobi.bytes to binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * 42.bytes,
-            42.Zebi.bytes to binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * 42.bytes,
-            42.Exbi.bytes to binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * 42.bytes,
-            42.Pebi.bytes to binFactor * binFactor * binFactor * binFactor * binFactor * 42.bytes,
-            42.Tebi.bytes to binFactor * binFactor * binFactor * binFactor * 42.bytes,
-            42.Gibi.bytes to binFactor * binFactor * binFactor * 42.bytes,
-            42.Mebi.bytes to binFactor * binFactor * 42.bytes,
-            42.Kibi.bytes to binFactor * 42.bytes,
+            42.Yobi.bytes to 42.bytes * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor,
+            42.Zebi.bytes to 42.bytes * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor,
+            42.Exbi.bytes to 42.bytes * binFactor * binFactor * binFactor * binFactor * binFactor * binFactor,
+            42.Pebi.bytes to 42.bytes * binFactor * binFactor * binFactor * binFactor * binFactor,
+            42.Tebi.bytes to 42.bytes * binFactor * binFactor * binFactor * binFactor,
+            42.Gibi.bytes to 42.bytes * binFactor * binFactor * binFactor,
+            42.Mebi.bytes to 42.bytes * binFactor * binFactor,
+            42.Kibi.bytes to 42.bytes * binFactor,
             42.bytes to 42.bytes,
 
-            42.Yotta.bytes to decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * 42.bytes,
-            42.Zetta.bytes to decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * 42.bytes,
-            42.Exa.bytes to decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * 42.bytes,
-            42.Peta.bytes to decFactor * decFactor * decFactor * decFactor * decFactor * 42.bytes,
-            42.Tera.bytes to decFactor * decFactor * decFactor * decFactor * 42.bytes,
-            42.Giga.bytes to decFactor * decFactor * decFactor * 42.bytes,
-            42.Mega.bytes to decFactor * decFactor * 42.bytes,
-            42.kilo.bytes to decFactor * 42.bytes,
-            42.hecto.bytes to 10 * 10 * 42.bytes, // ⛳️
-            42.deca.bytes to 10 * 42.bytes, // 🌽
+            42.Yotta.bytes to 42.bytes * decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * decFactor,
+            42.Zetta.bytes to 42.bytes * decFactor * decFactor * decFactor * decFactor * decFactor * decFactor * decFactor,
+            42.Exa.bytes to 42.bytes * decFactor * decFactor * decFactor * decFactor * decFactor * decFactor,
+            42.Peta.bytes to 42.bytes * decFactor * decFactor * decFactor * decFactor * decFactor,
+            42.Tera.bytes to 42.bytes * decFactor * decFactor * decFactor * decFactor,
+            42.Giga.bytes to 42.bytes * decFactor * decFactor * decFactor,
+            42.Mega.bytes to 42.bytes * decFactor * decFactor,
+            42.kilo.bytes to 42.bytes * decFactor,
+            42.hecto.bytes to 42.bytes * 10 * 10, // ⛳️
+            42.deca.bytes to 42.bytes * 10, // 🌽
             42.bytes to 42.bytes,
         ).flatMap { (decimalSize: Size, binarySize: Size) ->
             listOf(
@@ -349,5 +352,129 @@ class SizeTest {
             )
         }
     }
+
+    @Nested
+    inner class Parsing {
+
+        @Nested
+        inner class WithBinaryPrefix {
+            @Test
+            fun `should parse integer with no spacing`() {
+                expectThat("2GiB".toSize()).isEqualTo(2.Gibi.bytes)
+            }
+
+            @Test
+            fun `should parse integer with spacing`() {
+                expectThat("2 GiB".toSize()).isEqualTo(2.Gibi.bytes)
+            }
+
+            @Test
+            fun `should parse fractional with no spacing`() {
+                expectThat("2.505GiB".toSize()).isEqualTo(2.505.Gibi.bytes)
+            }
+
+            @Test
+            fun `should parse fractional with spacing`() {
+                expectThat("2.505 GiB".toSize()).isEqualTo(2.505.Gibi.bytes)
+            }
+
+            @Test
+            fun `should parse three-letter KiB`() {
+                expectThat("2 KiB".toSize()).isEqualTo(2.Kibi.bytes)
+            }
+
+            @Test
+            fun `should parse upper-case kilo byte`() {
+                expectThat("2 KB".toSize()).isEqualTo(2.Kibi.bytes)
+            }
+        }
+
+        @Nested
+        inner class WithDecimalPrefix {
+            @Test
+            fun `should parse integer with no spacing`() {
+                expectThat("2GB".toSize()).isEqualTo(2.Giga.bytes)
+            }
+
+            @Test
+            fun `should parse integer with spacing`() {
+                expectThat("2 GB".toSize()).isEqualTo(2.Giga.bytes)
+            }
+
+            @Test
+            fun `should parse fractional with no spacing`() {
+                expectThat("2.505GB".toSize()).isEqualTo(2.505.Giga.bytes)
+            }
+
+            @Test
+            fun `should parse fractional with spacing`() {
+                expectThat("2.505 GB".toSize()).isEqualTo(2.505.Giga.bytes)
+            }
+
+            @Test
+            fun `should parse lower-case kilo byte`() {
+                expectThat("2 kB".toSize()).isEqualTo(2.kilo.bytes)
+            }
+        }
+
+        @Nested
+        inner class WithNoPrefix {
+            @Test
+            fun `should parse integer with no spacing`() {
+                expectThat("2B".toSize()).isEqualTo(2.bytes)
+            }
+
+            @Test
+            fun `should parse integer with spacing`() {
+                expectThat("2 B".toSize()).isEqualTo(2.bytes)
+            }
+
+            @Test
+            fun `should parse fractional with no spacing`() {
+                expectThat("2.505B".toSize()).isEqualTo(2.505.bytes)
+            }
+
+            @Test
+            fun `should parse fractional with spacing`() {
+                expectThat("2.505 B".toSize()).isEqualTo(2.505.bytes)
+            }
+        }
+
+        @Nested
+        inner class WithNoUnit {
+            @Test
+            fun `should parse integer with no spacing`() {
+                expectThat("2".toSize()).isEqualTo(2.bytes)
+            }
+
+            @Test
+            fun `should parse fractional with no spacing`() {
+                expectThat("2.505".toSize()).isEqualTo(2.505.bytes)
+            }
+        }
+    }
+
+    @Nested
+    inner class FileSizeComparison {
+
+        private val small = tempDir.tempFile().writeText("123")
+        private val medium = tempDir.tempFile().writeText("123456")
+        private val large = tempDir.tempFile().writeText("123456789")
+
+        @Test
+        fun `should compare files by size`() {
+            expectThat(listOf(large, small, medium).sortedWith(Size.FileSizeComparator)).containsExactly(small, medium, large)
+        }
+    }
 }
 
+val Assertion.Builder<out Path>.size get() = get { size }
+
+fun <T : Path> Assertion.Builder<T>.hasSize(size: Size) =
+    assert("has $size") {
+        val actualSize = it.size
+        when (actualSize == size) {
+            true -> pass()
+            else -> fail("was $actualSize (${actualSize.bytes} B; Δ: ${actualSize - size})")
+        }
+    }

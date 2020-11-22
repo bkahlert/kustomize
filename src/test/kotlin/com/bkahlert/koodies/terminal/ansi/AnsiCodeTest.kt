@@ -6,8 +6,8 @@ import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequenc
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.strikethrough
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.underline
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -33,7 +33,7 @@ class AnsiCodeTest {
     )
 
     @Suppress("SpellCheckingInspection", "LongLine")
-    @ConcurrentTestFactory
+    @TestFactory
     fun `stripping ANSI off of`() = listOf(
         ansiFormattedString to "Important: This line has no ANSI escapes.\nThis one's bold!\r\nLast one is clean.",
         "[$ESC[0;32m  OK  $ESC[0m] Listening on $ESC[0;1;39mudev Control Socket$ESC[0m." to

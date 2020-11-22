@@ -1,5 +1,7 @@
 package com.bkahlert.koodies.test.junit.systemproperties
 
+import org.junit.jupiter.api.extension.ExtendWith
+
 /**
  * Allows to annotate [SystemProperty] multiple times.
  */
@@ -12,4 +14,5 @@ package com.bkahlert.koodies.test.junit.systemproperties
     AnnotationTarget.PROPERTY_SETTER,
     AnnotationTarget.VALUE_PARAMETER
 )
+@ExtendWith(SystemPropertyExtension::class)
 annotation class SystemProperties(vararg val value: SystemProperty)

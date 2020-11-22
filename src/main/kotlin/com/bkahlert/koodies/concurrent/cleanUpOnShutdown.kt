@@ -3,11 +3,11 @@ package com.bkahlert.koodies.concurrent
 import com.bkahlert.koodies.docker.Docker
 import com.bkahlert.koodies.docker.DockerProcess
 import com.bkahlert.koodies.nio.file.age
+import com.bkahlert.koodies.nio.file.appendText
+import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.list
 import com.bkahlert.koodies.nio.file.sameFile
 import com.imgcstmzr.util.Paths
-import com.imgcstmzr.util.appendText
-import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.isFile
 import java.nio.file.Path
 import kotlin.time.Duration
@@ -16,7 +16,7 @@ import kotlin.time.minutes
 private val cleanUpJobs = object : MutableList<() -> Unit> by mutableListOf() {
     init {
         startOnShutdown {
-            val log = sameFile("com.bkahlert.koodies.cleanup.log").apply { delete() }
+            val log = sameFile("com.bkahlert.koodies.cleanup.log").delete()
             forEach { cleanUpJob ->
                 kotlin.runCatching {
                     cleanUpJob()

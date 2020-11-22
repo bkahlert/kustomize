@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.exception
 
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.Assertion
@@ -12,7 +12,7 @@ import strikt.assertions.message
 
 @Execution(CONCURRENT)
 class RootCauseKtTest {
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should find root cause`() = listOf(
         IllegalArgumentException("error message"),
         IllegalStateException(IllegalArgumentException("error message")),

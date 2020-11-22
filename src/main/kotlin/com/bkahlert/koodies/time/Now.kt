@@ -3,12 +3,32 @@ package com.bkahlert.koodies.time
 import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.string.Unicode.Emojis.Emoji
 import com.bkahlert.koodies.string.Unicode.Emojis.asEmoji
+import java.nio.file.attribute.FileTime
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.OffsetDateTime
+import java.time.OffsetTime
+import java.time.Year
+import java.time.YearMonth
+import java.time.ZonedDateTime
 import kotlin.time.Duration
 import kotlin.time.milliseconds
 
 object Now {
     val instant: Instant get() = Instant.now()
+    val localTime: LocalTime get() = LocalTime.now()
+    val localDate: LocalDate get() = LocalDate.now()
+    val localDateTime: LocalDateTime get() = LocalDateTime.now()
+    val zonedDateTime: ZonedDateTime get() = ZonedDateTime.now()
+    val offsetDateTime: OffsetDateTime get() = OffsetDateTime.now()
+    val offsetTime: OffsetTime get() = OffsetTime.now()
+    val yearMonth: YearMonth get() = YearMonth.now()
+    val year: Year get() = Year.now()
+
+    val fileTime: FileTime get() = FileTime.from(instant)
+
     val millis: Long get() = instant.toEpochMilli()
     val emoji: Emoji get() = Instant.now().asEmoji()
     val grapheme: Grapheme get() = Grapheme(Instant.now().asEmoji())

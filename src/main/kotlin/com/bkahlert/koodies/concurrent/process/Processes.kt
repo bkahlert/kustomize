@@ -8,8 +8,8 @@ import com.bkahlert.koodies.concurrent.process.RunningProcess.Companion.nullRunn
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.startAsCompletableFuture
 import com.bkahlert.koodies.nio.NonBlockingReader
-import com.bkahlert.koodies.nio.file.conditioned
 import com.bkahlert.koodies.nio.file.exists
+import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ansi.AnsiStyles.tag
@@ -26,7 +26,6 @@ import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.Executors
-import kotlin.streams.asSequence
 import kotlin.time.Duration
 import kotlin.time.milliseconds
 
@@ -35,23 +34,12 @@ import kotlin.time.milliseconds
  */
 object Processes {
 
-    const val shellScriptPrefix: String = "koodies.process."
-    const val shellScriptExtension: String = ".sh"
+    private const val shellScriptPrefix: String = "koodies.process."
+    private const val shellScriptExtension: String = ".sh"
 
     init {
         cleanUpOldTempFiles(shellScriptPrefix, shellScriptExtension)
     }
-
-    val current: ProcessHandle get() = ProcessHandle.current()
-
-    val descendants: Sequence<ProcessHandle>
-        get() = current.descendants().filter { it.isAlive && it.info().startInstant().isPresent }.asSequence()
-
-    val children: Sequence<ProcessHandle>
-        get() = descendants.filter { descendant -> descendant.parent().map { parent -> parent.pid() == current.pid() }.orElse(false) }
-
-    val recentChildren: List<ProcessHandle>
-        get() = children.toList().sortedByDescending { it.info().startInstant().get() }
 
     /**
      * Runs the [shellScript] asynchronously and with no helping wrapper.
@@ -67,7 +55,7 @@ object Processes {
             shebang()
             changeDirectoryOrExit(directory = workingDirectory)
             shellScript()
-        }.buildTo(tempFile(base = shellScriptPrefix, extension = shellScriptExtension)).conditioned
+        }.buildTo(tempFile(base = shellScriptPrefix, extension = shellScriptExtension)).serialized
         return Commandline(command).apply {
             addArguments(arguments)
             @Suppress("ExplicitThis")
@@ -150,7 +138,7 @@ object Processes {
             shebang()
             changeDirectoryOrExit(workingDirectory)
             shellScriptLines.forEach { line(it) }
-        }.buildTo(tempFile(base = shellScriptPrefix, extension = shellScriptExtension)).conditioned,
+        }.buildTo(tempFile(base = shellScriptPrefix, extension = shellScriptExtension)).serialized,
         workingDirectory = null, // part of the shell script
         env = env,
         runAfterProcessTermination = runAfterProcessTermination,

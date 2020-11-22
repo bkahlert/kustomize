@@ -1,7 +1,6 @@
 package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.string.random
-import com.imgcstmzr.patch.new.Patch
 import com.imgcstmzr.patch.new.buildPatch
 
 // "Change password according to custom password file?"

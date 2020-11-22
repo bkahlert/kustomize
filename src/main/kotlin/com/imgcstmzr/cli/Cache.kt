@@ -1,14 +1,17 @@
 package com.imgcstmzr.cli
 
+import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.exists
+import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.unit.Size
 import com.github.ajalt.clikt.output.TermUi.echo
+import com.imgcstmzr.cli.Cache.Companion.defaultFilter
 import com.imgcstmzr.guestfish.ImageBuilder
 import com.imgcstmzr.guestfish.ImageExtractor.extractImage
 import com.imgcstmzr.patch.ini.RegexElement
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.util.Paths
-import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.extension
 import com.imgcstmzr.util.isFile
 import com.imgcstmzr.util.joinToTruncatedString
@@ -19,6 +22,7 @@ import java.nio.file.Path
 import java.time.Instant.now
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter.ofPattern
+import java.time.temporal.TemporalAccessor
 
 class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: Int = 3) : ManagedDirectory(dir) {
 
@@ -27,6 +31,7 @@ class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: In
 
     companion object {
         val DEFAULT: Path = Paths.USER_HOME.resolve(".imgcstmzr")
+        fun defaultFilter(currentPath: Path): (Path) -> Boolean = { path: Path -> !path.fileName.startsWith(".") && path != currentPath }
     }
 }
 
@@ -106,13 +111,13 @@ private class ProjectDirectory(parentDir: Path, dirName: String, private val reu
 private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
     constructor(parentDir: Path, dirName: String) : this(parentDir.resolve(dirName))
 
-    private fun fileCount(): Int = dir.listFilesRecursively(DEFAULT_FILTER(dir)).size
+    private fun fileCount(): Int = dir.listFilesRecursively(defaultFilter(dir)).size
 
     fun fileExists(): Boolean = file.exists() && file.isDirectory && fileCount() > 0
 
     fun getSingle(): Path? =
         if (fileExists()) {
-            dir.listFilesRecursively(DEFAULT_FILTER(dir), Paths.fileSizeComparator)[0]
+            dir.listFilesRecursively(defaultFilter(dir), Size.FileSizeComparator)[0]
         } else null
 
     fun requireSingle(provider: () -> Path): Path {
@@ -122,7 +127,7 @@ private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
         return provider().let { costlyProvidedFile ->
             val destFile = dir.resolve(costlyProvidedFile.fileName)
             if (destFile.exists) {
-                costlyProvidedFile.delete()
+                costlyProvidedFile.delete(false)
                 destFile
             } else {
                 echo("Moving file to $destFile...", trailingNewline = false)
@@ -149,7 +154,7 @@ private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireVal
         }
 
         private val iso by regex("^\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}")
-        val dateTime get() = DATE_FORMATTER.parse(iso)
+        val dateTime: TemporalAccessor get() = DATE_FORMATTER.parse(iso)
         val separator by regex(SEPARATOR)
         val random by regex("\\w+")
     }
@@ -157,7 +162,7 @@ private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireVal
     fun getSingle(filter: (path: Path) -> Boolean): Path? =
         dir.listFilesRecursively({
             !it.fileName.startsWith(".") && filter(it)
-        }, Paths.fileSizeComparator).firstOrNull()
+        }, Size.FileSizeComparator).firstOrNull()
 
     override fun toString(): String {
         val files = dir.listFilesRecursively({ it.isFile })
@@ -169,7 +174,7 @@ private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireVal
     }
 
     companion object {
-        fun requireValidName(dir: Path): String = kotlin.runCatching { WorkDirectoryName(dir.fileName.toString()).toString() }.getOrThrow()
+        fun requireValidName(dir: Path): String = kotlin.runCatching { WorkDirectoryName(dir.fileName.serialized).toString() }.getOrThrow()
         fun isNameValid(name: String) = kotlin.runCatching {
             val workDirectoryName = WorkDirectoryName(name)
             workDirectoryName.toString()
@@ -183,4 +188,3 @@ private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireVal
     }
 }
 
-private fun DEFAULT_FILTER(currentPath: Path) = { path: Path -> !path.fileName.startsWith(".") && path != currentPath }

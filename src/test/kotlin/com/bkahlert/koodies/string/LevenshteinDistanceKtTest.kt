@@ -1,12 +1,12 @@
 package com.bkahlert.koodies.string
 
-import com.bkahlert.koodies.nio.ClassPath
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.junit.Slow
+import com.imgcstmzr.util.MiscFixture
 import com.imgcstmzr.util.quoted
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.Assertion
@@ -23,8 +23,7 @@ import kotlin.time.seconds
 class LevenshteinDistanceKtTest {
 
     @Suppress("SpellCheckingInspection")
-    @Execution(CONCURRENT)
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should calc Levenshtein distance 0`() = listOf(
         "h1" to "h1",
         "gil" to "gil",
@@ -35,8 +34,7 @@ class LevenshteinDistanceKtTest {
     }
 
     @Suppress("SpellCheckingInspection")
-    @Execution(CONCURRENT)
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should calc Levenshtein distance 1`() = listOf(
         "gil" to "gill",
         "waht" to "what",
@@ -49,8 +47,7 @@ class LevenshteinDistanceKtTest {
     }
 
     @Suppress("SpellCheckingInspection")
-    @Execution(CONCURRENT)
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should calc Levenshtein distance 2`() = listOf(
         "ca" to "abc",
         "thaw" to "what",
@@ -68,8 +65,8 @@ class LevenshteinDistanceKtTest {
     inner class Fuzzy {
         @Test @Slow
         fun `should calculate fuzzy distance between similar strings`() {
-            val a = ClassPath("guestfish.boot").readText() + "abc"
-            val b = "xyz" + ClassPath("guestfish.boot").readText()
+            val a = MiscFixture.BootingGuestfish.text + "abc"
+            val b = "xyz" + MiscFixture.BootingGuestfish.text
 
             expectThat(measureTimeMillis { expectThat(a).fuzzyLevenshteinDistance(b).isLessThan(0.05) }.milliseconds)
                 .isLessThanOrEqualTo(5.seconds)
@@ -77,8 +74,8 @@ class LevenshteinDistanceKtTest {
 
         @Test @Slow
         fun `should calculate fuzzy distance between completely different strings`() {
-            val a = ClassPath("raspberry.boot").readText()
-            val b = ClassPath("guestfish.boot").readText()
+            val a = MiscFixture.BootingRaspberry.text
+            val b = MiscFixture.BootingGuestfish.text
 
             expectThat(measureTimeMillis { expectThat(a).fuzzyLevenshteinDistance(b).isGreaterThan(0.85) }.milliseconds)
                 .isLessThanOrEqualTo(5.seconds)

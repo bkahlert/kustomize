@@ -3,7 +3,7 @@ package com.imgcstmzr.runtime
 import com.bkahlert.koodies.unit.Giga
 import com.bkahlert.koodies.unit.Mega
 import com.bkahlert.koodies.unit.Size
-import com.bkahlert.koodies.unit.bytes
+import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.empty
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.withPassword
@@ -118,7 +118,7 @@ enum class OperatingSystems(
      */
     ImgCstmzrTestOS(
         fullName = "ImgCstmzr Test OS",
-        downloadUrl = "imgcstmzr://build?files=classpath:cmdline.txt%3Eboot&files=classpath:config.txt%3Eboot",
+        downloadUrl = "imgcstmzr://build?files=classpath:img/boot/cmdline.txt%3Eboot&files=classpath:img/boot/config.txt%3Eboot",
         approximateImageSize = 6.Mega.bytes,
         defaultCredentials = empty,
     );

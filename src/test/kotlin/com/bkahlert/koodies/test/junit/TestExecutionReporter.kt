@@ -34,9 +34,9 @@ class TestExecutionReporter : TestExecutionListener, TestWatcher {
         checkDebug(testPlan)
 
         if (failedTestsCount == 0) {
-            val allTestClasses = testPlan.allEffectiveContainerJavaClasses
-            val notAnnotatedTestClasses = testPlan.allEffectiveContainerJavaClasses.withoutAnnotation<Execution>()
-            val nonConcurrentTestClasses = testPlan.allEffectiveContainerJavaClasses.withAnnotation<Execution> { it.value != CONCURRENT }
+            val allTestClasses = testPlan.allContainerJavaClasses
+            val notAnnotatedTestClasses = testPlan.allContainerJavaClasses.withoutAnnotation<Execution>()
+            val nonConcurrentTestClasses = testPlan.allContainerJavaClasses.withAnnotation<Execution> { it.value != CONCURRENT }
 
             if (notAnnotatedTestClasses.isEmpty()) {
                 val quantity =
@@ -85,7 +85,7 @@ class TestExecutionReporter : TestExecutionListener, TestWatcher {
         }
     }
 
-    private fun format(nonConcurrentTestClasses: List<AnnotatedElement>): String =
+    private fun format(nonConcurrentTestClasses: Collection<AnnotatedElement>): String =
         if (nonConcurrentTestClasses.isEmpty()) "—" else nonConcurrentTestClasses.joinToString("\n",
             prefix = "\n",
             limit = 10) { "$it" }

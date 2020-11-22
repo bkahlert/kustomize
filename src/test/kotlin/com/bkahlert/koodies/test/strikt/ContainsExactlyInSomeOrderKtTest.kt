@@ -1,9 +1,9 @@
 package com.bkahlert.koodies.test.strikt
 
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import org.opentest4j.AssertionFailedError
@@ -19,7 +19,7 @@ class ContainsExactlyInSomeOrderKtTest {
 
     @Nested
     inner class PassingAssertion {
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should assert`() = listOf(
             arrayOf(listOf("1"), listOf("2.a", "2.b"), listOf("3")),
             arrayOf(listOf("1"), listOf("2.b", "2.a"), listOf("3")),
@@ -41,7 +41,7 @@ class ContainsExactlyInSomeOrderKtTest {
 
     @Nested
     inner class FailingAssertion {
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should not assert`() = listOf(
             arrayOf(listOf("3"), listOf("2.a", "2.b"), listOf("1")),
             arrayOf(listOf("1"), listOf("2.b"), listOf("2.a"), listOf("3")),

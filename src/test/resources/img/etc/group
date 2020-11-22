@@ -1,0 +1,3 @@
+generalpi:!!:pi:dietpi,other
+generaldietpi:!!:dietpi:pi,other
+generalother:!!:other:pi,dietpi

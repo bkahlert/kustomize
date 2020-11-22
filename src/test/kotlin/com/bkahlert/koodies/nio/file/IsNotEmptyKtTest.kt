@@ -1,20 +1,19 @@
 package com.bkahlert.koodies.nio.file
 
-import com.bkahlert.koodies.nio.ClassPath
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.copyToTempFile
-import com.imgcstmzr.util.delete
+import com.imgcstmzr.util.ImgFixture.Home.User.ExampleHtml
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import strikt.api.Assertion
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.isA
 import strikt.assertions.isFailure
-import strikt.assertions.isFalse
-import strikt.assertions.isTrue
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
+import java.nio.file.Path
 
 @Execution(CONCURRENT)
 class IsNotEmptyKtTest {
@@ -25,12 +24,12 @@ class IsNotEmptyKtTest {
     inner class WithFile {
         @Test
         fun `should return true on non-empty`() {
-            expectThat(ClassPath("example.html").copyToTempFile().deleteOnExit().isNotEmpty).isTrue()
+            expectThat(ExampleHtml.copyToDirectory(tempDir)).isNotEmpty()
         }
 
         @Test
         fun `should return false on empty`() {
-            expectThat(tempDir.tempFile().isNotEmpty).isFalse()
+            expectThat(tempDir.tempFile()).not { isNotEmpty() }
         }
     }
 
@@ -38,24 +37,37 @@ class IsNotEmptyKtTest {
     inner class WithDirectory {
         @Test
         fun `should return true on non-empty`() {
-            expectThat(tempDir.tempDir().parent.isNotEmpty).isTrue()
+            expectThat(tempDir.tempDir().parent).isNotEmpty()
         }
 
         @Test
         fun `should return false on empty`() {
-            expectThat(tempDir.tempDir().isNotEmpty).isFalse()
+            expectThat(tempDir.tempDir()).not { isNotEmpty() }
         }
     }
 
     @Test
     fun `should throw on missing`() {
-        expectCatching { tempDir.tempFile().also { it.delete() }.isNotEmpty }.isFailure().isA<IllegalArgumentException>()
+        expectCatching {
+            tempDir.tempPath().isNotEmpty
+        }.isFailure().isA<FileAlreadyExistsException>()
     }
 
     @Test
-    fun `should throw in different type`() {
+    fun `should throw on different type`() {
         @Suppress("BlockingMethodInNonBlockingContext")
-        (expectCatching { Files.createSymbolicLink(tempDir.tempFile().also { it.delete() }, tempDir.tempFile()).isNotEmpty })
+        expectCatching {
+            Files.createSymbolicLink(tempDir.tempPath(), tempDir.tempFile()).isNotEmpty
+        }
     }
 }
+
+
+fun <T : Path> Assertion.Builder<T>.isNotEmpty() =
+    assert("is not empty") {
+        when (it.isNotEmpty) {
+            true -> pass()
+            else -> fail("was empty")
+        }
+    }
 

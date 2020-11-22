@@ -3,6 +3,9 @@
 package com.imgcstmzr.util
 
 import com.bkahlert.koodies.nio.file.listRecursively
+import com.bkahlert.koodies.nio.file.readBytes
+import com.bkahlert.koodies.nio.file.readText
+import com.bkahlert.koodies.nio.file.resolveBetweenFileSystems
 import com.bkahlert.koodies.regex.countMatches
 import com.bkahlert.koodies.string.CodePoint
 import com.bkahlert.koodies.string.Grapheme
@@ -16,16 +19,15 @@ import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequenc
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.Size
 import com.imgcstmzr.guestfish.GuestfishOperation
+import com.imgcstmzr.patch.Patch
 import com.imgcstmzr.patch.PathOperation
 import com.imgcstmzr.patch.new.ImgOperation
-import com.imgcstmzr.patch.new.Patch
 import com.imgcstmzr.runtime.Program
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
 import strikt.assertions.hasSize
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.time.Duration
 
@@ -144,7 +146,7 @@ fun <T : CharSequence> Assertion.Builder<T>.containsOnlyCharacters(chars: CharAr
 
 fun Assertion.Builder<Path>.hasContent(expectedContent: String) =
     assert("has content ${expectedContent.quoted}") {
-        val actualContent = it.toFile().readText()
+        val actualContent = it.readText()
         when (actualContent.contentEquals(expectedContent)) {
             true -> pass()
             else -> fail("was ${actualContent.quoted}")
@@ -153,7 +155,7 @@ fun Assertion.Builder<Path>.hasContent(expectedContent: String) =
 
 fun Assertion.Builder<Path>.containsContent(expectedContent: String) =
     assert("contains content ${expectedContent.quoted}") {
-        val actualContent = it.toFile().readText()
+        val actualContent = it.readText()
         when (actualContent.contains(expectedContent)) {
             true -> pass()
             else -> fail("was " + (if (actualContent.isMultiline) "\n$actualContent" else actualContent.quoted))
@@ -162,17 +164,17 @@ fun Assertion.Builder<Path>.containsContent(expectedContent: String) =
 
 fun Assertion.Builder<Path>.containsContentAtMost(expectedContent: String, limit: Int = 1) =
     assert("contains content ${expectedContent.quoted} at most ${limit}x") {
-        val actualContent = it.toFile().readText()
+        val actualContent = it.readText()
         val actual = Regex.fromLiteral(expectedContent).matchEntire(actualContent)?.groups?.size ?: 0
         if (actual <= limit) pass()
         else fail("but actually contains it ${limit}x")
     }
 
 
-fun Assertion.Builder<Path>.hasEqualContent(other: Path) =
+fun <T : Path> Assertion.Builder<T>.hasEqualContent(other: Path) =
     assert("has equal content as \"$other\"") {
-        val actualContent = it.readAllBytes()
-        val expectedContent = other.readAllBytes()
+        val actualContent = it.readBytes()
+        val expectedContent = other.readBytes()
         when (actualContent.contentEquals(expectedContent)) {
             true -> pass()
             else -> fail(
@@ -184,8 +186,8 @@ fun Assertion.Builder<Path>.hasEqualContent(other: Path) =
 
 fun Assertion.Builder<Pair<Path, Path>>.haveEqualContent() =
     assert("have same content") {
-        val firstContent = it.first.readAllBytes()
-        val lastContent = it.second.readAllBytes()
+        val firstContent = it.first.readBytes()
+        val lastContent = it.second.readBytes()
         when (firstContent.contentEquals(lastContent)) {
             true -> pass()
             else -> fail(
@@ -208,20 +210,10 @@ fun Assertion.Builder<Path>.containsAllFiles(other: Path) =
         if (!other.isDirectory) fail("$other is no directory")
         other.listRecursively().filter { it.isFile }.forEach { otherPath ->
             val relativePath = other.relativize(otherPath)
-            val actualPath = actual.resolve(relativePath)
-            if (actualPath.readAll() != otherPath.readAll()) fail("$actualPath and $otherPath have different content:\nactual: ${actual.readAll()}\nexpected:${otherPath.readAll()}")
+            val actualPath = actual.resolveBetweenFileSystems(relativePath)
+            if (actualPath.readText() != otherPath.readText()) fail("$actualPath and $otherPath have different content:\nactual: ${actual.readText()}\nexpected:${otherPath.readText()}")
         }
         pass()
-    }
-
-fun Assertion.Builder<Path>.isInside(path: Path) =
-    assert("is inside $path") {
-        expectThat(Files.isDirectory(path))
-        val relPath = path.toRealPath().relativize(it.toRealPath())
-        when (relPath.none { segment -> segment.fileName.toString() == ".." }) {
-            true -> pass()
-            else -> fail()
-        }
     }
 
 fun Assertion.Builder<Path>.absolutePathMatches(regex: Regex) =

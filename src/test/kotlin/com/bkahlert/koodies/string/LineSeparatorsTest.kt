@@ -15,7 +15,6 @@ import com.bkahlert.koodies.string.LineSeparators.lineSequence
 import com.bkahlert.koodies.string.LineSeparators.lines
 import com.bkahlert.koodies.string.LineSeparators.trailingLineSeparator
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.patch.isEqualTo
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.namedGroups
@@ -23,6 +22,7 @@ import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -41,7 +41,7 @@ class LineSeparatorsTest {
     @Nested
     inner class Multiline {
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should detect multilines`() = listOf(
             "\n", "a\r\nb", "b\ra\nc", "sss\r",
         ).map { input ->
@@ -50,7 +50,7 @@ class LineSeparatorsTest {
             }
         }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should detect single line`() = listOf(
             "", "b", "bds sd sd sds dac"
         ).map { input ->
@@ -144,7 +144,7 @@ class LineSeparatorsTest {
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `all line separators`() = LineSeparators.map { lineSeparator ->
         dynamicContainer(lineSeparator.replaceNonPrintableCharacters(), listOf(
             dynamicTest("should return itself") {

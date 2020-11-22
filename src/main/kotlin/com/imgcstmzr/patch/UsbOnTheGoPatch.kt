@@ -6,7 +6,6 @@ import com.imgcstmzr.cli.KeyValueDocument
 import com.imgcstmzr.patch.Requirements.requireContainingContent
 import com.imgcstmzr.patch.Requirements.requireContainingKeyValue
 import com.imgcstmzr.patch.ini.IniDocument
-import com.imgcstmzr.patch.new.Patch
 import com.imgcstmzr.patch.new.buildPatch
 
 // TOOD vcgencmd get_config <config>: this displays a specific config value, e.g. vcgencmd get_config arm_freq

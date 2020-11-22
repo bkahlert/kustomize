@@ -4,21 +4,20 @@ import com.bkahlert.koodies.io.PathFixtures.archiveWithTwoFiles
 import com.bkahlert.koodies.io.PathFixtures.directoryWithTwoFiles
 import com.bkahlert.koodies.io.TarArchiver.tar
 import com.bkahlert.koodies.io.TarArchiver.untar
+import com.bkahlert.koodies.nio.file.addExtension
+import com.bkahlert.koodies.nio.file.copyTo
+import com.bkahlert.koodies.nio.file.removeExtension
 import com.bkahlert.koodies.nio.file.tempDir
-import com.bkahlert.koodies.nio.file.tempFile
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
-import com.bkahlert.koodies.unit.size
+import com.bkahlert.koodies.nio.file.tempPath
+import com.bkahlert.koodies.nio.file.writeText
+import com.bkahlert.koodies.unit.Size.Companion.size
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.addExtension
-import com.imgcstmzr.util.copyTo
-import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.hasSameFiles
-import com.imgcstmzr.util.removeExtension
 import com.imgcstmzr.util.renameTo
 import com.imgcstmzr.util.touch
-import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
@@ -27,36 +26,37 @@ import strikt.assertions.exists
 import strikt.assertions.isA
 import strikt.assertions.isFailure
 import strikt.assertions.isGreaterThan
+import java.nio.file.FileAlreadyExistsException
 
 @Execution(CONCURRENT)
 class TarArchiverTest {
 
     private val tempDir = tempDir().deleteOnExit()
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should throw on missing source`() = listOf(
-        { tempDir.tempDir().also { it.delete() }.tar() },
-        { tempDir.tempFile(extension = ".tar").also { it.delete() }.untar() },
+        { tempDir.tempDir().tempPath().tar() },
+        { tempDir.tempDir().tempPath(extension = ".tar").untar() },
     ).map { call ->
         dynamicTest("$call") {
-            expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
+            expectCatching { call() }.isFailure().isA<FileAlreadyExistsException>()
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should throw on non-empty destination`() = listOf(
-        { tempDir.directoryWithTwoFiles().also { it.addExtension("tar").deleteOnExit().touch().writeText("content") }.tar() },
-        { tempDir.archiveWithTwoFiles("tar").also { it.copyTo(it.removeExtension("tar")).deleteOnExit() }.untar() },
+        { tempDir.tempDir().directoryWithTwoFiles().apply { addExtension("tar").touch().writeText("content") }.tar() },
+        { tempDir.tempDir().archiveWithTwoFiles("tar").apply { copyTo(removeExtension("tar")) }.untar() },
     ).map { call ->
         dynamicTest("$call") {
-            expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
+            expectCatching { call() }.isFailure().isA<FileAlreadyExistsException>()
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should overwrite non-empty destination`() = listOf(
-        { tempDir.directoryWithTwoFiles().also { it.addExtension("tar").deleteOnExit().touch().writeText("content") }.tar(overwrite = true) },
-        { tempDir.archiveWithTwoFiles("tar").also { it.copyTo(it.removeExtension("tar")).deleteOnExit() }.untar(overwrite = true) },
+        { tempDir.tempDir().directoryWithTwoFiles().apply { addExtension("tar").touch().writeText("content") }.tar(overwrite = true) },
+        { tempDir.tempDir().archiveWithTwoFiles("tar").apply { copyTo(removeExtension("tar")) }.untar(overwrite = true) },
     ).map { call ->
         dynamicTest("$call") {
             expectThat(call()).exists()

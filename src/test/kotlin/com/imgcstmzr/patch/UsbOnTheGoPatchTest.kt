@@ -24,7 +24,9 @@ class UsbOnTheGoPatchTest {
     @Test
     fun `should patch configtxt and cmdlinetxt file`(logger: InMemoryLogger<Any>) {
         val root = FixtureResolverExtension.prepareSharedDirectory()
-            .also { expectThat(it).get { resolve("boot/cmdline.txt") }.not { this.containsContent("g_ether,g_webcam") } }
+            .also {
+                expectThat(it).get { resolve("boot/cmdline.txt") }.not { this.containsContent("g_ether,g_webcam") }
+            }
         val usbOnTheGoPatch = UsbOnTheGoPatch(listOf("foo", "bar"))
 
         usbOnTheGoPatch.fileSystemOperations.onEach { op ->

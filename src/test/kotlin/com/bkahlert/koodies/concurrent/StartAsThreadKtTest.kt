@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.concurrent
 
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.time.sleep
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -17,7 +17,7 @@ class StartAsThreadKtTest {
 
     // can't check if not daemon as it might be inherited from parent thread
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should start immediately`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsThread() },
         "postfix form" to { finished: AtomicBoolean -> startAsThread { finished.set(true) } },
@@ -33,7 +33,7 @@ class StartAsThreadKtTest {
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should start delayed`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsThread(500.milliseconds) },
         "postfix form" to { finished: AtomicBoolean -> startAsThread(500.milliseconds) { finished.set(true) } },

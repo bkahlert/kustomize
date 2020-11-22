@@ -1,19 +1,27 @@
 package com.imgcstmzr.util
 
-import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.nio.file.appendLine
+import com.bkahlert.koodies.nio.file.appendText
+import com.bkahlert.koodies.nio.file.classPath
+import com.bkahlert.koodies.nio.file.delete
+import com.bkahlert.koodies.nio.file.isInside
+import com.bkahlert.koodies.nio.file.mkdirs
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
+import com.bkahlert.koodies.nio.file.tempPath
+import com.bkahlert.koodies.nio.file.writeBytes
+import com.bkahlert.koodies.nio.file.writeText
+import com.bkahlert.koodies.number.hasSize
 import com.bkahlert.koodies.string.random
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
-import com.bkahlert.koodies.test.strikt.hasSize
-import com.bkahlert.koodies.unit.bytes
+import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import org.junit.jupiter.api.DisplayName
-import org.junit.jupiter.api.DynamicContainer.dynamicContainer
+import org.junit.jupiter.api.DynamicContainer
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
@@ -24,14 +32,12 @@ import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import strikt.assertions.isFalse
-import strikt.assertions.isNotNull
-import strikt.assertions.isNull
 import strikt.assertions.isRegularFile
 import strikt.assertions.isTrue
-import strikt.assertions.message
-import java.io.File
 import java.io.IOException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
+import java.nio.file.ReadOnlyFileSystemException
 import kotlin.time.seconds
 
 @Execution(CONCURRENT)
@@ -55,7 +61,7 @@ class PathExtensionsKtTest {
     @Nested
     inner class FileName {
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `basename of`() = listOf(
             "filename", "filename.test",
             "my/path/filename", "my/path/filename.test",
@@ -68,7 +74,7 @@ class PathExtensionsKtTest {
             )
         }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `extension of`() = listOf(
             "filename" to null,
             "filename." to "",
@@ -87,7 +93,7 @@ class PathExtensionsKtTest {
             )
         }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `replaced extension of`() = listOf(
             "filename", "filename.test",
             "my/path/filename", "my/path/filename.test",
@@ -97,30 +103,6 @@ class PathExtensionsKtTest {
                 dynamicTest("$path should be filename.test") {
                     expectThat(Path.of(path).fileNameWithExtension("test")).isEqualTo("filename.test")
                 }
-            )
-        }
-
-        @ConcurrentTestFactory
-        fun `append and remove extension`() = listOf(
-            "filename" to "filename.test",
-            "my/path/filename" to "my/path/filename.test",
-            "/my/path/filename" to "/my/path/filename.test",
-            "filename.foo" to "filename.foo.test",
-            "my/path/filename.foo" to "my/path/filename.foo.test",
-            "/my/path/filename.foo" to "/my/path/filename.foo.test",
-        ).flatMap { (path, expected) ->
-            listOf(
-                dynamicTest("$path with appended extension \"test\" should be $expected") {
-                    expectThat(Path.of(path).addExtension("test")).isEqualTo(Path.of(expected))
-                },
-
-                dynamicTest("$expected with extension \"test\" removed should be $path") {
-                    expectThat(Path.of(expected).removeExtension("test")).isEqualTo(Path.of(path))
-                },
-
-                dynamicTest("removing extension \"baz\" from $expected should throw") {
-                    expectCatching { Path.of(expected).removeExtension("baz") }.isFailure().isA<IllegalArgumentException>()
-                },
             )
         }
     }
@@ -136,19 +118,18 @@ class PathExtensionsKtTest {
 
             @Test
             fun `should throw if file is directory`() {
-                expectThat(tempDir.tempFile().also { it.delete() }.mkdirs().touch()).lastModified(1.seconds)
+                expectThat(tempDir.tempPath().mkdirs().touch()).lastModified(1.seconds)
             }
 
             @Test
             fun `should create file if missing`() {
-                val path = tempDir.tempFile().also { it.delete() }
-                path.touch()
+                val path = tempDir.tempPath().touch()
                 expectThat(path).exists()
             }
 
             @Test
             fun `should leave file unchanged if exists`() {
-                val path = tempDir.tempFile().also { it.writeText("Test") }
+                val path = tempDir.tempFile().writeText("Test")
                 path.touch()
                 expectThat(path).hasContent("Test")
             }
@@ -172,59 +153,9 @@ class PathExtensionsKtTest {
     }
 
     @Nested
-    inner class InputStreaming {
-
-        private val testFile: Path = ClassPath.of("classpath:/cmdline.txt").copyToTempFile().deleteOnExit()
-
-        @Suppress("SpellCheckingInspection")
-        val expected = "console=serial0,115200 console=tty1 root=PARTUUID=907af7d0-02 rootfstype=ext4 elevator=deadline " +
-            "fsck.repair=yes rootwait quiet init=/usr/lib/raspi-config/init_resize.sh\n"
-
-        @ConcurrentTestFactory
-        fun `should read bytes`(): List<DynamicTest> {
-            return listOf(
-                ClassPath.of("classpath:/cmdline.txt"),
-                testFile,
-            ).flatMap { path: Path ->
-                listOf(
-                    dynamicTest("should stream ${path.quoted}") {
-                        expectThat(path.resourceAsStream()).isNotNull().get { String(readAllBytes()) }.isEqualTo(expected)
-                    },
-                    dynamicTest("should stream buffered ${path.quoted}") {
-                        expectThat(path.resourceAsBufferedStream()).isNotNull().get { String(readAllBytes()) }.isEqualTo(expected)
-                    },
-                    dynamicTest("should read buffered ${path.quoted}") {
-                        expectThat(path.resourceAsBufferedReader()).isNotNull().get { readText() }.isEqualTo(expected)
-                    },
-                )
-            }
-        }
-
-        @ConcurrentTestFactory
-        fun `should return null when streaming missing resource`() = listOf(
-            ClassPath.of("classpath:/missing.txt"),
-            ClassPath.of("/Users/missing/missing.missing"),
-        ).flatMap { path: Path ->
-            listOf(
-                dynamicTest("as stream") {
-                    expectThat(path.resourceAsStream()).isNull()
-                },
-
-                dynamicTest("as buffered stream") {
-                    expectThat(path.resourceAsBufferedStream()).isNull()
-                },
-
-                dynamicTest("as buffered reader") {
-                    expectThat(path.resourceAsBufferedReader()).isNull()
-                },
-            )
-        }
-    }
-
-    @Nested
     inner class Wrap {
 
-        @ConcurrentTestFactory
+        @TestFactory
         @DisplayName("should wrap")
         fun `should generate filename_test for`() = listOf(
             "filename" to "@@filename@@",
@@ -246,7 +177,7 @@ class PathExtensionsKtTest {
     @Nested
     inner class Quote {
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should absolute path`() = Paths.WORKING_DIRECTORY.let { pwd ->
             listOf(
                 "filename" to "\"$pwd/filename\"",
@@ -266,142 +197,23 @@ class PathExtensionsKtTest {
         }
     }
 
-    @Nested
-    inner class ReadAllBytes {
-
-        private val tempFilePrefix: String = PathExtensionsKtTest::class.simpleName!!
-        val tempFile: File = File.createTempFile(tempFilePrefix, ".txt").also { it.writeBytes(ByteArray(10)); it.deleteOnExit() }
-
-        @ConcurrentTestFactory
-        fun `should read bytes`() = mapOf(
-            tempFile.toPath() to 10,
-            ClassPath.of("classpath:funny.img.zip") to 540,
-            ClassPath.of("classpath:/cmdline.txt") to 169,
-        ).flatMap { (path, expectedSize) ->
+    @TestFactory
+    fun `should create temporary copy for`() = listOf(
+        "cmdline.txt" to Regex(".*/cmdline.*\\.txt"),
+        "cmdline" to Regex(".*/cmdline.*"),
+    ).map { (path, matcher) ->
+        val classPath by classPath(path)
+        DynamicContainer.dynamicContainer("$path",
             listOf(
-                dynamicTest("$expectedSize <- $path") {
-                    val actual = path.readAllBytes()
-                    expectThat(actual).get { size }.isEqualTo(expectedSize)
-                }
-            )
-        }
-
-        @Test
-        fun `should throw on missing file`() {
-            val deletedFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.delete() }
-            expectCatching { deletedFile.readAllBytes() }.isFailure().isA<IOException>()
-        }
-    }
-
-    @Nested
-    inner class ReadAll {
-
-        @ConcurrentTestFactory
-        fun `should read complete string`() {
-            @Suppress("SpellCheckingInspection", "LongLine")
-            val expected = """
-                console=serial0,115200 console=tty1 root=PARTUUID=907af7d0-02 rootfstype=ext4 elevator=deadline fsck.repair=yes rootwait quiet init=/usr/lib/raspi-config/init_resize.sh
-
-            """.trimIndent()
-            expectThat(ClassPath.of("cmdline.txt").readAll()).isEqualTo(expected)
-        }
-
-        @Test
-        fun `should throw on missing file`() {
-            expectCatching { ClassPath.of("deleted").readAllBytes() }.isFailure().isA<IOException>()
-        }
-    }
-
-    @Nested
-    inner class Base64 {
-        @Test
-        fun `should encode using Base64`() {
-            @Suppress("SpellCheckingInspection")
-            val logo =
-                """
-iVBORw0KGgoAAAANSUhEUgAAAFQAAAARCAMAAAB0IHssAAABYlBMVEVMaXEmq+J4TIfCHnMmq+LCHnMmq+Imq+LCHnMmq+LCHn
-Mmq+Imq+Imq+Imq+J2U40mq+Imq+LCHnMmq+LCHnPCHnPCHnPCHnMmq+KNbp04otcmq+Jna5/CHnPCHnPCHnNaiLtqN3ySMHl8b6GSc6HCHnPCHnNilccmq
-+JImc1HntKpLnhfhri5LHefToeqSoRtap1yaZ1NndCFeadikMJ8M3pfeqywPX52fKzCHnOEYJWVTIZ3NXtxT4mOMHlqcaN6U4yqKHaRPX9Sir5gf7KCXZKDS
-YSxR4JWlcijQoCIWY9vf69lWZGhO32cR4OmOHxrdqhojb6sM3p8iLabVotwY5hlL3gmq+LCHnNYb6SUKXarJHRKjcFiSodkOX1ClcmfJ3W8H3NjQYFyLneDL
-Hd+LHdgUox3LXdWd6uaKHVbaJ6JK3axI3SPKnY4nNFdYZkypNlfWpJrL3hPhblUfbKlJXWlLrboAAAAVnRSTlMAMO/AwIDwQECAMBAgsHDr0KAg4NDwoFCQc
-MRQ6OCwcND++LA8YJBMYMiI6MSXoHTg2HlkgvvikJQQwMT88/jc5/To6NTP6EyeuMig+tS+0M50zC6U5O6Ej+cAAAAJcEhZcwAAAWIAAAFiAV8n0FMAAAKfS
-URBVDiNrdNnU9tAEAbgtXxyb2AwxkCA0Anpvffe27sryb1jesn/z9xZ4CHwicl+0Eg63TOrfeforIqJjNK0yIUzV89ZEREhWyT4P9H7tj1NMdseOy8wC6yL1
-B7tbCeJSMTrMicXRkRkdmc7RWTLOtCRzboTSsREZCTAzBUAFU7pW1NDcQrxcQUIgCuyAZRvGXTDYW7XRESA8pxGXQDiAU5Yj0WuMHMRQJGj4WMnQwOTwxq9a
-D+sA01bo7V9h3uoioxM6ZVhg/acxedAuY96FeaXrVZrRgU0molGM8w8Meg0lNDog0CI642azlqqcHaBztQwURdwcwZlpnEAS320xPxWRCJEYdMWxbPMUSLS0
-8ibmQKYzPAhNsV02oRzB8BVIuIStkbJli2NLgG42UfhcOQESqqP6hFEj9Cys4eOjA4TUQ1w7jaBG/oTB2gVrrWg0fcA/N8HKmuu634MGHSib59CTXkx/VQFJ
-nNVIOujKOpLqa2pukFzl4CSWYkaLaTMNANnoo1RrXaA64t/AP3RADXplysGjYz7G4opGqQ/RP+ie0PvDsqoXiCaB+BoppIn4h6a+mA1USqZSfbRcA9wPc8bp
-0GnWTqFTsbjIQcNIboHoHug5SzRbh3uiJ9+0EP9COUSvEFQE7Tsx3US/UC0WgLWY5HHAGbU7QbgjEfagDvto2MecJjy0Up5/UT6IWZ1CnWDU9IAPtU2AVSHa
-azWADYEwIv+iWImHY85SGth5q6ZKed9NMrMiVOoiFRRrrhbAC4T0cITYF+A9uox+kszGp3RUtugykcTR0kdo88s62swGMx9K6gvn630nHk5/zT9Jvj6lQoQj
-QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJggg==
-""".trimIndent().lines().joinToString("")
-
-            expectThat(ClassPath("BKAHLERT.png").toBase64()).isEqualTo(logo)
-        }
-    }
-
-    @Nested
-    inner class DataUri {
-        @Test
-        fun `should create data URI`() {
-            @Suppress("SpellCheckingInspection")
-            val logo =
-                """
-data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFQAAAARCAMAAAB0IHssAAABYlBMVEVMaXEmq+J4TIfCHnMmq+LCHnMmq+Imq+LCHnMmq+LCHn
-Mmq+Imq+Imq+Imq+J2U40mq+Imq+LCHnMmq+LCHnPCHnPCHnPCHnMmq+KNbp04otcmq+Jna5/CHnPCHnPCHnNaiLtqN3ySMHl8b6GSc6HCHnPCHnNilccmq
-+JImc1HntKpLnhfhri5LHefToeqSoRtap1yaZ1NndCFeadikMJ8M3pfeqywPX52fKzCHnOEYJWVTIZ3NXtxT4mOMHlqcaN6U4yqKHaRPX9Sir5gf7KCXZKDS
-YSxR4JWlcijQoCIWY9vf69lWZGhO32cR4OmOHxrdqhojb6sM3p8iLabVotwY5hlL3gmq+LCHnNYb6SUKXarJHRKjcFiSodkOX1ClcmfJ3W8H3NjQYFyLneDL
-Hd+LHdgUox3LXdWd6uaKHVbaJ6JK3axI3SPKnY4nNFdYZkypNlfWpJrL3hPhblUfbKlJXWlLrboAAAAVnRSTlMAMO/AwIDwQECAMBAgsHDr0KAg4NDwoFCQc
-MRQ6OCwcND++LA8YJBMYMiI6MSXoHTg2HlkgvvikJQQwMT88/jc5/To6NTP6EyeuMig+tS+0M50zC6U5O6Ej+cAAAAJcEhZcwAAAWIAAAFiAV8n0FMAAAKfS
-URBVDiNrdNnU9tAEAbgtXxyb2AwxkCA0Anpvffe27sryb1jesn/z9xZ4CHwicl+0Eg63TOrfeforIqJjNK0yIUzV89ZEREhWyT4P9H7tj1NMdseOy8wC6yL1
-B7tbCeJSMTrMicXRkRkdmc7RWTLOtCRzboTSsREZCTAzBUAFU7pW1NDcQrxcQUIgCuyAZRvGXTDYW7XRESA8pxGXQDiAU5Yj0WuMHMRQJGj4WMnQwOTwxq9a
-D+sA01bo7V9h3uoioxM6ZVhg/acxedAuY96FeaXrVZrRgU0molGM8w8Meg0lNDog0CI642azlqqcHaBztQwURdwcwZlpnEAS320xPxWRCJEYdMWxbPMUSLS0
-8ibmQKYzPAhNsV02oRzB8BVIuIStkbJli2NLgG42UfhcOQESqqP6hFEj9Cys4eOjA4TUQ1w7jaBG/oTB2gVrrWg0fcA/N8HKmuu634MGHSib59CTXkx/VQFJ
-nNVIOujKOpLqa2pukFzl4CSWYkaLaTMNANnoo1RrXaA64t/AP3RADXplysGjYz7G4opGqQ/RP+ie0PvDsqoXiCaB+BoppIn4h6a+mA1USqZSfbRcA9wPc8bp
-0GnWTqFTsbjIQcNIboHoHug5SzRbh3uiJ9+0EP9COUSvEFQE7Tsx3US/UC0WgLWY5HHAGbU7QbgjEfagDvto2MecJjy0Up5/UT6IWZ1CnWDU9IAPtU2AVSHa
-azWADYEwIv+iWImHY85SGth5q6ZKed9NMrMiVOoiFRRrrhbAC4T0cITYF+A9uox+kszGp3RUtugykcTR0kdo88s62swGMx9K6gvn630nHk5/zT9Jvj6lQoQj
-QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJggg==
-""".trimIndent().lines().joinToString("")
-
-            expectThat(ClassPath("BKAHLERT.png").toDataUri()).isEqualTo(logo)
-        }
-    }
-
-    @Nested
-    inner class Copy {
-
-        private val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
-        val tempFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.toFile().writeBytes(ByteArray(10)); it.deleteOnExit() }
-
-        @Test
-        fun `should copy file if destination not exists`() {
-            val deletedFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.delete() }
-            tempFile.copyTo(deletedFile)
-            expectThat(deletedFile).get { readAllBytes().size }.isEqualTo(10)
-        }
-
-        @Test
-        fun `should throw on missing file`() {
-            val deletedFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.delete() }
-            expectCatching { deletedFile.copyTo(tempFile) }.isFailure().isA<IOException>()
-        }
-
-        @ConcurrentTestFactory
-        fun `should create temporary copy for`() = listOf(
-            ClassPath.of("cmdline.txt") to Regex(".*/cmdline.*\\.txt"),
-            ClassPath.of("cmdline") to Regex(".*/cmdline.*\\.tmp"),
-        ).map { (path, matcher) ->
-            dynamicContainer("$path",
-                listOf(
-                    dynamicTest("with matching name") {
-                        val tempCopy = path.copyToTempFile()
-                        expectThat(tempCopy).absolutePathMatches(matcher)
-                    },
-                    dynamicTest("with correct content") {
-                        val tempCopy = path.copyToTempFile()
-                        expectThat(tempCopy).hasEqualContent(ClassPath.of("cmdline.txt"))
-                    },
-                ))
-        }
+                DynamicTest.dynamicTest("with matching name") {
+                    val tempCopy = classPath.copyToTempFile()
+                    expectThat(tempCopy).absolutePathMatches(matcher)
+                },
+                DynamicTest.dynamicTest("with correct content") {
+                    val tempCopy = classPath.copyToTempFile()
+                    expectThat(tempCopy).hasContent(ImgFixture.Boot.CmdlineTxt.text)
+                },
+            ))
     }
 
     @Nested
@@ -412,7 +224,7 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
 
         @Test
         fun `should copy file if destination not exists`() {
-            val deletedFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.delete() }
+            val deletedFile = tempDir.tempPath(tempFilePrefix, ".txt")
             val tempFile = tempFile()
             tempFile.moveTo(deletedFile)
             expectThat(deletedFile).get { readAllBytes().size }.isEqualTo(10)
@@ -421,7 +233,7 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
 
         @Test
         fun `should throw on missing file`() {
-            val deletedFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.delete() }
+            val deletedFile = tempDir.tempPath(tempFilePrefix, ".txt")
             expectCatching { deletedFile.moveTo(tempFile()) }.isFailure().isA<IOException>()
         }
     }
@@ -442,13 +254,13 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
 
         @Test
         fun `should throw on missing file`() {
-            val deletedFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.delete() }
-            expectCatching { deletedFile.renameTo("filename") }.isFailure().isA<IllegalArgumentException>()
+            val deletedFile = tempDir.tempPath(tempFilePrefix, ".txt")
+            expectCatching { deletedFile.renameTo("filename") }.isFailure().isA<FileAlreadyExistsException>()
         }
 
         @Test
         fun `should throw on classpath file`() {
-            expectCatching { ClassPath("cmdline.txt").renameTo("filename") }.isFailure().isA<IllegalArgumentException>()
+            expectCatching { classPath("try.it") { renameTo("filename") } }.isFailure().isA<ReadOnlyFileSystemException>()
         }
     }
 
@@ -456,15 +268,14 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
     inner class Cleanup {
 
         private val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
-        private fun getTempFile(additionalSuffix: String) = tempDir.tempFile(tempFilePrefix, ".txt$additionalSuffix")
-            .also { it.toFile().writeBytes(ByteArray(10)); it.deleteOnExit() }
+        private fun getTempFile(additionalSuffix: String) = tempDir.tempFile(tempFilePrefix, ".txt$additionalSuffix").writeBytes(ByteArray(10))
 
         @Suppress("LongLine")
         @Test
         fun `should rename file if trailing dirt`() {
-            val file = getTempFile("?x")
-            val cleanedFile = file.cleanUp("?")
-            expectThat(file).not { exists() }
+            val path = getTempFile("?x")
+            val cleanedFile = path.cleanUp("?")
+            expectThat(path).not { exists() }
             expectThat(cleanedFile)
                 .exists()
                 .hasSize(10.bytes)
@@ -486,7 +297,7 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
 
         @Test
         fun `should create empty temp file`() {
-            val path = tempDir.tempFile(prefix, ".txt").also { it.writeText("Test") }
+            val path = tempDir.tempFile(prefix, ".txt").writeText("Test")
             expectThat(path.asEmptyTempFile())
                 .isRegularFile()
                 .hasContent("")
@@ -494,20 +305,22 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
 
         @Test
         fun `should create empty temp file in isolated directory`() {
-            val path = tempDir.tempFile(prefix, ".txt").also { it.writeText("Test") }
+            val path = tempDir.tempFile(prefix, ".txt").writeText("Test")
             val temp = path.asEmptyTempFile(isolated = true)
             expectThat(temp)
                 .isRegularFile()
                 .hasContent("")
                 .isInside(temp.parent)
-                .and { temp.delete() }
+                .and {
+                    temp.delete(false)
+                }
                 .get { parent }
                 .isEmptyDirectory()
         }
 
         @Test
         fun `should create temp copy`() {
-            val path = tempDir.tempFile(prefix, ".txt").also { it.writeText("Test") }
+            val path = tempDir.tempFile(prefix, ".txt").apply { writeText("Test") }
             val tempCopy = path.copyToTempFile()
             expectThat(tempCopy)
                 .isRegularFile()
@@ -516,51 +329,32 @@ QV//FZ5+pm2rJUVy7K+J5RShbSVLqjleFIl40QUVSqltyWVChAR/QWZSglyrdNAqgAAAABJRU5ErkJgg
 
         @Test
         fun `should create temp copy in isolated directory`() {
-            val path = tempFile(prefix, ".txt").also { it.writeText("Test") }.deleteOnExit()
+            val path = tempFile(prefix, ".txt").apply { writeText("Test") }.deleteOnExit()
             val tempCopy = path.copyToTempFile(isolated = true)
             expectThat(tempCopy)
                 .isRegularFile()
                 .hasContent("Test")
                 .isInside(path.parent)
-                .and { tempCopy.delete() }
+                .and {
+                    tempCopy.delete(false)
+                }
                 .get { parent }
                 .isEmptyDirectory()
         }
 
         @Test
         fun `should create temp sibling`() {
-            val path = tempDir.tempFile(prefix, ".txt").also { it.writeText("Test") }
+            val path = tempDir.tempFile(prefix, ".txt").writeText("Test")
             val tempSiblingCopy = path.copyToTempSiblingDirectory()
             expectThat(tempSiblingCopy)
                 .isRegularFile()
                 .hasContent("Test")
                 .isInside(path.parent.parent)
-                .and { tempSiblingCopy.delete() }
+                .and {
+                    tempSiblingCopy.delete(false)
+                }
                 .get { parent }
                 .isEmptyDirectory()
-        }
-    }
-
-    @Nested
-    inner class CheckSingleFile {
-        @Test
-        fun `should return single file`() {
-            val dir = tempDir.tempFile().copyToTempSiblingDirectory().parent
-            expectThat(dir.checkSingleFile { "File not found." }).isInside(dir)
-        }
-
-        @Test
-        fun `should throw on missing file`() {
-            val dir = tempDir.tempFile().copyToTempSiblingDirectory().also { it.delete() }.parent
-            expectCatching { dir.checkSingleFile { "File not found." } }.isFailure().isA<IllegalStateException>()
-                .message.assert("") { expectThat(it).isEqualTo("File not found.") }
-        }
-
-        @Test
-        fun `should throw on too many files`() {
-            val dir = tempDir.tempFile().copyToTempSiblingDirectory().also { it.parent.resolve("second.file").touch() }.parent
-            expectCatching { dir.checkSingleFile { "File not found." } }.isFailure().isA<IllegalStateException>()
-                .message.assert("") { expectThat(it).isEqualTo("File not found.") }
         }
     }
 }

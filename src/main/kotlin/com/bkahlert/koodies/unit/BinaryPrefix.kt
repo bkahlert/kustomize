@@ -32,7 +32,7 @@ enum class BinaryPrefix(
     abi("ai", -60),
     zebi("Zi", -70),
     yobi("Yi", -80),
-    ;
+    ; // TODO radix = 1024, POWER 1,2,3...
 
     override val basis: BigDecimal = TWO
     override val baseExponent: Int = 10

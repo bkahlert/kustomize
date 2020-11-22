@@ -1,9 +1,9 @@
 package com.imgcstmzr.cli
 
+import com.bkahlert.koodies.nio.file.writeText
 import com.github.ajalt.clikt.output.TermUi
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.readAll
-import com.imgcstmzr.util.writeText
 import java.nio.file.Path
 
 

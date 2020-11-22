@@ -2,8 +2,8 @@ package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.test.junit.FifteenMinutesTimeout
 import com.bkahlert.koodies.unit.Mebi
-import com.bkahlert.koodies.unit.bytes
-import com.bkahlert.koodies.unit.size
+import com.bkahlert.koodies.unit.Size.Companion.bytes
+import com.bkahlert.koodies.unit.Size.Companion.size
 import com.imgcstmzr.E2E
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite

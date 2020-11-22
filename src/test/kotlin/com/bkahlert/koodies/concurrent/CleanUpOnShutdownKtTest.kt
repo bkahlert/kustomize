@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.concurrent
 
 import com.bkahlert.koodies.nio.file.sameFile
+import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.time.Now
-import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test

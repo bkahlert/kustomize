@@ -1,127 +1,57 @@
 package com.imgcstmzr.util
 
-import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.nio.file.copyTo
 import com.bkahlert.koodies.nio.file.exists
+import com.bkahlert.koodies.nio.file.lastModified
+import com.bkahlert.koodies.nio.file.mkdirs
+import com.bkahlert.koodies.nio.file.readBytes
 import com.bkahlert.koodies.nio.file.requireExists
-import com.bkahlert.koodies.string.LineSeparators.LF
+import com.bkahlert.koodies.nio.file.serialized
+import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.string.random
-import org.apache.commons.io.FileUtils
-import java.awt.datatransfer.MimeTypeParseException
-import java.io.BufferedInputStream
-import java.io.File
-import java.io.InputStream
-import java.io.InputStreamReader
-import java.net.URLConnection
+import com.bkahlert.koodies.time.Now
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.attribute.FileTime
-import java.time.Instant
-import java.util.Base64
 import kotlin.streams.toList
+import com.bkahlert.koodies.nio.file.delete as del
 
 val Path.isReadable: Boolean
-    get() = Files.isReadable(toAbsolutePath())
+    get() = Files.isReadable(this)
 
 val Path.isWritable: Boolean
-    get() = Files.isWritable(toAbsolutePath())
+    get() = Files.isWritable(this)
 
 val Path.isExecutable: Boolean
-    get() = Files.isExecutable(toAbsolutePath())
+    get() = Files.isExecutable(this)
 
 fun Path.makeExecutable() = toFile().setExecutable(true)
 
 val Path.isFile: Boolean
-    get() = Files.isRegularFile(toAbsolutePath())
+    get() = Files.isRegularFile(this)
 
 val Path.isDirectory: Boolean
-    get() = Files.isDirectory(toAbsolutePath())
+    get() = Files.isDirectory(this)
 
 val Path.isSymlink: Boolean
-    get() = Files.isSymbolicLink(toAbsolutePath())
+    get() = Files.isSymbolicLink(this)
 
 val Path.isHidden: Boolean
-    get() = Files.isHidden(toAbsolutePath())
+    get() = Files.isHidden(this)
 
 fun Path.touch(): Path {
-    if (!exists) Files.write(this, emptyList())
-    Files.setLastModifiedTime(this, FileTime.from(Instant.now()))
-    return this
-}
-
-fun Path.mkdirs(): Path {
-    FileUtils.forceMkdir(toFile())
+    if (!exists) writeText("")
+    lastModified = Now.fileTime
     return this
 }
 
 fun Path.mkRandomDir(): Path = resolve(String.random(4)).mkdirs()
 
 private val Path.fileNameParts: Pair<String, String?>
-    get() = fileName.toString().split(".").let {
+    get() = fileName.serialized.split(".").let {
         if (it.size > 1) it.dropLast(1).joinToString(".") to it.last()
         else it.joinToString(".") to null
     }
-
-fun Path.resourceAsStream(): InputStream? =
-    if (this is ClassPath) {
-        this.resourceAsStream()
-    } else {
-        Files.newInputStream(toAbsolutePath())
-    }
-
-fun Path.resourceAsBufferedStream(): BufferedInputStream? =
-    resourceAsStream()?.let { BufferedInputStream(it) }
-
-fun Path.resourceAsBufferedReader(): InputStreamReader? =
-    resourceAsBufferedStream()?.let { InputStreamReader(it) }
-
-/**
- * Converts this path using Base64.
- */
-fun Path.toBase64(): String = Base64.getEncoder().encodeToString(readAllBytes())
-
-/**
- * Converts this path to a [data URI](https://en.wikipedia.org/wiki/Data_URI_scheme) of the form
- * `data:[<media type>][;base64],<data>`, e.g. `data:image/gif;base64,...`
- *
- * @throws MimeTypeParseException if the mime type cannot be guessed by the resource name
- */
-fun Path.toDataUri(): String {
-    val mimeType = URLConnection.guessContentTypeFromName(fileName.toString())
-    val data = Base64.getEncoder().encodeToString(readAllBytes())
-    return "data:$mimeType;base64,$data"
-}
-
-
-/**
- * Sets the content of this file to [text] encoded using UTF-8.
- * If this file exists, it becomes overwritten.
- *
- * @param text text to write into file.
- */
-fun Path.writeText(text: String): Path = apply { toFile().writeText(text) }
-
-/**
- * Sets the content of this file to [line] encoded using UTF-8.
- * If this file exists, it becomes overwritten.
- *
- * @param line text to write into file.
- */
-fun Path.writeLine(line: String): Path = apply { writeText("$line$LF") }
-
-/**
- * Appends [text] to the content of this file using UTF-8.
- *
- * @param text text to append to file.
- */
-fun Path.appendText(text: String): Path = apply { toFile().appendText(text) }
-
-/**
- * Appends a new [line] to the content of this file using UTF-8.
- *
- * @param line line to append to file.
- */
-fun Path.appendLine(line: String): Path = apply { appendText("$line$LF") }
 
 /**
  * Returns the base name of the file described by this [Path].
@@ -137,24 +67,6 @@ val Path.baseName: String get() = fileNameParts.first
  */
 val Path.extension: String? get() = fileNameParts.second
 
-/**
- * Adds [extension] to this [Path].
- *
- * Example: `Path.of("/path/file.foo").addExtension("bar")` returns path `/path/file.foo.bar`.
- */
-fun Path.addExtension(extension: String): Path = "$fileName.$extension".let { parent?.resolve(it) ?: Path.of(it) }
-
-/**
- * Removes [extension] from this [Path].
- *
- * Example: `Path.of("/path/file.foo.bar").removeExtension("bar")` returns path `/path/file.foo`.
- *
- * @throws IllegalArgumentException if the [extension] to be removed is not present
- */
-fun Path.removeExtension(extension: String): Path {
-    require("$fileName".endsWith(".$extension")) { "$this must end with .$extension" }
-    return "$fileName".dropLast(extension.length + 1).let { parent?.resolve(it) ?: Path.of(it) }
-}
 
 /**
  * Returns the name of the file described by this [Path] with a replaced [extension].
@@ -166,7 +78,10 @@ fun Path.fileNameWithExtension(extension: String): String = "$baseName.$extensio
  * Returns this [Path] with a replaced [extension].
  * If no extension is present, it will be added.
  */
-fun Path.withExtension(extension: String): Path = parent.resolve(fileNameWithExtension(extension))
+fun Path.withExtension(extension: String): Path {
+    val resolveSibling = resolveSibling(fileNameWithExtension(extension))
+    return resolveSibling
+}
 
 /**
  * Constructs a path that takes this path as the root of [subPath].
@@ -187,55 +102,35 @@ fun Path.wrap(value: CharSequence): String = toString().wrap(value)
 
 val Path.quoted get() = toAbsolutePath().toString().quoted
 
-fun Path.readAllBytes(): ByteArray = if (this is ClassPath) this.readAllBytes() else Files.readAllBytes(toAbsolutePath())
+@Deprecated("", replaceWith = ReplaceWith("readBytes()", "com.bkahlert.koodies.nio.file.readBytes"))
+fun Path.readAllBytes(): ByteArray = readBytes()
 
 fun Path.readAllLines(charset: Charset = Charsets.UTF_8): List<String> =
-    if (this is ClassPath) this.readAllLines(charset) else Files.readAllLines(this, charset)
+    Files.readAllLines(this, charset)
 
+@Deprecated("", replaceWith = ReplaceWith("readText()", "com.bkahlert.koodies.nio.file.readText"))
 fun Path.readAll(): String = String(readAllBytes())
 
-fun Path.copyTo(dest: Path, createDirectories: Boolean = true): Path =
-    if (this is ClassPath) {
-        this.copyTo(dest, createDirectories)
-    } else {
-        if (createDirectories) Files.createDirectories(dest.parent)
-        Files.copy(this, dest)
-    }
-
 fun Path.moveTo(dest: Path, createDirectories: Boolean = true): Path =
-    if (this is ClassPath) {
-        throw IllegalArgumentException("$this is a ${ClassPath::class.simpleName} which is read-only and therefore cannot be moved (but copied).")
-    } else {
+    run {
         if (createDirectories) Files.createDirectories(dest.parent)
         Files.move(this, dest)
     }
 
-fun Path.renameTo(fileName: String): Path =
-    if (this is ClassPath) {
-        throw IllegalArgumentException("$this is a ${ClassPath::class.simpleName} which is read-only and therefore cannot be renamed.")
-    } else {
-        requireExists()
-        toFile().let {
-            val destination = File(it.parent, fileName)
-            it.renameTo(destination)
-            destination.toPath()
-        }
-    }
+fun Path.renameTo(fileName: String): Path = run {
+    requireExists()
+    Files.move(this, this.resolveSibling(fileName))
+}
 
 /**
- * Cleans up this path by removing the [delimiter] from the [Path.getFileName]
+ * Cleans up this path by removing the [delimiters] from the [Path.getFileName]
  * (e.g. `/path/file.txt$crap` with `$` removed ➜ `/path/file.txt`).
  *
  * The removal itself takes place by renaming the corresponding file system resource.
  */
-fun Path.cleanUp(delimiter: String): Path = "$fileName".let {
-    if (it.contains(delimiter)) renameTo(it.substringBefore(delimiter))
-    else this
-}
-
-fun Path.copyToDirectory(dest: Path, createDirectories: Boolean = true): Path {
-    require(dest.isDirectory || !dest.exists) { "$dest must be a directory" }
-    return copyTo(dest.resolve(fileName), createDirectories)
+fun Path.cleanUp(vararg delimiters: String = arrayOf("?", "#")): Path {
+    val cleanedUp = delimiters.fold(fileName.serialized) { fileName, delimiter -> fileName.substringBefore(delimiter) }
+    return renameTo(cleanedUp)
 }
 
 /**
@@ -247,7 +142,8 @@ fun Path.copyToDirectory(dest: Path, createDirectories: Boolean = true): Path {
  */
 fun Path.asEmptyTempFile(isolated: Boolean = false): Path {
     val fileNameParts = fileNameParts
-    val tempFile = File.createTempFile(fileNameParts.first + "-", fileNameParts.second?.let { ".$it" }).also { it.deleteOnExit() }.toPath()
+    val tempFile = com.bkahlert.koodies.nio.file.tempFile(fileNameParts.first + "-", fileNameParts.second?.let { ".$it" } ?: "")
+        .apply { toFile().deleteOnExit() }
     return if (isolated) tempFile.parent.mkRandomDir().let { Files.move(tempFile, it.resolve(tempFile.fileName)) }
     else tempFile
 }
@@ -257,9 +153,8 @@ fun Path.asEmptyTempFile(isolated: Boolean = false): Path {
  */
 fun Path.copyToTempFile(isolated: Boolean = false): Path {
     val tempFile = asEmptyTempFile(isolated)
-    tempFile.delete()
-    copyTo(tempFile, true)
-    return tempFile
+    tempFile.del()
+    return copyTo(tempFile)
 }
 
 /**
@@ -267,10 +162,9 @@ fun Path.copyToTempFile(isolated: Boolean = false): Path {
  */
 fun Path.copyToTempSiblingDirectory(): Path {
     val random = String.random(4)
-    val siblingDir: Path = parent.resolveSibling("${parent.fileName}-$random").mkdirs()
+    val siblingDir: Path = resolveSibling("${parent.fileName}-$random").mkdirs()
     val siblingFile: Path = siblingDir.resolve("${fileNameParts.first}-$random" + if (fileNameParts.second != null) ".${fileNameParts.second}" else "")
-    copyTo(siblingFile, true)
-    return siblingFile
+    return copyTo(siblingFile)
 }
 
 /**
@@ -278,40 +172,3 @@ fun Path.copyToTempSiblingDirectory(): Path {
  */
 fun Path.listFilesRecursively(predicate: ((path: Path) -> Boolean) = { true }, comparator: Comparator<Path> = naturalOrder()): List<Path> =
     Files.walk(toAbsolutePath()).use { it.sorted(comparator).filter(predicate).toList() }
-
-/**
- * Calls [action] on each directory and file in this [Path] **and its sub directories**.
- */
-fun Path.onEachFileRecursively(action: (path: Path) -> Unit, comparator: Comparator<Path> = naturalOrder()) {
-    Files.walk(toAbsolutePath()).use { it.sorted(comparator).forEach(action) }
-}
-
-/**
- * Calls [action] on each directory/file in this [Path] (including its sub directories)
- * and returns a [Sequence] of each [action]'s result.
- */
-fun <R> Path.mapFilesRecursively(action: (path: Path) -> R, comparator: Comparator<Path> = naturalOrder()): List<R> =
-    Files.walk(toAbsolutePath()).use { it.sorted(comparator).map(action).toList() }
-
-/**
- * Tries to delete this path—optionally [recursively]—and returns whether
- * the path no more exists. That is, `true` is returned if the path was
- * successfully deleted or if it did not exist already.
- */
-fun Path.delete(recursively: Boolean = false): Boolean =
-    if (recursively) {
-        if (exists) toFile().deleteRecursively() else true
-    } else {
-        if (exists) toFile().delete() else true
-    }
-
-/**
- * Requires this path to be a directory and contain exactly one file which
- * will be returned.
- *
- * @throws IllegalArgumentException with [lazyMessage] if not a single file was found
- */
-fun Path.checkSingleFile(lazyMessage: () -> Any): Path = toFile().listFiles()?.let {
-    check(it.size == 1, lazyMessage)
-    it.first().toPath()
-} ?: throw IllegalStateException("${lazyMessage()}")

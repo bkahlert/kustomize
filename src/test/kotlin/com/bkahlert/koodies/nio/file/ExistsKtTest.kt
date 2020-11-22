@@ -1,49 +1,45 @@
 package com.bkahlert.koodies.nio.file
 
-import com.bkahlert.koodies.nio.ClassPath
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import strikt.api.expectCatching
 import strikt.api.expectThat
+import strikt.assertions.isA
+import strikt.assertions.isFailure
 import strikt.assertions.isFalse
 import strikt.assertions.isTrue
-import java.io.File
-import java.nio.file.Path
+import java.nio.file.NoSuchFileException
 
 @Execution(CONCURRENT)
 class ExistsKtTest {
-    @Test
-    fun `should return true if path exists`() {
-        val path = File.createTempFile("what", "ever").toPath()
-        expectThat(path.exists).isTrue()
-    }
+
+    private val tempDir = tempDir().deleteOnExit()
 
     @Test
-    fun `should not rely on toString`() {
-        val path = object : Path by File.createTempFile("what", "ever").toPath() {
-            override fun toString(): String = "Resource@${toFile()}"
-        }
+    fun `should return true if path exists`() {
+        val path = tempDir.tempFile("what", "ever")
         expectThat(path.exists).isTrue()
     }
 
     @Test
     fun `should return true if classpath exists`() {
-        val path = ClassPath.of("config.txt")
+        val path by classPath("config.txt")
         expectThat(path.exists).isTrue()
     }
 
 
     @Test
     fun `should return false if file is missing`() {
-        val path = File.createTempFile("what", "ever").toPath()
+        val path = tempDir.tempFile("what", "ever")
         path.toFile().delete()
         expectThat(path.exists).isFalse()
     }
 
-
     @Test
-    fun `should return false if classpath is missing`() {
-        val path = ClassPath.of("missing.txt")
-        expectThat(path.exists).isFalse()
+    fun `should throw if classpath is missing`() {
+        val path by classPath("missing.txt")
+        expectCatching { path.exists }.isFailure().isA<NoSuchFileException>()
     }
 }

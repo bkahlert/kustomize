@@ -1,7 +1,6 @@
 package com.bkahlert.koodies.nio.file
 
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.delete
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -27,6 +26,6 @@ class RequireDirectoryKtTest {
 
     @Test
     fun `should throw on missing`() {
-        expectCatching { tempDir.tempDir().also { it.delete() }.requireDirectory() }.isFailure().isA<NotDirectoryException>()
+        expectCatching { tempDir.tempPath().requireDirectory() }.isFailure().isA<NotDirectoryException>()
     }
 }

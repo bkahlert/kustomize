@@ -1,7 +1,6 @@
 package com.imgcstmzr
 
 import com.bkahlert.koodies.boolean.asEmoji
-import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.LineSeparators.LF
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.green
 import com.bkahlert.koodies.terminal.ascii.Borders
@@ -23,7 +22,7 @@ import kotlin.system.exitProcess
 
 object Tests {
 
-    fun runTaggedTests(
+    private fun runTaggedTests(
         name: String,
         launcherDiscoveryRequestBuilder: LauncherDiscoveryRequestBuilder.() -> Unit,
     ): SummaryGeneratingListener {
@@ -37,7 +36,7 @@ object Tests {
             launcher = { registerTestExecutionListeners(LoggingListener.forJavaUtilLogging()) }
         )
             .also {
-                val summary = "Detailed Summary".toUpperCase() + LineSeparators.LF + it.summary.render()
+                val summary = "Detailed Summary".toUpperCase() + LF + it.summary.render()
                 println(summary.draw.border.heavyDotted(padding = 2, margin = 1).replace("[", " ").replace("]", " "))
             }
     }

@@ -5,15 +5,21 @@ import com.bkahlert.koodies.number.BigDecimalConstants
 import com.bkahlert.koodies.number.formatToExactDecimals
 import com.bkahlert.koodies.number.scientificFormat
 import com.bkahlert.koodies.number.toBigDecimal
+import com.bkahlert.koodies.string.asString
 import com.imgcstmzr.util.isDirectory
 import com.imgcstmzr.util.isSymlink
+import com.imgcstmzr.util.quoted
 import java.io.File
 import java.math.BigDecimal
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.reflect.KClass
 
-
+/**
+ * Amount of bytes representable in with the decimal [SI prefixes](https://en.wikipedia.org/wiki/Metric_prefix)
+ * [Yotta], [Zetta], [Exa], [Peta], [Tera], [Giga], [Mega], [kilo] as well as with the binary prefixes as defined by
+ * [ISO/IEC 80000](https://en.wikipedia.org/wiki/ISO/IEC_80000) [Yobi], [Zebi], [Exbi], [Pebi], [Tebi], [Gibi], [Mebi] and [Kibi].
+ */
 inline class Size(val bytes: BigDecimal) : Comparable<Size> {
 
     companion object {
@@ -41,13 +47,37 @@ inline class Size(val bytes: BigDecimal) : Comparable<Size> {
             )
         )
         const val SYMBOL = "B"
-        fun parse(value: CharSequence) {
-            require(value.endsWith(SYMBOL)) { "Size must be in unit bytes (e.g. 5 ${DecimalPrefix.Mega}($SYMBOL})." }
-            require(value.endsWith(SYMBOL)) { "Size must be in unit bytes (e.g. 5 ${DecimalPrefix.Mega}($SYMBOL})." }
-            // TODO
+
+        fun CharSequence.toSize(): Size {
+            val trimmed = trim()
+            val unitString = trimmed.takeLastWhile { it.isLetter() }
+            val valueString = trimmed.dropLast(unitString.length).trim().asString()
+            val value = valueString.toBigDecimal()
+            return unitString.removeSuffix(SYMBOL).let { it ->
+                when {
+                    it.isBlank() -> value.bytes
+                    it == "K" -> (value * BinaryPrefix.Kibi.factor).bytes
+                    else -> supportedPrefixes.flatMap { prefix -> prefix.value }.find { unit -> unit.symbol == it }?.let { (value * it.factor).bytes }
+                }
+            } ?: throw IllegalArgumentException("${unitString.quoted} is no valid size unit like MB or GiB.")
         }
 
-        operator fun Number.times(bytes: Size): Size = (bytes.bytes * this.toBigDecimal()).bytes
+        val Number.bytes: Size get() = if (this == 0) ZERO else Size(toBigDecimal())
+
+        val Path.size: Size
+            get() {
+                requireExists()
+                return if (!isDirectory) Files.size(toAbsolutePath()).bytes
+                else (toFile().listFiles() ?: return ZERO)
+                    .asSequence()
+                    .map(File::toPath)
+                    .filterNot(Path::isSymlink)
+                    .fold(ZERO) { size, path -> size + path.size }
+            }
+    }
+
+    object FileSizeComparator : (Path, Path) -> Int {
+        override fun invoke(path1: Path, path2: Path): Int = path1.size.compareTo(path2.size)
     }
 
     /**
@@ -145,21 +175,6 @@ inline class Size(val bytes: BigDecimal) : Comparable<Size> {
     operator fun minus(otherBytes: Long): Size = Size(bytes - BigDecimal.valueOf(otherBytes))
     operator fun minus(otherBytes: Int): Size = Size(bytes - BigDecimal.valueOf(otherBytes.toLong()))
     operator fun unaryMinus(): Size = ZERO - this
-    operator fun times(factor: Number): Size = factor.times(this)
+    operator fun times(factor: Number): Size = (factor.toBigDecimal() * bytes).bytes
     fun toZeroFilledByteArray(): ByteArray = ByteArray(bytes.toInt())
 }
-
-val Number.bytes: Size get() = if (this == 0) Size.ZERO else Size(toBigDecimal())
-
-val Path.size: Size
-    get() {
-        requireExists()
-        return if (!isDirectory) Files.size(toAbsolutePath()).bytes
-        else (toFile().listFiles() ?: return Size.ZERO)
-            .asSequence()
-            .map(File::toPath)
-            .filterNot(Path::isSymlink)
-            .fold(Size.ZERO) { size, path -> size + path.size }
-    }
-
-fun Size.`in`(unit: UnitPrefix?) = bytes.divide(unit?.factor?.toBigDecimal() ?: BigDecimal.ONE)

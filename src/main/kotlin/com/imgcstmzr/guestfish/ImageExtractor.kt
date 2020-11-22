@@ -3,10 +3,9 @@ package com.imgcstmzr.guestfish
 import com.bkahlert.koodies.io.Archiver.listArchive
 import com.bkahlert.koodies.io.Archiver.unarchive
 import com.bkahlert.koodies.nio.file.listRecursively
-import com.bkahlert.koodies.unit.size
+import com.bkahlert.koodies.unit.Size.Companion.size
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.util.extension
-import java.nio.file.Files
 import java.nio.file.Path
 
 object ImageExtractor {
@@ -22,7 +21,7 @@ object ImageExtractor {
             return this
         }
 
-        val temp = Files.createTempDirectory("imgcstmzr")
+        val temp = com.bkahlert.koodies.nio.file.tempDir("imgcstmzr-")
         echo("Unarchiving $fileName ($size)...", trailingNewline = false)
 
         val filteredArchiveEntries = filterArchiveEntries()

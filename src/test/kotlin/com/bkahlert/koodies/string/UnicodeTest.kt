@@ -3,11 +3,11 @@ package com.bkahlert.koodies.string
 import com.bkahlert.koodies.number.ApproximationMode
 import com.bkahlert.koodies.string.Unicode.Emojis.asEmoji
 import com.bkahlert.koodies.string.Unicode.nextLine
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.util.isEqualToStringWise
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -21,7 +21,7 @@ class UnicodeTest {
     @Nested
     inner class Get {
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should return code point`() = listOf(
             133 to nextLine,
             119594 to Unicode.DivinationSymbols.Tetragrams.Purity.toString(),
@@ -35,7 +35,7 @@ class UnicodeTest {
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should have valid unicode blocks`() = listOf(
         Unicode.BoxDrawings to ("╿" to """
             ─	BOX DRAWINGS LIGHT HORIZONTAL
@@ -73,7 +73,7 @@ class UnicodeTest {
     @Nested
     inner class Emojis {
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `maps hours`() = listOf(
             listOf(-12, 0, 12, 24) to listOf(Unicode.Emojis.Emoji("🕛"), Unicode.Emojis.Emoji("🕧")),
             listOf(-8, 4, 16) to listOf(Unicode.Emojis.Emoji("🕓"), Unicode.Emojis.Emoji("🕟")),
@@ -92,7 +92,7 @@ class UnicodeTest {
             }
         }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `maps instants`() = listOf(
             Instant.parse("2020-02-02T02:02:02Z") to listOf(Unicode.Emojis.Emoji("🕝"), Unicode.Emojis.Emoji("🕑"), Unicode.Emojis.Emoji("🕑")),
             Instant.parse("2020-02-02T22:32:02Z") to listOf(Unicode.Emojis.Emoji("🕚"), Unicode.Emojis.Emoji("🕥"), Unicode.Emojis.Emoji("🕥")),

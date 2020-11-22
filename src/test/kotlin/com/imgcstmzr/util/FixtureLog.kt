@@ -1,10 +1,12 @@
 package com.imgcstmzr.util
 
 import com.bkahlert.koodies.concurrent.process.ShutdownHookUtils.addShutDownHook
-import com.bkahlert.koodies.nio.file.conditioned
+import com.bkahlert.koodies.nio.file.appendLine
+import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.list
 import com.bkahlert.koodies.nio.file.sameFile
+import com.bkahlert.koodies.nio.file.serialized
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.applyLogging
@@ -36,7 +38,7 @@ object FixtureLog : (Path) -> Path {
                     val fixtureDirectory = fixture.parent
                     val directoryWithFixtureDirectories = fixtureDirectory.parent
                     listOf(fixture).plus(directoryWithFixtureDirectories.list().filter { otherFixtureDirectory ->
-                        otherFixtureDirectory.conditioned.startsWith(fixtureDirectory.conditioned)
+                        otherFixtureDirectory.serialized.startsWith(fixtureDirectory.serialized)
                     }.toList().sorted().reversed())
                 } else {
                     listOf(fixture)
@@ -48,7 +50,7 @@ object FixtureLog : (Path) -> Path {
                     paths.forEach {
                         logLine { "$it" }
                         kotlin.runCatching {
-                            check(it.delete(true)) { "$it could not be deleted." }
+                            it.delete(true)
                             deleted++
                         }.getOrElse { logCaughtException { it } }
                     }

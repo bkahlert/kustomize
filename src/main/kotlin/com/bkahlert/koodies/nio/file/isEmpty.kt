@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.nio.file
 
-import com.bkahlert.koodies.unit.size
+import com.bkahlert.koodies.unit.Size.Companion.size
 import com.imgcstmzr.util.isDirectory
 import com.imgcstmzr.util.isFile
 import java.math.BigDecimal

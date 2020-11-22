@@ -1,17 +1,17 @@
 package com.bkahlert.koodies.concurrent.process
 
-import com.bkahlert.koodies.nio.file.conditioned
+import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
+import com.bkahlert.koodies.nio.file.tempPath
+import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.regex.RegularExpressions
 import com.bkahlert.koodies.regex.sequenceOfAllMatches
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.hasContent
 import com.imgcstmzr.util.isEqualToStringWise
 import com.imgcstmzr.util.readAll
-import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -44,7 +44,7 @@ class CompletedProcessTest {
         @Test
         fun `should dump IO to specified file`() {
             val completedProcess = createCompletedTestProcess()
-            val dumps = completedProcess.saveIO(path = tempFile(CompletedProcess::class.toString(), ".txt").apply { delete() }.deleteOnExit())
+            val dumps = completedProcess.saveIO(path = tempPath(CompletedProcess::class.toString(), ".txt").deleteOnExit())
             expectThat(dumps.values.map { it.deleteOnExit().readAll().removeEscapeSequences() }).hasSize(2).all {
                 isEqualTo("""
                 Starting process...
@@ -60,7 +60,7 @@ class CompletedProcessTest {
         @Test
         fun `should throw if IO could not be dumped`() {
             val completedProcess = createCompletedTestProcess()
-            val logPath = tempDir.tempFile(CompletedProcess::class.toString(), ".log").writeText("already exists")
+            val logPath = tempDir.tempFile(extension = ".log").writeText("already exists")
             logPath.toFile().setReadOnly()
             expectCatching {
                 completedProcess.saveIO(path = logPath.deleteOnExit())
@@ -72,7 +72,7 @@ class CompletedProcessTest {
         fun `should dump IO to file with ansi formatting`() {
             val completedProcess = createCompletedTestProcess()
             val dumps = completedProcess.saveIO().values.onEach { it.deleteOnExit() }
-            expectThat(dumps).filter { !it.conditioned.endsWith("no-ansi.log") }.single().hasContent("""
+            expectThat(dumps).filter { !it.serialized.endsWith("no-ansi.log") }.single().hasContent("""
                 ${IO.Type.META.format("Starting process...")}
                 ${IO.Type.OUT.format("processing")}
                 ${IO.Type.OUT.format("awaiting input: ")}
@@ -86,7 +86,7 @@ class CompletedProcessTest {
         fun `should dump IO to file without ansi formatting`() {
             val completedProcess = createCompletedTestProcess()
             val dumps = completedProcess.saveIO().values.onEach { it.deleteOnExit() }
-            expectThat(dumps).filter { it.conditioned.endsWith("no-ansi.log") }.single().hasContent("""
+            expectThat(dumps).filter { it.serialized.endsWith("no-ansi.log") }.single().hasContent("""
                 Starting process...
                 processing
                 awaiting input: 

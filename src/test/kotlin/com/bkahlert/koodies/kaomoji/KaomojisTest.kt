@@ -4,11 +4,11 @@ import com.bkahlert.koodies.kaomoji.Kaomojis.fishing
 import com.bkahlert.koodies.kaomoji.Kaomojis.thinking
 import com.bkahlert.koodies.terminal.IDE
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.hidden
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -20,7 +20,7 @@ import strikt.assertions.startsWith
 @Execution(CONCURRENT)
 class KaomojisTest {
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should create random Kaomoji`() = (0 until 10).map { i ->
         val kaomoji = Kaomojis.random()
         dynamicTest(kaomoji) {
@@ -28,7 +28,7 @@ class KaomojisTest {
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should create random Kaomoji from`() = Kaomojis.Generator.values().map { category ->
         dynamicContainer(category.name, (0 until 10).map { i ->
             val kaomoji = category.random()
@@ -38,7 +38,7 @@ class KaomojisTest {
         })
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should create random dogs`() = (0 until 10).map { i ->
         val kaomoji = Kaomojis.Dogs.random()
         dynamicTest(kaomoji) {
@@ -46,7 +46,7 @@ class KaomojisTest {
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should create random wizards`() = (0 until 10).map { i ->
         val kaomoji = Kaomojis.`(＃￣_￣)o︠・━・・━・━━・━☆`.random()
         dynamicTest(kaomoji) {

@@ -1,8 +1,6 @@
 package com.bkahlert.koodies.nio.file
 
-import com.bkahlert.koodies.nio.ClassPath
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.delete
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -14,26 +12,19 @@ import strikt.assertions.isEqualTo
 @Execution(CONCURRENT)
 class ToPathKtTest {
 
+    private val tempDir = tempDir().deleteOnExit()
+
     @Test
     fun `should return regular path`() {
-        val path = createTempFile("file", ".txt").toPath().deleteOnExit()
+        val path = tempDir.tempFile("file", ".txt")
         expectThat("$path".toPath())
             .isEqualTo(path)
-            .not { isA<ClassPath>() }
-    }
-
-
-    @Test
-    fun `should return class path`() {
-        val path = ClassPath("config.txt")
-        expectThat("$path".toPath())
-            .isEqualTo(path)
-            .isA<ClassPath>()
+            .not { isA<WrappedPath>() }
     }
 
     @Test
     fun `should not check existence`() {
-        val path = createTempFile("file", ".txt").toPath().apply { delete() }
+        val path = tempDir.tempPath("file", ".txt")
         expectThat("$path".toPath())
             .isEqualTo(path)
             .not { exists() }

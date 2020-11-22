@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.concurrent
 
+import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.sameFile
-import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.touch
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -16,8 +16,12 @@ class StartOnShutdownKtTest {
 
     @Test
     fun `should register hook`() {
-        expectThat(marker).not { exists() }
-        expectThat(marker.touch()).exists()
-        startOnShutdown { marker.delete() }
+        expectThat(marker) {
+            not { exists() }
+            get { marker.touch() }.exists()
+        }
+        startOnShutdown {
+            marker.delete(false)
+        }
     }
 }

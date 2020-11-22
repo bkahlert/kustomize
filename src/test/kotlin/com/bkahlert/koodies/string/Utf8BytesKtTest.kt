@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.string
 
-import com.bkahlert.koodies.unit.bytes
+import com.bkahlert.koodies.unit.Size.Companion.bytes
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT

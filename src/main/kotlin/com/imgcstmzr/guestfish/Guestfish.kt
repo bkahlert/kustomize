@@ -3,6 +3,7 @@ package com.imgcstmzr.guestfish
 import com.bkahlert.koodies.concurrent.process.CompletedProcess
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.docker.Docker
+import com.bkahlert.koodies.io.TarArchiver.tar
 import com.bkahlert.koodies.kaomoji.Kaomojis
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.string.match
@@ -15,6 +16,7 @@ import com.imgcstmzr.runtime.log.singleLineLogger
 import com.imgcstmzr.runtime.log.subLogger
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.asRootFor
+import com.imgcstmzr.util.moveTo
 import com.imgcstmzr.util.quoted
 import com.imgcstmzr.util.withExtension
 import java.nio.file.Path
@@ -87,7 +89,7 @@ class Guestfish(
                     autoCleanup = false,
                     volumes = mapOf(
                         imgPathOnHost to imgPathOnDocker,
-                        imgPathOnHost.parent.resolve(SHARED_DIRECTORY_NAME) to GUEST_ROOT_ON_DOCKER,
+                        imgPathOnHost.resolveSibling(SHARED_DIRECTORY_NAME) to GUEST_ROOT_ON_DOCKER,
                     ),
                     image = IMAGE_NAME,
                     args = listOf(
@@ -118,13 +120,15 @@ class Guestfish(
         return guestRootOnHost.asRootFor(guestPath)
     }
 
+    fun tarIn(): Unit = run(tarInCommands(imgPathOnHost))
+
     companion object {
         @Suppress("SpellCheckingInspection")
         private const val IMAGE_NAME: String = "cmattoon/guestfish"//"curator/guestfish"
         val DOCKER_MOUNT_ROOT: Path = Path.of("/work")///root")
-        val GUEST_MOUNT_ROOT: Path = Path.of("/")
+        private val GUEST_MOUNT_ROOT: Path = Path.of("/")
         const val SHARED_DIRECTORY_NAME: String = "guestfish.shared"
-        val shutdownOperation = GuestfishOperation("umount-all", "quit")
+        private val shutdownOperation = GuestfishOperation("umount-all", "quit")
 
         /**
          * [Path] on the OS running inside Docker mapped to this host.
@@ -134,7 +138,7 @@ class Guestfish(
         /**
          * Given an [img] location returns the [Path] which is used to exchange data with [img] mounted using [Guestfish].
          */
-        private fun guestRootOnHost(img: Path) = img.parent.resolve(SHARED_DIRECTORY_NAME)
+        private fun guestRootOnHost(img: Path) = img.resolveSibling(SHARED_DIRECTORY_NAME)
 
         /**
          * Creates the commands needed to copy the [guestPaths] to this host.
@@ -160,8 +164,21 @@ class Guestfish(
                 }
                 val sourcePath = GUEST_ROOT_ON_DOCKER.asRootFor(relativeHostPath)
                 val destPath = GUEST_MOUNT_ROOT.asRootFor(relativeHostPath.parent)
-                listOf("copy-in $sourcePath $destPath")
+                listOf("- mkdir-p $destPath", "copy-in $sourcePath $destPath")
             })
+
+        /**
+         * Creates the commands needed to copy everything contained in the [SHARED_DIRECTORY_NAME]
+         * using the same directory structure to the guest of [img].
+         */
+        fun tarInCommands(img: Path): GuestfishOperation {
+            val tarball = guestRootOnHost(img).tar().moveTo(guestRootOnHost(img).resolve("tarball.tar"))
+            check(tarball.exists) { "Error creating tarball" }
+            return GuestfishOperation(arrayOf(
+                "-tar-in ${GUEST_ROOT_ON_DOCKER.resolve(tarball.fileName)} /",
+                "! rm ${GUEST_ROOT_ON_DOCKER.resolve(tarball.fileName)}",
+            ))
+        }
 
         /**
          * Creates the commands needed to change the password of [username] to [password].

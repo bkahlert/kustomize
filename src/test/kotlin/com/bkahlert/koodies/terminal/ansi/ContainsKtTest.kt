@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.terminal.ansi
 
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.ESC
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -11,7 +11,7 @@ import strikt.assertions.isEqualTo
 @Execution(CONCURRENT)
 class ContainsKtTest {
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `NOT ignoring case AND NOT ignoring ANSI`() = listOf(
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  OK") to true,
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  ok") to false,
@@ -34,7 +34,7 @@ class ContainsKtTest {
         )
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `NOT ignoring case AND ignoring ANSI`() = listOf(
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  OK") to true,
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  ok") to false,
@@ -51,7 +51,7 @@ class ContainsKtTest {
         )
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `ignoring case AND NOT ignoring ANSI`() = listOf(
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  OK") to true,
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  ok") to true,
@@ -68,7 +68,7 @@ class ContainsKtTest {
         )
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `ignoring case AND ignoring ANSI`() = listOf(
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  OK") to true,
         ("[$ESC[0;32m  OK  $ESC[0m]" to "[$ESC[0;32m  ok") to true,

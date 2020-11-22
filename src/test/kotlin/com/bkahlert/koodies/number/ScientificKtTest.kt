@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.number
 
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.patch.isEqualTo
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -10,7 +10,8 @@ import java.math.BigDecimal
 
 @Execution(CONCURRENT)
 class ScientificKtTest {
-    @ConcurrentTestFactory
+
+    @TestFactory
     fun `should format scientifically`() = listOf(
         "0.00000085" to "8.50e-7",
         "0.000002" to "2.00e-6",
@@ -32,7 +33,7 @@ class ScientificKtTest {
         )
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should format to exact decimals`() = listOf(
         "0.00000085" to "0.0000008500",
         "0.000002" to "0.0000020000",
@@ -54,7 +55,7 @@ class ScientificKtTest {
         )
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should format up to decimals`() = listOf(
         "0.00000085" to "0.0000009",
         "0.000002" to "0.000002",

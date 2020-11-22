@@ -3,11 +3,11 @@ package com.bkahlert.koodies.string
 import com.bkahlert.koodies.string.Grapheme.Companion.asGraphemeSequence
 import com.bkahlert.koodies.string.Grapheme.Companion.getGrapheme
 import com.bkahlert.koodies.string.Grapheme.Companion.getGraphemeCount
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.util.asString
 import com.imgcstmzr.util.quoted
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
@@ -42,7 +42,7 @@ class GraphemeTest {
         expectCatching { Grapheme("1⃣2⃣") }.isFailure().isA<IllegalArgumentException>()
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun using() = listOf(
         "\u0041" to 1, // A
         "\uD83E\uDD13" to 1, // 🤓

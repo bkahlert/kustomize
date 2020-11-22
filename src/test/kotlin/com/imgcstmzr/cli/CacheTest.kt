@@ -1,9 +1,13 @@
 package com.imgcstmzr.cli
 
+import com.bkahlert.koodies.nio.file.isInside
+import com.bkahlert.koodies.nio.file.tempDir
+import com.bkahlert.koodies.spyable
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
+import com.imgcstmzr.util.MiscFixture.FunnyImgZip
 import com.imgcstmzr.util.exists
 import com.imgcstmzr.util.hasContent
 import com.imgcstmzr.util.isDirectory
-import com.imgcstmzr.util.isInside
 import com.imgcstmzr.util.isWritable
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
@@ -11,12 +15,12 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.Path
 
 @Execution(CONCURRENT)
 class CacheTest {
+
+    private val tempDir = tempDir().deleteOnExit()
+
     @Test
     fun `should instantiate in user home by default`() {
         val cache = Cache()
@@ -30,7 +34,7 @@ class CacheTest {
 
     @Test
     fun `should instantiate in provided directory`() {
-        val tempDir = createTempDir().toPath()
+        val tempDir = tempDir.tempDir()
 
         val cache = Cache(tempDir)
 
@@ -39,11 +43,10 @@ class CacheTest {
 
     @Test
     fun `should provide a retrieved copy`(logger: InMemoryLogger<*>) {
-        val cache = Cache(createTempDir().toPath())
-        val path = prepareTestImgZip()
+        val cache = Cache(tempDir.tempDir())
 
         val copy = cache.provideCopy("my-copy", logger = logger) {
-            path
+            FunnyImgZip.copyToTemp()
         }
 
         expectThat(copy)
@@ -53,13 +56,9 @@ class CacheTest {
 
     @Test
     fun `should only retrieve copy once`(logger: InMemoryLogger<*>) {
-        val cache = Cache(createTempDir().toPath())
-        val path = prepareTestImgZip()
+        val cache = Cache(tempDir.tempDir())
         var providerCalls = 0
-        val provider = {
-            providerCalls++
-            path
-        }
+        val provider by spyable(FunnyImgZip::copyToTemp) { providerCalls++ }
 
         val copies = (0..2).map {
             cache.provideCopy("my-copy", false, logger, provider)
@@ -71,12 +70,5 @@ class CacheTest {
                 .hasContent("funny content")
                 .isInside(cache.dir)
         }
-    }
-
-    private fun prepareTestImgZip(): Path {
-        val path = File.createTempFile("imgcstmzr", ".zip").toPath()
-        val bytes = javaClass.getResource("/funny.img.zip").openStream().readAllBytes()
-        Files.write(path, bytes)
-        return path
     }
 }

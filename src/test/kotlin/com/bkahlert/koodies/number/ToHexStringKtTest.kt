@@ -1,6 +1,5 @@
 package com.bkahlert.koodies.number
 
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.patch.isEqualTo
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -10,7 +9,8 @@ import strikt.api.expectThat
 
 @Execution(CONCURRENT)
 class ToHexStringKtTest {
-    @ConcurrentTestFactory
+    
+    @TestFactory
     fun `should convert to hex representation`() = listOf(
         0 to "0",
         10 to "A",
@@ -24,7 +24,7 @@ class ToHexStringKtTest {
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should convert to padded hex representation`() = listOf(
         0 to "00",
         10 to "0A",

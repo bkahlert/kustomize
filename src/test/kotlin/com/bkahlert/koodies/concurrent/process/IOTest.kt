@@ -4,9 +4,9 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.gray
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.italic
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -15,7 +15,7 @@ import strikt.assertions.isEqualTo
 @Execution(CONCURRENT)
 class IOTest {
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should leave content untouched`() = listOf("IO", "")
         .flatMap { sample ->
             IO.Type.values().map { type ->

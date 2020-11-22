@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.regex
 
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -12,8 +12,9 @@ import strikt.assertions.matches
 class RegularExpressionsTest {
 
     private data class MatchExpectations(val matchingInput: List<String>, val nonMatchingInput: List<String>)
+    private data class SplitExpectations(val splitable: List<Pair<String, List<String>>>, val nonSplitable: List<String>)
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should correctly match`() = listOf(
         RegularExpressions.atLeastOneWhitespaceRegex to MatchExpectations(
             matchingInput = listOf(
@@ -97,4 +98,50 @@ class RegularExpressionsTest {
             }),
         ))
     }
+
+
+//    @TestFactory
+//    fun `should correctly split`() = listOf(
+//        RegularExpressions.digitLetterRegex to SplitExpectations(
+//            splitable = listOf(
+//                "1a" to listOf("1", "a"),
+//                "1.1a" to listOf("1.1", "a"),
+//                "111.11a" to listOf("111.11", "a"),
+//                "111.a" to listOf("1", "a"),
+//                "1aa" to listOf("1", "aa"),
+//                ".1aa" to listOf(".1", "aa"),
+//                "1.1aa" to listOf("1.1", "aa"),
+//                "111.11aa" to listOf("111.11", "aa"),
+//                "111.aa" to listOf("1", "aa"),
+//
+//                "1 a" to listOf("1", "a"),
+//                "1.1 a" to listOf("1.1", "a"),
+//                "111.11 a" to listOf("111.11", "a"),
+//                "111. a" to listOf("1", "a"),
+//                "1 aa" to listOf("1", "aa"),
+//                ".1 aa" to listOf(".1", "aa"),
+//                "1.1 aa" to listOf("1.1", "aa"),
+//                "111.11 aa" to listOf("111.11", "aa"),
+//                "111. aa" to listOf("1", "aa"),
+//            ), nonSplitable = listOf(
+//                "1",
+//                ".a",
+//                "1.a",
+//                "111.11",
+//                "111.*",
+//            )),
+//    ).map { (regex, expectations) ->
+//        dynamicContainer("for ${regex.pattern}", listOf(
+//            dynamicContainer("should split", expectations.splitable.map { (input, splitUp) ->
+//                dynamicTest("input: $input") {
+//                    expectThat(input.split(regex)).isEqualTo(splitUp)
+//                }
+//            }),
+//            dynamicContainer("should not split", expectations.nonSplitable.map { input ->
+//                dynamicTest("input: $input") {
+//                    expectThat(input.split(regex)).containsExactly(input)
+//                }
+//            }),
+//        ))
+//    }
 }

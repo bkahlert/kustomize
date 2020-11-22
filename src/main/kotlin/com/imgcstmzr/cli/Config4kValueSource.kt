@@ -4,11 +4,12 @@ import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.Option
 import com.github.ajalt.clikt.sources.ValueSource
 import com.github.ajalt.clikt.sources.ValueSource.Invocation
+import com.imgcstmzr.util.readAll
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import io.github.config4k.extract
-import java.io.File
 import java.net.URL
+import java.nio.file.Path
 
 /**
  * Makes all types of configurations available by adapting [config4k](https://www.kotlinresources.com/library/config4k/)'s [config].
@@ -62,12 +63,14 @@ class Config4kValueSource(private val name: String, private val config: Config) 
             return Config4kValueSource(names[0], parseConfig.atKey(names[0]))
         }
 
-        fun ValueSource?.update(configFile: File) {
-            (this as Proxy).delegate = from(configFile.readText())
+        fun from(configFile: Path): Config4kValueSource = from(configFile.readAll())
+
+        fun ValueSource?.update(configFile: Path) {
+            (this as? Proxy)?.delegate = from(configFile.readAll())
         }
 
         fun ValueSource?.update(configUrl: URL) {
-            (this as Proxy).delegate = from(configUrl.readText())
+            (this as? Proxy)?.delegate = from(configUrl.readText())
         }
 
 

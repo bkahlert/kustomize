@@ -1,6 +1,8 @@
 package com.bkahlert.koodies.nio
 
 import com.bkahlert.koodies.exception.dump
+import com.bkahlert.koodies.nio.file.classPath
+import com.bkahlert.koodies.nio.file.inputStream
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
 import com.bkahlert.koodies.string.fuzzyLevenshteinDistance
 import com.bkahlert.koodies.string.joinLinesToString
@@ -134,8 +136,7 @@ abstract class SharedReaderTest(val readerFactory: (InputStream, Duration, Rende
     @Isolated
     @Nested
     inner class Benchmark {
-        private val bootLog = ClassPath("raspberry.boot")
-        private val inputStream = { bootLog.resourceAsStream() ?: throw IllegalStateException() }
+        private val inputStream = { classPath("raspberry.boot") { inputStream() } ?: throw IllegalStateException() }
         private val expected = inputStream().bufferedReader().readText().withoutTrailingLineSeparator
 
         @Slow @Test

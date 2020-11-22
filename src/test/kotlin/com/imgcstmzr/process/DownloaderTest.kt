@@ -2,9 +2,9 @@ package com.imgcstmzr.process
 
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
+import com.bkahlert.koodies.number.hasSize
 import com.bkahlert.koodies.test.junit.Slow
-import com.bkahlert.koodies.test.strikt.hasSize
-import com.bkahlert.koodies.unit.bytes
+import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.runtime.OperatingSystemMock
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.util.FixtureLog.deleteOnExit

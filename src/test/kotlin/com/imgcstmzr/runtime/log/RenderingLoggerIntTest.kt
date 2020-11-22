@@ -4,7 +4,6 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.string.repeat
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.util.containsAtMost
@@ -13,6 +12,7 @@ import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.InMemoryLoggerFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
@@ -99,7 +99,7 @@ class RenderingLoggerIntTest {
                 """.trimIndent())
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should allow complex layout`(@Columns(100) loggerFactory: InMemoryLoggerFactory<Unit>) = listOf(
         true to """
             ╭─────╴{}

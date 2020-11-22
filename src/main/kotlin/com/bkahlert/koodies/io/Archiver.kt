@@ -4,25 +4,25 @@ import com.bkahlert.koodies.io.Archiver.archive
 import com.bkahlert.koodies.io.Archiver.unarchive
 import com.bkahlert.koodies.io.TarArchiveGzCompressor.tarGunzip
 import com.bkahlert.koodies.io.TarArchiveGzCompressor.tarGzip
-import com.bkahlert.koodies.nio.bufferedInputStream
+import com.bkahlert.koodies.nio.file.addExtension
+import com.bkahlert.koodies.nio.file.bufferedInputStream
+import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.exists
+import com.bkahlert.koodies.nio.file.hasExtension
 import com.bkahlert.koodies.nio.file.listRecursively
+import com.bkahlert.koodies.nio.file.mkdirs
+import com.bkahlert.koodies.nio.file.outputStream
+import com.bkahlert.koodies.nio.file.removeExtension
 import com.bkahlert.koodies.nio.file.requireEmpty
 import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.nio.file.requireExistsNot
-import com.bkahlert.koodies.nio.outputStream
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.util.addExtension
-import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.extension
 import com.imgcstmzr.util.isFile
-import com.imgcstmzr.util.mkdirs
-import com.imgcstmzr.util.removeExtension
 import org.apache.commons.compress.archivers.ArchiveEntry
 import org.apache.commons.compress.archivers.ArchiveInputStream
 import org.apache.commons.compress.archivers.ArchiveOutputStream
 import org.apache.commons.compress.archivers.ArchiveStreamFactory
-import java.io.IOException
 import java.nio.file.Path
 import com.bkahlert.koodies.io.TarArchiveGzCompressor.listArchive as tarGzListArchive
 
@@ -72,11 +72,11 @@ object Archiver {
      * By default the existing file name is used with the extension removed.
      */
     fun Path.unarchive(
-        destination: Path = removeExtension(if ("$fileName".endsWith("tar.gz")) "tar.gz" else extension
-            ?: throw IllegalArgumentException("Cannot auto-detect the archive format due to missing file extension.")),
+        destination: Path = if (hasExtension("tar.gz")) removeExtension("tar.gz") else extension?.let { removeExtension(it) }
+            ?: throw IllegalArgumentException("Cannot auto-detect the archive format due to missing file extension."),
         overwrite: Boolean = false,
     ): Path =
-        if ("$fileName".endsWith("tar.gz")) {
+        if (hasExtension("tar.gz")) {
             tarGunzip(destination, overwrite = overwrite)
         } else {
             requireExists()
@@ -104,7 +104,7 @@ object Archiver {
                 require(path.mkdirs().exists) { "$path could not be created." }
             } else {
                 require(path.parent.mkdirs().exists) { "${path.parent} could not be created." }
-                path.also { it.delete() }.outputStream().also { copyTo(it) }.also { it.close() }
+                path.delete().outputStream().also { copyTo(it) }.also { it.close() }
             }
         }
     }
@@ -124,17 +124,11 @@ object Archiver {
     /**
      * Lists this archive without unarchiving it.
      */
-    fun Path.listArchive(): List<ArchiveEntry> {
-        return kotlin.runCatching {
-            if ("$fileName".endsWith("tar.gz")) {
-                tarGzListArchive()
-            } else {
-                requireExists()
-                ArchiveStreamFactory().createArchiveInputStream(bufferedInputStream()).use { it.list() }
-            }
-        }.recover {
-            require(it !is IOException) { it }
-            throw it
-        }.getOrThrow()
-    }
+    fun Path.listArchive(): List<ArchiveEntry> =
+        if ("$fileName".endsWith("tar.gz")) {
+            tarGzListArchive()
+        } else {
+            requireExists()
+            ArchiveStreamFactory().createArchiveInputStream(bufferedInputStream()).use { it.list() }
+        }
 }

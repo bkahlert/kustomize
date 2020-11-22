@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.string
 
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -10,7 +10,7 @@ import strikt.assertions.isEqualTo
 @Execution(CONCURRENT)
 class OverlapKtTest {
     @Suppress("SpellCheckingInspection")
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should calculate right-wise overlap`() = listOf(
         "overlap" to 7,
         "verlap" to 6,
@@ -34,7 +34,7 @@ class OverlapKtTest {
     }
 
     @Suppress("SpellCheckingInspection")
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should calculate left-wise overlap`() = listOf(
         "overlap" to 7,
         "overla" to 6,

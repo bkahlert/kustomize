@@ -1,12 +1,13 @@
 package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.nio.file.conditioned
+import com.bkahlert.koodies.nio.file.exists
+import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.unit.Mega
 import com.bkahlert.koodies.unit.Size
-import com.bkahlert.koodies.unit.bytes
-import com.bkahlert.koodies.unit.size
+import com.bkahlert.koodies.unit.Size.Companion.bytes
+import com.bkahlert.koodies.unit.Size.Companion.size
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.singleLineLogger
@@ -38,7 +39,7 @@ class OperatingSystemImage(
     private val updatedCredentials: Boolean get() = credentials != defaultCredentials
 
     fun boot(logger: RenderingLogger<Any>, vararg programs: Program): Int =
-        ArmRunner.run(name = conditioned, osImage = this, logger = logger, programs = programs)
+        ArmRunner.run(name = serialized, osImage = this, logger = logger, programs = programs)
 
     fun increaseDiskSpace(logger: RenderingLogger<Any>, size: Size): Any =
         logger.subLogger("Increasing Disk Space: ${image.size} ➜ $size", null) {
@@ -73,6 +74,8 @@ class OperatingSystemImage(
                 }
             }
         }
+
+    val exists: Boolean get() = image.exists
 
     override fun toString(): String = fullName
 }

@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.string
 
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
@@ -12,7 +12,7 @@ import strikt.assertions.isEqualTo
 @Execution(CONCURRENT)
 class RepeatKtTest {
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should repeat`() = listOf(
         3 to ("AAA" to "ABC 🤯ABC 🤯ABC 🤯"),
         1 to ("A" to "ABC 🤯"),

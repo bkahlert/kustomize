@@ -4,23 +4,22 @@ import com.bkahlert.koodies.io.Compressor.compress
 import com.bkahlert.koodies.io.Compressor.decompress
 import com.bkahlert.koodies.io.PathFixtures.archiveWithSingleFile
 import com.bkahlert.koodies.io.PathFixtures.singleFile
+import com.bkahlert.koodies.nio.file.addExtension
+import com.bkahlert.koodies.nio.file.copyTo
+import com.bkahlert.koodies.nio.file.removeExtension
 import com.bkahlert.koodies.nio.file.requireNotEmpty
 import com.bkahlert.koodies.nio.file.tempDir
-import com.bkahlert.koodies.nio.file.tempFile
+import com.bkahlert.koodies.nio.file.tempPath
+import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.string.random
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
-import com.bkahlert.koodies.unit.size
+import com.bkahlert.koodies.unit.Size.Companion.size
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.addExtension
-import com.imgcstmzr.util.copyTo
-import com.imgcstmzr.util.delete
 import com.imgcstmzr.util.hasEqualContent
-import com.imgcstmzr.util.removeExtension
 import com.imgcstmzr.util.renameTo
 import com.imgcstmzr.util.touch
-import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
@@ -30,37 +29,39 @@ import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import strikt.assertions.isLessThan
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
+
 
 @Execution(CONCURRENT)
 class CompressorTest {
 
     private val tempDir = tempDir().deleteOnExit()
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should throw on missing source`() = listOf(
-        { tempDir.tempFile().also { it.delete() }.compress() },
-        { tempDir.tempFile(extension = ".bzip2").also { it.delete() }.decompress() },
+        { tempDir.tempDir().tempPath().compress() },
+        { tempDir.tempDir().tempPath(extension = ".bzip2").decompress() },
     ).map { call ->
         dynamicTest("$call") {
-            expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
+            expectCatching { call() }.isFailure().isA<FileAlreadyExistsException>()
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should throw on non-empty destination`() = listOf(
-        { tempDir.singleFile().also { it.addExtension("bzip2").deleteOnExit().touch().writeText("content") }.compress("bzip2") },
-        { tempDir.archiveWithSingleFile("bzip2").also { it.copyTo(it.removeExtension("bzip2")).deleteOnExit() }.decompress() },
+        { tempDir.tempDir().singleFile().apply { addExtension("bzip2").touch().writeText("content") }.compress("bzip2") },
+        { tempDir.tempDir().archiveWithSingleFile("bzip2").apply { copyTo(removeExtension("bzip2")) }.decompress() },
     ).map { call ->
         dynamicTest("$call") {
-            expectCatching { call() }.isFailure().isA<IllegalArgumentException>()
+            expectCatching { call() }.isFailure().isA<FileAlreadyExistsException>()
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should overwrite non-empty destination`() = listOf(
-        { tempDir.singleFile().also { it.addExtension("bzip2").touch().deleteOnExit().writeText("content") }.compress("bzip2", overwrite = true) },
-        { tempDir.archiveWithSingleFile("bzip2").also { it.copyTo(it.removeExtension("bzip2")).deleteOnExit() }.decompress(overwrite = true) },
+        { tempDir.tempDir().singleFile().apply { addExtension("bzip2").touch().writeText("content") }.compress("bzip2", overwrite = true) },
+        { tempDir.tempDir().archiveWithSingleFile("bzip2").apply { copyTo(removeExtension("bzip2")) }.decompress(overwrite = true) },
     ).map { call ->
         dynamicTest("$call") {
             expectThat(call()).exists()

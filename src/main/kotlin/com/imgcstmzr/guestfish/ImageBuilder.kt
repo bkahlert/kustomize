@@ -2,7 +2,11 @@ package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.io.Archiver.archive
 import com.bkahlert.koodies.io.GzCompressor.gunzip
-import com.bkahlert.koodies.nio.file.conditioned
+import com.bkahlert.koodies.nio.file.copyToDirectory
+import com.bkahlert.koodies.nio.file.delete
+import com.bkahlert.koodies.nio.file.hasExtension
+import com.bkahlert.koodies.nio.file.mkdirs
+import com.bkahlert.koodies.nio.file.removeExtension
 import com.bkahlert.koodies.nio.file.toPath
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.colors.gray
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightYellow
@@ -13,17 +17,13 @@ import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.Gibi
 import com.bkahlert.koodies.unit.Mebi
 import com.bkahlert.koodies.unit.Size
-import com.bkahlert.koodies.unit.bytes
+import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.guestfish.Guestfish.Companion.DOCKER_MOUNT_ROOT
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.singleLineLogger
 import com.imgcstmzr.runtime.log.subLogger
 import com.imgcstmzr.util.Paths
-import com.imgcstmzr.util.copyTo
-import com.imgcstmzr.util.delete
-import com.imgcstmzr.util.mkdirs
 import com.imgcstmzr.util.quoted
-import com.imgcstmzr.util.removeExtension
 import java.net.URI
 import java.nio.file.Path
 import kotlin.math.ceil
@@ -76,7 +76,7 @@ object ImageBuilder {
     private fun prepareImg(logger: RenderingLogger<*>, vararg paths: Pair<Path, Path>): Path =
         buildFrom(Paths.TEMP.resolve("imgcstmzr-" + paths.take(5).mapNotNull { it.first.fileName }.joinToString(separator = "-")).mkdirs().run {
             logger.singleLineLogger<Unit>("Copying ${paths.size} files to ${toUri()}") {
-                paths.forEach { (from, to) -> from.copyTo(resolve(to).resolve(from.fileName)) }
+                paths.forEach { (from, to) -> from.copyToDirectory(resolve(to)) }
             }
             @Suppress("SpellCheckingInspection")
             logger.singleLineLogger("Gzipping") { archive("tar", overwrite = true) }
@@ -105,14 +105,16 @@ object ImageBuilder {
         ansiCode = gray,
         borderedOutput = false,
     ) {
-        val tarball = if (archive.conditioned.endsWith(".gz")) archive.gunzip(overwrite = true) else archive
-        require("$tarball".endsWith(".tar")) { "Currently only \"tar\" and \"tar.gz\" files are supported." }
+        val tarball = if (archive.hasExtension("gz")) archive.gunzip(overwrite = true) else archive
+        require(tarball.hasExtension("tar")) { "Currently only \"tar\" and \"tar.gz\" files are supported." }
 
         val hostDirectory = tarball.parent
         val addFilesCommand = "-tar-in ${DOCKER_MOUNT_ROOT.resolve(tarball.fileName)} /" +
-            (if (tarball.conditioned.endsWith(".tar")) "" else " compress:gzip")
+            (if (tarball.hasExtension(".tar")) "" else " compress:gzip")
 
-        val imgName = "${tarball.fileName.removeExtension("tar")}.img".also { hostDirectory.resolve(it).delete() }
+        val imgName = "${tarball.fileName.removeExtension("tar")}.img".also {
+            hostDirectory.resolve(it).delete(false)
+        }
         logLine {
             val formattedTotalSize = totalSize.round().toString(BinaryPrefix::class)
             val formattedRootSize = (totalSize.round() - bootSize.round()).toString(BinaryPrefix::class)

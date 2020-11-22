@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.exception
 
+import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.imgcstmzr.util.withExtension
-import com.imgcstmzr.util.writeText
 import java.io.IOException
 import java.nio.file.Path
 

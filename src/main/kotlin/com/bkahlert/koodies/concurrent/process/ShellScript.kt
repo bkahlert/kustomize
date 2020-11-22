@@ -1,23 +1,27 @@
 package com.bkahlert.koodies.concurrent.process
 
 import com.bkahlert.koodies.docker.Docker.toContainerName
-import com.bkahlert.koodies.nio.file.conditioned
+import com.bkahlert.koodies.nio.file.serialized
+import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.string.LineSeparators
 import com.imgcstmzr.util.makeExecutable
 import com.imgcstmzr.util.quoted
-import com.imgcstmzr.util.writeText
 import java.nio.file.Path
 
 @DslMarker
 annotation class ShellScriptMarker
 
 @ShellScriptMarker
-class ShellScript {
-
+class ShellScript(val name: String? = null, content: String? = null) {
 
     val lines: MutableList<String> = mutableListOf()
+
+    init {
+        if (content != null) lines.add(content.trimIndent())
+    }
+
     fun shebang(interpreter: Path = Path.of("/bin/sh")) {
-        lines.add("#!${interpreter.conditioned}")
+        lines.add("#!${interpreter.serialized}")
     }
 
     fun changeDirectoryOrExit(directory: Path, @Suppress("UNUSED_PARAMETER") errorCode: Int = 1) {
@@ -62,6 +66,26 @@ class ShellScript {
             makeExecutable()
         }
     }
+
+    override fun toString(): String = build()
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ShellScript
+
+        if (name != other.name) return false
+        if (lines != other.lines) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = name?.hashCode() ?: 0
+        result = 31 * result + lines.hashCode()
+        return result
+    }
+
 }
 
 @ShellScriptMarker
@@ -94,7 +118,7 @@ class DockerBuilder(private val lines: MutableList<String>) {
                 interactive to "-i",
                 pseudoTerminal to "-t",
             ).filter { (option, _) -> option }.map { (_, flag) -> continuation + flag }.toTypedArray(),
-            *volumes.map { volume -> continuation + "--volume ${volume.key.conditioned}:${volume.value}" }.toTypedArray(),
+            *volumes.map { volume -> continuation + "--volume ${volume.key.normalize().serialized}:${volume.value}" }.toTypedArray(),
             continuation + image,
             *args.map { continuation + it }.toTypedArray(),
         ).joinToString(" "))

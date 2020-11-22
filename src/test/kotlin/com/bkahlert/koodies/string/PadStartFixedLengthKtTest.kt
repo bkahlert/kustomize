@@ -2,9 +2,9 @@
 
 package com.bkahlert.koodies.string
 
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -14,7 +14,7 @@ import strikt.assertions.isEqualTo
 @Execution(CONCURRENT)
 class PadStartFixedLengthKtTest {
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should truncate to 10 chars using ··· and _`() = listOf(
         "SomeClassName and a couple of words" to "Some···rds",
         "Short" to "_____Short",

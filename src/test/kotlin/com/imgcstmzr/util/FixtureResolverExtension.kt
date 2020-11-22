@@ -1,6 +1,6 @@
 package com.imgcstmzr.util
 
-import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.guestfish.ImageBuilder
@@ -56,23 +56,15 @@ open class FixtureResolverExtension : ParameterResolver {
     }
 
     companion object {
-        val downloader = Downloader(ImageBuilder.schema to { uri, logger -> ImageBuilder.buildFrom(uri, logger) })
+        private val downloader = Downloader(ImageBuilder.schema to { uri, logger -> ImageBuilder.buildFrom(uri, logger) })
 
         private val cache = Cache(Paths.TEST.resolve("test"), maxConcurrentWorkingDirectories = 500)
         private fun OperatingSystem.getCopy(logger: RenderingLogger<*>): OperatingSystemImage = synchronized(this) {
             this based cache.provideCopy(name, false, logger) {
-                with(downloader) {
-                    download(logger)
-                }
+                with(downloader) { download(logger) }
             }
         }
 
-        fun prepareSharedDirectory(): Path {
-            val root = createTempDir("imgcstmzr")
-            val boot = root.resolve("boot").toPath()
-            ClassPath.of("cmdline.txt").copyToDirectory(boot)
-            ClassPath.of("config.txt").copyToDirectory(boot)
-            return root.toPath()
-        }
+        fun prepareSharedDirectory(): Path = ImgFixture.copyTo(tempDir("imgcstmzr-").deleteOnExit())
     }
 }

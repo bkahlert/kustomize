@@ -5,8 +5,8 @@ import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.docker.DockerProcess
 import com.bkahlert.koodies.docker.DockerProcess.Companion.nullDockerProcess
-import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.string.LineSeparators.lines
+import com.imgcstmzr.util.MiscFixture
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -19,14 +19,14 @@ import strikt.assertions.isLessThanOrEqualTo
 
 @Execution(CONCURRENT)
 class GuestfishIoProcessorTest {
-    private val guestfishIO = ClassPath("guestfish.boot")
+    private val guestfishIO = MiscFixture.BootingGuestfish.text
 
     @Nested
     inner class Verbosity {
         @Test
         fun `should log all on active verbose option`(logger: InMemoryLogger<CompletedProcess>) {
             val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = true)
-            guestfishIO.readAllLines().map { OUT typed it }.sendTo(guestfishIoProcessor)
+            guestfishIO.lines().map { OUT typed it }.sendTo(guestfishIoProcessor)
             expectThat(logger.logged.lines()) {
                 get { size }.isGreaterThan(950).isLessThanOrEqualTo(1050)
                 get { take(20).joinToString("\n") }.contains("libguestfs: create: flags = 0, handle = 0x1b19580, program = guestfish")
@@ -36,7 +36,7 @@ class GuestfishIoProcessorTest {
         @Test
         fun `should not log boot sequence on inactive verbose option`(logger: InMemoryLogger<CompletedProcess>) {
             val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = false)
-            guestfishIO.readAllLines().map { OUT typed it }.sendTo(guestfishIoProcessor)
+            guestfishIO.lines().map { OUT typed it }.sendTo(guestfishIoProcessor)
             expectThat(logger.logged.lines()) {
                 get { size }.isGreaterThan(80).isLessThanOrEqualTo(120)
                 get { take(10).joinToString("\n") }.contains("guestfsd: main_loop: new request, len 0x3c")

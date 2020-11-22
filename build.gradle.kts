@@ -21,8 +21,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.1")
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.10")
 
-    implementation("com.github.ajalt:clikt:2.8.0")
-    implementation("com.github.ajalt:mordant:1.2.1")
+    implementation("com.github.ajalt.clikt:clikt:3.0.1")
+    implementation("com.github.ajalt:mordant:1.2.1") // implementation("com.github.ajalt.mordant:mordant:2.0.0-alpha1")
     implementation("io.github.config4k:config4k:0.4.2")
     implementation("org.slf4j:slf4j-simple:2.0.0-alpha1")
 
@@ -71,7 +71,6 @@ tasks {
                 "-Xopt-in=kotlin.ExperimentalUnsignedTypes",
                 "-Xopt-in=kotlin.time.ExperimentalTime",
                 "-Xopt-in=kotlin.contracts.ExperimentalContracts",
-                "-Xopt-in=com.github.ajalt.clikt.sources.ExperimentalValueSourceApi",
                 "-Xinline-classes"
             )
         }
@@ -83,7 +82,7 @@ tasks {
         failFast = false
         ignoreFailures = true
         filter {
-            includeTestsMatching("com.imgcstmzr.AllTests")
+            includeTestsMatching("com.imgcstmzr.Tests")
         }
         useJUnitPlatform {
             excludeTags("Slow", "E2E")

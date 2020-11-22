@@ -1,12 +1,12 @@
 package com.bkahlert.koodies.string
 
 import com.bkahlert.koodies.string.CodePoint.Companion.isValidCodePoint
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.util.asString
 import com.imgcstmzr.util.quoted
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
@@ -46,7 +46,7 @@ class CodePointTest {
         expectCatching { CodePoint("ab") }.isFailure().isA<IllegalArgumentException>()
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun using() = listOf(
         "\u0041" to 1L, // A
         "\uD83E\uDD13" to 1L, // 🤓

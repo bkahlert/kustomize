@@ -100,6 +100,7 @@ output. Although that output is very likely mingled since those tests still run 
 - [ ] apt-get install -y git streamer (webcam tool)
 - [ ] https://github.com/nmcclain/raspberian-firstboot
 - [ ] https://github.com/kenfallon/fix-ssh-on-pi !!!
+- [ ] use in memory filesystem
 
 - name: Run the equivalent of "apt-get update" as a separate step apt:
   update_cache: true cache_valid_time: 3600
@@ -123,7 +124,9 @@ https://github.com/garthvh/ansible-raspi-playbooks/blob/master/playbooks/new-def
 - `PatchesKtTest.kt`
 - `RenderingLoggerIntTest.kt`
 - `Program` class (e.g. login script)
-- `ShellScriptBuilder` (with !"echo 'this is a command'")
 - `ContainsExactlyInSomeOrder` (easily understandable builder pattern)
+- `ImgFixture` (static builder)
+- `ShellScriptBuilder` (with !"echo 'this is a command'")
+- `ReadOnlyFileSystem`
 - `RegExDocument` (delegates properties)
 - `PatchTest` (Complex builder pattern)

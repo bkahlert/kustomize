@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.nio.file
 
+import com.bkahlert.koodies.nio.exception.noSuchFile
 import com.imgcstmzr.util.isDirectory
 import java.nio.file.Path
 
@@ -9,8 +10,8 @@ import java.nio.file.Path
  * - this directory is empty, that is, has no entries
  */
 fun Path.requireNotEmpty() {
-    require(isNotEmpty) {
-        if (isDirectory) "$this must not be empty but has no entries."
-        else "$this must not be empty but has zero size."
+    if (isEmpty) {
+        if (isDirectory) throw noSuchFile(this, "Directory must not be empty but has no entries.")
+        throw noSuchFile(this, "File must not be empty but has zero size.")
     }
 }

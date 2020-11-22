@@ -1,12 +1,12 @@
 package com.bkahlert.koodies.io
 
-import com.bkahlert.koodies.nio.bufferedInputStream
+import com.bkahlert.koodies.nio.file.addExtension
+import com.bkahlert.koodies.nio.file.bufferedInputStream
+import com.bkahlert.koodies.nio.file.delete
+import com.bkahlert.koodies.nio.file.outputStream
+import com.bkahlert.koodies.nio.file.removeExtension
 import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.nio.file.requireExistsNot
-import com.bkahlert.koodies.nio.outputStream
-import com.imgcstmzr.util.addExtension
-import com.imgcstmzr.util.delete
-import com.imgcstmzr.util.removeExtension
 import java.nio.file.Path
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream

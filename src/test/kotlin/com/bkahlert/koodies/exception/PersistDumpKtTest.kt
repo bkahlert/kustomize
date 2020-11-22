@@ -1,17 +1,16 @@
 package com.bkahlert.koodies.exception
 
-import com.bkahlert.koodies.nio.ClassPath
-import com.bkahlert.koodies.nio.file.conditioned
+import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.tempDir
-import com.bkahlert.koodies.nio.file.tempFile
+import com.bkahlert.koodies.nio.file.tempPath
+import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.delete
+import com.imgcstmzr.util.MiscFixture
 import com.imgcstmzr.util.hasContent
 import com.imgcstmzr.util.readAll
-import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -32,8 +31,8 @@ import java.io.IOException
 class PersistDumpKtTest {
 
     private val tempDir = tempDir().deleteOnExit()
-    private val path get() = tempDir.tempFile(PersistDumpKtTest::class.toString(), ".log").apply { delete() }
-    private val data = { ClassPath("raspberry.boot").readText() }
+    private val path get() = tempDir.tempPath(PersistDumpKtTest::class.toString(), ".log")
+    private val data = { MiscFixture.BootingRaspberry.text }
 
     @Test
     fun `should dump data`() {
@@ -58,7 +57,7 @@ class PersistDumpKtTest {
     @Test
     fun `should dump IO to file with ansi formatting`() {
         val dumps = persistDump(path = path, data = { "ansi".bold() + LineSeparators.LF + "no ansi" }).values.onEach { it.deleteOnExit() }
-        expectThat(dumps).filter { !it.conditioned.endsWith("no-ansi.log") }.single().hasContent("""
+        expectThat(dumps).filter { !it.serialized.endsWith("no-ansi.log") }.single().hasContent("""
                 ${"ansi".bold()}
                 no ansi
             """.trimIndent())
@@ -67,7 +66,7 @@ class PersistDumpKtTest {
     @Test
     fun `should dump IO to file without ansi formatting`() {
         val dumps = persistDump(path = path, data = { "ansi".bold() + LineSeparators.LF + "no ansi" }).values.onEach { it.deleteOnExit() }
-        expectThat(dumps).filter { it.conditioned.endsWith("no-ansi.log") }.single().hasContent("""
+        expectThat(dumps).filter { it.serialized.endsWith("no-ansi.log") }.single().hasContent("""
                 ansi
                 no ansi
             """.trimIndent())

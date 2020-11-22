@@ -2,16 +2,16 @@ package com.bkahlert.koodies.io
 
 import com.bkahlert.koodies.io.Archiver.addToArchive
 import com.bkahlert.koodies.io.Archiver.unarchiveTo
-import com.bkahlert.koodies.nio.bufferedInputStream
-import com.bkahlert.koodies.nio.bufferedOutputStream
+import com.bkahlert.koodies.nio.file.addExtension
+import com.bkahlert.koodies.nio.file.bufferedInputStream
+import com.bkahlert.koodies.nio.file.bufferedOutputStream
+import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.exists
+import com.bkahlert.koodies.nio.file.mkdirs
+import com.bkahlert.koodies.nio.file.removeExtension
 import com.bkahlert.koodies.nio.file.requireEmpty
 import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.nio.file.requireExistsNot
-import com.imgcstmzr.util.addExtension
-import com.imgcstmzr.util.delete
-import com.imgcstmzr.util.mkdirs
-import com.imgcstmzr.util.removeExtension
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import java.nio.file.Path

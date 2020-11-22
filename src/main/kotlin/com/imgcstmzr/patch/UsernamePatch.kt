@@ -1,10 +1,9 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.nio.file.writeText
 import com.imgcstmzr.patch.Requirements.requireNotMatchingContent
-import com.imgcstmzr.patch.new.Patch
 import com.imgcstmzr.patch.new.buildPatch
 import com.imgcstmzr.util.readAll
-import com.imgcstmzr.util.writeText
 
 // "Change username pi to $username?"
 class UsernamePatch(

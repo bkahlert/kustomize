@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.concurrent
 
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.time.sleep
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -20,7 +20,7 @@ class StartAsCompletableFutureKtTest {
 
     private val executor = Executors.newCachedThreadPool()
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should start immediately`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsCompletableFuture() },
         "postfix form" to { finished: AtomicBoolean -> startAsCompletableFuture { finished.set(true) } },
@@ -37,7 +37,7 @@ class StartAsCompletableFutureKtTest {
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should start delayed`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true) }.startAsCompletableFuture(500.milliseconds) },
         "postfix form" to { finished: AtomicBoolean -> startAsCompletableFuture(500.milliseconds) { finished.set(true) } },
@@ -54,7 +54,7 @@ class StartAsCompletableFutureKtTest {
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should block until value is returned`() = listOf(
         "prefix form" to { finished: AtomicBoolean -> { finished.set(true); "Hello World" }.startAsCompletableFuture() },
         "postfix form" to { finished: AtomicBoolean -> startAsCompletableFuture { finished.set(true); "Hello World" } },

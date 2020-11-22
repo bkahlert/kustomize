@@ -2,8 +2,12 @@ package com.bkahlert.koodies.nio.file
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.FileTime
 
-var Path.lastModified
+/**
+ * This path's last modified time.
+ */
+var Path.lastModified: FileTime
     get() = Files.getLastModifiedTime(this)
     set(fileTime) {
         Files.setLastModifiedTime(this, fileTime)

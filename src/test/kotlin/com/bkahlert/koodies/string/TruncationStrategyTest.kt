@@ -1,9 +1,9 @@
 package com.bkahlert.koodies.string
 
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -16,7 +16,7 @@ class TruncationStrategyTest {
     @Nested
     inner class StartTruncation {
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should truncate`() = listOf(
             "APrettyLongClassNameThatMightBeTooBigForTheAvailableSpace" to "…AvailableSpace",
             "A pretty long sentence works, too." to "…ce works, too.",
@@ -43,7 +43,7 @@ class TruncationStrategyTest {
     @Nested
     inner class MiddleTruncation {
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should truncate`() = listOf(
             "APrettyLongClassNameThatMightBeTooBigForTheAvailableSpace" to "APretty…leSpace",
             "A pretty long sentence works, too." to "A prett…s, too.",
@@ -70,7 +70,7 @@ class TruncationStrategyTest {
     @Nested
     inner class EndTruncation {
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should truncate`() = listOf(
             "APrettyLongClassNameThatMightBeTooBigForTheAvailableSpace" to "APrettyLongCla…",
             "A pretty long sentence works, too." to "A pretty long …",

@@ -7,6 +7,7 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.unit.Size
 import com.imgcstmzr.guestfish.Guestfish
 import com.imgcstmzr.guestfish.GuestfishOperation
+import com.imgcstmzr.patch.Patch
 import com.imgcstmzr.patch.PathOperation
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems
@@ -15,16 +16,6 @@ import com.imgcstmzr.runtime.RunningOperatingSystem
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.util.quoted
 import java.nio.file.Path
-
-
-interface Patch {
-    val name: String
-    val preFileImgOperations: List<ImgOperation>
-    val guestfishOperations: List<GuestfishOperation>
-    val fileSystemOperations: List<PathOperation>
-    val postFileImgOperations: List<ImgOperation>
-    val programs: List<Program>
-}
 
 data class SimplePatch(
     override val name: String,
@@ -109,6 +100,7 @@ class GuestfishOperationsCollector(private val guestfishOperations: MutableList<
         guestfishOperations += GuestfishOperation("chown $userId $groupId ${path.quoted}")
     }
 
+    // TODO use PosixFilePermission
     fun changeMode(path: String, owner: Byte, group: Byte, other: Byte) {
         listOf(owner, group, other).forEach { require(it in 0..7) { "Permission $it must be between 0 and 7 (both inclusive)." } }
         guestfishOperations += GuestfishOperation("chmod 0$owner$group$other ${path.quoted}")
@@ -123,7 +115,7 @@ class GuestfishOperationsCollector(private val guestfishOperations: MutableList<
     fun rootFile(path: String, content: String) {
         val commands = arrayOf(
             "touch ${path.quoted}",
-            "chown 0  0 ${path.quoted}",
+            "chown 0 0 ${path.quoted}",
             "chmod 0700 ${path.quoted}",
             *content.lines().map() { line ->
                 "write-append ${path.quoted} ${"$line\\n".replace("\"", "\\\"").quoted}"

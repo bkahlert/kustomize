@@ -5,6 +5,7 @@ import com.bkahlert.koodies.collections.dictOf
 import com.bkahlert.koodies.number.ApproximationMode
 import com.bkahlert.koodies.number.mod
 import com.bkahlert.koodies.string.CodePoint.CodePointRange
+import com.bkahlert.koodies.string.Unicode.UnicodeBlockMeta.Companion.metaFor
 import java.net.URL
 import java.time.Instant
 import java.time.ZoneId
@@ -26,6 +27,11 @@ by dictOf("unicode.dict.tsv"
      * Returns this character's [Unicode name](https://unicode.org/charts/charindex.html).
      */
     val Char.unicodeName: String get() = Unicode[this.toLong()]
+
+    /**
+     * [START OF HEADING](https://codepoints.net/U+0001)
+     */
+    const val startOfHeading = '\u0001'
 
     /**
      * [ESCAPE](https://codepoints.net/U+001B)
@@ -96,86 +102,80 @@ by dictOf("unicode.dict.tsv"
      */
     object DivinationSymbols {
         @Suppress("unused", "KDocMissingDocumentation")
-        enum class Monograms(override val range: CodePointRange = CodePoint("𝌀")..CodePoint("𝌀")) : UnicodeBlock {
+        enum class Monograms(override val range: CodePointRange = CodePoint("𝌀")..CodePoint("𝌀")) : UnicodeBlock<Monograms> {
             Earth;
 
-            override val valueCount by lazy { values().size }
             override fun toString(): String = string
 
-            companion object : UnicodeBlockMeta(values().first())
+            companion object : UnicodeBlockMeta<Monograms> by metaFor()
         }
 
         @Suppress("unused", "KDocMissingDocumentation")
-        enum class Digrams(override val range: CodePointRange = CodePoint("𝌁")..CodePoint("𝌅")) : UnicodeBlock {
+        enum class Digrams(override val range: CodePointRange = CodePoint("𝌁")..CodePoint("𝌅")) : UnicodeBlock<Digrams> {
             HeavenlyEarth, HumanEarth, EarthlyHeaven, EarthlyHuman, Earth;
 
-            override val valueCount by lazy { values().size }
             override fun toString(): String = string
 
-            companion object : UnicodeBlockMeta(values().first())
+            companion object : UnicodeBlockMeta<Digrams> by metaFor()
         }
 
         @Suppress("unused", "KDocMissingDocumentation")
-        enum class Tetragrams(override val range: CodePointRange = CodePoint("𝌆")..CodePoint("𝍖")) : UnicodeBlock {
+        enum class Tetragrams(override val range: CodePointRange = CodePoint("𝌆")..CodePoint("𝍖")) : UnicodeBlock<Tetragrams> {
             Centre, FullCircle, Mired, Barrier, KeepingSmall, Contrariety, Ascent, Opposition, BranchingOut, DefectivenessOrDistortion, Divergence, Youthfulness, Increase, Penetration, Reach, Contact, HoldingBack, Waiting, Following, Advance, Release, Resistance, Ease, Joy, Contention, Endeavour, Duties, Change, Decisiveness, BoldResolution, Packing, Legion, Closeness, Kinship, Gathering, Strength, Purity, Fullness, Residence, LawOrModel, Response, GoingToMeet, Encounters, Stove, Greatness, Enlargement, Pattern, Ritual, Flight, VastnessOrWasting, Constancy, Measure, Eternity, Unity, Diminishment, ClosedMouth, Guardedness, GatheringIn, Massing, Accumulation, Embellishment, Doubt, Watch, Sinking, Inner, Departure, Darkening, Dimming, Exhaustion, Severance, Stoppage, Hardness, Completion, Closure, Failure, Aggravation, Compliance, OnTheVerge, Difficulties, Labouring, Fostering;
 
-            override val valueCount by lazy { values().size }
             override fun toString(): String = string
 
-            companion object : UnicodeBlockMeta(values().first())
+            companion object : UnicodeBlockMeta<Tetragrams> by metaFor()
         }
     }
 
     @Suppress("unused", "KDocMissingDocumentation")
-    enum class BoxDrawings(override val range: CodePointRange = CodePoint("─")..CodePoint("╿")) : UnicodeBlock {
+    enum class BoxDrawings(override val range: CodePointRange = CodePoint("─")..CodePoint("╿")) : UnicodeBlock<BoxDrawings> {
         LightHorizontal, HeavyHorizontal, LightVertical, HeavyVertical, LightTripleDashHorizontal, HeavyTripleDashHorizontal, LightTripleDashVertical, HeavyTripleDashVertical, LightQuadrupleDashHorizontal, HeavyQuadrupleDashHorizontal, LightQuadrupleDashVertical, HeavyQuadrupleDashVertical, LightDownAndRight, DownLightAndRightHeavy, DownHeavyAndRightLight, HeavyDownAndRight, LightDownAndLeft, DownLightAndLeftHeavy, DownHeavyAndLeftLight, HeavyDownAndLeft, LightUpAndRight, UpLightAndRightHeavy, UpHeavyAndRightLight, HeavyUpAndRight, LightUpAndLeft, UpLightAndLeftHeavy, UpHeavyAndLeftLight, HeavyUpAndLeft, LightVerticalAndRight, VerticalLightAndRightHeavy, UpHeavyAndRightDownLight, DownHeavyAndRightUpLight, VerticalHeavyAndRightLight, DownLightAndRightUpHeavy, UpLightAndRightDownHeavy, HeavyVerticalAndRight, LightVerticalAndLeft, VerticalLightAndLeftHeavy, UpHeavyAndLeftDownLight, DownHeavyAndLeftUpLight, VerticalHeavyAndLeftLight, DownLightAndLeftUpHeavy, UpLightAndLeftDownHeavy, HeavyVerticalAndLeft, LightDownAndHorizontal, LeftHeavyAndRightDownLight, RightHeavyAndLeftDownLight, DownLightAndHorizontalHeavy, DownHeavyAndHorizontalLight, RightLightAndLeftDownHeavy, LeftLightAndRightDownHeavy, HeavyDownAndHorizontal, LightUpAndHorizontal, LeftHeavyAndRightUpLight, RightHeavyAndLeftUpLight, UpLightAndHorizontalHeavy, UpHeavyAndHorizontalLight, RightLightAndLeftUpHeavy, LeftLightAndRightUpHeavy, HeavyUpAndHorizontal, LightVerticalAndHorizontal, LeftHeavyAndRightVerticalLight, RightHeavyAndLeftVerticalLight, VerticalLightAndHorizontalHeavy, UpHeavyAndDownHorizontalLight, DownHeavyAndUpHorizontalLight, VerticalHeavyAndHorizontalLight, LeftUpHeavyAndRightDownLight, RightUpHeavyAndLeftDownLight, LeftDownHeavyAndRightUpLight, RightDownHeavyAndLeftUpLight, DownLightAndUpHorizontalHeavy, UpLightAndDownHorizontalHeavy, RightLightAndLeftVerticalHeavy, LeftLightAndRightVerticalHeavy, HeavyVerticalAndHorizontal, LightDoubleDashHorizontal, HeavyDoubleDashHorizontal, LightDoubleDashVertical, HeavyDoubleDashVertical, DoubleHorizontal, DoubleVertical, DownSingleAndRightDouble, DownDoubleAndRightSingle, DoubleDownAndRight, DownSingleAndLeftDouble, DownDoubleAndLeftSingle, DoubleDownAndLeft, UpSingleAndRightDouble, UpDoubleAndRightSingle, DoubleUpAndRight, UpSingleAndLeftDouble, UpDoubleAndLeftSingle, DoubleUpAndLeft, VerticalSingleAndRightDouble, VerticalDoubleAndRightSingle, DoubleVerticalAndRight, VerticalSingleAndLeftDouble, VerticalDoubleAndLeftSingle, DoubleVerticalAndLeft, DownSingleAndHorizontalDouble, DownDoubleAndHorizontalSingle, DoubleDownAndHorizontal, UpSingleAndHorizontalDouble, UpDoubleAndHorizontalSingle, DoubleUpAndHorizontal, VerticalSingleAndHorizontalDouble, VerticalDoubleAndHorizontalSingle, DoubleVerticalAndHorizontal, LightArcDownAndRight, LightArcDownAndLeft, LightArcUpAndLeft, LightArcUpAndRight, LightDiagonalUpperRightToLowerLeft, LightDiagonalUpperLeftToLowerRight, LightDiagonalCross, LightLeft, LightUp, LightRight, LightDown, HeavyLeft, HeavyUp, HeavyRight, HeavyDown, LightLeftAndHeavyRight, LightUpAndHeavyDown, HeavyLeftAndLightRight, HeavyUpAndLightDown;
 
-        override val valueCount by lazy { values().size }
         override fun toString(): String = string
 
-        companion object : UnicodeBlockMeta(values().first())
+        companion object : UnicodeBlockMeta<BoxDrawings> by metaFor()
     }
 
     var boxDrawings = ('\u2500'..'\u257F').toList()
 
     @Suppress("unused", "KDocMissingDocumentation")
-    enum class CombiningDiacriticalMarks(override val range: CodePointRange = CodePoint("̀")..CodePoint("ͯ")) : UnicodeBlock {
+    enum class CombiningDiacriticalMarks(override val range: CodePointRange = CodePoint("̀")..CodePoint("ͯ")) : UnicodeBlock<CombiningDiacriticalMarks> {
         CombiningGraveAccent, CombiningAcuteAccent, CombiningCircumflexAccent, CombiningTilde, CombiningMacron, CombiningOverline, CombiningBreve, CombiningDotAbove, CombiningDiaeresis, CombiningHookAbove, CombiningRingAbove, CombiningDoubleAcuteAccent, CombiningCaron, CombiningVerticalLineAbove, CombiningDoubleVerticalLineAbove, CombiningDoubleGraveAccent, CombiningCandrabindu, CombiningInvertedBreve, CombiningTurnedCommaAbove, CombiningCommaAbove, CombiningReversedCommaAbove, CombiningCommaAboveRight, CombiningGraveAccentBelow, CombiningAcuteAccentBelow, CombiningLeftTackBelow, CombiningRightTackBelow, CombiningLeftAngleAbove, CombiningHorn, CombiningLeftHalfRingBelow, CombiningUpTackBelow, CombiningDownTackBelow, CombiningPlusSignBelow, CombiningMinusSignBelow, CombiningPalatalizedHookBelow, CombiningRetroflexHookBelow, CombiningDotBelow, CombiningDiaeresisBelow, CombiningRingBelow, CombiningCommaBelow, CombiningCedilla, CombiningOgonek, CombiningVerticalLineBelow, CombiningBridgeBelow, CombiningInvertedDoubleArchBelow, CombiningCaronBelow, CombiningCircumflexAccentBelow, CombiningBreveBelow, CombiningInvertedBreveBelow, CombiningTildeBelow, CombiningMacronBelow, CombiningLowLine, CombiningDoubleLowLine, CombiningTildeOverlay, CombiningShortStrokeOverlay, CombiningLongStrokeOverlay, CombiningShortSolidusOverlay, CombiningLongSolidusOverlay, CombiningRightHalfRingBelow, CombiningInvertedBridgeBelow, CombiningSquareBelow, CombiningSeagullBelow, CombiningXAbove, CombiningVerticalTilde, CombiningDoubleOverline, CombiningGraveToneMark, CombiningAcuteToneMark, CombiningGreekPerispomeni, CombiningGreekKoronis, CombiningGreekDialytikaTonos, CombiningGreekYpogegrammeni, CombiningBridgeAbove, CombiningEqualsSignBelow, CombiningDoubleVerticalLineBelow, CombiningLeftAngleBelow, CombiningNotTildeAbove, CombiningHomotheticAbove, CombiningAlmostEqualToAbove, CombiningLeftRightArrowBelow, CombiningUpwardsArrowBelow, CombiningGraphemeJoiner, CombiningRightArrowheadAbove, CombiningLeftHalfRingAbove, CombiningFermata, CombiningXBelow, CombiningLeftArrowheadBelow, CombiningRightArrowheadBelow, CombiningRightArrowheadAndUpArrowheadBelow, CombiningRightHalfRingAbove, CombiningDotAboveRight, CombiningAsteriskBelow, CombiningDoubleRingBelow, CombiningZigzagAbove, CombiningDoubleBreveBelow, CombiningDoubleBreve, CombiningDoubleMacron, CombiningDoubleMacronBelow, CombiningDoubleTilde, CombiningDoubleInvertedBreve, CombiningDoubleRightwardsArrowBelow, CombiningLatinSmallLetterA, CombiningLatinSmallLetterE, CombiningLatinSmallLetterI, CombiningLatinSmallLetterO, CombiningLatinSmallLetterU, CombiningLatinSmallLetterC, CombiningLatinSmallLetterD, CombiningLatinSmallLetterH, CombiningLatinSmallLetterM, CombiningLatinSmallLetterR, CombiningLatinSmallLetterT, CombiningLatinSmallLetterV, CombiningLatinSmallLetterX;
 
-        override val valueCount by lazy { values().size }
         override fun toString(): String = string
 
-        companion object : UnicodeBlockMeta(values().first())
+        companion object : UnicodeBlockMeta<CombiningDiacriticalMarks> by metaFor()
     }
 
     @Suppress("unused", "KDocMissingDocumentation")
-    enum class CombiningDiacriticalMarksSupplementBlock(override val range: CodePointRange = CodePoint("᷀")..CodePoint("᷿")) : UnicodeBlock {
+    enum class CombiningDiacriticalMarksSupplementBlock(override val range: CodePointRange = CodePoint("᷀")..CodePoint("᷿")) :
+        UnicodeBlock<CombiningDiacriticalMarksSupplementBlock> {
         CombiningDottedGraveAccent, CombiningDottedAcuteAccent, CombiningSnakeBelow, CombiningSuspensionMark, CombiningMacronAcute, CombiningGraveMacron, CombiningMacronGrave, CombiningAcuteMacron, CombiningGraveAcuteGrave, CombiningAcuteGraveAcute, CombiningLatinSmallLetterRBelow, CombiningBreveMacron, CombiningMacronBreve, CombiningDoubleCircumflexAbove, CombiningOgonekAbove, CombiningZigzagBelow, CombiningIsBelow, CombiningUrAbove, CombiningUsAbove, CombiningLatinSmallLetterFlattenedOpenAAbove, CombiningLatinSmallLetterAe, CombiningLatinSmallLetterAo, CombiningLatinSmallLetterAv, CombiningLatinSmallLetterCCedilla, CombiningLatinSmallLetterInsularD, CombiningLatinSmallLetterEth, CombiningLatinSmallLetterG, CombiningLatinLetterSmallCapitalG, CombiningLatinSmallLetterK, CombiningLatinSmallLetterL, CombiningLatinLetterSmallCapitalL, CombiningLatinLetterSmallCapitalM, CombiningLatinSmallLetterN, CombiningLatinLetterSmallCapitalN, CombiningLatinLetterSmallCapitalR, CombiningLatinSmallLetterRRotunda, CombiningLatinSmallLetterS, CombiningLatinSmallLetterLongS, CombiningLatinSmallLetterZ, CombiningDoubleInvertedBreveBelow, CombiningAlmostEqualToBelow, CombiningLeftArrowheadAbove, CombiningRightArrowheadAndDownArrowheadBelow;
 
-        override val valueCount by lazy { values().size }
         override fun toString(): String = string
 
-        companion object : UnicodeBlockMeta(values().first())
+        companion object : UnicodeBlockMeta<CombiningDiacriticalMarksSupplementBlock> by metaFor()
     }
 
     @Suppress("unused", "KDocMissingDocumentation")
-    enum class CombiningDiacriticalMarksForSymbolsBlock(override val range: CodePointRange = CodePoint("⃐")..CodePoint("⃰")) : UnicodeBlock {
+    enum class CombiningDiacriticalMarksForSymbolsBlock(override val range: CodePointRange = CodePoint("⃐")..CodePoint("⃰")) :
+        UnicodeBlock<CombiningDiacriticalMarksForSymbolsBlock> {
         CombiningLeftHarpoonAbove, CombiningRightHarpoonAbove, CombiningLongVerticalLineOverlay, CombiningShortVerticalLineOverlay, CombiningAnticlockwiseArrowAbove, CombiningClockwiseArrowAbove, CombiningLeftArrowAbove, CombiningRightArrowAbove, CombiningRingOverlay, CombiningClockwiseRingOverlay, CombiningAnticlockwiseRingOverlay, CombiningThreeDotsAbove, CombiningFourDotsAbove, CombiningEnclosingCircle, CombiningEnclosingSquare, CombiningEnclosingDiamond, CombiningEnclosingCircleBackslash, CombiningLeftRightArrowAbove, CombiningEnclosingScreen, CombiningEnclosingKeycap, CombiningEnclosingUpwardPointingTriangle, CombiningReverseSolidusOverlay, CombiningDoubleVerticalStrokeOverlay, CombiningAnnuitySymbol, CombiningTripleUnderdot, CombiningWideBridgeAbove, CombiningLeftwardsArrowOverlay, CombiningLongDoubleSolidusOverlay, CombiningRightwardsHarpoonWithBarbDownwards, CombiningLeftwardsHarpoonWithBarbDownwards, CombiningLeftArrowBelow, CombiningRightArrowBelow, CombiningAsteriskAbove;
 
-        override val valueCount by lazy { values().size }
         override fun toString(): String = string
 
-        companion object : UnicodeBlockMeta(values().first())
+        companion object : UnicodeBlockMeta<CombiningDiacriticalMarksForSymbolsBlock> by metaFor()
     }
 
     @Suppress("unused", "KDocMissingDocumentation")
-    enum class CombiningHalfMarksBlock(override val range: CodePointRange = CodePoint("︠")..CodePoint("︦")) : UnicodeBlock {
+    enum class CombiningHalfMarksBlock(override val range: CodePointRange = CodePoint("︠")..CodePoint("︦")) : UnicodeBlock<CombiningHalfMarksBlock> {
         CombiningLigatureLeftHalf, CombiningLigatureRightHalf, CombiningDoubleTildeLeftHalf, CombiningDoubleTildeRightHalf, CombiningMacronLeftHalf, CombiningMacronRightHalf, CombiningConjoiningMacron;
 
-        override val valueCount by lazy { values().size }
         override fun toString(): String = string
 
-        companion object : UnicodeBlockMeta(values().first())
+        companion object : UnicodeBlockMeta<CombiningHalfMarksBlock> by metaFor()
     }
 
     @Suppress("SpellCheckingInspection")
@@ -411,29 +411,44 @@ by dictOf("unicode.dict.tsv"
      *
      * @sample DivinationSymbols.Digrams
      */
-    interface UnicodeBlock : ClosedRange<CodePoint> {
+    interface UnicodeBlock<T : Enum<T>> : ClosedRange<CodePoint> {
         override val start: CodePoint get() = range.start
         override val endInclusive: CodePoint get() = range.endInclusive
         override fun contains(value: CodePoint): Boolean = range.contains(value)
         override fun isEmpty(): Boolean = range.isEmpty()
 
         val range: CodePointRange
-        val codePointCount: Int get() = range.last - range.first + 1
-        val valueCount: Int
         val ordinal: Int
         val string: String get() = (range.first + ordinal).string
     }
 
-    open class UnicodeBlockMeta(val unicodeBlock: UnicodeBlock) {
-        val isValid: Boolean by lazy { unicodeBlock.valueCount == unicodeBlock.codePointCount }
-        val name: String by lazy { toString().split("$").last { !it.contains("Companion") } }
-        fun asTable(): String = with(unicodeBlock) {
-            check(isValid) { "Unicode block must have the same number of values ($valueCount) as code points ($codePointCount)." }
-            val table = StringBuilder()
-            for (codePoint in range) {
-                table.append("$codePoint\t${codePoint.unicodeName}\n")
+    interface UnicodeBlockMeta<T> where T : UnicodeBlock<T>, T : Enum<T> {
+        val valueCount: Int
+        val unicodeBlock: UnicodeBlock<T>
+        val codePointCount: Int
+        val isValid: Boolean
+        val name: String
+        fun asTable(): String
+
+        companion object {
+            inline fun <reified T> metaFor(): UnicodeBlockMeta<T> where T : Enum<T>, T : UnicodeBlock<T> =
+                SimpleUnicodeBlockMeta(enumValues())
+        }
+
+        class SimpleUnicodeBlockMeta<T>(val values: Array<T>) : UnicodeBlockMeta<T> where T : Enum<T>, T : UnicodeBlock<T> {
+            override val valueCount: Int by lazy { values.size }
+            override val unicodeBlock: UnicodeBlock<T> by lazy { values.first() }
+            override val codePointCount: Int by lazy { unicodeBlock.range.last - unicodeBlock.range.first + 1 }
+            override val isValid: Boolean by lazy { valueCount == codePointCount }
+            override val name: String by lazy { toString().split("$").last { !it.contains("Companion") } }
+            override fun asTable(): String = with(unicodeBlock) {
+                check(isValid) { "Unicode block must have the same number of values ($valueCount) as code points ($codePointCount)." }
+                val table = StringBuilder()
+                for (codePoint in range) {
+                    table.append("$codePoint\t${codePoint.unicodeName}\n")
+                }
+                "$table"
             }
-            "$table"
         }
     }
 }

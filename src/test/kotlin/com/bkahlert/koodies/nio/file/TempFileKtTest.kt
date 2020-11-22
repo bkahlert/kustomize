@@ -1,14 +1,14 @@
 package com.bkahlert.koodies.nio.file
 
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.delete
+import com.imgcstmzr.util.Paths
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.endsWith
 import strikt.assertions.exists
-import strikt.assertions.isDirectory
+import strikt.assertions.isEqualTo
 import strikt.assertions.isRegularFile
 import strikt.assertions.startsWith
 
@@ -19,27 +19,30 @@ class TempFileKtTest {
 
     @Test
     fun `should create temp file if called stand-alone`() {
-        expectThat(tempDir.tempFile("base", ".test"))
-            .exists()
-            .isRegularFile()
-            .get { "${last()}" }.startsWith("base").endsWith(".test")
+        expectThat(tempFile("base", ".test")) {
+            exists()
+            isRegularFile()
+            get { fileName.serialized }.startsWith("base").endsWith(".test")
+            get { parent }.isEqualTo(Paths.TEMP)
+        }
     }
 
     @Test
     fun `should create temp file if called with path receiver`() {
-        expectThat(tempDir.tempDir("parent", "dir").tempFile("child", "file"))
-            .exists()
-            .isRegularFile()
-            .compose("parent and child") {
-                get { parent }.isDirectory().get { "${last()}" }.startsWith("parent").endsWith("dir")
-                get { "${last()}" }.startsWith("child").endsWith("file")
-            } then { if (allPassed) pass() else fail() }
+        expectThat(tempDir.tempDir("parent", "dir").tempFile("child", "file")) {
+            exists()
+            isRegularFile()
+            get { fileName.serialized }.startsWith("child").endsWith("file")
+            get { parent.fileName.serialized }.startsWith("parent").endsWith("dir")
+            get { parent.parent }.isEqualTo(tempDir)
+        }
     }
 
     @Test
-    fun `should create temp file if called with non-existant path receiver`() {
-        expectThat(tempDir.tempDir("parent", "dir").also { it.delete() }.tempFile("child", "file"))
-            .exists()
-            .isRegularFile()
+    fun `should create temp file if called with non-existent path receiver`() {
+        expectThat(tempDir.tempPath("parent", "path").tempFile("child", "file")) {
+            exists()
+            get { parent }.exists()
+        }
     }
 }

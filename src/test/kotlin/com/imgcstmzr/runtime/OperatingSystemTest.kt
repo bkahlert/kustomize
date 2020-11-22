@@ -7,13 +7,12 @@ import com.bkahlert.koodies.exception.dump
 import com.bkahlert.koodies.nio.NonBlockingReader
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightMagenta
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
 import com.bkahlert.koodies.time.sleep
 import com.bkahlert.koodies.tracing.trace
 import com.bkahlert.koodies.unit.Kibi
-import com.bkahlert.koodies.unit.bytes
+import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.cli.TestCli
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.empty
@@ -28,6 +27,7 @@ import com.imgcstmzr.util.logging.InMemoryLoggerFactory
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -50,7 +50,7 @@ class OperatingSystemTest {
         override val defaultCredentials = empty
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should detect login line`() = mapOf(
         true to listOf(
             "raspberrypi login: ",
@@ -76,7 +76,7 @@ class OperatingSystemTest {
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should detect ready line`() = mapOf(
         true to listOf(
             "pi@raspberrypi:~$",
@@ -120,8 +120,7 @@ class OperatingSystemTest {
     }
 
     @Slow
-    @Execution(CONCURRENT)
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory<String?>): List<DynamicTest> = listOf(
         LoginSimulation(2.0, "\n"),
         LoginSimulation(0.5, "\n"),
@@ -169,7 +168,7 @@ class OperatingSystemTest {
     @Test
     fun `should finish program`(logger: InMemoryLogger<String?>) {
         TestCli.cmd.main(emptyList())
-        val scriptContent = TestCli.cmd.scripts["the-basics"] ?: throw NoSuchElementException("Could not load program")
+        val scriptContent = TestCli.cmd.scripts["the basics"] ?: throw NoSuchElementException("Could not load program")
         val script = os.compileSetupScript("test", scriptContent)[1]//.logging()
         val processMock = ProcessMock(logger = logger, processExit = { computing() })
         val runningOS = object : RunningOperatingSystem() {

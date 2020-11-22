@@ -1,14 +1,13 @@
 package com.bkahlert.koodies.exception
 
-import com.bkahlert.koodies.nio.ClassPath
 import com.bkahlert.koodies.nio.file.tempDir
-import com.bkahlert.koodies.nio.file.tempFile
+import com.bkahlert.koodies.nio.file.tempPath
+import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.regex.RegularExpressions
 import com.bkahlert.koodies.regex.sequenceOfAllMatches
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.delete
-import com.imgcstmzr.util.writeText
+import com.imgcstmzr.util.MiscFixture
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -25,8 +24,8 @@ import java.net.URL
 class DumpKtTest {
 
     private val tempDir = tempDir().deleteOnExit()
-    private val path get() = tempDir.tempFile(DumpKtTest::class.toString(), ".log").apply { delete() }
-    private val data = { ClassPath("raspberry.boot").readText() }
+    private val path get() = tempDir.tempPath(DumpKtTest::class.toString(), ".log")
+    private val data get() = MiscFixture.BootingRaspberry.text
 
     @Test
     fun `should contain explanation`() {

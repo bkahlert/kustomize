@@ -4,7 +4,6 @@ import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.startAsDaemon
 import com.bkahlert.koodies.nio.NonBlockingReader
 import com.bkahlert.koodies.string.joinLinesToString
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
 import com.imgcstmzr.runtime.ProcessExitMock.Companion.immediateExit
@@ -18,6 +17,7 @@ import org.apache.commons.io.output.ByteArrayOutputStream
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import org.junit.jupiter.api.parallel.Isolated
@@ -66,7 +66,7 @@ class ProcessMockTest {
             }
         }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should provide 'block on prompt' behavior`(logger: InMemoryLogger<String?>) =
             listOf("with echoed input" to true,
                 "without echoed input" to false).map { (name, echoOption) ->
@@ -113,7 +113,7 @@ class ProcessMockTest {
             expectThat(input.byteInputStream().readAllBytes()).isEqualTo(inputStream.readAllBytes())
         }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should never apply delay at at end stream`(logger: InMemoryLogger<String?>) = "𝌪".let { input ->
             listOf(
                 SlowInputStream(input,

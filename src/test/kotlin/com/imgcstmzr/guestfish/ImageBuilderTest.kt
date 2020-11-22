@@ -1,25 +1,25 @@
 package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.io.TarArchiveGzCompressor.tarGzip
+import com.bkahlert.koodies.nio.file.addExtension
+import com.bkahlert.koodies.nio.file.mkdirs
+import com.bkahlert.koodies.nio.file.removeExtension
 import com.bkahlert.koodies.nio.file.tempDir
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
+import com.bkahlert.koodies.nio.file.writeText
+import com.bkahlert.koodies.number.hasSize
 import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
-import com.bkahlert.koodies.test.strikt.hasSize
 import com.bkahlert.koodies.unit.Gibi
 import com.bkahlert.koodies.unit.Mebi
-import com.bkahlert.koodies.unit.bytes
+import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.guestfish.ImageBuilder.format
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.util.DockerRequiring
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.addExtension
 import com.imgcstmzr.util.logging.InMemoryLogger
-import com.imgcstmzr.util.mkdirs
-import com.imgcstmzr.util.removeExtension
-import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
@@ -39,7 +39,7 @@ class ImageBuilderTest {
     @Nested
     inner class Format {
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should format size`() = listOf(
             4.Mebi.bytes to "4M",
             4.2.Mebi.bytes to "5M",

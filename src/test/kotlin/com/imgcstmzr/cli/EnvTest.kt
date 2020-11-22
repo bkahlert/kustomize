@@ -2,9 +2,9 @@ package com.imgcstmzr.cli
 
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
+import com.bkahlert.koodies.nio.file.writeText
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.logging.InMemoryLogger
-import com.imgcstmzr.util.writeText
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT

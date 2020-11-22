@@ -1,11 +1,9 @@
 package com.bkahlert.koodies.test.junit
 
-import org.junit.jupiter.api.TestFactory
 import org.junit.platform.engine.support.descriptor.ClassSource
 import org.junit.platform.engine.support.descriptor.MethodSource
 import org.junit.platform.launcher.TestIdentifier
 import org.junit.platform.launcher.TestPlan
-import java.lang.reflect.GenericDeclaration
 import java.lang.reflect.Method
 
 val TestPlan.rootIds: List<String> get() = roots.map { root -> root.uniqueId }
@@ -20,9 +18,6 @@ val TestPlan.allTestJavaMethods: List<Method> get() = allMethodSources.map { it.
 val TestPlan.allTestContainers: List<TestIdentifier> get() = allTestIdentifiers.filter { it.isTopLevelContainer(this) }
 val TestPlan.allContainerSources: List<ClassSource> get() = allTestContainers.mapNotNull { it.source.orElse(null) as? ClassSource }
 val TestPlan.allContainerJavaClasses: List<Class<*>> get() = allContainerSources.mapNotNull { it.javaClass }
-
-val TestPlan.allDynamicContainerJavaClasses get() : List<Method> = allTestJavaMethods.withAnnotation<TestFactory>().mapNotNull { it as? Method }
-val TestPlan.allEffectiveContainerJavaClasses: List<GenericDeclaration> get() = allContainerJavaClasses + allDynamicContainerJavaClasses
 
 fun TestIdentifier.isTopLevelContainer(testPlan: TestPlan): Boolean = parentId.map { testPlan.rootIds.contains(it) }.orElse(true)
 fun TestIdentifier.isLeaf(testPlan: TestPlan) = testPlan.leaves.contains(uniqueId)

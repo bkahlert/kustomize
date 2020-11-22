@@ -3,10 +3,10 @@ import com.bkahlert.koodies.terminal.ansi.AnsiCode
 import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.asAnsiString
 import com.bkahlert.koodies.terminal.ansi.AnsiStringTest.Companion.ansiString
 import com.bkahlert.koodies.terminal.ansi.AnsiStringTest.Companion.nonAnsiString
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicNode
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -17,7 +17,7 @@ class LinesOfLengthKtTest {
 
     @Nested
     inner class NonAnsiString {
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should be split with maximum line length`(): List<DynamicNode> = listOf(
             "sequence" to "$nonAnsiString\n".linesOfLengthSequence(26).toList(),
             "list" to "$nonAnsiString\n".linesOfLength(26),
@@ -33,7 +33,7 @@ class LinesOfLengthKtTest {
             }
         }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should be split with maximum line length with trailing line removed`(): List<DynamicNode> = listOf(
             "sequence" to "$nonAnsiString\n".linesOfLengthSequence(26, ignoreTrailingSeparator = true).toList(),
             "list" to "$nonAnsiString\n".linesOfLength(26, ignoreTrailingSeparator = true),
@@ -52,7 +52,7 @@ class LinesOfLengthKtTest {
 
     @Nested
     inner class AnsiString {
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should be split with maximum line length`(): List<DynamicNode> = listOf(
             "sequence" to (ansiString + "\n").linesOfLengthSequence(26).toList(),
             "list" to (ansiString + "\n").linesOfLength(26),
@@ -68,7 +68,7 @@ class LinesOfLengthKtTest {
             }
         }
 
-        @ConcurrentTestFactory
+        @TestFactory
         fun `should be split with maximum line length with trailing line removed`(): List<DynamicNode> = listOf(
             "sequence" to (ansiString + "\n").linesOfLengthSequence(26, ignoreTrailingSeparator = true).toList(),
             "list" to (ansiString + "\n").linesOfLength(26, ignoreTrailingSeparator = true),

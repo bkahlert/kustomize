@@ -1,9 +1,9 @@
 package com.bkahlert.koodies.string
 
 
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -13,7 +13,7 @@ import strikt.assertions.isTrue
 @Execution(CONCURRENT)
 class CharRangesTest {
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `alphanumeric contains`() = listOf(
         CharRanges.`a-z` to
             (listOf('a', 'b', 'c') to

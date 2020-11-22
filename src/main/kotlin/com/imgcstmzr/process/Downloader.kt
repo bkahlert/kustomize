@@ -1,14 +1,13 @@
 package com.imgcstmzr.process
 
 import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
-import com.github.ajalt.clikt.output.TermUi.echo
+import com.bkahlert.koodies.nio.file.list
+import com.bkahlert.koodies.nio.file.tempDir
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.singleLineLogger
-import com.imgcstmzr.util.checkSingleFile
 import com.imgcstmzr.util.cleanUp
 import java.net.URI
-import java.nio.file.Files
 import java.nio.file.Path
 
 //class X(caption: String, borderedOutput: Boolean = false) :
@@ -45,7 +44,7 @@ class Downloader(vararg customHandlers: Pair<String, Handler>) {
      * Optionally a [filename] can be provided which is used for logging at places where the [url] would otherwise have been used.
      */
     fun download(url: String, logger: RenderingLogger<*>, retries: Int = 5, filename: String? = null): Path =
-        customHandlerMapping[url.findScheme()]?.invoke(URI.create(url), logger) ?: Files.createTempDirectory("imgcstmzr").let { temp ->
+        customHandlerMapping[url.findScheme()]?.invoke(URI.create(url), logger) ?: tempDir("imgcstmzr").let { temp ->
             logger.singleLineLogger("Downloading ${filename ?: url} to $temp") {
 
                 // TODO parse progress and feedback
@@ -63,26 +62,10 @@ class Downloader(vararg customHandlers: Pair<String, Handler>) {
                         "--retry-max-time 300",
                         url,
                     )
-//            command(
-//                "wget",
-//                "--show-progress --progress=bar:force",
-//                "--tries=10",
-//                "--timeout=300",
-//                "--waitretry=5",
-//                "--retry-connrefused",
-//                "--compression=auto",
-//                "--content-disposition",
-//                "--continue",
-//                "--ignore-case",
-//                "--adjust-extension",
-//                "--directory-prefix=$temp",
-//                url,
-//                "&& break",
-//            )
                     !"done"
                 }.waitForExitCode()
 
-                temp.checkSingleFile { "Failed to download $url." }.cleanUp("?").also { echo(" Completed.") }
+                temp.list().singleOrNull()?.cleanUp() ?: throw IllegalStateException("Failed to download $url.")
             }
         }
 }

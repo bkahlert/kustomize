@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.terminal.ascii
 
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
@@ -11,7 +11,7 @@ import strikt.assertions.isEqualTo
 @Execution(CONCURRENT)
 class BorderTest {
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should border centered text`(): List<DynamicTest> {
         val string = """
                    foo
@@ -32,7 +32,7 @@ class BorderTest {
         }
     }
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun `should border centered text with padding and margin`(): List<DynamicTest> {
         val string = """
                    foo

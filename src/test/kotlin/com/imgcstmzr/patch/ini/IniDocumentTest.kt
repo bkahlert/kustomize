@@ -1,19 +1,21 @@
 package com.imgcstmzr.patch.ini
 
-import com.bkahlert.koodies.nio.ClassPath
+import com.bkahlert.koodies.nio.file.readText
+import com.bkahlert.koodies.nio.file.tempDir
+import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
-import com.bkahlert.koodies.test.junit.ConcurrentTestFactory
 import com.imgcstmzr.patch.ini.IniDocument.CommentLine
 import com.imgcstmzr.patch.ini.IniDocument.KeyLine
 import com.imgcstmzr.patch.ini.IniDocument.Line
 import com.imgcstmzr.patch.ini.IniDocument.SectionLine
-import com.imgcstmzr.util.copyToTempFile
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
+import com.imgcstmzr.util.ImgFixture
 import com.imgcstmzr.util.quoted
-import com.imgcstmzr.util.readAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
@@ -29,6 +31,8 @@ import strikt.assertions.isNull
 
 @Execution(CONCURRENT)
 class IniDocumentTest {
+
+    private val tempDir = tempDir().deleteOnExit()
 
     @Suppress("SpellCheckingInspection") val rawDocument = """
         # http://rpf.io/configtxt
@@ -58,7 +62,7 @@ class IniDocumentTest {
            abc = 'de f"g${"\t\t\t"} #t${'$'}€$£💷 peace ✌️
         """.trimIndent()
 
-    @ConcurrentTestFactory
+    @TestFactory
     fun fragment(): List<DynamicTest> = listOf(
         """
             dtparam=audio=on
@@ -191,7 +195,7 @@ class IniDocumentTest {
             val iniDocument = IniDocument(rawDocument)
             iniDocument.findKey("missing").also { expectThat(it).isEmpty() }
             iniDocument.append("missing=no-more")
-            expectThat(iniDocument.toString()).endsWith("missing=no-more")
+            expectThat("$iniDocument").endsWith("missing=no-more")
         }
 
         @Test
@@ -202,19 +206,19 @@ class IniDocumentTest {
             iniDocument.createKeyIfMissing("missing", "v2", "all")
             iniDocument.createKeyIfMissing("missing", "v3", "xxx")
 
-            expectThat(iniDocument.toString()).endsWith("missing=v1,v2\n[xxx]\nmissing=v3")
+            expectThat("$iniDocument").endsWith("missing=v1,v2\n[xxx]\nmissing=v3")
         }
 
         @Suppress("SpellCheckingInspection")
         @Test
         fun `should make basic changes and persist file`() {
-            val path = ClassPath.of("config.txt").copyToTempFile()
+            val path = ImgFixture.Boot.ConfigTxt.copyTo(tempDir.tempFile())
             val iniDocument = IniDocument(path)
 
             iniDocument.findKey("dtoverlay").onEach { it.values += "added-value" }
             iniDocument.save(path)
 
-            expectThat(path.readAll())
+            expectThat(path.readText())
                 .contains("dtoverlay=vc4-fkms-v3d,added-value")
                 .contains("dtoverlay=dwc2,added-value")
         }
