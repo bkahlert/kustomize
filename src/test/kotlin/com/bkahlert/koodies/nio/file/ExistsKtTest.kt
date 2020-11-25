@@ -33,7 +33,7 @@ class ExistsKtTest {
     @Test
     fun `should return false if file is missing`() {
         val path = tempDir.tempFile("what", "ever")
-        path.toFile().delete()
+        path.delete()
         expectThat(path.exists).isFalse()
     }
 

@@ -6,6 +6,7 @@ import com.bkahlert.koodies.nio.file.classPath
 import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.isInside
 import com.bkahlert.koodies.nio.file.mkdirs
+import com.bkahlert.koodies.nio.file.readBytes
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.nio.file.tempPath
@@ -35,7 +36,7 @@ import strikt.assertions.isFalse
 import strikt.assertions.isRegularFile
 import strikt.assertions.isTrue
 import java.io.IOException
-import java.nio.file.FileAlreadyExistsException
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.ReadOnlyFileSystemException
 import kotlin.time.seconds
@@ -220,14 +221,14 @@ class PathExtensionsKtTest {
     inner class Move {
 
         private val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
-        fun tempFile() = tempDir.tempFile(tempFilePrefix, ".txt").also { it.toFile().writeBytes(ByteArray(10)); it.deleteOnExit() }
+        fun tempFile() = tempDir.tempFile(tempFilePrefix, ".txt").writeBytes(ByteArray(10)).deleteOnExit()
 
         @Test
         fun `should copy file if destination not exists`() {
             val deletedFile = tempDir.tempPath(tempFilePrefix, ".txt")
             val tempFile = tempFile()
             tempFile.moveTo(deletedFile)
-            expectThat(deletedFile).get { readAllBytes().size }.isEqualTo(10)
+            expectThat(deletedFile).get { readBytes().size }.isEqualTo(10)
             expectThat(tempFile).not { exists() }
         }
 
@@ -242,20 +243,20 @@ class PathExtensionsKtTest {
     inner class Rename {
 
         private val tempFilePrefix = PathExtensionsKtTest::class.simpleName!!
-        val tempFile = tempDir.tempFile(tempFilePrefix, ".txt").also { it.toFile().writeBytes(ByteArray(10)); it.deleteOnExit() }
+        val tempFile = tempDir.tempFile(tempFilePrefix, ".txt").writeBytes(ByteArray(10)).deleteOnExit()
 
         @Test
         fun `should rename file if destination not exists`() {
             val renamedFilename = String.random()
             val renamedFile = tempFile.renameTo("$renamedFilename.txt")
             expectThat(tempFile).not { exists() }
-            expectThat(renamedFile).exists().get { readAllBytes().size }.isEqualTo(10)
+            expectThat(renamedFile).exists().get { readBytes().size }.isEqualTo(10)
         }
 
         @Test
         fun `should throw on missing file`() {
             val deletedFile = tempDir.tempPath(tempFilePrefix, ".txt")
-            expectCatching { deletedFile.renameTo("filename") }.isFailure().isA<FileAlreadyExistsException>()
+            expectCatching { deletedFile.renameTo("filename") }.isFailure().isA<NoSuchFileException>()
         }
 
         @Test

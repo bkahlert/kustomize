@@ -1,9 +1,9 @@
 package com.imgcstmzr.cli
 
+import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.nio.file.writeText
 import com.github.ajalt.clikt.output.TermUi
 import com.imgcstmzr.util.debug
-import com.imgcstmzr.util.readAll
 import java.nio.file.Path
 
 
@@ -16,7 +16,7 @@ class KeyValueDocument(private val properties: MutableList<Pair<String, MutableL
         key to values
     }.toMutableList())
 
-    constructor(path: Path) : this(path.readAll())
+    constructor(path: Path) : this(path.readText())
 
     fun findProperty(key: String): Pair<String, MutableList<String>>? = properties.find { (k, _) -> key == k }
 

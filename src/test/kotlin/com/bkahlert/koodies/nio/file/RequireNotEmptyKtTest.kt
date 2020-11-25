@@ -10,7 +10,6 @@ import strikt.api.expectCatching
 import strikt.assertions.isA
 import strikt.assertions.isFailure
 import strikt.assertions.isSuccess
-import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 
@@ -49,7 +48,7 @@ class RequireNotEmptyKtTest {
     fun `should throw on missing`() {
         expectCatching {
             tempDir.tempPath().requireNotEmpty()
-        }.isFailure().isA<FileAlreadyExistsException>()
+        }.isFailure().isA<NoSuchFileException>()
     }
 
     @Test

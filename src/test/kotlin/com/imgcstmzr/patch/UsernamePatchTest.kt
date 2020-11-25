@@ -54,7 +54,7 @@ class UsernamePatchTest {
     @Test
     fun `should finish if files are missing`(logger: InMemoryLogger<Any>) {
         val root = prepareSharedDirectory().apply {
-            resolve("etc").delete(false)
+            resolve("etc").delete(true)
         }
         val patch = UsernamePatch("pi", "ella")
         expectCatching {

@@ -1,10 +1,14 @@
 package com.bkahlert.koodies.concurrent.process
 
 import com.bkahlert.koodies.concurrent.process.IO.Type
+import com.bkahlert.koodies.exception.persistDump
+import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.LineSeparators.lines
 import com.bkahlert.koodies.string.Unicode.Emojis.heavyCheckMark
+import com.bkahlert.koodies.string.joinLinesToString
 import org.apache.commons.io.output.ByteArrayOutputStream
+import java.nio.file.Path
 import kotlin.collections.Map.Entry
 
 /**
@@ -65,6 +69,21 @@ class IOLog {
             write(read.last().toByteArray(Charsets.UTF_8))
         }
     }
+
+    /**
+     * Returns a dumps of the logged I/O log.
+     */
+    fun dump(): String = logged.joinLinesToString { it.formatted }
+
+    /**
+     * Dumps the logged I/O log at TEMP using the name scheme `koodies.process.{PID}.{RANDOM}.log".
+     */
+    fun dump(pid: Int): Map<String, Path> = dump(tempFile("koodies.process.$pid.", ".log"))
+
+    /**
+     * Dumps the logged I/O log at the specified [path].
+     */
+    fun dump(path: Path): Map<String, Path> = persistDump(path) { dump() }
 
     override fun toString(): String =
         "${this::class.simpleName}(${log.size} $heavyCheckMark; ${incompleteLines.filterValues { it.toByteArray().isNotEmpty() }.size} …)"

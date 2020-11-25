@@ -1,3 +1,4 @@
+import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
@@ -42,7 +43,6 @@ import com.imgcstmzr.runtime.log.applyLogging
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.listFilesRecursively
-import com.imgcstmzr.util.readAll
 import java.io.File
 import java.nio.file.Path
 import kotlin.reflect.KClass
@@ -100,7 +100,7 @@ class CliCommand : NoOpCliktCommand(
         BlockRenderingLogger<Any?>("ImgCstmzr").applyLogging {
             configFile?.apply {
                 valueSources.add(Config4kValueSource.from(this))
-                logLine { "Using config (file: $this, name: $name, size: ${readAll().length})".cyan().bold() }
+                logLine { "Using config (file: $this, name: $name, size: ${readText().length})".cyan().bold() }
             }
             logLine { "Checking $envFile for .env file" }
             shared[Env::class] = Env(this, envFile)

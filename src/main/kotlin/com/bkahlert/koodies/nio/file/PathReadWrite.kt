@@ -2,7 +2,6 @@ package com.bkahlert.koodies.nio.file
 
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.LineSeparators.LF
-import com.bkahlert.koodies.string.LineSeparators.NL
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.InputStream
@@ -91,7 +90,7 @@ fun Path.writeText(text: String, charset: Charset = Charsets.UTF_8): Path =
  *
  * @see LineSeparators
  */
-fun Path.writeLine(text: String, charset: Charset = Charsets.UTF_8, lineSeparator: String = NL): Path =
+fun Path.writeLine(text: String, charset: Charset = Charsets.UTF_8, lineSeparator: String = LF): Path =
     writeText("$text$lineSeparator", charset)
 
 /**

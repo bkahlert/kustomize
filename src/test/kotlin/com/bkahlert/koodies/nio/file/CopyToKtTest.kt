@@ -9,7 +9,6 @@ import com.imgcstmzr.util.hasContent
 import com.imgcstmzr.util.hasSameFiles
 import com.imgcstmzr.util.isDirectory
 import com.imgcstmzr.util.isFile
-import com.imgcstmzr.util.readAllBytes
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -197,8 +196,8 @@ fun Assertion.Builder<Path>.createsEqualTar(other: Path) =
         val selfTar = self.tar(tempFile()).deleteOnExit()
         val otherTar = other.tar(tempFile()).deleteOnExit()
 
-        val selfBytes = selfTar.readAllBytes()
-        val otherBytes = otherTar.readAllBytes()
+        val selfBytes = selfTar.readBytes()
+        val otherBytes = otherTar.readBytes()
         if (selfBytes.contentEquals(otherBytes)) pass()
         else fail("The resulting tarballs do not match. Expected size ${selfBytes.size} but was ${otherBytes.size}")
     }
@@ -212,8 +211,8 @@ fun Assertion.Builder<Path>.isCopyOf(other: Path) =
                 expectThat(self).hasSameFiles(other)
             }.exceptionOrNull()?.let { fail("Directories contained different files.") } ?: pass()
         } else {
-            val selfBytes = self.readAllBytes()
-            val otherBytes = other.readAllBytes()
+            val selfBytes = self.readBytes()
+            val otherBytes = other.readBytes()
             if (selfBytes.contentEquals(otherBytes)) pass()
             else fail("The resulting tarballs do not match. Expected size ${selfBytes.size} but was ${otherBytes.size}")
         }

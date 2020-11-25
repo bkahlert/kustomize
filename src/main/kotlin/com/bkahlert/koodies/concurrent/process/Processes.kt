@@ -5,8 +5,11 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.concurrent.process.RunningProcess.Companion.nullRunningProcess
+import com.bkahlert.koodies.concurrent.process.ShellScript.Companion.build
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.startAsCompletableFuture
+import com.bkahlert.koodies.exception.dump
+import com.bkahlert.koodies.exception.toSingleLineString
 import com.bkahlert.koodies.nio.NonBlockingReader
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.serialized
@@ -25,6 +28,7 @@ import java.io.Reader
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.time.Duration
 import kotlin.time.milliseconds
@@ -36,6 +40,36 @@ object Processes {
 
     private const val shellScriptPrefix: String = "koodies.process."
     private const val shellScriptExtension: String = ".sh"
+
+    /**
+     * Builds a proper script that runs at [workingDirectory] and saved it as a
+     * temporary file (to be deleted once in a while).
+     */
+    internal fun buildShellScriptToTempFile(
+        workingDirectory: Path,
+        shellScriptBuilder: ShellScript.() -> Unit,
+    ): Path {
+        val shellScriptLines = shellScriptBuilder.build().lines
+        val shellScriptWithWorkingDirectory = ShellScript().apply {
+            shebang()
+            changeDirectoryOrExit(directory = workingDirectory)
+            shellScriptLines.forEach { line(it) }
+        }
+        return shellScriptWithWorkingDirectory.buildTo(tempFile(base = shellScriptPrefix, extension = shellScriptExtension))
+    }
+
+    /**
+     * Contains all accessible files contained in this command line.
+     */
+    val Commandline.includesFiles
+        get() = listOf(executable, arguments).map { Path.of(it.toString().unquoted) }.filter { it.exists }
+
+    /**
+     * Contains a formatted list of files contained in this command line.
+     */
+    val Commandline.formattedIncludesFiles
+        get() = includesFiles.joinToString("\n") { "📄 ${it.toUri()}" }
+
 
     init {
         cleanUpOldTempFiles(shellScriptPrefix, shellScriptExtension)
@@ -87,25 +121,44 @@ object Processes {
     }.isSuccess
 
     /**
-     * Runs the [shellScript] synchronously and returns the [CompletedProcess].
+     * Runs the [shellScriptBuilder] synchronously and returns the [CompletedProcess].
      */
     fun evalShellScript(
         workingDirectory: Path = WORKING_DIRECTORY,
         env: Map<String, String> = emptyMap(),
         inputStream: InputStream? = null,
-        shellScript: ShellScript.() -> Unit,
+        shellScriptBuilder: ShellScript.() -> Unit,
     ): CompletedProcess {
         return startShellScript(
             workingDirectory = workingDirectory,
             env = env,
             inputStream = inputStream,
-            shellScript = shellScript,
+            shellScriptBuilder = shellScriptBuilder,
         ).waitForCompletion()
     }
 
+    /**
+     * Runs the [shellScriptBuilder] asynchronously and returns the [RunningProcess].
+     */
+    fun startScript(
+        workingDirectory: Path = WORKING_DIRECTORY,
+        env: Map<String, String> = emptyMap(),
+        runAfterProcessTermination: (() -> Unit)? = null,
+        inputStream: InputStream? = null,
+        ioProcessor: (LoggingProcess.(IO) -> Unit)? = null,
+        shellScriptBuilder: ShellScript.() -> Unit,
+    ): LoggingProcess = LoggingProcess(
+        command = buildShellScriptToTempFile(workingDirectory, shellScriptBuilder).serialized,
+        arguments = emptyList(),
+        workingDirectory = null, // part of the shell script
+        env = env,
+        runAfterProcessTermination = runAfterProcessTermination,
+        userProvidedInputStream = inputStream,
+        ioProcessor = ioProcessor,
+    )
 
     /**
-     * Runs the [shellScript] asynchronously and returns the [RunningProcess].
+     * Runs the [shellScriptBuilder] asynchronously and returns the [RunningProcess].
      */
     fun startShellScript(
         workingDirectory: Path = WORKING_DIRECTORY,
@@ -113,32 +166,9 @@ object Processes {
         runAfterProcessTermination: (() -> Unit)? = null,
         inputStream: InputStream? = null,
         ioProcessor: (RunningProcess.(IO) -> Unit)? = null,
-        shellScript: ShellScript.() -> Unit,
-    ): RunningProcess = startShellScriptLines(
-        inputStream = inputStream,
-        ioProcessor = ioProcessor,
-        *(ShellScript().apply(shellScript)).lines.toTypedArray(),
-        workingDirectory = workingDirectory,
-        env = env,
-        runAfterProcessTermination = runAfterProcessTermination,
-    )
-
-    /**
-     * Starts the [shellScriptLines] asynchronously and returns the [RunningProcess].
-     */
-    private fun startShellScriptLines(
-        inputStream: InputStream? = null,
-        ioProcessor: (RunningProcess.(IO) -> Unit)? = null,
-        vararg shellScriptLines: String,
-        workingDirectory: Path = WORKING_DIRECTORY,
-        env: Map<String, String> = emptyMap(),
-        runAfterProcessTermination: (() -> Unit)? = null,
+        shellScriptBuilder: ShellScript.() -> Unit,
     ): RunningProcess = startCommand(
-        command = ShellScript().apply {
-            shebang()
-            changeDirectoryOrExit(workingDirectory)
-            shellScriptLines.forEach { line(it) }
-        }.buildTo(tempFile(base = shellScriptPrefix, extension = shellScriptExtension)).serialized,
+        command = buildShellScriptToTempFile(workingDirectory, shellScriptBuilder).serialized,
         workingDirectory = null, // part of the shell script
         env = env,
         runAfterProcessTermination = runAfterProcessTermination,
@@ -224,49 +254,56 @@ object Processes {
 
             init {
                 "Executing $commandLine".log()
-                listOf(commandLine.executable, commandLine.arguments)
-                    .map { Path.of(it.toString().unquoted) }
-                    .filter { it.exists }
-                    .joinToString("\n") { "📄 ${it.toUri()}" }.log()
+                commandLine.formattedIncludesFiles.log()
             }
 
             var disabled: Boolean = false
             override val result: CompletableFuture<CompletedProcess> = executor.startAsCompletableFuture {
-                val exceptionHandler: (Throwable) -> Unit = {
-                    process.destroy()
-                }
-                runCatching {
-                    listOf(
-                        "stdin" to setupInputFeeder(exceptionHandler),
-                        "stdout" to setupOutputPumper(exceptionHandler),
-                        "stderr" to setupErrorPumper(exceptionHandler),
-                    ).let { ioHelper ->
-                        awaitExitCode().also {
-                            ioHelper.forEach { (_, completable) -> completable?.join() }
-                            ioHelper.forEach { (label, completable) ->
-                                completable?.takeIf { it.isCompletedExceptionally }?.exceptionally {
-                                    throw RuntimeException("An error occurred while processing ${label.tag()}.", it)
-                                }
-                            }
-                        }
-                    }
-                }.run {
-                    disabled = true
-                    runAfterProcessTermination?.runCatching { run() }
-                    ShutdownHookUtils.removeShutdownHook(processHook)
-                    processHook.runCatching { run() }
-                    outputStream.runCatching { close() }
+                arrayOf(
+                    executor.setupInputFeeder("stdin").exceptionally {
+                        process.destroy()
+                        throw RuntimeException("An error occurred while processing ${"stdin".tag()}.", it)
+                    },
+                    executor.setupOutputPumper("stdout").exceptionally {
+                        process.destroy()
+                        throw RuntimeException("An error occurred while processing ${"stdout".tag()}.", it)
+                    },
+                    executor.setupErrorPumper("stderr").exceptionally {
+                        process.destroy()
+                        throw RuntimeException("An error occurred while processing ${"stderr".tag()}.", it)
+                    },
+                ) to awaitExitCode()
+            }.thenApply { (ioHelper, exitCode) ->
 
-                    fold(
-                        onSuccess = { CompletedProcess(pid, it, ioLog.logged) },
-                        onFailure = {
-                            if (it is CompletionException) {
-                                throw it.cause ?: it
-                            }
-                            throw RuntimeException("An unexpected error occurred while killing ${"$commandLine".tag()}.", it)
-                        }
-                    )
+                disabled = true
+                runAfterProcessTermination?.runCatching { run() }
+                ShutdownHookUtils.removeShutdownHook(processHook)
+                processHook.runCatching { run() }
+                outputStream.runCatching { close() }
+
+                val helperException: Throwable? = CompletableFuture.allOf(*ioHelper).handle { _, ex -> ex }.get()?.let {
+                    if (it is CompletionException) it.cause else it
                 }
+
+                if (helperException != null) throw helperException
+
+                exitCode
+            }.exceptionally {
+                dump("""
+                    Process $process terminated with ${it.toSingleLineString()}.
+                    ${commandLine.formattedIncludesFiles}
+                """.trimIndent()) { ioLog.dump() }.log()
+                throw it
+            }.thenApply { exitCode ->
+                if (exitCode != 0) {
+                    dump("""
+                        Process $pid terminated with exit code $exitCode.
+                        ${commandLine.formattedIncludesFiles}
+                    """.trimIndent()) { ioLog.dump() }.log()
+                } else {
+                    "Process $pid terminated successfully.".log()
+                }
+                CompletedProcess(pid, exitCode, ioLog.logged)
             }
 
             private fun awaitExitCode() = if (timeout <= Duration.ZERO) {
@@ -283,47 +320,43 @@ object Processes {
                 metaProcessor(this)
             }
 
-            private fun setupInputFeeder(exceptionHandler: (Throwable) -> Unit): CompletableFuture<Any>? = inputProvider?.run {
-                executor.startAsCompletableFuture {
-                    runCatching {
-                        use {
-                            var bytesCopied: Long = 0
-                            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                            var bytes = read(buffer)
-                            while (bytes >= 0) {
-                                if (!disabled) {
-                                    outputStream.write(buffer, 0, bytes)
-                                    bytesCopied += bytes
-                                    bytes = read(buffer)
-                                } else {
-                                    break
-                                }
+            private fun ExecutorService.setupInputFeeder(name: String): CompletableFuture<Any?> = inputProvider?.run {
+                startAsCompletableFuture {
+                    use {
+                        Thread.currentThread().name = "$commandLine::$name"
+                        var bytesCopied: Long = 0
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        var bytes = read(buffer)
+                        while (bytes >= 0) {
+                            if (!disabled) {
+                                outputStream.write(buffer, 0, bytes)
+                                bytesCopied += bytes
+                                bytes = read(buffer)
+                            } else {
+                                break
                             }
                         }
-                    }.onFailure { exceptionHandler(it) }.getOrThrow()
+                    }
+                }
+            } ?: CompletableFuture.completedFuture(null)
+
+            private fun ExecutorService.setupOutputPumper(name: String) = startAsCompletableFuture {
+                inputStream.readerForStream(nonBlockingReader).forEachLine { line ->
+                    Thread.currentThread().name = "$commandLine::$name"
+                    if (!disabled) systemOutProcessor(line)
                 }
             }
 
-            private fun setupOutputPumper(exceptionHandler: (Throwable) -> Unit) = executor.startAsCompletableFuture {
-                kotlin.runCatching {
-                    inputStream.readerForStream(nonBlockingReader).forEachLine { line ->
-                        Thread.currentThread().name = "$commandLine::out:pump"
-                        if (!disabled) systemOutProcessor(line)
-                    }
-                }.onFailure { exceptionHandler(it) }.getOrThrow()
-            }
-
-            private fun setupErrorPumper(exceptionHandler: (Throwable) -> Unit) = executor.startAsCompletableFuture {
-                kotlin.runCatching {
-                    errorStream.readerForStream(nonBlockingReader).forEachLine { line ->
-                        Thread.currentThread().name = "$commandLine::err:pump"
-                        if (!disabled) systemErrProcessor(line)
-                    }
-                }.onFailure { exceptionHandler(it) }.getOrThrow()
+            private fun ExecutorService.setupErrorPumper(name: String) = startAsCompletableFuture {
+                errorStream.readerForStream(nonBlockingReader).forEachLine { line ->
+                    Thread.currentThread().name = "$commandLine::$name"
+                    if (!disabled) systemErrProcessor(line)
+                }
             }
 
             private fun InputStream.readerForStream(nonBlockingReader: Boolean): Reader =
                 if (nonBlockingReader) NonBlockingReader(this, blockOnEmptyLine = true) else InputStreamReader(this)
         }
     }
+
 }

@@ -14,6 +14,14 @@ annotation class ShellScriptMarker
 @ShellScriptMarker
 class ShellScript(val name: String? = null, content: String? = null) {
 
+    companion object {
+        /**
+         * Builds and returns an actual instance.
+         */
+        fun (ShellScript.() -> Unit).build(): ShellScript =
+            ShellScript().apply(this)
+    }
+
     val lines: MutableList<String> = mutableListOf()
 
     init {
@@ -60,11 +68,9 @@ class ShellScript(val name: String? = null, content: String? = null) {
     }
 
     fun build(): String = lines.joinToString(LineSeparators.LF, postfix = LineSeparators.LF)
-    fun buildTo(path: Path): Path = build().let { script ->
-        path.apply {
-            writeText(script)
-            makeExecutable()
-        }
+    fun buildTo(path: Path): Path = path.apply {
+        writeText(build())
+        makeExecutable()
     }
 
     override fun toString(): String = build()

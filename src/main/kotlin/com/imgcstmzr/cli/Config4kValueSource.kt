@@ -1,10 +1,10 @@
 package com.imgcstmzr.cli
 
+import com.bkahlert.koodies.nio.file.readText
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.Option
 import com.github.ajalt.clikt.sources.ValueSource
 import com.github.ajalt.clikt.sources.ValueSource.Invocation
-import com.imgcstmzr.util.readAll
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import io.github.config4k.extract
@@ -63,10 +63,10 @@ class Config4kValueSource(private val name: String, private val config: Config) 
             return Config4kValueSource(names[0], parseConfig.atKey(names[0]))
         }
 
-        fun from(configFile: Path): Config4kValueSource = from(configFile.readAll())
+        fun from(configFile: Path): Config4kValueSource = from(configFile.readText())
 
         fun ValueSource?.update(configFile: Path) {
-            (this as? Proxy)?.delegate = from(configFile.readAll())
+            (this as? Proxy)?.delegate = from(configFile.readText())
         }
 
         fun ValueSource?.update(configUrl: URL) {

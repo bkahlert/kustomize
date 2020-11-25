@@ -12,8 +12,8 @@ fun Any?.toSingleLineString(): String {
 
 fun Throwable?.toSingleLineString(): String {
     if (this == null) return ""
-    return rootCause.let {
-        it::class.simpleName + ": " + it.message + it.stackTrace?.firstOrNull()?.let { element -> " at.(${element.fileName}:${element.lineNumber})" }
+    return rootCause.run {
+        this::class.simpleName + ": " + message + stackTrace?.firstOrNull()?.let { element -> " at.(${element.fileName}:${element.lineNumber})" }
     }
 }
 

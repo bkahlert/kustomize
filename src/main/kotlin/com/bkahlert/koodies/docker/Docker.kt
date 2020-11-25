@@ -45,7 +45,7 @@ object Docker {
         return DockerProcess(name) { runningProcess }.also { dockerProcess ->
             runningProcess = startShellScript(
                 workingDirectory = workingDirectory,
-                shellScript = { docker(init) },
+                shellScriptBuilder = { docker(init) },
                 ioProcessor = ioProcessor?.let { { output -> it(dockerProcess, output) } },
                 runAfterProcessTermination = {
                     stop(name)

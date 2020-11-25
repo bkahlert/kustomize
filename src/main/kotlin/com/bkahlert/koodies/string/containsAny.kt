@@ -5,5 +5,5 @@ package com.bkahlert.koodies.string
  *
  * @param ignoreCase `true` to ignore character case when comparing strings. By default `false`.
  */
-fun <T : CharSequence> CharSequence.containsAny(others: Iterable<T>, ignoreCase: Boolean = false) =
+fun <T : CharSequence> CharSequence.containsAny(others: Iterable<T>, ignoreCase: Boolean = false): Boolean =
     others.any { contains(it, ignoreCase = ignoreCase) }

@@ -29,6 +29,7 @@ import strikt.assertions.isA
 import strikt.assertions.isFailure
 import strikt.assertions.isLessThan
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.NoSuchFileException
 
 @Execution(CONCURRENT)
 class TarArchiveGzCompressorTest {
@@ -40,7 +41,7 @@ class TarArchiveGzCompressorTest {
         { tempDir.tempDir().tempPath(extension = ".tar.gz").tarGunzip() },
     ).map { call ->
         dynamicTest("$call") {
-            expectCatching { call() }.isFailure().isA<FileAlreadyExistsException>()
+            expectCatching { call() }.isFailure().isA<NoSuchFileException>()
         }
     }
 

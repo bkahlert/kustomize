@@ -5,6 +5,7 @@ import com.bkahlert.koodies.nio.file.appendLine
 import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.list
+import com.bkahlert.koodies.nio.file.readLines
 import com.bkahlert.koodies.nio.file.sameFile
 import com.bkahlert.koodies.nio.file.serialized
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
@@ -67,7 +68,7 @@ object FixtureLog : (Path) -> Path {
 
     override fun invoke(path: Path): Path = location.appendLine(path.resolveFixture().logLine())
 
-    fun paths(): List<Path> = if (location.exists) location.readAllLines().map { Path.of(it) } else emptyList()
+    fun paths(): List<Path> = if (location.exists) location.readLines().map { Path.of(it) } else emptyList()
 
     private fun Path.logLine() = "${toAbsolutePath()}"
 

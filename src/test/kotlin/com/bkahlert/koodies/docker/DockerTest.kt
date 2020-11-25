@@ -158,7 +158,7 @@ class DockerTest {
             }
         }
 
-        @DockerRequiring @Test
+        @Slow @DockerRequiring @Test
         fun `should remove docker container after completion`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
             val dockerProcess = runOsImage(testName(Lifecycle::`should remove docker container after completion`), osImage)
             kotlin.runCatching {

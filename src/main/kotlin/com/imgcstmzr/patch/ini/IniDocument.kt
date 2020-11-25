@@ -1,6 +1,7 @@
 package com.imgcstmzr.patch.ini
 
-import com.imgcstmzr.util.readAll
+import com.bkahlert.koodies.nio.file.readText
+import com.bkahlert.koodies.nio.file.writeText
 import java.nio.file.Path
 
 @Suppress("PublicApiImplicitType")
@@ -8,7 +9,7 @@ class IniDocument private constructor(mutableElements: Collection<Line>) : Colle
     private val lines: MutableList<Line> = mutableElements.toMutableList()
 
     constructor(input: String) : this(input.lines().map { Line(it) }.toList())
-    constructor(path: Path) : this(path.readAll())
+    constructor(path: Path) : this(path.readText())
 
     override fun toString(): String = lines.joinToString("\n")
 
@@ -57,7 +58,7 @@ class IniDocument private constructor(mutableElements: Collection<Line>) : Colle
     }
 
     fun save(path: Path) {
-        path.toFile().writeText(toString())
+        path.writeText(toString())
     }
 
     @Suppress("unused")

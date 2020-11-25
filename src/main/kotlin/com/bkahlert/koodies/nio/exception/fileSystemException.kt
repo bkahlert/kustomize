@@ -6,6 +6,13 @@ import java.nio.file.Path
 
 /**
  * Constructs an instance of [FileSystemException]
+ * with this path.
+ */
+fun Path.fileSystemException(): FileSystemException =
+    FileSystemException(serialized)
+
+/**
+ * Constructs an instance of [FileSystemException]
  * with an unknown path and an optional [reason].
  */
 fun fileSystemException(reason: String? = null): FileSystemException =

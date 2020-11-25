@@ -68,7 +68,7 @@ inline class IntervalPolling(private val targetState: () -> Boolean) {
          *
          * Returns whether the [targetState] was reached in time.
          */
-        fun forAtMost(timeout: Duration, timeoutCallback: (Duration) -> Unit): Boolean {
+        fun forAtMost(timeout: Duration, timeoutCallback: (Duration) -> Unit = {}): Boolean {
             this.timeout = timeout
             this.timeoutCallback = timeoutCallback
             return poll()

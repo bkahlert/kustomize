@@ -1,6 +1,7 @@
 package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.exception.rootCause
+import com.bkahlert.koodies.nio.file.readLines
 import com.bkahlert.koodies.string.matchesCurlyPattern
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.test.junit.FifteenMinutesTimeout
@@ -15,7 +16,6 @@ import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.matches
-import com.imgcstmzr.util.readAllLines
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -47,7 +47,7 @@ class PasswordPatchTest {
         val username = RaspberryPiLite.defaultCredentials.username
         val newPassword = "on-a-diet"
         val passwordPatch = PasswordPatch(username, newPassword, salt)
-        val userPassword = Guestfish(osImage, logger).copyOut(passwordPath).readAllLines().single { it.startsWith(username) }
+        val userPassword = Guestfish(osImage, logger).copyOut(passwordPath).readLines().single { it.startsWith(username) }
         val userPasswordPattern = "$username:{}:{}:0:99999:7:::"
         check(userPassword.matchesCurlyPattern(userPasswordPattern)) { "${userPassword.debug} does not match ${userPasswordPattern.debug}" }
 

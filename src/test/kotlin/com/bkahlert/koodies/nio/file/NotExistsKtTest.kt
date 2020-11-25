@@ -23,11 +23,11 @@ class NotExistsKtTest {
         val path by classPath("config.txt")
         expectThat(path.notExists).isFalse()
     }
-    
+
     @Test
     fun `should return true if file is missing`() {
         val path = tempDir.tempFile("what", "ever")
-        path.toFile().delete()
+        path.delete()
         expectThat(path.notExists).isTrue()
     }
 }

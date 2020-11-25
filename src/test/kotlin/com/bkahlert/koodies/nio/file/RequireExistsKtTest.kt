@@ -7,7 +7,7 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
 import strikt.assertions.isA
 import strikt.assertions.isFailure
-import java.nio.file.FileAlreadyExistsException
+import java.nio.file.NoSuchFileException
 
 @Execution(CONCURRENT)
 class RequireExistsKtTest {
@@ -22,6 +22,6 @@ class RequireExistsKtTest {
     @Test
     fun `should throw if not exists`() {
         expectCatching { tempDir.tempPath().requireExists() }
-            .isFailure().isA<FileAlreadyExistsException>()
+            .isFailure().isA<NoSuchFileException>()
     }
 }

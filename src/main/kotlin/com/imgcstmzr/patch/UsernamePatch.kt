@@ -1,9 +1,9 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.nio.file.writeText
 import com.imgcstmzr.patch.Requirements.requireNotMatchingContent
 import com.imgcstmzr.patch.new.buildPatch
-import com.imgcstmzr.util.readAll
 
 // "Change username pi to $username?"
 class UsernamePatch(
@@ -27,7 +27,7 @@ class UsernamePatch(
             "/etc/subuid", "/etc/subgid",
         ).map { pwFile ->
             edit(pwFile, requireNotMatchingContent(oldUsernamePattern, { "$pwFile must not match $oldUsername ($oldUsernamePattern)" })) { path ->
-                path.readAll()
+                path.readText()
                     .replace(oldUsernamePattern) { newUsername }
                     .also { patchedContent -> path.writeText(patchedContent) }
 //                    .also { patchedContent -> TermUi.debug("Replaced: ($oldUsernamePattern) -> $newUsername\n$patchedContent") }

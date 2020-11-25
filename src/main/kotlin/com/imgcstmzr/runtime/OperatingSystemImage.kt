@@ -1,6 +1,7 @@
 package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.nio.file.appendBytes
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
@@ -59,7 +60,7 @@ class OperatingSystemImage(
                         logStatus { IO.Type.OUT typed image.size.toString() }
                         while (missing > 0.bytes) {
                             val write = if (missing < bytesPerStep) missing.toZeroFilledByteArray() else oneHundredMegaBytes
-                            image.toFile().appendBytes(write)
+                            image.appendBytes(write)
                             missing -= write.size
                             logStatus { IO.Type.OUT typed "⥅ ${image.size}" }
                         }

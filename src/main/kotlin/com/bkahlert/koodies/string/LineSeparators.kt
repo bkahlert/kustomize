@@ -44,7 +44,7 @@ object LineSeparators : Collection<String> {
 
     val LAST_LINE_PATTERN by lazy { ".+$".toRegex() }
 
-    val INTERMEDIARY_LINE_PATTERN by lazy { ".*(?<separator>${SEPARATOR_PATTERN.pattern})".toRegex() }
+    val INTERMEDIARY_LINE_PATTERN by lazy { ".*(?<separator>${SEPARATOR_PATTERN.pattern})".toRegex(RegexOption.DOT_MATCHES_ALL) }
 
     val LINE_PATTERN by lazy { "${INTERMEDIARY_LINE_PATTERN.pattern}|${LAST_LINE_PATTERN.pattern}".toRegex() }
 

@@ -1,19 +1,19 @@
 package com.imgcstmzr.cli
 
 import com.bkahlert.koodies.nio.file.isInside
+import com.bkahlert.koodies.nio.file.isWritable
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.spyable
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.MiscFixture.FunnyImgZip
-import com.imgcstmzr.util.exists
 import com.imgcstmzr.util.hasContent
-import com.imgcstmzr.util.isDirectory
-import com.imgcstmzr.util.isWritable
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
+import strikt.assertions.exists
+import strikt.assertions.isDirectory
 import strikt.assertions.isEqualTo
 
 @Execution(CONCURRENT)
@@ -26,7 +26,7 @@ class CacheTest {
         val cache = Cache()
 
         expectThat(cache)
-            .get { dir.toFile() }
+            .get { dir }
             .exists()
             .isDirectory()
             .isWritable()

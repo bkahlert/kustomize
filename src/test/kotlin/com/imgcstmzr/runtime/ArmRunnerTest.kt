@@ -60,7 +60,7 @@ class ArmRunnerTest {
                 if (booted) break
             }
 
-            expectThat(booted).isTrue()
+            expectThat(booted).describedAs("booted").isTrue()
             process?.destroyForcibly()
         }.onFailure { process?.destroyForcibly() }.getOrThrow()
     }

@@ -29,7 +29,7 @@ import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import strikt.assertions.isLessThan
-import java.nio.file.FileAlreadyExistsException
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 @Execution(CONCURRENT)
@@ -43,7 +43,7 @@ class GzCompressorTest {
         { tempDir.tempDir().tempPath(extension = ".gz").gunzip() },
     ).map { call ->
         dynamicTest("$call") {
-            expectCatching { call() }.isFailure().isA<FileAlreadyExistsException>()
+            expectCatching { call() }.isFailure().isA<NoSuchFileException>()
         }
     }
 
@@ -53,7 +53,7 @@ class GzCompressorTest {
         { tempDir.tempDir().archiveWithSingleFile("gz").apply { copyTo(removeExtension("gz")) }.gunzip() },
     ).map { call ->
         dynamicTest("$call") {
-            expectCatching { call() }.isFailure().isA<FileAlreadyExistsException>()
+            expectCatching { call() }.isFailure().isA<NoSuchFileException>()
         }
     }
 

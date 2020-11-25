@@ -2,6 +2,7 @@
 
 package com.imgcstmzr.util
 
+import com.bkahlert.koodies.nio.file.lastModified
 import com.bkahlert.koodies.nio.file.listRecursively
 import com.bkahlert.koodies.nio.file.readBytes
 import com.bkahlert.koodies.nio.file.readText
@@ -16,6 +17,8 @@ import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.bkahlert.koodies.string.truncate
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
+import com.bkahlert.koodies.time.Now
+import com.bkahlert.koodies.time.minus
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.Size
 import com.imgcstmzr.guestfish.GuestfishOperation
@@ -118,22 +121,6 @@ fun Assertion.Builder<File>.exists() =
         }
     }
 
-fun Assertion.Builder<File>.isDirectory() =
-    assert("is directory") {
-        when (it.isDirectory) {
-            true -> pass()
-            else -> fail()
-        }
-    }
-
-
-fun Assertion.Builder<File>.isWritable() =
-    assert("is writable") {
-        when (it.canWrite()) {
-            true -> pass()
-            else -> fail()
-        }
-    }
 
 fun <T : CharSequence> Assertion.Builder<T>.containsOnlyCharacters(chars: CharArray) =
     assert("contains only the characters " + chars.toString().truncate(20)) {
@@ -235,9 +222,9 @@ fun Assertion.Builder<Path>.isEmptyDirectory() =
 
 fun Assertion.Builder<Path>.lastModified(duration: Duration) =
     assert("was last modified at most $duration ago") {
-        val now = System.currentTimeMillis()
-        val recent = now - duration.toLongMilliseconds()
-        when (it.toFile().lastModified()) {
+        val now = Now.fileTime
+        val recent = now - duration
+        when (it.lastModified) {
             in (recent..now) -> pass()
             else -> fail()
         }

@@ -1,35 +1,29 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.nio.file.readLines
 import com.imgcstmzr.cli.KeyValueDocument
 import com.imgcstmzr.util.isReadable
-import com.imgcstmzr.util.readAllLines
 import java.nio.file.Path
 
+// TODO refactor to Path extension functions
 object Requirements {
 
-    fun requireContainingContent(string: String): (Path) -> Unit {
-        return {
-            require(it.toFile().canRead()) { "$it can't be read" }
-            require(it.toFile().readLines().any { line -> line.contains(string) }) { "$it does not contain $string " }
-        }
+    fun requireContainingContent(string: String): (Path) -> Unit = { path: Path ->
+        require(path.isReadable) { "$path can't be read" }
+        require(path.readLines().any { line -> line.contains(string) }) { "$path does not contain $string " }
     }
 
-    fun requireContainingKeyValue(key: String, vararg values: String): (Path) -> Unit {
-        return { it: Path ->
-            require(it.toFile().canRead()) { "$it can't be read" }
-            require(it.toFile().canRead() && values.all { value ->
-                KeyValueDocument(it).containsValue(key,
-                    value)
-            }) { "$it does not contain ${values.toList()} " }
-        }
+    fun requireContainingKeyValue(key: String, vararg values: String): (Path) -> Unit = { path: Path ->
+        require(path.isReadable) { "$path can't be read" }
+        require(path.isReadable && values.all { value ->
+            KeyValueDocument(path).containsValue(key, value)
+        }) { "$path does not contain ${values.toList()} " }
     }
 
-    fun requireNotMatchingContent(regex: Regex, lazyMessage: () -> Any): (Path) -> Unit {
-        return { path ->
-            require(path.isReadable) { "$path can't be read" }
-            require(path.readAllLines().none {
-                regex.containsMatchIn(it)
-            }, lazyMessage)
-        }
+    fun requireNotMatchingContent(regex: Regex, lazyMessage: () -> Any): (Path) -> Unit = { path ->
+        require(path.isReadable) { "$path can't be read" }
+        require(path.readLines().none {
+            regex.containsMatchIn(it)
+        }, lazyMessage)
     }
 }

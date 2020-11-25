@@ -1,11 +1,11 @@
 package com.bkahlert.koodies.nio.file
 
-import java.nio.file.FileAlreadyExistsException
+import com.bkahlert.koodies.nio.exception.noSuchFile
 import java.nio.file.Path
 
 /**
  * Throws if this [Path] does not exist.
  */
 fun Path.requireExists() {
-    if (notExists) throw FileAlreadyExistsException(serialized)
+    if (notExists) throw noSuchFile()
 }

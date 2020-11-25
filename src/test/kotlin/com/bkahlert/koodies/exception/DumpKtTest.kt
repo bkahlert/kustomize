@@ -78,7 +78,7 @@ class DumpKtTest {
         path.toFile().setReadOnly()
         expectThat(dump("error message", path = path, data = data)) {
             get { lines().take(2) }.containsExactly("Error message", "In the attempt to persist the corresponding dump the following error occurred:")
-            get { lines().drop(2).first() }.startsWith("FileNotFoundException: ")
+            get { lines().drop(2).first() }.startsWith("AccessDeniedException: ")
             get { lines() }
                 .any { contains("The not successfully persisted dump is as follows:") }
                 .any {

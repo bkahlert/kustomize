@@ -6,6 +6,13 @@ import java.nio.file.Path
 
 /**
  * Constructs an instance of [NoSuchFileException]
+ * with this path.
+ */
+fun Path.noSuchFile(): NoSuchFileException =
+    NoSuchFileException(serialized)
+
+/**
+ * Constructs an instance of [NoSuchFileException]
  * with an unknown path and an optional [reason].
  */
 fun noSuchFile(reason: String? = null): NoSuchFileException =

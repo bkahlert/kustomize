@@ -6,6 +6,13 @@ import java.nio.file.Path
 
 /**
  * Constructs an instance of [FileAlreadyExistsException]
+ * with this path.
+ */
+fun Path.fileAlreadyExists(): FileAlreadyExistsException =
+    FileAlreadyExistsException(serialized)
+
+/**
+ * Constructs an instance of [FileAlreadyExistsException]
  * with an unknown path and an optional [reason].
  */
 fun fileAlreadyExists(reason: String? = null): FileAlreadyExistsException =

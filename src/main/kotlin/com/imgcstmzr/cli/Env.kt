@@ -1,5 +1,6 @@
 package com.imgcstmzr.cli
 
+import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
@@ -11,8 +12,8 @@ import java.nio.file.Path
 class Env private constructor(logger: RenderingLogger<*>, vararg maps: Map<String, String?>) : Map<String, String?> by maps.flatMap({ it.toList() }).toMap() {
     constructor(logger: RenderingLogger<*>, path: Path) : this(
         logger,
-        if (path.toFile().exists()) {
-            ConfigFactory.parseFile(path.toFile())
+        if (path.exists) {
+            ConfigFactory.parseFile(path.toFile()) // TODO remove toFile()
                 .root()
                 .toMap()
                 .mapValues { entry -> entry.value?.unwrapped().toString() }

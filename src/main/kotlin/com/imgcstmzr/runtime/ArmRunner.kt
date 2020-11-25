@@ -107,7 +107,7 @@ object ArmRunner {
             }
             if (!unfinished.compute(this, output)) unfinished.takeIf { it.isNotEmpty() }?.removeAt(0)
             0
-        }.waitForExitCode(0).exitCode
+        }.waitForExitCode().exitCode
     }
 
     /**

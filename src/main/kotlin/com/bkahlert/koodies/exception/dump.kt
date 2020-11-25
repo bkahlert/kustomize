@@ -24,7 +24,7 @@ private val dumpInitWorkaround = "$Dump"
  * Dumps whatever is returned by [data] to the specified [path] and
  * returns a description of the dump.
  *
- * If an error occurs in this process—so to as as a last resort—the returned description
+ * If an error occurs in this process—so to as a last resort—the returned description
  * includes the complete dump itself.
  */
 fun dump(errorMessage: String?, path: Path = tempFile(Dump.dumpPrefix, Dump.dumpSuffix), data: () -> String): String = runCatching {

@@ -5,7 +5,6 @@ import com.bkahlert.koodies.test.FixturePath61C285F09D95930D0AE298B00AF09F918B0A
 import com.bkahlert.koodies.test.FixturePath61C285F09D95930D0AE298B00AF09F918B0A.fixtureFileName
 import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.readAllBytes
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -41,7 +40,7 @@ class ClassPathTest {
 
     @Test
     fun `should map resource on matching path`() {
-        expectThat(classPath(fixtureFileName) { readAllBytes() }).isEqualTo(fixtureContent)
+        expectThat(classPath(fixtureFileName) { readBytes() }).isEqualTo(fixtureContent)
     }
 
     @Test
@@ -57,7 +56,7 @@ class ClassPathTest {
         "classpath:/$fixtureFileName",
         "ClassPath:$fixtureFileName",
         "ClassPath:/$fixtureFileName",
-    ).map { dynamicTest(it) { expectThat(classPath(it) { readAllBytes() }).isEqualTo(fixtureContent) } }
+    ).map { dynamicTest(it) { expectThat(classPath(it) { readBytes() }).isEqualTo(fixtureContent) } }
 
     @Test
     fun `should map read-only root`() {
@@ -85,7 +84,7 @@ class ClassPathTest {
                 expectThat(exists).isTrue()
                 expectCatching { operation(this@classPath) }.isFailure().isA<ReadOnlyFileSystemException>()
                 expectThat(exists).isTrue()
-                expectThat(readAllBytes()).isEqualTo(fixtureContent)
+                expectThat(readBytes()).isEqualTo(fixtureContent)
             }
         }
     }

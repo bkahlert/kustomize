@@ -1,8 +1,8 @@
 package com.imgcstmzr.patch.ini
 
+import com.bkahlert.koodies.nio.file.mkdirs
 import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.nio.file.tempDir
-import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.imgcstmzr.patch.ini.IniDocument.CommentLine
 import com.imgcstmzr.patch.ini.IniDocument.KeyLine
@@ -212,7 +212,7 @@ class IniDocumentTest {
         @Suppress("SpellCheckingInspection")
         @Test
         fun `should make basic changes and persist file`() {
-            val path = ImgFixture.Boot.ConfigTxt.copyTo(tempDir.tempFile())
+            val path = ImgFixture.Boot.ConfigTxt.copyToDirectory(tempDir.mkdirs())
             val iniDocument = IniDocument(path)
 
             iniDocument.findKey("dtoverlay").onEach { it.values += "added-value" }

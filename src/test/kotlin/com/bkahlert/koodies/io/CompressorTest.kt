@@ -30,6 +30,7 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import strikt.assertions.isLessThan
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 
@@ -44,7 +45,7 @@ class CompressorTest {
         { tempDir.tempDir().tempPath(extension = ".bzip2").decompress() },
     ).map { call ->
         dynamicTest("$call") {
-            expectCatching { call() }.isFailure().isA<FileAlreadyExistsException>()
+            expectCatching { call() }.isFailure().isA<NoSuchFileException>()
         }
     }
 

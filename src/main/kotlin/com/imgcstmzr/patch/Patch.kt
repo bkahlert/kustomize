@@ -155,7 +155,7 @@ fun RenderingLogger<*>.applyGuestfishAndFileSystemOperations(osImage: OperatingS
 
             val changedFiles = root.listFilesRecursively({ it.isFile }).map { root.relativize(it) }.toList()
             if (changedFiles.isNotEmpty()) {
-                guestfish.run(Guestfish.copyInCommands(changedFiles))
+                guestfish.tarIn()
             } else {
                 logLine { META typed "No changed files to copy back." }
             }

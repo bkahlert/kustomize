@@ -1,16 +1,15 @@
 package com.imgcstmzr.util
 
+import com.bkahlert.koodies.concurrent.cleanUpOnShutdown
 import com.bkahlert.koodies.nio.file.copyTo
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.lastModified
 import com.bkahlert.koodies.nio.file.mkdirs
-import com.bkahlert.koodies.nio.file.readBytes
 import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.time.Now
-import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.streams.toList
@@ -78,10 +77,7 @@ fun Path.fileNameWithExtension(extension: String): String = "$baseName.$extensio
  * Returns this [Path] with a replaced [extension].
  * If no extension is present, it will be added.
  */
-fun Path.withExtension(extension: String): Path {
-    val resolveSibling = resolveSibling(fileNameWithExtension(extension))
-    return resolveSibling
-}
+fun Path.withExtension(extension: String): Path = resolveSibling(fileNameWithExtension(extension))
 
 /**
  * Constructs a path that takes this path as the root of [subPath].
@@ -101,15 +97,6 @@ fun Path.asRootFor(subPath: Path): Path {
 fun Path.wrap(value: CharSequence): String = toString().wrap(value)
 
 val Path.quoted get() = toAbsolutePath().toString().quoted
-
-@Deprecated("", replaceWith = ReplaceWith("readBytes()", "com.bkahlert.koodies.nio.file.readBytes"))
-fun Path.readAllBytes(): ByteArray = readBytes()
-
-fun Path.readAllLines(charset: Charset = Charsets.UTF_8): List<String> =
-    Files.readAllLines(this, charset)
-
-@Deprecated("", replaceWith = ReplaceWith("readText()", "com.bkahlert.koodies.nio.file.readText"))
-fun Path.readAll(): String = String(readAllBytes())
 
 fun Path.moveTo(dest: Path, createDirectories: Boolean = true): Path =
     run {
@@ -142,8 +129,7 @@ fun Path.cleanUp(vararg delimiters: String = arrayOf("?", "#")): Path {
  */
 fun Path.asEmptyTempFile(isolated: Boolean = false): Path {
     val fileNameParts = fileNameParts
-    val tempFile = com.bkahlert.koodies.nio.file.tempFile(fileNameParts.first + "-", fileNameParts.second?.let { ".$it" } ?: "")
-        .apply { toFile().deleteOnExit() }
+    val tempFile = com.bkahlert.koodies.nio.file.tempFile(fileNameParts.first + "-", fileNameParts.second?.let { ".$it" } ?: "").cleanUpOnShutdown()
     return if (isolated) tempFile.parent.mkRandomDir().let { Files.move(tempFile, it.resolve(tempFile.fileName)) }
     else tempFile
 }

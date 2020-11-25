@@ -9,12 +9,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
+import org.junit.jupiter.api.parallel.Isolated
+import strikt.api.Assertion
 import strikt.api.expectThat
-import strikt.assertions.isLessThan
 import kotlin.time.milliseconds
 import kotlin.time.seconds
 
-
+@Isolated
 @Execution(ExecutionMode.CONCURRENT)
 class ConcurrentTest {
 
@@ -35,11 +36,23 @@ class ConcurrentTest {
     @Test
     fun `should run concurrent tests currently`() {
         poll { starts.size == Tests.values().size && ends.size == Tests.values().size }.every(100.milliseconds).indefinitely()
-        expectThat(starts.values).get { maxOrThrow() - minOrThrow() }.get { milliseconds }
-            .describedAs { "$this difference between starts" }.isLessThan(.5.seconds)
-        expectThat(ends.values).get { maxOrThrow() - minOrThrow() }.get { milliseconds }
-            .describedAs { "$this difference between ends" }.isLessThan(.5.seconds)
-        expectThat(ends.values.maxOrThrow() - starts.values.minOrThrow()).get { milliseconds }
-            .describedAs { "$this overall time needed" }.isLessThan(2.5.seconds)
+        expectThat(Tests.values().toList()).ranConcurrently(starts, ends)
     }
 }
+
+
+fun <T : Enum<T>> Assertion.Builder<List<T>>.ranConcurrently(startTimes: Map<T, Long>, endTimes: Map<T, Long>): Assertion.Builder<List<T>> =
+    assert("ran concurrently") { tests ->
+        val relevantStartTimes = startTimes.filterKeys { it in tests }
+        val relevantEndTimes = endTimes.filterKeys { it in tests }
+
+        val startDifference = relevantStartTimes.values.run { maxOrThrow() - minOrThrow() }.milliseconds
+        val endDifference = relevantEndTimes.values.run { maxOrThrow() - minOrThrow() }.milliseconds
+        val overallDifference = (relevantEndTimes.values.maxOrThrow() - relevantStartTimes.values.minOrThrow()).milliseconds
+        when {
+            startDifference < .5.seconds -> fail("$startDifference difference between start times")
+            endDifference < .5.seconds -> fail("$endDifference difference between end times")
+            overallDifference < .5.seconds -> fail("$overallDifference difference between first start and last end time")
+            else -> pass()
+        }
+    }

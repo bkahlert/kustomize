@@ -27,6 +27,7 @@ import strikt.assertions.isA
 import strikt.assertions.isFailure
 import strikt.assertions.isGreaterThan
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.NoSuchFileException
 
 @Execution(CONCURRENT)
 class TarArchiverTest {
@@ -39,7 +40,7 @@ class TarArchiverTest {
         { tempDir.tempDir().tempPath(extension = ".tar").untar() },
     ).map { call ->
         dynamicTest("$call") {
-            expectCatching { call() }.isFailure().isA<FileAlreadyExistsException>()
+            expectCatching { call() }.isFailure().isA<NoSuchFileException>()
         }
     }
 

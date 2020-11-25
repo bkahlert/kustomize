@@ -1,6 +1,7 @@
 package com.imgcstmzr
 
 import com.bkahlert.koodies.concurrent.process.ShellScript
+import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.test.junit.systemproperties.SystemProperties
 import com.bkahlert.koodies.test.junit.systemproperties.SystemProperty
 import com.bkahlert.koodies.unit.Giga
@@ -13,7 +14,6 @@ import com.imgcstmzr.patch.Patch
 import com.imgcstmzr.patch.SshEnablementPatch
 import com.imgcstmzr.patch.UsernamePatch
 import com.imgcstmzr.runtime.OperatingSystems
-import com.imgcstmzr.util.readAll
 import com.typesafe.config.ConfigFactory
 import io.github.config4k.extract
 import org.junit.jupiter.api.Test
@@ -37,7 +37,7 @@ class ImgCstmzrConfigTest {
     fun `should deserialize`() {
         val config = ConfigFactory.systemProperties()
             .withFallback(ConfigFactory.parseResources("sample.conf"))
-            .withFallback(ConfigFactory.parseString(Path.of(".env").readAll()))
+            .withFallback(ConfigFactory.parseString(Path.of(".env").readText()))
             .resolve()
         val imgCstmztn = config.extract<ImageCustomization>("img-cstmztn")
         expectThat(imgCstmztn).compose("has equal properties") {

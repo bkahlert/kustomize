@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.exception
 
+import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempPath
@@ -10,7 +11,6 @@ import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.MiscFixture
 import com.imgcstmzr.util.hasContent
-import com.imgcstmzr.util.readAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -37,7 +37,7 @@ class PersistDumpKtTest {
     @Test
     fun `should dump data`() {
         val dumps = persistDump(path = path, data = data)
-        expectThat(dumps.values.map { it.deleteOnExit().readAll().removeEscapeSequences().lines().dropLast(1) }).hasSize(2).all {
+        expectThat(dumps.values.map { it.deleteOnExit().readText().removeEscapeSequences().lines().dropLast(1) }).hasSize(2).all {
             @Suppress("SpellCheckingInspection")
             first().startsWith("Booting QEMU machine \"versatilepb\" with kernel=")
             last().startsWith(" raspberrypi login:")
