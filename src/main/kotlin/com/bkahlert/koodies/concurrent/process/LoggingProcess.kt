@@ -11,12 +11,13 @@ import com.bkahlert.koodies.exception.toSingleLineString
 import com.bkahlert.koodies.io.RedirectingOutputStream
 import com.bkahlert.koodies.nio.NonBlockingReader
 import com.bkahlert.koodies.nio.file.exists
+import com.bkahlert.koodies.nio.file.serialized
+import com.bkahlert.koodies.string.unquoted
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ansi.AnsiStyles.tag
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.util.Paths.WORKING_DIRECTORY
 import com.imgcstmzr.util.group
-import com.imgcstmzr.util.unquoted
 import org.codehaus.plexus.util.cli.Commandline
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -28,6 +29,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
@@ -47,7 +49,7 @@ import org.apache.commons.io.output.TeeOutputStream as CommonsTeeOutputStream
  * On termination—no matter if successful or not—[runAfterProcessTermination]
  * will be called.
  */
-class LoggingProcess(
+open class LoggingProcess(
     private val command: String,
     private val arguments: List<String>,
     private val workingDirectory: Path? = WORKING_DIRECTORY,
@@ -57,6 +59,21 @@ class LoggingProcess(
     private val userProvidedInputStream: InputStream? = InputStream.nullInputStream(),
     private val ioProcessor: (LoggingProcess.(IO) -> Unit)? = { line -> echo(line) },
 ) : Process() {
+
+    constructor(
+        command: Command,
+        workingDirectory: Path? = WORKING_DIRECTORY,
+        env: Map<String, String> = emptyMap(),
+        runAfterProcessTermination: (() -> Unit)? = null,
+        ioProcessor: (LoggingProcess.(IO) -> Unit)? = { line -> echo(line) },
+    ) : this(
+        command = Processes.buildShellScriptToTempFile(workingDirectory, command).serialized,
+        arguments = emptyList(),
+        workingDirectory = null,
+        env = env,
+        runAfterProcessTermination = runAfterProcessTermination,
+        ioProcessor = ioProcessor,
+    )
 
     companion object {
         /**
@@ -68,7 +85,7 @@ class LoggingProcess(
         /**
          * Contains a formatted list of files contained in this command line.
          */
-        val Commandline.formattedIncludesFiles
+        val Commandline.formattedIncludesFiles: String
             get() = includesFiles.joinToString("\n") { "📄 ${it.toUri()}" }
 
         /**
@@ -126,7 +143,9 @@ class LoggingProcess(
         }.exceptionallyThrow("stdin"),
         executor.startAsCompletableFuture(name = "$commandLine::stdout") {
             inputStream.readerForStream(nonBlockingReader).forEachLine { line ->
-                ioProcessor?.let { it(this, OUT typed line) }
+                ioProcessor?.let { // TODO try out NIO processing; or just readLines with keepDelimiters respectively EOF as additional line separator
+                    it(this, OUT typed line)
+                }
             }
         }.exceptionallyThrow("stdout"),
         executor.startAsCompletableFuture(name = "$commandLine::stderr") {
@@ -171,6 +190,16 @@ class LoggingProcess(
     override fun descendants(): Stream<ProcessHandle> = process.descendants()
     override fun waitFor(): Int = loggedProcess.thenApply { it.exitValue() }.get()
     override fun waitFor(timeout: Long, unit: DurationUnit): Boolean = loggedProcess.thenApply { true }.completeOnTimeout(false, timeout, unit).get()
+    fun waitFor(timeout: Duration): Boolean = waitFor(timeout.toLongMilliseconds(), TimeUnit.MILLISECONDS)
+    fun waitForSuccess(): Unit = loggedProcess.thenApply {
+        check(it.exitValue() == 0) {
+            dump("""
+                    Process ${pid()} terminated with exit code ${exitValue()}.
+                    ${commandLine.formattedIncludesFiles}
+                """.trimIndent()) { ioLog.dump() }
+        }
+    }.get()
+
     override fun toString(): String = "RunningProcess($process; ${loggedProcess.toSimpleString()}; $ioLog)"
 
     init {
@@ -178,7 +207,7 @@ class LoggingProcess(
         commandLine.formattedIncludesFiles.log()
     }
 
-    private fun String.log() {
+    protected fun String.log() {
         metaStream.enter(this, delay = Duration.ZERO)
         ioProcessor?.let { it(this@LoggingProcess, META typed this) }
     }
@@ -190,5 +219,6 @@ class LoggingProcess(
 
     private fun InputStream.readerForStream(nonBlockingReader: Boolean): Reader =
         if (nonBlockingReader) NonBlockingReader(this, blockOnEmptyLine = true) else InputStreamReader(this)
+
 }
 

@@ -1,5 +1,7 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
+import com.bkahlert.koodies.docker.DockerContainerName.Companion.toUniqueContainerName
 import com.imgcstmzr.guestfish.Guestfish
 import com.imgcstmzr.runtime.ArmRunner
 import com.imgcstmzr.runtime.OperatingSystemImage
@@ -7,7 +9,6 @@ import com.imgcstmzr.runtime.Program
 import com.imgcstmzr.runtime.RunningOperatingSystem
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.util.asRootFor
-import com.imgcstmzr.util.quoted
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
 import strikt.assertions.isEqualTo
@@ -32,15 +33,6 @@ inline fun Assertion.Builder<OperatingSystemImage>.mounted(
     return this
 }
 
-fun Assertion.Builder<String>.isEqualTo(expected: String) =
-    assert("is equal to ${expected.quoted}") {
-        val actual = it
-        when (actual == expected) {
-            true -> pass()
-            else -> fail()
-        }
-    }
-
 inline fun Assertion.Builder<OperatingSystemImage>.booted(
     logger: BlockRenderingLogger<Any>,
     crossinline assertion: RunningOperatingSystem.(String) -> ((String) -> Boolean)?,
@@ -59,7 +51,7 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
         }
 
         ArmRunner.run(
-            name = "Assertion Boot of $this",
+            name = file.toUniqueContainerName(),
             osImage = this,
             logger = logger,
             programs = arrayOf(
@@ -75,7 +67,7 @@ fun Assertion.Builder<OperatingSystemImage>.booted(
     program: Program,
 ): Assertion.Builder<OperatingSystemImage> =
     compose("booted ${this.get { operatingSystem }}") {
-        get { ArmRunner.run(name = "Assertion Boot of $this", osImage = this, logger = logger, programs = arrayOf(program)) }.isEqualTo(0)
+        get { ArmRunner.run(name = "Assertion Boot of $this".toContainerName(), osImage = this, logger = logger, programs = arrayOf(program)) }.isEqualTo(0)
     } then {
         if (allPassed) pass() else fail("Program ${program.name} did not return successfully")
     }

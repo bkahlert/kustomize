@@ -1,11 +1,11 @@
 package com.bkahlert.koodies.string
 
+import com.bkahlert.koodies.terminal.ansi.AnsiStyles.tags
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import strikt.api.Assertion
 import strikt.api.expectThat
-import strikt.assertions.isFalse
-import strikt.assertions.isTrue
 
 @Execution(CONCURRENT)
 class ContainsAnyKtTest {
@@ -13,21 +13,34 @@ class ContainsAnyKtTest {
 
     @Test
     fun `should return true if any of the others is case-matching substring`() {
-        expectThat(string.containsAny(listOf("baz", "o b", "abc"))).isTrue()
+        expectThat(string).containsAny("baz", "o b", "abc")
     }
 
     @Test
     fun `should return true if any of the others is non-case-matching substring but case is ignored`() {
-        expectThat(string.containsAny(listOf("baz", "O B", "abc"), ignoreCase = true)).isTrue()
+        expectThat(string).containsAny("baz", "O B", "abc", ignoreCase = true)
     }
 
     @Test
     fun `should return false if none of the others is no case-matching substring`() {
-        expectThat(string.containsAny(listOf("baz", "O B", "abc"))).isFalse()
+        expectThat(string).not { containsAny("baz", "O B", "abc") }
     }
 
     @Test
     fun `should return false if none of the others is substring`() {
-        expectThat(string.containsAny(listOf("baz", "---", "abc"))).isFalse()
+        expectThat(string).not { containsAny("baz", "---", "abc") }
     }
 }
+
+
+/**
+ * Asserts that the subject contains any of the [expected] substrings.
+ */
+fun <T : CharSequence> Assertion.Builder<T>.containsAny(vararg expected: T, ignoreCase: Boolean = false): Assertion.Builder<T> =
+    assert("contains any of ${expected.tags()}") {
+        if (it.containsAny(expected, ignoreCase = ignoreCase)) {
+            pass()
+        } else {
+            fail("does not contain any of ${expected.tags()}")
+        }
+    }

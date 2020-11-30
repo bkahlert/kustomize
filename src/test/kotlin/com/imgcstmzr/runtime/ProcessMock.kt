@@ -4,6 +4,7 @@ import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
 import com.bkahlert.koodies.time.Now
+import com.bkahlert.koodies.time.sleep
 import com.bkahlert.koodies.tracing.MiniTracer
 import com.bkahlert.koodies.tracing.trace
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
@@ -98,7 +99,7 @@ class ProcessMock(
     }
 
     fun start(): RunningOperatingSystem {
-        return object : RunningOperatingSystem() {
+        return object : RunningOperatingSystem("shutdown-command") {
             override val process: Process = this@ProcessMock
             override val logger: RenderingLogger<*> = this@ProcessMock.logger
         }
@@ -135,18 +136,23 @@ class SlowInputStream(
     private val blockedByPrompt get() = unread.isNotEmpty() && unread.first().first == Duration.INFINITE
     private val Int.padded get() = this.toString().padStart(originalCountLength)
 
+    private val inputs = mutableListOf<String>()
     fun processInput(logger: MiniTracer<*>?): Boolean = logger.microTrace(Grapheme("✏️")) {
-        val input = byteArrayOutputStream?.toString(Charsets.UTF_8) ?: ""
-        if (input.isNotEmpty()) {
-            trace(input.debug)
+        byteArrayOutputStream?.apply {
+            toString(Charsets.UTF_8).takeUnless { it.isEmpty() }?.let { newInput ->
+                inputs.add(newInput)
+                trace("new input added; buffer is $inputs")
+                reset()
+            }
+        }
+        if (inputs.isNotEmpty()) {
             if (blockedByPrompt) {
+                val input = inputs.first()
+                trace(input.debug)
                 if (echoInput) unread[0] = Duration.ZERO to input.map { it.toByte() }.toMutableList()
                 else unread.removeFirst()
-                trace("${input.debug} unblocked prompt")
-            } else {
-                trace("${input.debug} had no effect, since there was no prompt")
+                trace("unblocked prompt")
             }
-            byteArrayOutputStream?.reset()
         } else {
             if (blockedByPrompt) {
                 trace("blocked by prompt")
@@ -201,6 +207,7 @@ class SlowInputStream(
 
         while (handleAndReturnBlockingState()) {
             trace("prompt is blocking")
+            10.milliseconds.sleep()
         }
 
         trace("${unreadCount.padded.yellow()} bytes unread")

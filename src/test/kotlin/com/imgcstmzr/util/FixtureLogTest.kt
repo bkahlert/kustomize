@@ -2,6 +2,7 @@ package com.imgcstmzr.util
 
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
+import com.bkahlert.koodies.nio.file.withExtension
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.BeforeEach

@@ -63,7 +63,7 @@ class Downloader(vararg customHandlers: Pair<String, Handler>) {
                         url,
                     )
                     !"done"
-                }.waitForExitCode()
+                }.waitForSuccess()
 
                 temp.list().singleOrNull()?.cleanUp() ?: throw IllegalStateException("Failed to download $url.")
             }

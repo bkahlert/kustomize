@@ -15,9 +15,11 @@ import com.bkahlert.koodies.string.LineSeparators.lineSequence
 import com.bkahlert.koodies.string.LineSeparators.lines
 import com.bkahlert.koodies.string.LineSeparators.trailingLineSeparator
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
-import com.imgcstmzr.patch.isEqualTo
 import com.imgcstmzr.util.debug
-import com.imgcstmzr.util.namedGroups
+import com.imgcstmzr.util.group
+import com.imgcstmzr.util.groupValues
+import com.imgcstmzr.util.matchEntire
+import com.imgcstmzr.util.value
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
@@ -25,13 +27,12 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
-import strikt.assertions.isEmpty
+import strikt.assertions.first
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
-import strikt.assertions.isNotNull
-import strikt.assertions.isNull
 import strikt.assertions.isNullOrEmpty
 import strikt.assertions.isTrue
 
@@ -46,7 +47,9 @@ class LineSeparatorsTest {
             "\n", "a\r\nb", "b\ra\nc", "sss\r",
         ).map { input ->
             dynamicTest("in ${input.debug}") {
-                expectThat(input.isMultiline).isTrue()
+                expectThat(input)
+                    .isMultiline()
+                    .not { isSingleLine() }
             }
         }
 
@@ -55,7 +58,9 @@ class LineSeparatorsTest {
             "", "b", "bds sd sd sds dac"
         ).map { input ->
             dynamicTest("in ${input.debug}") {
-                expectThat(input.isMultiline).isFalse()
+                expectThat(input)
+                    .isSingleLine()
+                    .not { isMultiline() }
             }
         }
     }
@@ -70,83 +75,92 @@ class LineSeparatorsTest {
         expectThat(LineSeparators.joinToString(" ") { "($it)" }).isEqualTo("(\r\n) (\n) (\r) (${LineSeparators.LS}) ($PS) (${LineSeparators.NL})")
     }
 
-    @Nested
-    inner class LineSequence {
-
-        @Test
-        fun `should keep trailing new lines`() {
-            expectThat("1${CR}2${CRLF}3$PS".lineSequence().toList())
-                .containsExactly("1", "2", "3", "")
-        }
-
-        @Nested
-        inner class WithTrailingSeparatorIgnored {
-            @Test
-            fun `should not have trailing empty line if one existed`() {
-                expectThat("1${CR}2${CRLF}3$PS".lineSequence(ignoreTrailingSeparator = true).toList())
-                    .containsExactly("1", "2", "3")
-            }
-
-            @Test
-            fun `should not have trailing empty line if none existed`() {
-                expectThat("1${CR}2${CRLF}3".lineSequence(ignoreTrailingSeparator = true).toList())
-                    .containsExactly("1", "2", "3")
-            }
-
-            @Test
-            fun `should consist of single line if only one existed`() {
-                expectThat("1".lineSequence(ignoreTrailingSeparator = true).toList())
-                    .containsExactly("1")
-            }
-
-            @Test
-            fun `should be empty if only (trailing) line is empty`() {
-                expectThat("".lineSequence(ignoreTrailingSeparator = true).toList())
-                    .isEmpty()
-            }
-        }
-    }
-
-    @Nested
-    inner class Lines {
-
-        @Test
-        fun `should keep trailing new lines`() {
-            expectThat("1${CR}2${CRLF}3$PS".lines())
-                .containsExactly("1", "2", "3", "")
-        }
-
-        @Nested
-        inner class WithTrailingSeparatorIgnored {
-            @Test
-            fun `should not have trailing empty line if one existed`() {
-                expectThat("1${CR}2${CRLF}3$PS".lines(ignoreTrailingSeparator = true))
-                    .containsExactly("1", "2", "3")
-            }
-
-            @Test
-            fun `should not have trailing empty line if none existed`() {
-                expectThat("1${CR}2${CRLF}3".lines(ignoreTrailingSeparator = true))
-                    .containsExactly("1", "2", "3")
-            }
-
-            @Test
-            fun `should consist of single line if only one existed`() {
-                expectThat("1".lines(ignoreTrailingSeparator = true))
-                    .containsExactly("1")
-            }
-
-            @Test
-            fun `should be empty if only (trailing) line is empty`() {
-                expectThat("".lineSequence(ignoreTrailingSeparator = true).toList())
-                    .isEmpty()
-            }
-        }
+    @TestFactory
+    fun lineOperations() = mapOf(
+        "lineSequence" to fun(input: CharSequence, ignoreTrailSep: Boolean, keepDelimiters: Boolean): Iterable<String> =
+            input.lineSequence(ignoreTrailingSeparator = ignoreTrailSep, keepDelimiters = keepDelimiters).toList(),
+        "lines" to fun(input: CharSequence, ignoreTrailingSeparator: Boolean, keepDelimiters: Boolean): Iterable<String> =
+            input.lines(ignoreTrailingSeparator = ignoreTrailingSeparator, keepDelimiters = keepDelimiters).toList(),
+    ).map { (name: String, operation: CharSequence.(Boolean, Boolean) -> Iterable<String>) ->
+        dynamicContainer("$name(", listOf(
+            dynamicContainer("ignoreTrailingSeparator=false", false.let { keepTrailSep ->
+                listOf(
+                    dynamicContainer("keepDelimiters=false)", false.let { ignoreDelimiters ->
+                        listOf(
+                            dynamicTest("should keep trailing empty line if one existed and ignore delimiters") {
+                                expectThat("1${CR}2${CRLF}3$PS".operation(keepTrailSep, ignoreDelimiters)).containsExactly("1", "2", "3", "")
+                            },
+                            dynamicTest("should not have trailing empty line if none existed and ignore delimiters") {
+                                expectThat("1${CR}2${CRLF}3".operation(keepTrailSep, ignoreDelimiters)).containsExactly("1", "2", "3")
+                            },
+                            dynamicTest("should consist of single line if only one existed") {
+                                expectThat("1".operation(keepTrailSep, ignoreDelimiters)).containsExactly("1")
+                            },
+                            dynamicTest("should be empty if only one is empty") {
+                                expectThat("".operation(keepTrailSep, ignoreDelimiters)).containsExactly("")
+                            },
+                        )
+                    }),
+                    dynamicContainer("keepDelimiters=true)", true.let { keepDelimiters ->
+                        listOf(
+                            dynamicTest("should keep trailing empty line if one existed and keep delimiters") {
+                                expectThat("1${CR}2${CRLF}3$PS".operation(keepTrailSep, keepDelimiters)).containsExactly("1$CR", "2$CRLF", "3$PS", "")
+                            },
+                            dynamicTest("should not have trailing empty line if none existed and keep delimiters") {
+                                expectThat("1${CR}2${CRLF}3".operation(keepTrailSep, keepDelimiters)).containsExactly("1$CR", "2$CRLF", "3")
+                            },
+                            dynamicTest("should consist of single line if only one existed") {
+                                expectThat("1".operation(keepTrailSep, keepDelimiters)).containsExactly("1")
+                            },
+                            dynamicTest("should be empty if only one is empty") {
+                                expectThat("".operation(keepTrailSep, keepDelimiters)).containsExactly("")
+                            },
+                        )
+                    }),
+                )
+            }),
+            dynamicContainer("ignoreTrailingSeparator=true", true.let { ignoreTrailSep ->
+                listOf(
+                    dynamicContainer("keepDelimiters=false)", false.let { ignoreDelims ->
+                        listOf(
+                            dynamicTest("should not have trailing empty line if one existed and ignore delimiters") {
+                                expectThat("1${CR}2${CRLF}3$PS".operation(ignoreTrailSep, ignoreDelims)).containsExactly("1", "2", "3")
+                            },
+                            dynamicTest("should not have trailing empty line if none existed and ignore delimiters") {
+                                expectThat("1${CR}2${CRLF}3".operation(ignoreTrailSep, ignoreDelims)).containsExactly("1", "2", "3")
+                            },
+                            dynamicTest("should consist of single line if only one existed") {
+                                expectThat("1".operation(ignoreTrailSep, ignoreDelims)).containsExactly("1")
+                            },
+                            dynamicTest("should be empty if only one is empty") {
+                                expectThat("".operation(ignoreTrailSep, ignoreDelims)).containsExactly()
+                            },
+                        )
+                    }),
+                    dynamicContainer("keepDelimiters=true)", true.let { keepDelims ->
+                        listOf(
+                            dynamicTest("should not have trailing empty line if one existed and keep delimiters") {
+                                expectThat("1${CR}2${CRLF}3$PS".operation(ignoreTrailSep, keepDelims)).containsExactly("1$CR", "2$CRLF", "3$PS")
+                            },
+                            dynamicTest("should not have trailing empty line if none existed and keep delimiters") {
+                                expectThat("1${CR}2${CRLF}3".operation(ignoreTrailSep, keepDelims)).containsExactly("1$CR", "2$CRLF", "3")
+                            },
+                            dynamicTest("should consist of single line if only one existed") {
+                                expectThat("1".operation(ignoreTrailSep, keepDelims)).containsExactly("1")
+                            },
+                            dynamicTest("should be empty if only one is empty") {
+                                expectThat("".operation(ignoreTrailSep, keepDelims)).containsExactly()
+                            },
+                        )
+                    }),
+                )
+            }),
+        ))
     }
 
     @TestFactory
-    fun `all line separators`() = LineSeparators.map { lineSeparator ->
-        dynamicContainer(lineSeparator.replaceNonPrintableCharacters(), listOf(
+    fun `each line separator`() = LineSeparators.map { lineSeparator ->
+        dynamicContainer(lineSeparator.replaceNonPrintableCharacters() + lineSeparator.debug, listOf(
             dynamicTest("should return itself") {
                 expectThat(lineSeparator).isEqualTo(lineSeparator)
             },
@@ -206,97 +220,85 @@ class LineSeparatorsTest {
                 },
             )),
 
-            dynamicContainer("SEPARATOR_PATTERN", listOf(
+            dynamicContainer(::SEPARATOR_PATTERN.name, listOf(
                 dynamicTest("should not match empty string") {
-                    val match = SEPARATOR_PATTERN.matchEntire("")
-                    expectThat(match).isNull()
+                    expectThat(SEPARATOR_PATTERN).not { matchEntire("") }
                 },
                 dynamicTest("should match itself") {
-                    val match = SEPARATOR_PATTERN.matchEntire(lineSeparator)
-                    expectThat(match?.groupValues).isNotNull().containsExactly(lineSeparator)
+                    expectThat(SEPARATOR_PATTERN).matchEntire(lineSeparator).groupValues.containsExactly(lineSeparator)
                 },
-                dynamicTest("should not match " + "line$lineSeparator".replaceNonPrintableCharacters()) {
-                    val match = SEPARATOR_PATTERN.matchEntire("line$lineSeparator")
-                    expectThat(match?.groupValues).isNull()
+                dynamicTest("should not match line$lineSeparator".replaceNonPrintableCharacters()) {
+                    expectThat(SEPARATOR_PATTERN).not { matchEntire("line$lineSeparator") }
                 },
             )),
 
-            dynamicContainer("LAST_LINE_PATTERN", listOf(
+            dynamicContainer(::LAST_LINE_PATTERN.name, listOf(
                 dynamicTest("should not match empty string") {
-                    val match = LAST_LINE_PATTERN.matchEntire("")
-                    expectThat(match).isNull()
+                    expectThat(LAST_LINE_PATTERN).not { matchEntire("") }
                 },
                 dynamicTest("should match line") {
-                    val match = LAST_LINE_PATTERN.matchEntire("line")
-                    expectThat(match).get { this?.groupValues }.isNotNull().containsExactly("line")
+                    expectThat(LAST_LINE_PATTERN).matchEntire("line").groupValues.containsExactly("line")
                 },
-                dynamicTest("should not match " + "line$lineSeparator".replaceNonPrintableCharacters()) {
-                    val match = LAST_LINE_PATTERN.matchEntire("line$lineSeparator")
-                    expectThat(match).isNull()
+                dynamicTest("should not match line$lineSeparator".replaceNonPrintableCharacters()) {
+                    expectThat(LAST_LINE_PATTERN).not { matchEntire("line$lineSeparator") }
                 },
-                dynamicTest("should not match" + "line$lineSeparator...".replaceNonPrintableCharacters()) {
-                    val match = LAST_LINE_PATTERN.matchEntire("line$lineSeparator...")
-                    expectThat(match?.groupValues).isNull()
+                dynamicTest("should not match line$lineSeparator...".replaceNonPrintableCharacters()) {
+                    expectThat(LAST_LINE_PATTERN).not { matchEntire("line$lineSeparator...") }
                 },
             )),
 
-            dynamicContainer("INTERMEDIARY_LINE_PATTERN", listOf(
+            dynamicContainer(::INTERMEDIARY_LINE_PATTERN.name, listOf(
                 dynamicTest("should not match empty string") {
-                    val match = INTERMEDIARY_LINE_PATTERN.matchEntire("")
-                    expectThat(match).isNull()
+                    expectThat(INTERMEDIARY_LINE_PATTERN).not { matchEntire("") }
                 },
                 dynamicTest("should match itself") {
-                    val match = INTERMEDIARY_LINE_PATTERN.matchEntire(lineSeparator)
-                    expectThat(match?.groupValues).isNotNull().containsExactly(lineSeparator, lineSeparator)
+                    expectThat(INTERMEDIARY_LINE_PATTERN).matchEntire(lineSeparator).groupValues.containsExactly(lineSeparator, lineSeparator)
                 },
                 dynamicTest("should not match line") {
-                    val match = INTERMEDIARY_LINE_PATTERN.matchEntire("line")
-                    expectThat(match).isNull()
+                    expectThat(INTERMEDIARY_LINE_PATTERN).not { matchEntire("line") }
                 },
-                dynamicTest("should match " + "line$lineSeparator".replaceNonPrintableCharacters()) {
-                    val match = INTERMEDIARY_LINE_PATTERN.matchEntire("line$lineSeparator")
-                    expectThat(match)
-                        .get { this?.namedGroups }
-                        .get { this?.get("separator") }
-                        .get { this?.value }
-                        .isEqualTo(lineSeparator)
+                dynamicTest("should match line$lineSeparator".replaceNonPrintableCharacters()) {
+                    expectThat(INTERMEDIARY_LINE_PATTERN).matchEntire("line$lineSeparator").group("separator").value.isEqualTo(lineSeparator)
                 },
-                dynamicTest("should not match" + "line$lineSeparator...".replaceNonPrintableCharacters()) {
-                    val match = INTERMEDIARY_LINE_PATTERN.matchEntire("line$lineSeparator...")
-                    expectThat(match?.groupValues).isNull()
+                dynamicTest("should not match line$lineSeparator...".replaceNonPrintableCharacters()) {
+                    expectThat(INTERMEDIARY_LINE_PATTERN).not { matchEntire("line$lineSeparator...") }
                 },
             )),
 
-            dynamicContainer("LINE_PATTERN", listOf(
+            dynamicContainer(::LINE_PATTERN.name, listOf(
                 dynamicTest("should not match empty string") {
-                    val match = LINE_PATTERN.matchEntire("")
-                    expectThat(match).isNull()
+                    expectThat(LINE_PATTERN).not { matchEntire("") }
                 },
                 dynamicTest("should match itself") {
-                    val match = LINE_PATTERN.matchEntire(lineSeparator)
-                    expectThat(match?.groupValues).isNotNull().containsExactly(lineSeparator, lineSeparator)
+                    expectThat(LINE_PATTERN).matchEntire(lineSeparator).groupValues.containsExactly(lineSeparator, lineSeparator)
                 },
                 dynamicTest("should match line") {
-                    val match = LINE_PATTERN.matchEntire("line")
-                    expectThat(match)
-                        .get { this?.groups }
-                        .get { this?.get(0) }
-                        .get { this?.value }
-                        .isEqualTo("line")
+                    expectThat(LINE_PATTERN).matchEntire("line").groupValues.first().isEqualTo("line")
                 },
-                dynamicTest("should match " + "line$lineSeparator".replaceNonPrintableCharacters()) {
-                    val match = LINE_PATTERN.matchEntire("line$lineSeparator")
-                    expectThat(match)
-                        .get { this?.namedGroups }
-                        .get { this?.get("separator") }
-                        .get { this?.value }
-                        .isEqualTo(lineSeparator)
+                dynamicTest("should match line$lineSeparator".replaceNonPrintableCharacters()) {
+                    expectThat(LINE_PATTERN).matchEntire("line$lineSeparator").group("separator").value.isEqualTo(lineSeparator)
                 },
-                dynamicTest("should not match" + "line$lineSeparator...".replaceNonPrintableCharacters()) {
-                    val match = LINE_PATTERN.matchEntire("line$lineSeparator...")
-                    expectThat(match?.groupValues).isNull()
+                dynamicTest("should not match line$lineSeparator...".replaceNonPrintableCharacters()) {
+                    expectThat(LINE_PATTERN).not { matchEntire("line$lineSeparator...") }
                 },
             )),
         ))
     }
 }
+
+fun <T : CharSequence> Assertion.Builder<T>.isMultiline() =
+    assert("is multi line") {
+        if (it.isMultiline) pass()
+        else fail()
+    }
+
+fun <T : CharSequence> Assertion.Builder<T>.isSingleLine() =
+    assert("is single line") {
+        if (!it.isMultiline) pass()
+        else fail()
+    }
+
+fun <T : CharSequence> Assertion.Builder<T>.lines(
+    ignoreTrailingSeparator: Boolean = false,
+    keepDelimiters: Boolean = false,
+) = get("lines %s") { lines(ignoreTrailingSeparator = ignoreTrailingSeparator, keepDelimiters = keepDelimiters) }

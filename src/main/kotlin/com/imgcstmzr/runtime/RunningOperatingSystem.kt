@@ -6,14 +6,14 @@ import com.bkahlert.koodies.kaomoji.Kaomojis
 import com.bkahlert.koodies.kaomoji.Kaomojis.thinking
 import com.bkahlert.koodies.string.LineSeparators.LF
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
+import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.green
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.util.quoted
 import kotlin.properties.Delegates.observable
 import kotlin.time.Duration
 import kotlin.time.milliseconds
 
-abstract class RunningOperatingSystem(val shutdownCommand: String = "sudo shutdown -h now") {
+abstract class RunningOperatingSystem(val shutdownCommand: String) {
     abstract val logger: RenderingLogger<*>
     abstract val process: Process
 

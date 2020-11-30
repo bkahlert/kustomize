@@ -2,6 +2,7 @@ package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.mkdirs
+import com.bkahlert.koodies.nio.file.withExtension
 import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
@@ -20,7 +21,6 @@ import com.imgcstmzr.util.hasContent
 import com.imgcstmzr.util.hasEqualContent
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.withCommands
-import com.imgcstmzr.util.withExtension
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory

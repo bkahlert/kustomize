@@ -2,15 +2,15 @@ package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.io.Archiver.listArchive
 import com.bkahlert.koodies.io.Archiver.unarchive
+import com.bkahlert.koodies.nio.file.extensionOrNull
 import com.bkahlert.koodies.nio.file.listRecursively
 import com.bkahlert.koodies.unit.Size.Companion.size
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.util.extension
 import java.nio.file.Path
 
 object ImageExtractor {
     val imgFilter: (Path) -> Boolean = { path ->
-        path.extension.equals("img", ignoreCase = true)
+        path.extensionOrNull.equals("img", ignoreCase = true)
             && !path.startsWith("__MACOSX")
             && !path.last().toString().startsWith("._")
     }

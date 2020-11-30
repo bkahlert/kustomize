@@ -2,6 +2,7 @@ package com.imgcstmzr.cli
 
 import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.exists
+import com.bkahlert.koodies.nio.file.extensionOrNull
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.unit.Size
@@ -12,7 +13,6 @@ import com.imgcstmzr.guestfish.ImageExtractor.extractImage
 import com.imgcstmzr.patch.ini.RegexElement
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.util.Paths
-import com.imgcstmzr.util.extension
 import com.imgcstmzr.util.isFile
 import com.imgcstmzr.util.joinToTruncatedString
 import com.imgcstmzr.util.listFilesRecursively
@@ -38,7 +38,7 @@ class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: In
 open class ManagedDirectory(val dir: Path) {
     constructor(parentDir: Path, dirName: String) : this(parentDir.resolve(dirName))
 
-    protected val file: File = dir.toAbsolutePath().toFile()
+    protected val file: File = dir.toAbsolutePath().toFile() // TODO remove toFile
 
     init {
         if (!file.exists()) {
@@ -88,7 +88,7 @@ private class ProjectDirectory(parentDir: Path, dirName: String, private val reu
         if (reuseLastWorkingCopy) {
             val lastWorkingCopy = workDirs.mapNotNull { workDir ->
                 val single = workDir.getSingle { file ->
-                    file.extension == "img"
+                    file.extensionOrNull == "img"
                 }
                 single
             }.firstOrNull()
@@ -104,7 +104,7 @@ private class ProjectDirectory(parentDir: Path, dirName: String, private val reu
             downloadedFile.extractImage { ImageBuilder.buildFrom(it, logger = logger) }
         }
 
-        return WorkDirectory.from(dir, img).getSingle { it.extension.equals("img", ignoreCase = true) } ?: throw NoSuchElementException()
+        return WorkDirectory.from(dir, img).getSingle { it.extensionOrNull.equals("img", ignoreCase = true) } ?: throw NoSuchElementException()
     }
 }
 

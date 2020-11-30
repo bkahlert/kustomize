@@ -3,7 +3,6 @@ package com.imgcstmzr.patch
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.nio.file.writeLine
-import com.bkahlert.koodies.number.hasSize
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
 import com.bkahlert.koodies.test.junit.ThirtyMinutesTimeout
@@ -17,13 +16,12 @@ import com.imgcstmzr.guestfish.Guestfish
 import com.imgcstmzr.guestfish.Guestfish.Companion.copyOutCommands
 import com.imgcstmzr.patch.new.buildPatch
 import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.runtime.Program
+import com.imgcstmzr.runtime.size
 import com.imgcstmzr.util.DockerRequiring
 import com.imgcstmzr.util.MiscFixture
 import com.imgcstmzr.util.OS
-import com.imgcstmzr.util.copyToTempSiblingDirectory
 import com.imgcstmzr.util.logging.CapturedOutput
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.OutputCaptureExtension
@@ -37,6 +35,7 @@ import org.junit.jupiter.api.parallel.Isolated
 import strikt.api.expectThat
 import strikt.assertions.exists
 import strikt.assertions.isEmpty
+import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
 import java.nio.file.Path
 import java.time.Instant
@@ -46,7 +45,7 @@ import java.time.Instant
 class PatchKtTest {
 
     @Nested
-    @Isolated // flaky OutputCapture
+    @Isolated("flaky OutputCapture")
     inner class ConsoleLoggingByDefault {
         @Test
         fun `should only log to console by default`(osImage: OperatingSystemImage, capturedOutput: CapturedOutput) {
@@ -71,7 +70,7 @@ class PatchKtTest {
     }
 
     @Nested
-    @Isolated // flaky OutputCapture
+    @Isolated("flaky OutputCapture")
     inner class NoSystemOut {
         @Test
         fun `should only log using specified logger`(osImage: OperatingSystemImage, logger: InMemoryLogger<Any>, capturedOutput: CapturedOutput) {
@@ -104,7 +103,7 @@ class PatchKtTest {
 
         sshPatch.patch(osImage, logger)
 
-        val guestfish = Guestfish(osImage based Path.of(osImage.path).copyToTempSiblingDirectory(), logger).withRandomSuffix()
+        val guestfish = Guestfish(osImage.duplicate(), logger).withRandomSuffix()
         guestfish.run(copyOutCommands(listOf(Path.of("/boot/ssh"))))
         expectThat(guestfish.guestRootOnHost).get { resolve("boot/ssh") }.exists().get { }
     }
@@ -140,11 +139,11 @@ class PatchKtTest {
 
         patch.patch(osImage, logger)
 
-        expectThat(osImage)
-            .hasSize(2.Giga.bytes)
-            .booted(logger, Program("check",
+        expectThat(osImage) {
+            size.isEqualTo(2.Giga.bytes)
+            booted(logger, Program("check",
                 { "init" },
-                "init" to { _ ->
+                "init" to {
                     enter("sudo cat /root/.imgcstmzr.created")
                     "demo"
                 },
@@ -153,5 +152,6 @@ class PatchKtTest {
                     else null
                 }
             ))
+        }
     }
 }

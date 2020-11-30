@@ -2,6 +2,7 @@ package com.bkahlert.koodies.kaomoji
 
 import com.bkahlert.koodies.kaomoji.Kaomojis.fishing
 import com.bkahlert.koodies.kaomoji.Kaomojis.thinking
+import com.bkahlert.koodies.string.codePointSequence
 import com.bkahlert.koodies.terminal.IDE
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.hidden
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
@@ -24,7 +25,7 @@ class KaomojisTest {
     fun `should create random Kaomoji`() = (0 until 10).map { i ->
         val kaomoji = Kaomojis.random()
         dynamicTest(kaomoji) {
-            expectThat(kaomoji).get { codePoints().count() }.isGreaterThanOrEqualTo(3)
+            expectThat(kaomoji).get { codePointSequence().count() }.isGreaterThanOrEqualTo(3)
         }
     }
 
@@ -33,7 +34,7 @@ class KaomojisTest {
         dynamicContainer(category.name, (0 until 10).map { i ->
             val kaomoji = category.random()
             dynamicTest(kaomoji) {
-                expectThat(kaomoji).get { codePoints().count() }.isGreaterThanOrEqualTo(3)
+                expectThat(kaomoji).get { codePointSequence().count() }.isGreaterThanOrEqualTo(3)
             }
         })
     }

@@ -1,11 +1,10 @@
 package com.bkahlert.koodies.concurrent.process
 
-import com.bkahlert.koodies.docker.Docker.toContainerName
-import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.string.LineSeparators
+import com.bkahlert.koodies.string.LineSeparators.lines
+import com.bkahlert.koodies.string.prefixLinesWith
 import com.imgcstmzr.util.makeExecutable
-import com.imgcstmzr.util.quoted
 import java.nio.file.Path
 
 @DslMarker
@@ -20,20 +19,22 @@ class ShellScript(val name: String? = null, content: String? = null) {
          */
         fun (ShellScript.() -> Unit).build(): ShellScript =
             ShellScript().apply(this)
+
+        operator fun invoke(name: String? = null, block: ShellScript.() -> Unit): ShellScript {
+            val build = block.build()
+            val content = build.build()
+            return ShellScript(name, content)
+        }
     }
 
     val lines: MutableList<String> = mutableListOf()
 
     init {
-        if (content != null) lines.add(content.trimIndent())
+        if (content != null) lines.addAll(content.trimIndent().lines())
     }
 
-    fun shebang(interpreter: Path = Path.of("/bin/sh")) {
-        lines.add("#!${interpreter.serialized}")
-    }
-
-    fun changeDirectoryOrExit(directory: Path, @Suppress("UNUSED_PARAMETER") errorCode: Int = 1) {
-        lines.add("cd \"$directory\" || exit 1")
+    fun changeDirectoryOrExit(directory: Path, @Suppress("UNUSED_PARAMETER") errorCode: Int = -1) {
+        lines.add("cd \"$directory\" || exit -1")
     }
 
     operator fun String.not() {
@@ -61,10 +62,19 @@ class ShellScript(val name: String? = null, content: String? = null) {
         lines.add(listOf(command, *arguments).joinToString(" "))
     }
 
-    fun docker(init: DockerBuilder.() -> Unit) = DockerBuilder(lines).apply(init)
+    /**
+     * Builds a [command] call.
+     */
+    fun command(command: Command) {
+        lines.addAll(command.lines)
+    }
 
     fun exit(code: Int) {
         lines.add("exit $code")
+    }
+
+    fun comment(text: String) {
+        lines += text.prefixLinesWith(prefix = "# ")
     }
 
     fun build(): String = lines.joinToString(LineSeparators.LF, postfix = LineSeparators.LF)
@@ -73,7 +83,7 @@ class ShellScript(val name: String? = null, content: String? = null) {
         makeExecutable()
     }
 
-    override fun toString(): String = build()
+    override fun toString(): String = "Script(name=$name;content=${build().lines(ignoreTrailingSeparator = true).joinToString(";")}})"
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -90,43 +100,5 @@ class ShellScript(val name: String? = null, content: String? = null) {
         var result = name?.hashCode() ?: 0
         result = 31 * result + lines.hashCode()
         return result
-    }
-
-}
-
-@ShellScriptMarker
-class DockerBuilder(private val lines: MutableList<String>) {
-    fun run(
-        redirectStdErrToStdOut: Boolean = false,
-        name: String,
-        privileged: Boolean = false,
-        autoCleanup: Boolean = true,
-        interactive: Boolean = true,
-        pseudoTerminal: Boolean = false,
-        volumes: Map<Path, Path> = emptyMap(),
-        image: String,
-        args: List<String> = emptyList(),
-    ) {
-        val containerName = name.toContainerName()
-        val continuation = "\\${LineSeparators.LF}"
-
-        val redirections = mutableListOf<String>()
-        if (redirectStdErrToStdOut) redirections.add("2>&1")
-
-        lines.add(listOf(
-            *redirections.toTypedArray(),
-            "docker",
-            "run",
-            continuation + "--name ${containerName.quoted}",
-            *listOf(
-                privileged to "--privileged",
-                autoCleanup to "--rm",
-                interactive to "-i",
-                pseudoTerminal to "-t",
-            ).filter { (option, _) -> option }.map { (_, flag) -> continuation + flag }.toTypedArray(),
-            *volumes.map { volume -> continuation + "--volume ${volume.key.normalize().serialized}:${volume.value}" }.toTypedArray(),
-            continuation + image,
-            *args.map { continuation + it }.toTypedArray(),
-        ).joinToString(" "))
     }
 }

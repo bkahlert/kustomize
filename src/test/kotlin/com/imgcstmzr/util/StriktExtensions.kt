@@ -4,49 +4,32 @@ package com.imgcstmzr.util
 
 import com.bkahlert.koodies.nio.file.lastModified
 import com.bkahlert.koodies.nio.file.listRecursively
+import com.bkahlert.koodies.nio.file.quoted
 import com.bkahlert.koodies.nio.file.readBytes
 import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.nio.file.resolveBetweenFileSystems
 import com.bkahlert.koodies.regex.countMatches
-import com.bkahlert.koodies.string.CodePoint
-import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.LineSeparators.isMultiline
 import com.bkahlert.koodies.string.asString
+import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.bkahlert.koodies.string.truncate
-import com.bkahlert.koodies.terminal.ANSI
-import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
+import com.bkahlert.koodies.test.strikt.asString
 import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.time.minus
-import com.bkahlert.koodies.unit.BinaryPrefix
-import com.bkahlert.koodies.unit.Size
 import com.imgcstmzr.guestfish.GuestfishOperation
 import com.imgcstmzr.patch.Patch
 import com.imgcstmzr.patch.PathOperation
 import com.imgcstmzr.patch.new.ImgOperation
 import com.imgcstmzr.runtime.Program
 import strikt.api.Assertion
-import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
 import strikt.assertions.hasSize
 import java.io.File
 import java.nio.file.Path
 import kotlin.time.Duration
 
-// TODO improve compatibility with https://github.com/JetBrains/intellij-community/blob/3f7e93e20b7e79ba389adf593b3b59e46a3e01d1/plugins/testng/src/com/theoryinpractice/testng/model/TestProxy.java#L50 in order to always trigger the "Click here to compare" link
-fun Assertion.Builder<*>.asString(trim: Boolean = true): DescribeableBuilder<String> {
-    return this.get("asString") {
-        val string = when (this) {
-            is CodePoint -> this.string
-            is Grapheme -> this.asString
-            is Size -> this.toString(BinaryPrefix::class)
-            is GuestfishOperation -> this.asHereDoc()
-            else -> this.toString()
-        }
-        string.takeUnless { trim } ?: string.trim()
-    }
-}
 
 fun <T : CharSequence> Assertion.Builder<T>.asBytes(trim: Boolean = true): Assertion.Builder<ByteArray> =
     asString(trim).get("as ByteArray") {
@@ -66,16 +49,6 @@ fun <T : CharSequence> Assertion.Builder<T>.isEqualToByteWise(other: CharSequenc
             true -> pass()
             else -> fail("\nwas        ${otherString.debug}" +
                 "\ninstead of ${thisString.debug}.")
-        }
-    }
-
-fun Assertion.Builder<*>.isEqualToStringWise(other: Any?, removeAnsi: Boolean = true) =
-    assert("have same toString value") { value ->
-        val actualString = value.toString().let { if (removeAnsi || value is ANSI) it.removeEscapeSequences() else it }
-        val expectedString = other.toString().let { if (removeAnsi || value is ANSI) it.removeEscapeSequences() else it }
-        when (actualString == expectedString) {
-            true -> pass()
-            else -> fail("was $actualString instead of $expectedString.")
         }
     }
 
@@ -131,7 +104,7 @@ fun <T : CharSequence> Assertion.Builder<T>.containsOnlyCharacters(chars: CharAr
         }
     }
 
-fun Assertion.Builder<Path>.hasContent(expectedContent: String) =
+fun <T : Path> Assertion.Builder<T>.hasContent(expectedContent: String) =
     assert("has content ${expectedContent.quoted}") {
         val actualContent = it.readText()
         when (actualContent.contentEquals(expectedContent)) {
@@ -140,7 +113,7 @@ fun Assertion.Builder<Path>.hasContent(expectedContent: String) =
         }
     }
 
-fun Assertion.Builder<Path>.containsContent(expectedContent: String) =
+fun <T : Path> Assertion.Builder<T>.containsContent(expectedContent: String) =
     assert("contains content ${expectedContent.quoted}") {
         val actualContent = it.readText()
         when (actualContent.contains(expectedContent)) {
@@ -149,7 +122,7 @@ fun Assertion.Builder<Path>.containsContent(expectedContent: String) =
         }
     }
 
-fun Assertion.Builder<Path>.containsContentAtMost(expectedContent: String, limit: Int = 1) =
+fun <T : Path> Assertion.Builder<T>.containsContentAtMost(expectedContent: String, limit: Int = 1) =
     assert("contains content ${expectedContent.quoted} at most ${limit}x") {
         val actualContent = it.readText()
         val actual = Regex.fromLiteral(expectedContent).matchEntire(actualContent)?.groups?.size ?: 0
@@ -171,7 +144,7 @@ fun <T : Path> Assertion.Builder<T>.hasEqualContent(other: Path) =
         }
     }
 
-fun Assertion.Builder<Pair<Path, Path>>.haveEqualContent() =
+fun <T : Path> Assertion.Builder<Pair<T, Path>>.haveEqualContent() =
     assert("have same content") {
         val firstContent = it.first.readBytes()
         val lastContent = it.second.readBytes()
@@ -184,14 +157,14 @@ fun Assertion.Builder<Pair<Path, Path>>.haveEqualContent() =
         }
     }
 
-fun Assertion.Builder<Path>.hasSameFiles(other: Path) =
+fun <T : Path> Assertion.Builder<T>.hasSameFiles(other: Path) =
     assert("has same files as ${other.quoted}") { actual ->
         expectThat(actual).containsAllFiles(other)
         expectThat(other).containsAllFiles(actual)
     }
 
 
-fun Assertion.Builder<Path>.containsAllFiles(other: Path) =
+fun <T : Path> Assertion.Builder<T>.containsAllFiles(other: Path) =
     assert("contains all files as ${other.quoted}") { actual ->
         if (!actual.isDirectory) fail("$actual is no directory")
         if (!other.isDirectory) fail("$other is no directory")
@@ -203,7 +176,7 @@ fun Assertion.Builder<Path>.containsAllFiles(other: Path) =
         pass()
     }
 
-fun Assertion.Builder<Path>.absolutePathMatches(regex: Regex) =
+fun <T : Path> Assertion.Builder<T>.absolutePathMatches(regex: Regex) =
     assert("matches ${regex.pattern}") {
         when (it.toAbsolutePath().toString().matches(regex)) {
             true -> pass()
@@ -211,7 +184,7 @@ fun Assertion.Builder<Path>.absolutePathMatches(regex: Regex) =
         }
     }
 
-fun Assertion.Builder<Path>.isEmptyDirectory() =
+fun <T : Path> Assertion.Builder<T>.isEmptyDirectory() =
     assert("is empty directory") { self ->
         val files = self.listFilesRecursively({ current -> current != self })
         when (files.isEmpty()) {
@@ -220,7 +193,7 @@ fun Assertion.Builder<Path>.isEmptyDirectory() =
         }
     }
 
-fun Assertion.Builder<Path>.lastModified(duration: Duration) =
+fun <T : Path> Assertion.Builder<T>.lastModified(duration: Duration) =
     assert("was last modified at most $duration ago") {
         val now = Now.fileTime
         val recent = now - duration

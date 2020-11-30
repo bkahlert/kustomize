@@ -12,13 +12,13 @@ import java.nio.file.Path
 import kotlin.collections.Map.Entry
 
 /**
- * An I/O log can be used to log what a [RunningProcess] received and produces as data.
+ * An I/O log can be used to log what a [LoggingProcess] received and produces as data.
  *
  * In order to log I/O only [add] must be called.
  */
 class IOLog {
     /**
-     * Contains the currently logged I/O of a [RunningProcess].
+     * Contains the currently logged I/O of a [LoggingProcess].
      *
      * **Important:** Only complete lines can be accessed as this is considered to be the only safe way
      * to have non-corrupted data (e.g. split characters).

@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 @Suppress("SpellCheckingInspection")
 plugins {
-    kotlin("jvm") version "1.4.10"
+    kotlin("jvm") version "1.4.20"
     id("se.patrikerdes.use-latest-versions") version "0.2.14"
     id("com.github.ben-manes.versions") version "0.29.0"
     id("com.github.johnrengelman.shadow") version "6.0.0"
@@ -71,6 +71,7 @@ tasks {
                 "-Xopt-in=kotlin.ExperimentalUnsignedTypes",
                 "-Xopt-in=kotlin.time.ExperimentalTime",
                 "-Xopt-in=kotlin.contracts.ExperimentalContracts",
+                "-Xopt-in=kotlin.io.path.ExperimentalPathApi",
                 "-Xinline-classes"
             )
         }

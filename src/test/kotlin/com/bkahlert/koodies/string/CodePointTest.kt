@@ -1,8 +1,7 @@
 package com.bkahlert.koodies.string
 
 import com.bkahlert.koodies.string.CodePoint.Companion.isValidCodePoint
-import com.imgcstmzr.util.asString
-import com.imgcstmzr.util.quoted
+import com.bkahlert.koodies.test.strikt.asString
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test

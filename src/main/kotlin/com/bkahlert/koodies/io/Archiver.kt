@@ -8,6 +8,7 @@ import com.bkahlert.koodies.nio.file.addExtension
 import com.bkahlert.koodies.nio.file.bufferedInputStream
 import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.exists
+import com.bkahlert.koodies.nio.file.extensionOrNull
 import com.bkahlert.koodies.nio.file.hasExtension
 import com.bkahlert.koodies.nio.file.listRecursively
 import com.bkahlert.koodies.nio.file.mkdirs
@@ -17,7 +18,6 @@ import com.bkahlert.koodies.nio.file.requireEmpty
 import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.nio.file.requireExistsNot
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.util.extension
 import com.imgcstmzr.util.isFile
 import org.apache.commons.compress.archivers.ArchiveEntry
 import org.apache.commons.compress.archivers.ArchiveInputStream
@@ -72,7 +72,7 @@ object Archiver {
      * By default the existing file name is used with the extension removed.
      */
     fun Path.unarchive(
-        destination: Path = if (hasExtension("tar.gz")) removeExtension("tar.gz") else extension?.let { removeExtension(it) }
+        destination: Path = if (hasExtension("tar.gz")) removeExtension("tar.gz") else extensionOrNull?.let { removeExtension(it) }
             ?: throw IllegalArgumentException("Cannot auto-detect the archive format due to missing file extension."),
         overwrite: Boolean = false,
     ): Path =

@@ -58,11 +58,11 @@ class RandomKtTest {
 
     @RepeatedTest(100)
     fun `should create valid random CodePoint`() {
-        expectThat(CodePoint.random.toString().codePoints().count()).isEqualTo(1)
+        expectThat(CodePoint.random.toString().codePointSequence().count()).isEqualTo(1)
     }
 
     @RepeatedTest(100)
     fun `should create valid random single character string`() {
-        expectThat(Char.random.codePoints().count()).isEqualTo(1)
+        expectThat(Char.random.codePointSequence().count()).isEqualTo(1)
     }
 }

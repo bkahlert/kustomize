@@ -1,24 +1,29 @@
 package com.imgcstmzr.guestfish
 
-import com.bkahlert.koodies.concurrent.process.CompletedProcess
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
-import com.bkahlert.koodies.docker.Docker
+import com.bkahlert.koodies.concurrent.process.LoggedProcess
+import com.bkahlert.koodies.docker.DockerContainerName
+import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
+import com.bkahlert.koodies.docker.DockerImage
+import com.bkahlert.koodies.docker.DockerImageBuilder
+import com.bkahlert.koodies.docker.DockerProcess
+import com.bkahlert.koodies.docker.DockerRunCommandBuilder.Companion.buildRunCommand
 import com.bkahlert.koodies.io.TarArchiver.tar
 import com.bkahlert.koodies.kaomoji.Kaomojis
 import com.bkahlert.koodies.nio.file.exists
+import com.bkahlert.koodies.nio.file.withExtension
 import com.bkahlert.koodies.string.match
+import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.singleLineLogger
+import com.imgcstmzr.runtime.log.fileLogger
 import com.imgcstmzr.runtime.log.subLogger
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.moveTo
-import com.imgcstmzr.util.quoted
-import com.imgcstmzr.util.withExtension
 import java.nio.file.Path
 
 /**
@@ -50,11 +55,11 @@ class Guestfish(
     /**
      * Name to be used for the underlying Docker container. If a container with the same name exists, it will be stopped and removed.
      */
-    private val containerName: String = imgPathOnHost.fileName.toString(),
+    private val containerName: DockerContainerName = imgPathOnHost.fileName.toContainerName(),
 
     private val debug: Boolean = false,
 ) {
-    fun withRandomSuffix(): Guestfish = Guestfish(imgPathOnHost, logger, imgPathOnHost.fileName.toString() + "-" + String.random(4))
+    fun withRandomSuffix(): Guestfish = Guestfish(imgPathOnHost, logger, DockerContainerName(imgPathOnHost.fileName + "-" + String.random(4)))
 
     /**
      * [Path] on this host mapped to the OS running inside Docker.
@@ -77,30 +82,31 @@ class Guestfish(
 
         val caption = "Running ${imgPathOnHost.fileName} ${guestfishOperation.summary} "
         val block: RenderingLogger<Unit>.() -> Unit = {
-            require(imgPathOnHost.exists) { "Error running Guestfish: $imgPathOnHost does not exist.".wrapWithBorder() }
+            require(imgPathOnHost.readable) { "Error running Guestfish: $imgPathOnHost can't be read.".wrapWithBorder() }
 
-            Docker.run(
-                workingDirectory = imgPathOnHost.parent,
-                ioProcessor = GuestfishIoProcessor(this, verbose = false),
-            ) {
-                run(
-                    redirectStdErrToStdOut = true, // needed since some commandrvf writes all output to stderr
-                    name = containerName,
-                    autoCleanup = false,
-                    volumes = mapOf(
-                        imgPathOnHost to imgPathOnDocker,
-                        imgPathOnHost.resolveSibling(SHARED_DIRECTORY_NAME) to GUEST_ROOT_ON_DOCKER,
-                    ),
-                    image = IMAGE_NAME,
-                    args = listOf(
+            val workingDirectory = imgPathOnHost.directory
+
+            DockerProcess(
+                command = IMAGE.buildRunCommand {
+                    redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
+                    options {
+                        containerName { containerName }
+                        autoCleanup { false }
+                        volumes {
+                            workingDirectory.resolve(imgPathOnHost.fileName) to imgPathOnDocker
+                            workingDirectory.resolve(SHARED_DIRECTORY_NAME) to GUEST_ROOT_ON_DOCKER
+                        }
+                    }
+                    args(listOf(
                         "--rw",
                         "--add $imgPathOnDocker",
                         "--mount /dev/sda2:/",
                         "--mount /dev/sda1:/boot",
-                        (guestfishOperation + shutdownOperation).asHereDoc(),
-                    ),
-                )
-            }.waitForExitCode()
+                        (guestfishOperation + shutdownOperation).asHereDoc()))
+                },
+                workingDirectory = workingDirectory,
+                ioProcessor = GuestfishIoProcessor(this, verbose = false),
+            ).waitForSuccess()
 
             guestfishOperation.commands.map { it.match("""! perl -i.{} -pe 's|(?<={}:)[^:]*|crypt("{}","\\\${'$'}6\\\${'$'}{}\\\${'$'}")|e' {}/shadow""") }
                 .filter { it.size > 2 }
@@ -111,7 +117,7 @@ class Guestfish(
                 }
         }
         if (debug) logger.subLogger(caption = caption, ansiCode = null, block = block)
-        else logger.singleLineLogger(caption = caption, block = block)
+        else logger.fileLogger(path = imgPathOnHost.newLogFilePath(), caption = caption, block = block)
     }
 
     fun copyOut(guestPathAsString: String): Path {
@@ -123,8 +129,7 @@ class Guestfish(
     fun tarIn(): Unit = run(tarInCommands(imgPathOnHost))
 
     companion object {
-        @Suppress("SpellCheckingInspection")
-        private const val IMAGE_NAME: String = "cmattoon/guestfish"//"curator/guestfish"
+        @Suppress("SpellCheckingInspection") val IMAGE: DockerImage = DockerImageBuilder.build { "cmattoon" / "guestfish" } //"curator/guestfish"
         val DOCKER_MOUNT_ROOT: Path = Path.of("/work")///root")
         private val GUEST_MOUNT_ROOT: Path = Path.of("/")
         const val SHARED_DIRECTORY_NAME: String = "guestfish.shared"
@@ -138,7 +143,7 @@ class Guestfish(
         /**
          * Given an [img] location returns the [Path] which is used to exchange data with [img] mounted using [Guestfish].
          */
-        private fun guestRootOnHost(img: Path) = img.resolveSibling(SHARED_DIRECTORY_NAME)
+        private fun guestRootOnHost(osImage: OperatingSystemImage) = osImage.directory.resolve(SHARED_DIRECTORY_NAME)
 
         /**
          * Creates the commands needed to copy the [guestPaths] to this host.
@@ -171,8 +176,8 @@ class Guestfish(
          * Creates the commands needed to copy everything contained in the [SHARED_DIRECTORY_NAME]
          * using the same directory structure to the guest of [img].
          */
-        fun tarInCommands(img: Path): GuestfishOperation {
-            val tarball = guestRootOnHost(img).tar().moveTo(guestRootOnHost(img).resolve("tarball.tar"))
+        fun tarInCommands(osImage: OperatingSystemImage): GuestfishOperation {
+            val tarball = guestRootOnHost(osImage).tar().moveTo(guestRootOnHost(osImage).resolve("tarball.tar"))
             check(tarball.exists) { "Error creating tarball" }
             return GuestfishOperation(arrayOf(
                 "-tar-in ${GUEST_ROOT_ON_DOCKER.resolve(tarball.fileName)} /",
@@ -204,22 +209,21 @@ class Guestfish(
             commands: GuestfishOperation,
             workingDirectory: Path = Paths.WORKING_DIRECTORY,
             logger: RenderingLogger<*>,
-        ): CompletedProcess = logger.subLogger("Running ${commands.commandCount} guestfish operations... ${Kaomojis.fishing()}") {
-            Docker.run(
+        ): LoggedProcess = logger.subLogger("Running ${commands.commandCount} guestfish operations... ${Kaomojis.fishing()}") {
+            DockerProcess(
+                command = IMAGE.buildRunCommand {
+                    redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
+                    options {
+                        name { containerName }
+                        autoCleanup { false }
+                        volumes { +volumes }
+                    }
+                    args(listOf(*options.toTypedArray(), "--", (commands + shutdownOperation).asHereDoc()))
+                },
                 workingDirectory = workingDirectory,
-                ioProcessor = GuestfishIoProcessor(this, verbose = false)
-            ) {
-                run(
-                    redirectStdErrToStdOut = true, // needed since some commandrvf writes all output to stderr
-                    name = containerName,
-                    autoCleanup = false,
-                    volumes = volumes,
-                    image = IMAGE_NAME,
-                    args = listOf(*options.toTypedArray(), "--", (commands + shutdownOperation).asHereDoc()),
-                )
-            }.waitForExitCode()
+                ioProcessor = GuestfishIoProcessor(this, verbose = false),
+            ).loggedProcess.get()
         }
-
     }
 }
 

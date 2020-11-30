@@ -3,13 +3,16 @@ package com.bkahlert.koodies.terminal.ansi
 import com.bkahlert.koodies.terminal.ansi.AnsiStyles.echo
 import com.bkahlert.koodies.terminal.ansi.AnsiStyles.saying
 import com.bkahlert.koodies.terminal.ansi.AnsiStyles.tag
+import com.bkahlert.koodies.terminal.ansi.AnsiStyles.tags
 import com.bkahlert.koodies.terminal.ansi.AnsiStyles.unit
-import com.imgcstmzr.patch.isEqualTo
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
+import strikt.assertions.isEqualTo
+import java.util.concurrent.TimeUnit.DAYS
+import java.util.concurrent.TimeUnit.SECONDS
 
 @Execution(CONCURRENT)
 class AnsiStylesTest {
@@ -26,6 +29,11 @@ class AnsiStylesTest {
     @Test
     fun `should style tag`() {
         expectThat("tag".tag()).isEqualTo("【tag】")
+    }
+
+    @Test
+    fun `should style tags`() {
+        expectThat(listOf(SECONDS, DAYS).tags { it.name.toLowerCase().capitalize() }).isEqualTo("【Seconds, Days】")
     }
 
     @Nested

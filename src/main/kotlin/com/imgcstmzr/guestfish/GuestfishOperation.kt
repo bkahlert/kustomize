@@ -1,5 +1,6 @@
 package com.imgcstmzr.guestfish
 
+import com.bkahlert.koodies.shell.HereDoc
 import com.bkahlert.koodies.shell.toHereDoc
 import com.imgcstmzr.runtime.HasStatus.Companion.asStatus
 
@@ -29,5 +30,5 @@ inline class GuestfishOperation(val commands: Array<String>) {
 
     val commandCount: Int get() = commands.size
 
-    fun asHereDoc(): String = commands.toHereDoc()
+    fun asHereDoc(): HereDoc = commands.toHereDoc()
 }

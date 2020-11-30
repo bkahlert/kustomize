@@ -6,9 +6,12 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.IN
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.concurrent.startAsThread
-import com.bkahlert.koodies.docker.Docker
+import com.bkahlert.koodies.docker.DockerContainerName
+import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
+import com.bkahlert.koodies.docker.DockerImage
+import com.bkahlert.koodies.docker.DockerImageBuilder.Companion.build
 import com.bkahlert.koodies.docker.DockerProcess
-import com.bkahlert.koodies.docker.DockerProcess.Companion.nullDockerProcess
+import com.bkahlert.koodies.docker.DockerRunCommandBuilder.Companion.buildRunCommand
 import com.bkahlert.koodies.terminal.ANSI
 import com.imgcstmzr.runtime.Program.Companion.compute
 import com.imgcstmzr.runtime.Program.Companion.format
@@ -29,7 +32,7 @@ import java.nio.file.Path
 object ArmRunner {
 
     @Suppress("SpellCheckingInspection")
-    private const val DOCKER_IMAGE = "lukechilds/dockerpi:vm"
+    private val DOCKER_IMAGE: DockerImage = build { "lukechilds" / "dockerpi" tag "vm" }
 
     /**
      * Starts a [DockerProcess] with [name] that boots the [osImage].
@@ -38,20 +41,26 @@ object ArmRunner {
      * also forwards all logging calls to [logger].
      */
     fun <T> run(
-        name: String,
+        name: DockerContainerName,
         osImage: OperatingSystemImage,
         logger: RenderingLogger<T>? = null,
         ioProcessor: (RunningOperatingSystem.(IO) -> Any)? = null,
-    ): DockerProcess {
-        var dockerProcess: DockerProcess = nullDockerProcess
-        val runningOperatingSystem = object : RunningOperatingSystem() {
-            override val process: Process get() = dockerProcess
-            override val logger: RenderingLogger<T> = logger ?: MutedBlockRenderingLogger()
-        }
-        return Docker.run(
+    ): DockerProcess = run {
+        lateinit var dockerProcess: DockerProcess
+        DockerProcess(
+            command = DOCKER_IMAGE.buildRunCommand {
+                options {
+                    containerName { name }
+                    volumes { osImage.file to Path.of("/sdcard/filesystem.img") }
+                }
+            },
             ioProcessor = ioProcessor.let {
                 val deadEndPattern = osImage.deadEndPattern
                 var dying = false
+                val runningOperatingSystem = object : RunningOperatingSystem(osImage.shutdownCommand) {
+                    override val process: Process get() = dockerProcess
+                    override val logger: RenderingLogger<T> = logger ?: MutedBlockRenderingLogger()
+                }
                 { io: IO ->
                     if (!dying) {
                         if (deadEndPattern?.matches(io.unformatted) == true) {
@@ -59,21 +68,14 @@ object ArmRunner {
                                 dying = true
                                 runningOperatingSystem.negativeFeedback("The VM is stuck. Chances are the VM starts correctly with less load on this machine.")
                             }
-                            dockerProcess.destroy()
+                            destroy()
                             throw IllegalStateException(io.unformatted)
                         }
                         it?.invoke(runningOperatingSystem, io)
                     }
                 }
             },
-            init = {
-                run(
-                    name = name,
-                    volumes = mapOf(osImage.toAbsolutePath() to Path.of("/sdcard/filesystem.img")),
-                    image = DOCKER_IMAGE,
-                )
-            }
-        ).also { dockerProcess = it }
+        ).apply { dockerProcess = this }
     }
 
     /**
@@ -87,7 +89,7 @@ object ArmRunner {
      * @return exit code `0` if no errors occurred.
      */
     fun run(
-        name: String,
+        name: DockerContainerName,
         osImage: OperatingSystemImage,
         logger: RenderingLogger<Any>,
         autoLogin: Boolean = true,
@@ -106,8 +108,7 @@ object ArmRunner {
                 ERR -> feedback("Unfortunately an error occurred: ${output.formatted}")
             }
             if (!unfinished.compute(this, output)) unfinished.takeIf { it.isNotEmpty() }?.removeAt(0)
-            0
-        }.waitForExitCode().exitCode
+        }.waitFor()
     }
 
     /**
@@ -124,7 +125,7 @@ object ArmRunner {
         osImage: OperatingSystemImage,
         logger: RenderingLogger<Any>,
     ): Int = run(
-        name = name,
+        name = name.toContainerName(),
         osImage = osImage,
         logger = logger,
         programs = arrayOf(this)

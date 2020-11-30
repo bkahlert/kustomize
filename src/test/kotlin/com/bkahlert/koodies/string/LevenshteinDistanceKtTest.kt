@@ -2,7 +2,6 @@ package com.bkahlert.koodies.string
 
 import com.bkahlert.koodies.test.junit.Slow
 import com.imgcstmzr.util.MiscFixture
-import com.imgcstmzr.util.quoted
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test

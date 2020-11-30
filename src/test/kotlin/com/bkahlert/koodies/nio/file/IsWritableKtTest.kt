@@ -14,4 +14,4 @@ class IsWritableKtTest {
  * @see Files.isWritable
  */
 fun <T : Path> Assertion.Builder<T>.isWritable(): Assertion.Builder<T> =
-    assertThat("is readable") { Files.isWritable(it) }
+    assertThat("is writable") { Files.isWritable(it) }

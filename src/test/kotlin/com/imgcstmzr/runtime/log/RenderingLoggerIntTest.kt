@@ -3,9 +3,14 @@ package com.imgcstmzr.runtime.log
 import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.nio.file.readLines
+import com.bkahlert.koodies.nio.file.tempDir
+import com.bkahlert.koodies.nio.file.tempFile
+import com.bkahlert.koodies.string.Unicode
 import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.imgcstmzr.runtime.HasStatus
+import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.containsAtMost
 import com.imgcstmzr.util.logging.Columns
 import com.imgcstmzr.util.logging.InMemoryLogger
@@ -15,13 +20,19 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import strikt.api.expect
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.contains
+import strikt.assertions.endsWith
+import strikt.assertions.first
+import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
 
 @Execution(CONCURRENT)
 class RenderingLoggerIntTest {
+
+    private val tempDir = tempDir().deleteOnExit()
 
     @Test
     fun `should log`(@Columns(100) logger: InMemoryLogger<Unit>) {
@@ -310,5 +321,47 @@ class RenderingLoggerIntTest {
                 ╰─────╴✔ returned ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽ｀、ヽ｀ヽ｀、ヽノ＞＜)ノ ｀、ヽ｀、ヽ
                 ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ ｀、ヽ｀、ヽ｀、ヽ
                 """.trimIndent())
+    }
+
+    @Test
+    fun `should log to file`(@Columns(100) logger: InMemoryLogger<Unit>) {
+        logger.logLine { "｀、ヽ｀ヽ｀、ヽ(ノ＞＜)ノ ｀、ヽ｀☂ヽ｀、ヽ" }
+        logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+        val file = tempDir.tempFile("file-log", ".log")
+        logger.fileLogger<Any>(file, "Some logging heavy operation") {
+            logLine { "line" }
+            logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+            logException { RuntimeException("just a test") }
+            logCaughtException { RuntimeException("covered") }
+            "👍"
+        }
+        logger.logLine { "Normal logging continues..." }
+        logger.logResult { Result.success(Unit) }
+
+        expect {
+            that(logger.logged).matchesCurlyPattern(
+                """
+                    ╭─────╴{}
+                    │{}
+                    │   ｀、ヽ｀ヽ｀、ヽ(ノ＞＜)ノ ｀、ヽ｀☂ヽ｀、ヽ
+                    │   ☎Σ⊂⊂(☉ω☉∩)                                            {}                                      ▮▮
+                    │{}
+                    │   ╭─────╴Some logging heavy operation{}
+                    │   │{}
+                    │   │   This process might produce pretty much log messages. Logging to …
+                    │   │   ${Unicode.Emojis.pageFacingUp} ${file.toUri()}
+                    │   │{}
+                    │   ╰─────╴✔ returned 👍
+                    │{}
+                    │   Normal logging continues...
+                    │{}
+                    ╰─────╴✔{}
+                """.trimIndent())
+
+            that(file.readLines().filter { it.isNotBlank() }) {
+                first().isEqualTo("Started: Some logging heavy operation")
+                get { last { it.isNotBlank() } }.endsWith("👍")
+            }
+        }
     }
 }

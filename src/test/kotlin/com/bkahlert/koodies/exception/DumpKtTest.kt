@@ -24,7 +24,7 @@ import java.net.URL
 class DumpKtTest {
 
     private val tempDir = tempDir().deleteOnExit()
-    private val path get() = tempDir.tempPath(DumpKtTest::class.toString(), ".log")
+    private val path get() = tempDir.tempPath(extension = ".log")
     private val data get() = MiscFixture.BootingRaspberry.text
 
     @Test

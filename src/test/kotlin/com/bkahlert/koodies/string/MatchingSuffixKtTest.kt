@@ -1,14 +1,15 @@
 package com.bkahlert.koodies.string
 
-import com.imgcstmzr.patch.isEqualTo
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
+import strikt.assertions.isEqualTo
 import strikt.assertions.isNullOrBlank
 
 @Execution(CONCURRENT)
 class MatchingSuffixKtTest {
+    
     @Test
     fun `should find matching suffix`() {
         expectThat("Prom!§\$%&/())pt".matchingSuffix("pt", "/())pt", "om", "&/())p")).isEqualTo("/())pt")

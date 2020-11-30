@@ -44,6 +44,8 @@ object Tests {
     fun runFastUnitTests(): TestExecutionSummary = runTaggedTests("Fast Unit Tests") { filters(excludeTags(Slow.NAME, E2E.NAME)) }.summary
     fun runSlowUnitTests(): TestExecutionSummary = runTaggedTests("Slow Unit Tests") { filters(includeTags(Slow.NAME), excludeTags(E2E.NAME)) }.summary
     fun runE2ETests(): TestExecutionSummary = runTaggedTests("End-to-End Tests") { filters(includeTags(E2E.NAME)) }.summary
+
+
 }
 
 fun main() {

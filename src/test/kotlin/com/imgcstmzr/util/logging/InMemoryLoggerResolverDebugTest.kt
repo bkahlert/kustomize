@@ -3,7 +3,7 @@ package com.imgcstmzr.util.logging
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.test.junit.debug.Debug
-import com.imgcstmzr.util.asString
+import com.bkahlert.koodies.test.strikt.asString
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -16,7 +16,7 @@ import strikt.assertions.contains
 import strikt.assertions.isA
 import strikt.assertions.isFailure
 
-@Isolated // flaky OutputCapture
+@Isolated("flaky OutputCapture")
 @Execution(CONCURRENT)
 @ExtendWith(OutputCaptureExtension::class)
 class InMemoryLoggerResolverDebugTest {

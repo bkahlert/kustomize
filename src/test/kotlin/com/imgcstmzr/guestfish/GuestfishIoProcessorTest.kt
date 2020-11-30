@@ -1,21 +1,23 @@
 package com.imgcstmzr.guestfish
 
-import com.bkahlert.koodies.concurrent.process.CompletedProcess
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
-import com.bkahlert.koodies.docker.DockerProcess
-import com.bkahlert.koodies.docker.DockerProcess.Companion.nullDockerProcess
+import com.bkahlert.koodies.concurrent.process.LoggedProcess
 import com.bkahlert.koodies.string.LineSeparators.lines
+import com.bkahlert.koodies.test.junit.test
 import com.imgcstmzr.util.MiscFixture
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
+import strikt.assertions.any
 import strikt.assertions.contains
 import strikt.assertions.isGreaterThan
 import strikt.assertions.isLessThanOrEqualTo
+import strikt.assertions.none
 
 @Execution(CONCURRENT)
 class GuestfishIoProcessorTest {
@@ -24,7 +26,7 @@ class GuestfishIoProcessorTest {
     @Nested
     inner class Verbosity {
         @Test
-        fun `should log all on active verbose option`(logger: InMemoryLogger<CompletedProcess>) {
+        fun `should log all on active verbose option`(logger: InMemoryLogger<LoggedProcess>) {
             val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = true)
             guestfishIO.lines().map { OUT typed it }.sendTo(guestfishIoProcessor)
             expectThat(logger.logged.lines()) {
@@ -34,7 +36,7 @@ class GuestfishIoProcessorTest {
         }
 
         @Test
-        fun `should not log boot sequence on inactive verbose option`(logger: InMemoryLogger<CompletedProcess>) {
+        fun `should not log boot sequence on inactive verbose option`(logger: InMemoryLogger<LoggedProcess>) {
             val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = false)
             guestfishIO.lines().map { OUT typed it }.sendTo(guestfishIoProcessor)
             expectThat(logger.logged.lines()) {
@@ -44,7 +46,7 @@ class GuestfishIoProcessorTest {
         }
 
         @Test
-        fun `should not errors on inactive verbose option`(logger: InMemoryLogger<CompletedProcess>) {
+        fun `should only log errors on inactive verbose option`(logger: InMemoryLogger<LoggedProcess>) {
             val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = false)
             IO.Type.values().map { type -> type typed "$type" }.sendTo(guestfishIoProcessor)
             expectThat(logger).get { logged }
@@ -57,10 +59,24 @@ class GuestfishIoProcessorTest {
                 }
         }
 
+        @Nested
+        inner class SkippingLines {
+
+            @TestFactory
+            fun `should meta log skipped lines depending on verbosity`(logger: InMemoryLogger<LoggedProcess>) =
+                listOf(true, false).test { verbose ->
+                    val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = verbose)
+                    guestfishIO.lines().map { IO.Type.META typed it }.sendTo(guestfishIoProcessor)
+                    expectThat(logger.logged.lines()) {
+                        if (verbose) none { contains("lines skipped") }
+                        else any { contains("lines skipped") }
+                    }
+                }
+        }
     }
 
-    private fun List<IO>.sendTo(guestfishIoProcessor: (DockerProcess, IO) -> Unit) {
-        forEach { io -> guestfishIoProcessor.invoke(nullDockerProcess, io) }
+    private fun List<IO>.sendTo(guestfishIoProcessor: (Any?, IO) -> Unit) {
+        forEach { io -> guestfishIoProcessor.invoke(null, io) }
     }
 }
 

@@ -2,6 +2,7 @@ package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.unit.Size
+import kotlin.text.RegexOption.IGNORE_CASE
 import kotlin.time.milliseconds
 import kotlin.time.seconds
 
@@ -39,6 +40,14 @@ interface OperatingSystem {
         }
     }
 
+    companion object {
+        val DEFAULT_LOGIN_PATTERN: Regex = Regex("(?<host>[\\w-_]+)(?<sep>\\s+)(?<const>login):(?<optWhitespace>.*)", IGNORE_CASE)
+        val DEFAULT_PASSWORD_PATTERN: Regex = Regex("Password:(?<optWhitespace>\\s*)", IGNORE_CASE)
+        val DEFAULT_READY_PATTERN: Regex = Regex("(?<user>[\\w-_]+)@(?<host>[\\w-_]+):(?<path>[^#$]+?)[#$](?<optWhitespace>\\s*)", IGNORE_CASE)
+        val DEFAULT_DEAD_END_PATTERN: Regex = Regex(".*in emergency mode.*", IGNORE_CASE)
+        const val DEFAULT_SHUTDOWN_COMMAND: String = "sudo shutdown -h now"
+    }
+
     /**
      * The full name of this [OperatingSystem].
      */
@@ -69,26 +78,28 @@ interface OperatingSystem {
     /**
      * The [Regex] that matches a login prompt.
      */
-    val loginPattern: Regex
-        get() = Regex("(?<host>[\\w-_]+)(?<sep>\\s+)(?<const>login):(?<optWhitespace>.*)")
+    val loginPattern: Regex get() = DEFAULT_LOGIN_PATTERN
 
     /**
      * The [Regex] that matches a password prompt.
      */
-    val passwordPattern: Regex
-        get() = Regex("Password:(?<optWhitespace>\\s*)")
+    val passwordPattern: Regex get() = DEFAULT_PASSWORD_PATTERN
 
     /**
      * The [Regex] that matches a command prompt.
      */
-    val readyPattern: Regex
-        get() = Regex("(?<user>[\\w-_]+)@(?<host>[\\w-_]+):(?<path>[^#$]+?)[#$](?<optWhitespace>\\s*)")
+    val readyPattern: Regex get() = DEFAULT_READY_PATTERN
 
     /**
      * The [Regex] that matches output which signifies that the [OperatingSystem] is stuck and
      * that there is no chance to recover without further steps.
      */
-    val deadEndPattern: Regex? get() = null
+    val deadEndPattern: Regex? get() = DEFAULT_DEAD_END_PATTERN
+
+    /**
+     * The command allows to initiate a shutdown.
+     */
+    val shutdownCommand: String get() = DEFAULT_SHUTDOWN_COMMAND
 
     /**
      * Compiles a special script with a [name] that consists itself of multiple scripts
@@ -121,7 +132,7 @@ interface OperatingSystem {
         var usernameLastEntered = 0L
         fun RunningOperatingSystem.enterUsername() {
             if (Now.passedSince(usernameLastEntered) > 10.seconds) {
-                enter("${credentials.username}\r")
+                enter(credentials.username)
                 usernameLastEntered = Now.millis
             }
         }
@@ -129,7 +140,7 @@ interface OperatingSystem {
         var passwordLastEntered = 0L
         fun RunningOperatingSystem.enterPassword() {
             if (Now.passedSince(passwordLastEntered) > 10.seconds) {
-                enter("${credentials.password}\r", delay = 500.milliseconds)
+                enter(credentials.password, delay = 500.milliseconds)
                 passwordLastEntered = Now.millis
             }
         }
@@ -202,7 +213,7 @@ interface OperatingSystem {
         var shutdownLastEntered = 0L
         fun RunningOperatingSystem.enterShutdown() {
             if (Now.passedSince(shutdownLastEntered) > 10.seconds) {
-                enter("sudo shutdown -h now")
+                enter(shutdownCommand)
                 shutdownLastEntered = Now.millis
             }
         }

@@ -10,6 +10,7 @@ import com.bkahlert.koodies.nio.file.sameFile
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.isFile
 import java.nio.file.Path
+import kotlin.io.path.listDirectoryEntries
 import kotlin.time.Duration
 import kotlin.time.minutes
 
@@ -74,6 +75,18 @@ class CleanUpBuilder(private val jobs: MutableList<() -> Unit>) {
     fun tempFiles(filter: Path.() -> Boolean) {
         jobs.add { Paths.TEMP.list().filter { it.isFile }.filter(filter).forEach { it.delete() } }
     }
+
+    /**
+     * Registers a lambda that is called during shutdown and
+     * which deletes all returned files..
+     */
+    fun allTempFiles(filter: (List<Path>) -> List<Path>) {
+        jobs.add {
+            filter(Paths.TEMP.listDirectoryEntries()).forEach {
+                it.delete()
+            }
+        }
+    }
 }
 
 /**
@@ -87,12 +100,25 @@ fun cleanUpOnShutDown(block: CleanUpBuilder.() -> Unit): () -> Unit =
  * Convenience function to delete temporary files of the specified [minAge] and
  * who's [fileName][Path.getFileName] matches the specified [prefix] and [suffix].
  *
- * Files matching these criteria are deleted immediately **and** during shutdown.
+ * Also at most [keepAtMost] of the most recent files are kept.
+ *
+ * Files matching these criteria are deleted during shutdown.
  */
-fun cleanUpOldTempFiles(prefix: String, suffix: String, minAge: Duration = 10.minutes) {
+fun cleanUpOldTempFiles(prefix: String, suffix: String, minAge: Duration = 10.minutes, keepAtMost: Int = 100) {
     cleanUpOnShutDown {
-        tempFiles { fileNameStartsWith(prefix) && fileNameEndsWith(suffix) && age >= minAge }
-    }.apply {
-        invoke()
+        allTempFiles { allFiles ->
+            val relevantFiles = allFiles
+                .sortedBy { file -> file.age }
+                .filter { it.fileNameStartsWith(prefix) && it.fileNameEndsWith(suffix) }
+
+            val stillRelevantFiles = relevantFiles.filter { it.age < minAge }
+
+            val keep = stillRelevantFiles.take(keepAtMost)
+
+            relevantFiles.minus(keep)
+        }
+        tempFiles {
+            fileNameStartsWith(prefix) && fileNameEndsWith(suffix) && age >= minAge
+        }
     }
 }

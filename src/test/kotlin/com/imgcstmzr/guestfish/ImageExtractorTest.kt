@@ -1,13 +1,13 @@
 package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.io.Archiver.archive
+import com.bkahlert.koodies.nio.file.fileNameWithExtension
 import com.bkahlert.koodies.nio.file.mkdirs
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.nio.file.writeText
 import com.imgcstmzr.guestfish.ImageExtractor.extractImage
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.fileNameWithExtension
 import com.imgcstmzr.util.hasContent
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution

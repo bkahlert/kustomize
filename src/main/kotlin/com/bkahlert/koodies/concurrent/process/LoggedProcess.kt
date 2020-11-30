@@ -6,6 +6,7 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import java.io.InputStream
 import java.io.OutputStream
+import java.lang.ProcessHandle.Info
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
@@ -25,7 +26,11 @@ import java.util.stream.Stream
  * **All other means are ANSI free.**
  */
 class LoggedProcess private constructor(
-    private val process: Process,
+    val exitValue: Int,
+    val supportsNormalTermination: Boolean,
+    val pid: Long,
+    val handle: ProcessHandle,
+    val info: Info,
     /**
      * All [output] of the completed [Process].
      *
@@ -33,7 +38,14 @@ class LoggedProcess private constructor(
      */
     val all: List<IO>,
 ) : CharSequence by all.joinToString("\n", transform = { it.unformatted }), Process() {
-    constructor(process: LoggingProcess) : this(process = process, all = process.ioLog.logged)
+    constructor(process: LoggingProcess) : this(
+        exitValue = process.exitValue(),
+        supportsNormalTermination = process.supportsNormalTermination(),
+        pid = process.pid(),
+        handle = process.toHandle(),
+        info = process.info(),
+        all = process.ioLog.logged
+    )
 
     /**
      * All [output] of type [META] of the completed [Process].
@@ -100,20 +112,20 @@ class LoggedProcess private constructor(
 
     override fun toString(): String = all.joinToString("\n")
 
-    override fun getOutputStream(): OutputStream = process.outputStream
-    override fun getInputStream(): InputStream = process.inputStream
-    override fun getErrorStream(): InputStream = process.errorStream
-    override fun waitFor(): Int = process.waitFor()
-    override fun waitFor(timeout: Long, unit: TimeUnit?): Boolean = waitFor(timeout, unit)
-    override fun exitValue(): Int = process.exitValue()
-    override fun destroy(): Unit = process.destroy()
-    override fun destroyForcibly(): Process = process.destroyForcibly()
-    override fun supportsNormalTermination(): Boolean = process.supportsNormalTermination()
-    override fun isAlive(): Boolean = process.isAlive
-    override fun pid(): Long = process.pid()
-    override fun onExit(): CompletableFuture<Process> = process.onExit()
-    override fun toHandle(): ProcessHandle = process.toHandle()
-    override fun info(): ProcessHandle.Info = process.info()
-    override fun children(): Stream<ProcessHandle> = process.children()
-    override fun descendants(): Stream<ProcessHandle> = process.descendants()
+    override fun getOutputStream(): OutputStream = OutputStream.nullOutputStream()
+    override fun getInputStream(): InputStream = InputStream.nullInputStream()
+    override fun getErrorStream(): InputStream = InputStream.nullInputStream()
+    override fun waitFor(): Int = exitValue
+    override fun waitFor(timeout: Long, unit: TimeUnit?) = true
+    override fun exitValue(): Int = exitValue
+    override fun destroy() {}
+    override fun destroyForcibly(): Process = this
+    override fun supportsNormalTermination(): Boolean = supportsNormalTermination
+    override fun isAlive(): Boolean = false
+    override fun pid(): Long = pid
+    override fun onExit(): CompletableFuture<Process> = CompletableFuture.completedFuture(this)
+    override fun toHandle(): ProcessHandle = handle
+    override fun info(): Info = info
+    override fun children(): Stream<ProcessHandle> = Stream.empty()
+    override fun descendants(): Stream<ProcessHandle> = Stream.empty()
 }

@@ -7,6 +7,7 @@ import com.bkahlert.koodies.string.LineSeparators.CR
 import com.bkahlert.koodies.string.LineSeparators.LF
 import com.bkahlert.koodies.string.LineSeparators.hasTrailingLineSeparator
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
+import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.time.Now
 import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
@@ -14,7 +15,6 @@ import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.singleLineLogger
 import com.imgcstmzr.runtime.log.subLogger
 import com.imgcstmzr.util.debug
-import com.imgcstmzr.util.quoted
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.Reader
@@ -35,6 +35,10 @@ class NonBlockingReader(
     private val logger: RenderingLogger<*> = MutedBlockRenderingLogger<Any>("NonBlockingReader"),
     private val blockOnEmptyLine: Boolean = false,
 ) : BufferedReader(Reader.nullReader()) {
+    init {
+        check(timeout.isPositive()) { "Timeout must greater 0" }
+    }
+
     private var reader: NonBlockingCharReader? = NonBlockingCharReader(inputStream, timeout = timeout / 3)
     private var lastReadLine: String? = null
     private var lastReadLineDueTimeout: Boolean? = null
@@ -97,6 +101,7 @@ class NonBlockingReader(
                 }
                 if (currentTimeMillis() >= maxTimeMillis && !(blockOnEmptyLine && unfinishedLine.isEmpty())) {
                     logStatus { META typed "${Now.emoji} Timed out. Returning ${unfinishedLine.quoted}" }
+                    // TODO evaluate if better to call a callback and continue working (without returning half-read lines)
                     lastReadLineDueTimeout = true
                     lastReadLine = "$unfinishedLine"
                     return@subLogger lastReadLine!!.withoutTrailingLineSeparator
@@ -113,14 +118,15 @@ class NonBlockingReader(
      * for the next attempt. The unfinished line will be completed until a line separator
      * or EOF was encountered.
      */
-    fun forEachLine(block: (String) -> Unit): String? = logger.singleLineLogger(NonBlockingReader::class.simpleName + "." + ::readLine.name + "()") {
+    fun forEachLine(block: (String) -> Unit): String? = logger.singleLineLogger(NonBlockingReader::class.simpleName + "." + ::forEachLine.name + "()") {
+        var lineCount = 0
         while (true) {
             val readLine: String? = readLine()
             val line = readLine ?: break
             block(line)
-            logLine { "Finished processing $line" }
+            lineCount++
         }
-        null
+        "$lineCount processed"
     }
 
     /**

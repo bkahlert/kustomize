@@ -1,5 +1,9 @@
 package com.bkahlert.koodies.string
 
+/**
+ * Collection of line separators themselves and various corresponding methods
+ * like [lines] or [lineSequence].
+ */
 object LineSeparators : Collection<String> {
 
     /**
@@ -39,14 +43,25 @@ object LineSeparators : Collection<String> {
      */
     const val NL: String = Unicode.nextLine
 
-    @Suppress("InvisibleCharacter")
-    val SEPARATOR_PATTERN by lazy { "$CRLF|[$LF$CR$LS$PS$NL]".toRegex() }
+    /**
+     * [Regex] that matches all line separators.
+     */
+    val SEPARATOR_PATTERN: Regex by lazy { "$CRLF|[${ALL.filter { it != CRLF }.joinToString("")}]".toRegex() }
 
-    val LAST_LINE_PATTERN by lazy { ".+$".toRegex() }
+    /**
+     * [Regex] that matches only string that contain no line separators, e.g. the last line of a multi-line text.
+     */
+    val LAST_LINE_PATTERN: Regex by lazy { ".+$".toRegex() }
 
-    val INTERMEDIARY_LINE_PATTERN by lazy { ".*(?<separator>${SEPARATOR_PATTERN.pattern})".toRegex(RegexOption.DOT_MATCHES_ALL) }
+    /**
+     * [Regex] that matches strings ending with a line separator.
+     */
+    val INTERMEDIARY_LINE_PATTERN: Regex by lazy { ".*?(?<separator>${SEPARATOR_PATTERN.pattern})".toRegex(RegexOption.DOT_MATCHES_ALL) }
 
-    val LINE_PATTERN by lazy { "${INTERMEDIARY_LINE_PATTERN.pattern}|${LAST_LINE_PATTERN.pattern}".toRegex() }
+    /**
+     * [Regex] that matches text lines, that is strings that either finish with a line separator or dont' contain any line separator at all.
+     */
+    val LINE_PATTERN: Regex by lazy { "${INTERMEDIARY_LINE_PATTERN.pattern}|${LAST_LINE_PATTERN.pattern}".toRegex() }
 
     private val ALL by lazy { arrayOf(CRLF, LF, CR, LS, PS, NL) }
 
@@ -60,6 +75,9 @@ object LineSeparators : Collection<String> {
 
     override fun iterator(): Iterator<String> = ALL.iterator()
 
+    /**
+     * The maximum length a line separator handled can have.
+     */
     val MAX_LENGTH: Int by lazy { ALL.maxOf { it.length } }
 
     /**
@@ -67,30 +85,39 @@ object LineSeparators : Collection<String> {
      */
     val CharSequence.isMultiline: Boolean get() = lines().size > 1
 
+
     /**
      * Splits this char sequence to a sequence of lines delimited by any of the [LineSeparators].
      *
-     * The lines returned do not include terminating line separators.
+     * If the lines returned do include terminating line separators is specified by [keepDelimiters].
      *
      * If the last last is empty, it will be ignored unless [ignoreTrailingSeparator] is provided.
      */
-    fun CharSequence.lineSequence(ignoreTrailingSeparator: Boolean = false): Sequence<String> =
-        if (!ignoreTrailingSeparator) splitToSequence(*ALL)
-        else splitToSequence(*ALL).iterator().run {
-            generateSequence {
-                hasNext().let { hasNext -> if (hasNext) next() else null }
-                    ?.let { current -> if (hasNext() || current.isNotEmpty()) current else null }
-            }
-        }
+    fun CharSequence.lineSequence(
+        ignoreTrailingSeparator: Boolean = false,
+        keepDelimiters: Boolean = false,
+    ): Sequence<String> =
+        splitToSequence(
+            delimiters = ALL,
+            keepDelimiters = keepDelimiters,
+            ignoreTrailingSeparator = ignoreTrailingSeparator
+        )
 
     /**
      * Splits this char sequence to a list of lines delimited by any of the [LineSeparators].
      *
-     * The lines returned do not include terminating line separators.
+     * If the lines returned do include terminating line separators is specified by [keepDelimiters].
      *
      * If the last last is empty, it will be ignored unless [ignoreTrailingSeparator] is provided.
      */
-    fun CharSequence.lines(ignoreTrailingSeparator: Boolean = false): List<String> = lineSequence(ignoreTrailingSeparator).toList()
+    fun CharSequence.lines(
+        ignoreTrailingSeparator: Boolean = false,
+        keepDelimiters: Boolean = false,
+    ): List<String> =
+        lineSequence(
+            ignoreTrailingSeparator = ignoreTrailingSeparator,
+            keepDelimiters = keepDelimiters
+        ).toList()
 
     /**
      * If this [CharSequence] ends with one of the [LineSeparators] this property includes it.
@@ -103,32 +130,16 @@ object LineSeparators : Collection<String> {
     val CharSequence.hasTrailingLineSeparator: Boolean get() = trailingLineSeparator != null
 
     /**
-     * If this [CharSequence] ends with one of the [LineSeparators] this property contains this [CharSequence] without it.
-     */
-    val CharSequence.withoutTrailingLineSeparator: CharSequence
-        get() = trailingLineSeparator?.let { lineBreak -> removeSuffix(lineBreak) } ?: this
-
-    /**
      * If this [String] ends with one of the [LineSeparators] this property contains this [String] without it.
      */
     val String.withoutTrailingLineSeparator: String
-        get() = trailingLineSeparator?.let { lineBreak -> removeSuffix(lineBreak) } ?: this
-
-    // TODO would be more streamlined if there was a lines(keepDelimiters=true) function
+        get() = (this as CharSequence).trailingLineSeparator?.let { lineBreak -> removeSuffix(lineBreak) } ?: this
 
     /**
      * If this [CharSequence] [isMultiline] this property contains the first line's line separator.
      */
     val CharSequence.firstLineSeparator: String?
-        get() = lines().takeIf { it.size > 1 }.let { lines ->
-            lines?.firstOrNull()?.let { firstLine ->
-                LineSeparators.first { separator ->
-                    val indexIncludingLineSeparator = firstLine.length + separator.length
-                    if (indexIncludingLineSeparator > length) false
-                    else separator == substring(firstLine.length, indexIncludingLineSeparator)
-                }
-            }
-        }
+        get() = lineSequence(keepDelimiters = true).firstOrNull()?.trailingLineSeparator
 
     /**
      * If this [CharSequence] [isMultiline] this property contains the first line's line separator length.

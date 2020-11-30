@@ -1,5 +1,9 @@
 package com.imgcstmzr.util
 
+import com.bkahlert.koodies.concurrent.cleanUpOnShutDown
+import com.bkahlert.koodies.nio.file.age
+import com.bkahlert.koodies.nio.file.isEmpty
+import com.bkahlert.koodies.nio.file.list
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
 import com.imgcstmzr.cli.Cache
@@ -20,6 +24,7 @@ import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
 import java.nio.file.Path
 import kotlin.annotation.AnnotationRetention.RUNTIME
+import kotlin.time.days
 
 @Retention(RUNTIME)
 @Target(AnnotationTarget.VALUE_PARAMETER)
@@ -33,6 +38,7 @@ open class FixtureResolverExtension : ParameterResolver {
     init {
         // provokes instantiation of FixtureLog to have it clean up first
         FixtureLog.location
+        cleanUpOnShutDown { Paths.TEMP.list().filter { it.isDirectory && it.isEmpty && it.age > 1.days } }
     }
 
     override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =
@@ -49,7 +55,7 @@ open class FixtureResolverExtension : ParameterResolver {
         }
         logger.runLogging {
             operatingSystem.getCopy(logger).apply {
-                if (autoDelete) deleteOnExit<Path>()
+                if (autoDelete) file.deleteOnExit()
                 logger.logText { "Provisioning " }
             }
         }

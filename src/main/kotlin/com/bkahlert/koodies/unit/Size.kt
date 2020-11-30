@@ -6,9 +6,9 @@ import com.bkahlert.koodies.number.formatToExactDecimals
 import com.bkahlert.koodies.number.scientificFormat
 import com.bkahlert.koodies.number.toBigDecimal
 import com.bkahlert.koodies.string.asString
+import com.bkahlert.koodies.string.quoted
 import com.imgcstmzr.util.isDirectory
 import com.imgcstmzr.util.isSymlink
-import com.imgcstmzr.util.quoted
 import java.io.File
 import java.math.BigDecimal
 import java.nio.file.Files
@@ -68,7 +68,7 @@ inline class Size(val bytes: BigDecimal) : Comparable<Size> {
             get() {
                 requireExists()
                 return if (!isDirectory) Files.size(toAbsolutePath()).bytes
-                else (toFile().listFiles() ?: return ZERO)
+                else (toFile().listFiles() ?: return ZERO) // TODO remove toFile
                     .asSequence()
                     .map(File::toPath)
                     .filterNot(Path::isSymlink)

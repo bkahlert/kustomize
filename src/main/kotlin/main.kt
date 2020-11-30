@@ -1,3 +1,4 @@
+import com.bkahlert.koodies.docker.DockerContainerName
 import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
@@ -183,7 +184,7 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
 
             val logger = BlockRenderingLogger<Any>("Project: $fullName")
 
-            val guestfish = Guestfish(this, logger, "$fullName-guestfish")
+            val guestfish = Guestfish(this, logger, DockerContainerName("$fullName-guestfish"))
             guestfish.run(copyOutCommands(listOf("/etc/hostname", "/boot/cmdline.txt", "/boot/config.txt").map(Path::of)))
             guestfish.guestRootOnHost
                 .also { echo("Success $it") }

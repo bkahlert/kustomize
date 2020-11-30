@@ -1,6 +1,7 @@
 package com.imgcstmzr.util.logging
 
 import com.bkahlert.koodies.collections.withNegativeIndices
+import com.bkahlert.koodies.concurrent.synchronized
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
 import com.bkahlert.koodies.string.TruncationStrategy.MIDDLE
 import com.bkahlert.koodies.string.padStartFixedLength
@@ -16,8 +17,8 @@ open class InMemoryLogger<T> private constructor(
     borderedOutput: Boolean = false,
     statusInformationColumn: Int = -1,
     private val outputStream: TeeOutputStream,
-    private val captured: MutableList<String> = mutableListOf(),
-    private val start: Long = System.currentTimeMillis(),
+    private val captured: MutableList<String>,
+    private val start: Long,
 ) : BlockRenderingLogger<T>(
     caption = caption,
     borderedOutput = borderedOutput,
@@ -40,7 +41,9 @@ open class InMemoryLogger<T> private constructor(
         borderedOutput = borderedOutput,
         statusInformationColumn = statusInformationColumn,
         outputStream = outputStreams.foldRight(TeeOutputStream(OutputStream.nullOutputStream(), OutputStream.nullOutputStream()),
-            { os, tos -> TeeOutputStream(os, tos) })
+            { os, tos -> TeeOutputStream(os, tos) }),
+        captured = mutableListOf<String>().synchronized(),
+        start = System.currentTimeMillis(),
     )
 
     constructor() : this("Test", true, -1, emptyList())

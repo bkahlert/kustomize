@@ -1,5 +1,6 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.readLines
 import com.imgcstmzr.cli.KeyValueDocument
 import com.imgcstmzr.util.isReadable
@@ -21,9 +22,11 @@ object Requirements {
     }
 
     fun requireNotMatchingContent(regex: Regex, lazyMessage: () -> Any): (Path) -> Unit = { path ->
-        require(path.isReadable) { "$path can't be read" }
-        require(path.readLines().none {
-            regex.containsMatchIn(it)
-        }, lazyMessage)
+        if (path.exists) {
+            require(path.isReadable) { "$path can't be read" }
+            require(path.readLines().none {
+                regex.containsMatchIn(it)
+            }, lazyMessage)
+        }
     }
 }

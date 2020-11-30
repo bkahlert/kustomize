@@ -2,8 +2,10 @@ package com.imgcstmzr.util
 
 import com.bkahlert.koodies.concurrent.process.ShutdownHookUtils.addShutDownHook
 import com.bkahlert.koodies.nio.file.appendLine
+import com.bkahlert.koodies.nio.file.baseName
 import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.exists
+import com.bkahlert.koodies.nio.file.extensionOrNull
 import com.bkahlert.koodies.nio.file.list
 import com.bkahlert.koodies.nio.file.readLines
 import com.bkahlert.koodies.nio.file.sameFile
@@ -35,7 +37,7 @@ object FixtureLog : (Path) -> Path {
         var deleted = 0
         paths()
             .flatMap { fixture ->
-                if (fixture.extension == "img" && fixture.parent != Paths.TEMP) {
+                if (fixture.extensionOrNull == "img" && fixture.parent != Paths.TEMP) {
                     val fixtureDirectory = fixture.parent
                     val directoryWithFixtureDirectories = fixtureDirectory.parent
                     listOf(fixture).plus(directoryWithFixtureDirectories.list().filter { otherFixtureDirectory ->

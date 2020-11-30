@@ -388,6 +388,11 @@ by dictOf("unicode.dict.tsv"
         val heavyLargeCircle = Emoji('⭕')
 
         /**
+         * [PAGE FACING UP](https://codepoints.net/U+1F4C4) 📄️ 📄︎
+         */
+        val pageFacingUp = Emoji("📄")
+
+        /**
          * [VARIATION SELECTOR-15](https://codepoints.net/U+FE0E)
          *
          * <cite>This codepoint may change the appearance of the preceding character.

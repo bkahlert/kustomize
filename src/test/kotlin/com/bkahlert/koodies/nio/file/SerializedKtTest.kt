@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import java.nio.file.Path
@@ -26,7 +27,7 @@ class SerializedKtTest {
             dynamicContainer("as generic path", Paths.get(path).let { genericPath ->
                 listOf(
                     dynamicTest("should have identical serialization") {
-                        expectThat(genericPath.serialized).isEqualTo(path)
+                        expectThat(genericPath).serializedIsEqualTo(path)
                     },
                 )
             }),
@@ -38,7 +39,7 @@ class SerializedKtTest {
                         expectThat("$customPath").isEqualTo("custom toString")
                     },
                     dynamicTest("should have identical serialization") {
-                        expectThat(customPath.serialized).isEqualTo(path)
+                        expectThat(customPath).serializedIsEqualTo(path)
                     },
                     dynamicTest("should have get equal path from serialized path") {
                         expectThat(Paths.get(customPath.serialized)).isEqualTo(Paths.get(path))
@@ -48,3 +49,10 @@ class SerializedKtTest {
         ))
     }
 }
+
+fun <T : Path> Assertion.Builder<T>.serializedIsEqualTo(path: String) =
+    assert("equals $path") {
+        val actual = it.serialized
+        if (actual == path) pass()
+        else fail()
+    }

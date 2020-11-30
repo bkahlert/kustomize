@@ -2,6 +2,7 @@ package com.bkahlert.koodies.terminal.ansi
 
 import com.bkahlert.koodies.string.joinLinesToString
 import com.bkahlert.koodies.string.mapLines
+import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.ESC
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
@@ -15,7 +16,6 @@ import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.getChar
 import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.render
 import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.subSequence
 import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.tokenize
-import com.imgcstmzr.util.quoted
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicNode
 import org.junit.jupiter.api.DynamicTest

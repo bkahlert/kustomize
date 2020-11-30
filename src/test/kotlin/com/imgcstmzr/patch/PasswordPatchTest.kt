@@ -32,7 +32,7 @@ import java.util.concurrent.ExecutionException
 @Execution(CONCURRENT)
 class PasswordPatchTest {
 
-    val salt = String.random(32)
+    private val salt = String.random(32)
 
     @Test
     fun `should provide password change command`() {

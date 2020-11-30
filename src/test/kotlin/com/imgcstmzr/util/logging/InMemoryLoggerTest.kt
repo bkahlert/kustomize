@@ -1,7 +1,7 @@
 package com.imgcstmzr.util.logging
 
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
-import com.imgcstmzr.util.asString
+import com.bkahlert.koodies.test.strikt.asString
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -15,7 +15,7 @@ import strikt.assertions.startsWith
 
 @Execution(CONCURRENT)
 @ExtendWith(OutputCaptureExtension::class)
-@Isolated // flaky OutputCapture
+@Isolated("flaky OutputCapture")
 class InMemoryLoggerTest {
     @Test
     fun `should log using OutputStream`(capturedOutput: CapturedOutput) {

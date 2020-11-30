@@ -1,6 +1,7 @@
 package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.boolean.asEmoji
+import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.time.poll
 import com.imgcstmzr.util.DockerRequiring
@@ -20,7 +21,7 @@ import kotlin.time.seconds
 @Execution(SAME_THREAD)
 class DockerPsTest {
 
-    val containers = mutableListOf<DockerProcess>()
+    private val containers = mutableListOf<DockerProcess>()
 
     @BeforeAll
     fun setUp() {
@@ -28,15 +29,17 @@ class DockerPsTest {
             "shared-prefix-boot-and-run",
             "shared-prefix-boot-and-run-program-in-user-session",
         ).mapTo(containers) {
-            Docker.run {
-                run(name = it, image = "busybox", args = listOf("""
-                            <<BE-BUSY
-                            while true; do
-                                sleep 1
-                            done
-                            BE-BUSY
-                        """.trimIndent()))
-            }.also { 100.milliseconds.poll { it.isRunning }.forAtMost(5.seconds) { fail("Docker containers did not start") } }
+            DockerProcess(Docker.image { "busybox" }.run {
+                options { name { it } }
+                args("""
+                    <<BE-BUSY
+                    while true; do
+                        sleep 1
+                    done
+                    BE-BUSY
+                """.trimIndent()
+                )
+            }).also { poll { it.isRunning }.every(100.milliseconds).forAtMost(5.seconds) { fail("Docker containers did not start") } }
         }
     }
 
@@ -50,10 +53,10 @@ class DockerPsTest {
     ).flatMap { (name, expectedIsRunning) ->
         listOf(
             dynamicTest("${expectedIsRunning.asEmoji} $name is running?") {
-                expectThat(Docker.isContainerRunning(name)).isEqualTo(expectedIsRunning)
+                expectThat(Docker.isContainerRunning(name.toContainerName())).isEqualTo(expectedIsRunning)
             },
             dynamicTest("${expectedIsRunning.asEmoji} $name exists?") {
-                expectThat(Docker.exists(name)).isEqualTo(expectedIsRunning)
+                expectThat(Docker.exists(name.toContainerName())).isEqualTo(expectedIsRunning)
             },
         )
     }

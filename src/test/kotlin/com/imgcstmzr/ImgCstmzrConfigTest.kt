@@ -39,7 +39,9 @@ class ImgCstmzrConfigTest {
             .withFallback(ConfigFactory.parseResources("sample.conf"))
             .withFallback(ConfigFactory.parseString(Path.of(".env").readText()))
             .resolve()
+
         val imgCstmztn = config.extract<ImageCustomization>("img-cstmztn")
+        
         expectThat(imgCstmztn).compose("has equal properties") {
             get { name }.isEqualTo("Sample Project")
             get { os }.isEqualTo(OperatingSystems.RaspberryPiLite)

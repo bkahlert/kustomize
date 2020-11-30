@@ -1,6 +1,7 @@
 package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.concurrent.process.Processes
+import com.bkahlert.koodies.nio.file.duplicate
 import com.bkahlert.koodies.shell.toHereDoc
 import com.bkahlert.koodies.string.joinLinesToString
 import com.bkahlert.koodies.string.random
@@ -10,7 +11,6 @@ import com.imgcstmzr.E2E
 import com.imgcstmzr.guestfish.Guestfish.Companion.SHARED_DIRECTORY_NAME
 import com.imgcstmzr.runtime.OperatingSystems.DietPi
 import com.imgcstmzr.util.OS
-import com.imgcstmzr.util.copyToTempSiblingDirectory
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import java.nio.file.Path
@@ -84,7 +84,7 @@ class GuestfishMountPassthroughTest {
                         "ls",
                         "umount $mountDir/$SHARED_DIRECTORY_NAME",
                     ).joinLinesToString())
-                }.waitForCompletion().let { "Result #1: $result\nResult #2: $it".magenta() }
+                }.loggedProcess.get().let { "Result #1: $result\nResult #2: $it".magenta() }
                 result
             },
 //            "multiline I" to { img: Path ->
@@ -115,7 +115,7 @@ class GuestfishMountPassthroughTest {
 //            },
         ).map { (name, experiment) ->
             dynamicTest(name) {
-                val result = experiment(img.copyToTempSiblingDirectory())
+                val result = experiment(img.duplicate())
                 check(result.exitValue() == 0) { "An error while running the following command inside $img" }
             }
         }.toList()

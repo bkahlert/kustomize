@@ -11,7 +11,7 @@ private const val MESSAGE_FORMAT_REPLACEMENT = "{%d}"
 /**
  * `slf4jFormat("This is a log {} with {} {}", "message", "some", "parameters") == "This is a log message with some parameters"`
  */
-fun slf4jFormat(slf4jLogMessage: String, vararg args: Any): String {
+fun slf4jFormat(slf4jLogMessage: String, vararg args: Any?): String {
     var messageFormatPattern = slf4jLogMessage
     var index = 0
 

@@ -1,19 +1,15 @@
 package com.imgcstmzr.util
 
-import com.bkahlert.koodies.concurrent.cleanUpOnShutdown
-import com.bkahlert.koodies.nio.file.copyTo
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.lastModified
-import com.bkahlert.koodies.nio.file.mkdirs
 import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.writeText
-import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.string.wrap
 import com.bkahlert.koodies.time.Now
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.streams.toList
-import com.bkahlert.koodies.nio.file.delete as del
 
 val Path.isReadable: Boolean
     get() = Files.isReadable(this)
@@ -44,41 +40,6 @@ fun Path.touch(): Path {
     return this
 }
 
-fun Path.mkRandomDir(): Path = resolve(String.random(4)).mkdirs()
-
-private val Path.fileNameParts: Pair<String, String?>
-    get() = fileName.serialized.split(".").let {
-        if (it.size > 1) it.dropLast(1).joinToString(".") to it.last()
-        else it.joinToString(".") to null
-    }
-
-/**
- * Returns the base name of the file described by this [Path].
- * Example: `/path/file.pdf` would return `file`.
- */
-val Path.baseName: String get() = fileNameParts.first
-
-/**
- * Returns the extension of the file described by this [Path].
- * Example: `/path/file.pdf` would return `pdf`.
- *
- * If no extension is present, `null` is returned.
- */
-val Path.extension: String? get() = fileNameParts.second
-
-
-/**
- * Returns the name of the file described by this [Path] with a replaced [extension].
- * If no extension is present, it will be added.
- */
-fun Path.fileNameWithExtension(extension: String): String = "$baseName.$extension"
-
-/**
- * Returns this [Path] with a replaced [extension].
- * If no extension is present, it will be added.
- */
-fun Path.withExtension(extension: String): Path = resolveSibling(fileNameWithExtension(extension))
-
 /**
  * Constructs a path that takes this path as the root of [subPath].
  *
@@ -95,8 +56,6 @@ fun Path.asRootFor(subPath: Path): Path {
 }
 
 fun Path.wrap(value: CharSequence): String = toString().wrap(value)
-
-val Path.quoted get() = toAbsolutePath().toString().quoted
 
 fun Path.moveTo(dest: Path, createDirectories: Boolean = true): Path =
     run {
@@ -118,39 +77,6 @@ fun Path.renameTo(fileName: String): Path = run {
 fun Path.cleanUp(vararg delimiters: String = arrayOf("?", "#")): Path {
     val cleanedUp = delimiters.fold(fileName.serialized) { fileName, delimiter -> fileName.substringBefore(delimiter) }
     return renameTo(cleanedUp)
-}
-
-/**
- * Returns a temporary empty file of which the filename is derived from this path.
- *
- * Furthermore if [isolated] is set to `true`, the returned path is guaranteed only include this single file.
- *
- * Example: `/path/file.ext` becomes `/var/folders/hh/2o87sdl12piu3jeo/T/dldk12aj3sk4/file-78363289732697283.ext`
- */
-fun Path.asEmptyTempFile(isolated: Boolean = false): Path {
-    val fileNameParts = fileNameParts
-    val tempFile = com.bkahlert.koodies.nio.file.tempFile(fileNameParts.first + "-", fileNameParts.second?.let { ".$it" } ?: "").cleanUpOnShutdown()
-    return if (isolated) tempFile.parent.mkRandomDir().let { Files.move(tempFile, it.resolve(tempFile.fileName)) }
-    else tempFile
-}
-
-/**
- * Returns a temporary copy of this [Path] optionally residing in an [isolated], that is, otherwise empty directory.
- */
-fun Path.copyToTempFile(isolated: Boolean = false): Path {
-    val tempFile = asEmptyTempFile(isolated)
-    tempFile.del()
-    return copyTo(tempFile)
-}
-
-/**
- * Returns a temporary copy of this paths in a sibling directory with random name and a modified file name.
- */
-fun Path.copyToTempSiblingDirectory(): Path {
-    val random = String.random(4)
-    val siblingDir: Path = resolveSibling("${parent.fileName}-$random").mkdirs()
-    val siblingFile: Path = siblingDir.resolve("${fileNameParts.first}-$random" + if (fileNameParts.second != null) ".${fileNameParts.second}" else "")
-    return copyTo(siblingFile)
 }
 
 /**

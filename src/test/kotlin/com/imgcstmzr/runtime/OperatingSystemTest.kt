@@ -13,27 +13,21 @@ import com.bkahlert.koodies.time.sleep
 import com.bkahlert.koodies.tracing.trace
 import com.bkahlert.koodies.unit.Kibi
 import com.bkahlert.koodies.unit.Size.Companion.bytes
-import com.imgcstmzr.cli.TestCli
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.empty
-import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.runtime.ProcessExitMock.Companion.computing
 import com.imgcstmzr.runtime.SlowInputStream.Companion.prompt
-import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.miniTrace
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.InMemoryLoggerFactory
+import com.imgcstmzr.util.matchEntire
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.contains
-import strikt.assertions.containsExactly
-import strikt.assertions.isEqualTo
 import strikt.assertions.isTrue
 import kotlin.time.Duration
 import kotlin.time.milliseconds
@@ -71,7 +65,7 @@ class OperatingSystemTest {
     ).flatMap { (expected, values) ->
         values.map {
             dynamicTest(expected.asEmoji + " $it") {
-                expectThat(RaspberryPiLite.loginPattern.matches(it)).isEqualTo(expected)
+                expectThat(OperatingSystem.DEFAULT_LOGIN_PATTERN).matchEntire(it, expected)
             }
         }
     }
@@ -101,22 +95,32 @@ class OperatingSystemTest {
     ).flatMap { (expected, values) ->
         values.map {
             dynamicTest(expected.asEmoji + " $it") {
-                expectThat(RaspberryPiLite.readyPattern.matches(it)).isEqualTo(expected)
+                expectThat(OperatingSystem.DEFAULT_READY_PATTERN).matchEntire(it, expected)
             }
         }
     }
 
-    @Test
-    fun `should be provided with programs in correct order`() {
-        TestCli.cmd.main(emptyList())
-        val programs = TestCli.cmd.scripts
 
-        expectThat(programs.keys).containsExactly(
-            "the-basics",
-            "very-----------------long",
-            "middle",
-            "s",
-            "leisure")
+    @TestFactory
+    fun `should detect dead end line`() = mapOf(
+        true to listOf(
+            "You are in emergency mode. After logging in, type \"journalctl -xb\" to view",
+            "You are in EMERGENCY MODE. After logging in, type \"journalctl -xb\" to view",
+            "in emergency mode",
+        ),
+        false to listOf(
+            "emergency",
+            "",
+            "   ",
+            "anything",
+            "anything else:",
+        )
+    ).flatMap { (expected, values) ->
+        values.map {
+            dynamicTest(expected.asEmoji + " $it") {
+                expectThat(OperatingSystem.DEFAULT_DEAD_END_PATTERN).matchEntire(it, expected)
+            }
+        }
     }
 
     @Slow
@@ -163,40 +167,6 @@ class OperatingSystemTest {
             expectThat(workflow).get("Halted") { halted }.isTrue()
             expectThat((runningOS.process as ProcessMock).received).contains("john").contains("passwd123").not { contains("stuff") }
         }
-    }
-
-    @Test
-    fun `should finish program`(logger: InMemoryLogger<String?>) {
-        TestCli.cmd.main(emptyList())
-        val scriptContent = TestCli.cmd.scripts["the basics"] ?: throw NoSuchElementException("Could not load program")
-        val script = os.compileSetupScript("test", scriptContent)[1]//.logging()
-        val processMock = ProcessMock(logger = logger, processExit = { computing() })
-        val runningOS = object : RunningOperatingSystem() {
-            override val logger: RenderingLogger<*> = logger
-            override var process: Process = processMock
-        }
-
-        assertTimeoutPreemptively(100.seconds, {
-            var running = true
-            while (running) {
-                running = script.compute(runningOS, OUT typed "pi@raspberrypi:~$ ")
-            }
-        }) { "Output till timeout: ${processMock.outputStream}" }
-
-        expectThat(script).assertThat("Halted") { it.halted }
-        expectThat(processMock.outputStream.toString().byteString()).isEqualTo("""
-            sudo -i
-            ${"\r"}
-            echo "Configuring SSH port"
-            sed -i 's/^\#Port 22${'$'}/Port 1234/g' /etc/ssh/sshd_config
-            ${"\r"}
-            exit
-${"\r"}
-        """.trimIndent().byteString())
-    }
-
-    private fun String.byteString() {
-        toString().toByteArray().joinToString(", ") { "$it" }
     }
 }
 

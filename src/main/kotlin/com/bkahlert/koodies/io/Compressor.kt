@@ -3,11 +3,11 @@ package com.bkahlert.koodies.io
 import com.bkahlert.koodies.nio.file.addExtension
 import com.bkahlert.koodies.nio.file.bufferedInputStream
 import com.bkahlert.koodies.nio.file.delete
+import com.bkahlert.koodies.nio.file.extensionOrNull
 import com.bkahlert.koodies.nio.file.outputStream
 import com.bkahlert.koodies.nio.file.removeExtension
 import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.nio.file.requireExistsNot
-import com.imgcstmzr.util.extension
 import org.apache.commons.compress.compressors.CompressorStreamFactory
 import java.nio.file.Path
 
@@ -43,8 +43,8 @@ object Compressor {
      * By default the existing file name is used with the extension removed.
      */
     fun Path.decompress(
-        format: String = extension ?: throw IllegalArgumentException("Cannot auto-detect the compression format due to missing file extension."),
-        destination: Path = removeExtension(extension!!),
+        format: String = extensionOrNull ?: throw IllegalArgumentException("Cannot auto-detect the compression format due to missing file extension."),
+        destination: Path = removeExtension(extensionOrNull!!),
         overwrite: Boolean = false,
     ): Path {
         requireExists()

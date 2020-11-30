@@ -1,27 +1,11 @@
 package com.imgcstmzr.util
 
 import com.bkahlert.koodies.boolean.asEmoji
-import com.bkahlert.koodies.string.Unicode
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
+import com.bkahlert.koodies.string.wrap
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightCyan
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.gray
 
-private val boxDrawings by lazy { Regex.escape(Unicode.boxDrawings.joinToString("")) }
-private val specialCharacterPattern by lazy { Regex("[^\\p{Print}\\p{IsPunctuation}$boxDrawings]") }
-
-val x = "ss".removeSurrounding("\"").removeSurrounding("\'")
-fun CharSequence?.wrap(value: CharSequence): String = "$value$this$value"
-fun CharSequence?.wrap(left: CharSequence, right: CharSequence): String = "$left$this$right"
-fun CharSequence.unwrap(vararg delimiters: CharSequence): CharSequence {
-    var result = this
-    delimiters.forEach { result = result.removeSurrounding(it) }
-    return result
-}
-
-inline val CharSequence.unquoted: String get() = "${unwrap("\"", "\'")}"
-
-inline val CharSequence?.quoted: String get() = this.wrap("\"")
-inline val CharSequence?.singleQuoted: String get() = this.wrap("'")
 inline val CharSequence?.debug: String
     get() = if (this == null) null.wrap("❬".brightCyan(), "❭".brightCyan())
     else toString().replaceNonPrintableCharacters().wrap("❬".brightCyan(), "⫻".brightCyan() + "${this.length}".gray() + "❭".brightCyan())

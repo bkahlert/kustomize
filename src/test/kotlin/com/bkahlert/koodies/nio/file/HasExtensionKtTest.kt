@@ -1,6 +1,5 @@
 package com.bkahlert.koodies.nio.file
 
-import com.imgcstmzr.util.extension
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -66,6 +65,6 @@ fun <T : Path> Assertion.Builder<T>.hasExtension(
             ignoreCase = ignoreCase,
         )) {
             true -> pass()
-            else -> fail("has extension ${it.extension}")
+            else -> fail("has extension ${it.extensionOrNull}")
         }
     }

@@ -1,16 +1,19 @@
-package com.bkahlert.koodies.concurrent.process
+package com.bkahlert.koodies.shell
 
+import com.bkahlert.koodies.concurrent.process.ShellScript
+import com.bkahlert.koodies.docker.docker
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
-import com.bkahlert.koodies.shell.toHereDoc
-import com.imgcstmzr.patch.isEqualTo
+import com.bkahlert.koodies.test.strikt.toStringIsEqualTo
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.hasContent
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import strikt.api.Assertion
 import strikt.api.expectThat
+import strikt.assertions.containsExactly
 import strikt.assertions.isEqualTo
 import strikt.assertions.isExecutable
 import java.nio.file.Path
@@ -21,7 +24,7 @@ class ShellScriptTest {
     private val tempDir = tempDir().deleteOnExit()
 
     private fun shellScript() = ShellScript().apply {
-        shebang()
+        shebang
         changeDirectoryOrExit(Path.of("/some/where"))
         !"""
                 echo "Hello World!"
@@ -34,7 +37,7 @@ class ShellScriptTest {
     fun `should build valid script`() {
         expectThat(shellScript().build()).isEqualTo("""
             #!/bin/sh
-            cd "/some/where" || exit 1
+            cd "/some/where" || exit -1
             echo "Hello World!"
             echo "Bye!"
             exit 42
@@ -48,7 +51,7 @@ class ShellScriptTest {
         shellScript().buildTo(file)
         expectThat(file).hasContent("""
             #!/bin/sh
-            cd "/some/where" || exit 1
+            cd "/some/where" || exit -1
             echo "Hello World!"
             echo "Bye!"
             exit 42
@@ -74,18 +77,17 @@ class ShellScriptTest {
     inner class DockerCommand {
         @Test
         fun `should build valid docker run`() {
-            expectThat(ShellScript().apply {
-                shebang()
-                docker {
-                    run(
-                        name = "container-name",
-                        volumes = mapOf(
-                            Path.of("/a/b") to Path.of("/c/d"),
+            expectThat(ShellScript {
+                `#!`
+                docker { "image" / "name" } run {
+                    options {
+                        name { "container-name" }
+                        volumes {
+                            Path.of("/a/b") to Path.of("/c/d")
                             Path.of("/e/f/../g") to Path.of("//h")
-                        ),
-                        image = "image/name",
-                        args = listOf("-arg1", "--argument 2", listOf("heredoc 1", "-heredoc-line-2").toHereDoc("HEREDOC")),
-                    )
+                        }
+                    }
+                    args(listOf("-arg1", "--argument 2", listOf("heredoc 1", "-heredoc-line-2").toHereDoc("HEREDOC")))
                 }
             }.build()).isEqualTo("""
             #!/bin/sh
@@ -109,13 +111,10 @@ class ShellScriptTest {
         @Test
         fun `should build allow redirection`() {
             expectThat(ShellScript().apply {
-                shebang()
-                docker {
-                    run(
-                        redirectStdErrToStdOut = true,
-                        name = "container-name",
-                        image = "image/name",
-                    )
+                shebang
+                docker { "image" / "name" } run {
+                    redirects { +"2>&1" }
+                    options { name { "container-name" } }
                 }
             }.build()).isEqualTo("""
             #!/bin/sh
@@ -128,4 +127,35 @@ class ShellScriptTest {
         """.trimIndent())
         }
     }
+
+    @Test
+    fun `should have an optional name`() {
+        val sh = ShellScript("test") { !"exit 0" }
+        expectThat(sh).toStringIsEqualTo("Script(name=test;content=exit 0})")
+    }
+
+    @Test
+    fun `should build comments`() {
+        val sh = ShellScript {
+            comment("test")
+            !"exit 0"
+        }
+        expectThat(sh.lines).containsExactly("# test", "exit 0")
+    }
+
+    @Test
+    fun `should build multi-line comments`() {
+        expectThat(ShellScript {
+
+            comment("""
+                line 1
+                line 2
+            """.trimIndent())
+            !"exit 0"
+
+        }.lines).containsExactly("# line 1", "# line 2", "exit 0")
+    }
 }
+
+val Assertion.Builder<ShellScript>.built
+    get() = get("built shell script %s") { build() }

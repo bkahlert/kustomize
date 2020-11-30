@@ -87,23 +87,45 @@ inline class CodePoint(val codePoint: Int) : Comparable<CodePoint> {
         /**
          * `true` if these [Char] instances represent a *single* Unicode character.
          */
-        fun CharSequence.isValidCodePoint(): Boolean = let {
-            val codePointCount = it.codePoints().unordered().limit(2).count()
-            codePointCount == 1L && it.codePoints().findFirst().orElseThrow().isValidCodePoint()
-        }
+        fun CharSequence.isValidCodePoint(): Boolean = asCodePoint() != null
+
+        /**
+         * The single code point if this consists of exactly one valid code point.
+         */
+        fun CharSequence.asCodePoint(): CodePoint? =
+            codePointSequence().take(2).toList().takeIf { it.size == 1 }?.first()?.takeIf { it.codePoint.isValidCodePoint() }
 
         fun count(string: CharSequence): Long = string.codePoints().count()
         fun count(string: String): Long = string.codePoints().count()
     }
 
     @Suppress("KDocMissingDocumentation")
-    class CodePointRange(override val start: CodePoint, override val endInclusive: CodePoint) :
-        CodePointProgression(start, endInclusive, 1), ClosedRange<CodePoint> {
-        @Suppress("ConvertTwoComparisonsToRangeCheck") override fun contains(value: CodePoint): Boolean = first <= value && value <= last
-        override fun isEmpty(): Boolean = first > last
-        override fun equals(other: Any?): Boolean = other is CodePointRange && (isEmpty() && other.isEmpty() || first == other.first && last == other.last)
-        override fun hashCode(): Int = if (isEmpty()) -1 else (31 * first.codePoint + last.codePoint)
-        override fun toString(): String = "$first..$last"
+    class CodePointRange(override val start: CodePoint, override val endInclusive: CodePoint, step: Int = 1) :
+        CodePointProgression(start, endInclusive, step), ClosedRange<CodePoint> {
+        @Suppress("ConvertTwoComparisonsToRangeCheck") override fun contains(value: CodePoint): Boolean = start <= value && value <= endInclusive
+        override fun isEmpty(): Boolean = if (step > 0) first > last else first < last
+        override fun toString(): String = if (step > 0) "$first..$last step $step" else "$first downTo $last step ${-step}"
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            if (!super.equals(other)) return false
+
+            other as CodePointRange
+
+            if (start != other.start) return false
+            if (endInclusive != other.endInclusive) return false
+            if (step != other.step) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = super.hashCode()
+            result = 31 * result + start.hashCode()
+            result = 31 * result + endInclusive.hashCode()
+            result = 31 * result + step
+            return result
+        }
     }
 
     /**

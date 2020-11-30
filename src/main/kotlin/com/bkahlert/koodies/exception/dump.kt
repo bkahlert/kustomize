@@ -13,7 +13,7 @@ private object Dump {
     const val dumpSuffix = ".log"
 
     init {
-        cleanUpOldTempFiles(dumpPrefix, dumpSuffix, 5.days)
+        cleanUpOldTempFiles(dumpPrefix, dumpSuffix, 5.days, keepAtMost = 200)
     }
 }
 

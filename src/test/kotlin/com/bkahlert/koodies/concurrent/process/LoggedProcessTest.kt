@@ -55,8 +55,6 @@ class LoggedProcessTest {
             get { error }.isEqualTo(error)
         }
     }
-
-    private fun IO.nonEmptyLines() = lines().filter { isBlank }
 }
 
-fun createLoggedProcess(exitCode: Int): LoggedProcess = createCompletingLoggingProcess(exitCode).onExit().get() as LoggedProcess
+fun createLoggedProcess(exitValue: Int): LoggedProcess = createCompletingLoggingProcess(exitValue).onExit().get() as LoggedProcess

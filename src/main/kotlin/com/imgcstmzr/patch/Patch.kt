@@ -2,6 +2,7 @@ package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.docker.DockerContainerName
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
@@ -121,7 +122,7 @@ fun RenderingLogger<*>.applyGuestfishAndFileSystemOperations(osImage: OperatingS
     } else {
         subLogger("File System Operations (${patch.guestfishOperations.size + patch.fileSystemOperations.size})", null) {
             logLine { META typed "Starting Guestfish VM..." }
-            val guestfish = Guestfish(osImage, this, patch.name + "." + String.random(16))
+            val guestfish = Guestfish(osImage, this, DockerContainerName(patch.name + "." + String.random(16)))
 
             val remainingGuestfishOperations = patch.guestfishOperations.toMutableList()
             if (remainingGuestfishOperations.isNotEmpty()) {
@@ -165,12 +166,14 @@ fun RenderingLogger<*>.applyGuestfishAndFileSystemOperations(osImage: OperatingS
 fun RenderingLogger<*>.applyPostFileImgOperations(osImage: OperatingSystemImage, patch: Patch): Any =
     if (patch.postFileImgOperations.isEmpty()) {
         logLine { META typed "IMG Operations II: —" }
+        false
     } else {
         subLogger<Any>("IMG Operations II (${patch.postFileImgOperations.size})", null, borderedOutput = false) {
             patch.postFileImgOperations.onEachIndexed { index, op ->
                 op(osImage, this)
             }
         }
+        true
     }
 
 fun RenderingLogger<*>.applyPrograms(osImage: OperatingSystemImage, patch: Patch): Any =

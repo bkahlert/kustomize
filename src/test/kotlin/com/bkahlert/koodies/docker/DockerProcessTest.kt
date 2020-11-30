@@ -4,7 +4,7 @@ import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.synchronized
-import com.bkahlert.koodies.shell.toHereDoc
+import com.bkahlert.koodies.shell.HereDoc
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.time.poll
 import com.bkahlert.koodies.time.sleep
@@ -19,7 +19,6 @@ import org.junit.jupiter.api.fail
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
-import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
 import strikt.assertions.isGreaterThan
 import strikt.assertions.isLessThan
@@ -30,29 +29,16 @@ import kotlin.time.milliseconds
 import kotlin.time.seconds
 
 @Execution(CONCURRENT)
-class DockerTest {
-
-    @Test
-    fun `should extract name from docker run command`() {
-        expectThat(Docker.extractName {
-            run(name = "this-is_what_its-about--123", image = "busybox")
-        }).isEqualTo("this-is_what_its-about--123")
-    }
+class DockerProcessTest {
 
     @Nested
     inner class Lifecycle {
 
         @DockerRequiring @Test
         fun `should start docker and pass arguments`() {
-            val dockerProcess = Docker.run {
-                run(name = testName(Lifecycle::`should start docker and pass arguments`), volumes = emptyMap(), image = "busybox", args = listOf(
-                    listOf(
-                        "ping -c 1 \"imgcstmzr.com\"",
-                        "sleep 1",
-                        "echo 'test'",
-                    ).toHereDoc()
-                ))
-            }
+            val dockerProcess = DockerProcess(busybox(Lifecycle::`should start docker and pass arguments`, HereDoc(
+                "echo 'test'",
+            )))
 
             kotlin.runCatching {
                 poll { dockerProcess.ioLog.logged.any { it.type == OUT && it.unformatted == "test" } }
@@ -62,9 +48,7 @@ class DockerTest {
 
         @DockerRequiring @Test
         fun `should start docker and process input`() {
-            val dockerProcess = Docker.run {
-                run(name = testName(Lifecycle::`should start docker and process input`), volumes = emptyMap(), image = "busybox")
-            }
+            val dockerProcess = DockerProcess(busybox(Lifecycle::`should start docker and process input`))
 
             kotlin.runCatching {
                 dockerProcess.enter("echo 'test'")
@@ -86,15 +70,15 @@ class DockerTest {
 
         @DockerRequiring @Test
         fun `should start docker and process output produced by own input`() {
-            val dockerProcess = Docker.run(ioProcessor = {
-                if (it.type == OUT) {
-                    if (ioLog.logged.any { output -> output.unformatted == "test 4 6" }) destroy()
-                    val message = "echo '${it.unformatted} ${it.unformatted.length}'"
-                    enter(message)
-                }
-            }) {
-                run(name = testName(Lifecycle::`should start docker and process output produced by own input`), volumes = emptyMap(), image = "busybox")
-            }
+            val dockerProcess = DockerProcess(
+                command = Docker.image { "busybox" }.run { options { testName(Lifecycle::`should start docker and process output produced by own input`) } },
+                ioProcessor = {
+                    if (it.type == OUT) {
+                        if (ioLog.logged.any { output -> output.unformatted == "test 4 6" }) destroy()
+                        val message = "echo '${it.unformatted} ${it.unformatted.length}'"
+                        enter(message)
+                    }
+                })
 
             kotlin.runCatching {
                 dockerProcess.enter("echo 'test'")
@@ -178,7 +162,7 @@ class DockerTest {
     @Slow @DockerRequiring @Test
     fun `should not produce incorrect empty lines`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
         val output = mutableListOf<IO>().synchronized()
-        val dockerProcess = runOsImage(testName(DockerTest::`should not produce incorrect empty lines`), osImage) { output.add(it) }
+        val dockerProcess = runOsImage(testName(DockerProcessTest::`should not produce incorrect empty lines`), osImage) { output.add(it) }
         kotlin.runCatching {
             20.seconds.sleep()
             dockerProcess.destroy()
@@ -186,14 +170,24 @@ class DockerTest {
             expectThat(output.filter { it.isBlank }.size).isLessThan(output.size / 4)
         }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
     }
-
-
-    private fun testName(test: KFunction<Any>): String = DockerTest::class.simpleName + "-" + test.name
 }
+
+fun testName(test: KFunction<Any>): String = DockerProcessTest::class.simpleName + "-" + test.name
+fun OptionsBuilder.testName(test: KFunction<Any>) = run { com.bkahlert.koodies.docker.testName(test).let { name { it } } }
 
 @Suppress("SpellCheckingInspection")
-private fun runOsImage(name: String, osImage: OperatingSystemImage, ioProcessor: (DockerProcess.(IO) -> Unit)? = null): DockerProcess {
-    return Docker.run(ioProcessor = ioProcessor) {
-        run(name = name, volumes = listOf(osImage.toAbsolutePath() to Path.of("/sdcard/filesystem.img")).toMap(), image = "lukechilds/dockerpi:vm")
+private fun runOsImage(name: String, osImage: OperatingSystemImage, ioProcessor: (DockerProcess.(IO) -> Unit)? = null): DockerProcess =
+    DockerProcess(
+        command = Docker.image { "lukechilds" / "dockerpi" tag "vm" }.run {
+            options {
+                name { name }
+                volumes { osImage.file to Path.of("/sdcard/filesystem.img") }
+            }
+        },
+        ioProcessor = ioProcessor)
+
+private fun busybox(test: KFunction<Any>, hereDoc: HereDoc? = null): DockerRunCommand =
+    Docker.image { "busybox" }.run {
+        options { testName(test) }
+        hereDoc?.let { args(it) }
     }
-}

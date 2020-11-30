@@ -4,10 +4,10 @@ import com.bkahlert.koodies.time.busyWait
 import kotlin.time.Duration
 import kotlin.time.milliseconds
 
-data class ProcessExitMock(val exitCode: Int, val delay: Duration) {
+data class ProcessExitMock(val exitValue: Int, val delay: Duration) {
     operator fun invoke(): Int {
         delay.busyWait()
-        return exitCode
+        return exitValue
     }
 
     operator fun invoke(timeout: Duration): Boolean {
@@ -17,9 +17,9 @@ data class ProcessExitMock(val exitCode: Int, val delay: Duration) {
 
     companion object {
         fun immediateSuccess() = ProcessExitMock(0, Duration.ZERO)
-        fun immediateExit(exitCode: Int) = ProcessExitMock(exitCode, Duration.ZERO)
+        fun immediateExit(exitValue: Int) = ProcessExitMock(exitValue, Duration.ZERO)
         fun computing() = delayedExit(0, 1.milliseconds)
-        fun delayedExit(exitCode: Int, delay: Duration) = ProcessExitMock(exitCode, delay)
+        fun delayedExit(exitValue: Int, delay: Duration) = ProcessExitMock(exitValue, delay)
         fun deadLock() = ProcessExitMock(-1, Duration.INFINITE)
     }
 }

@@ -5,6 +5,7 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.exception.toSingleLineString
 import com.bkahlert.koodies.nullable.invoke
 import com.bkahlert.koodies.string.Grapheme
+import com.bkahlert.koodies.string.Unicode
 import com.bkahlert.koodies.string.Unicode.Emojis.heavyBallotX
 import com.bkahlert.koodies.string.Unicode.Emojis.heavyCheckMark
 import com.bkahlert.koodies.string.Unicode.greekSmallLetterKoppa
@@ -12,6 +13,7 @@ import com.bkahlert.koodies.string.mapLines
 import com.bkahlert.koodies.string.prefixWith
 import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.terminal.ANSI
+import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.italic
@@ -19,8 +21,13 @@ import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.asAnsiString
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.mordant.AnsiCode
 import com.imgcstmzr.runtime.HasStatus
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption.CREATE
+import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
+import java.nio.file.StandardOpenOption.WRITE
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import kotlin.io.path.bufferedWriter
 
 /**
  * Logger interface to implement loggers that don't just log
@@ -148,14 +155,13 @@ inline fun <reified R> RenderingLogger<*>?.subLogger(
                 borderedOutput = borderedOutput,
             )
             else -> ((this as? BlockRenderingLogger)?.prefix ?: "$this::").let { prefix ->
-                val color = ansiCode // TODO
                 BlockRenderingLogger(
                     caption = caption,
                     borderedOutput = borderedOutput,
                 ) { output ->
                     val indentedOutput = output.asAnsiString().mapLines {
                         val prefixLength = "5"
-                        val truncateBy = color.invoke(it.replaceFirst(("\\s{$prefixLength}").toRegex(), ' '.repeat(5 - prefix.length)))
+                        val truncateBy = ansiCode.invoke(it.replaceFirst(("\\s{$prefixLength}").toRegex(), ' '.repeat(5 - prefix.length)))
                         truncateBy.prefixWith(prefix)
                     }
                     logText { indentedOutput }
@@ -163,6 +169,28 @@ inline fun <reified R> RenderingLogger<*>?.subLogger(
             }
         }
     return kotlin.runCatching { block(logger) }.also { logger.logResult { it } }.getOrThrow()
+}
+
+
+/**
+ * Creates a logger which logs to [path].
+ */
+inline fun <reified R> RenderingLogger<*>?.fileLogger(
+    path: Path,
+    caption: CharSequence,
+    block: RenderingLogger<R>.() -> R,
+): R = subLogger(caption) {
+    logLine { "This process might produce pretty much log messages. Logging to …" }
+    logLine { "${Unicode.Emojis.pageFacingUp} ${path.toUri()}" }
+    val writer = path.bufferedWriter(options = arrayOf(CREATE, TRUNCATE_EXISTING, WRITE))
+    val logger: RenderingLogger<R> = BlockRenderingLogger(
+        caption = caption,
+        borderedOutput = false,
+        log = { output: String ->
+            writer.appendLine(output.removeEscapeSequences())
+        },
+    )
+    kotlin.runCatching { block(logger) }.also { logger.logResult { it }; writer.close() }.getOrThrow()
 }
 
 

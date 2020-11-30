@@ -3,7 +3,8 @@ package com.bkahlert.koodies.string
 import com.bkahlert.koodies.number.ApproximationMode
 import com.bkahlert.koodies.string.Unicode.Emojis.asEmoji
 import com.bkahlert.koodies.string.Unicode.nextLine
-import com.imgcstmzr.util.isEqualToStringWise
+import com.bkahlert.koodies.test.junit.test
+import com.bkahlert.koodies.test.strikt.isEqualToStringWise
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
@@ -25,13 +26,9 @@ class UnicodeTest {
         fun `should return code point`() = listOf(
             133 to nextLine,
             119594 to Unicode.DivinationSymbols.Tetragrams.Purity.toString(),
-        ).flatMap { (codePoint, expected) ->
-            listOf(
-                dynamicTest("\"$expected\" ？⃔ \"$codePoint\"") {
-                    val actual: CodePoint = Unicode[codePoint]
-                    expectThat(actual).isEqualToStringWise(expected)
-                }
-            )
+        ).test("\"{}\" ？⃔ \"{}\"") { (codePoint, expected) ->
+            val actual: CodePoint = Unicode[codePoint]
+            expectThat(actual).isEqualToStringWise(expected)
         }
     }
 

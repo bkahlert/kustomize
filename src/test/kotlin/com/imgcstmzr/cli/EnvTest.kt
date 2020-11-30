@@ -17,7 +17,7 @@ import strikt.assertions.isNotEqualTo
 import java.nio.file.Path
 
 @Execution(CONCURRENT)
-@Isolated // flaky OutputCapture
+@Isolated("flaky OutputCapture")
 class EnvTest {
 
     private val tempDir = tempDir().deleteOnExit()

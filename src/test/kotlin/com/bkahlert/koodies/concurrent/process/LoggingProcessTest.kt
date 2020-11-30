@@ -8,11 +8,14 @@ import com.bkahlert.koodies.exception.rootCause
 import com.bkahlert.koodies.kaomoji.Kaomojis
 import com.bkahlert.koodies.string.anyContainsAll
 import com.bkahlert.koodies.test.junit.Slow
+import com.bkahlert.koodies.test.junit.test
 import com.bkahlert.koodies.test.strikt.containsExactlyInSomeOrder
 import com.bkahlert.koodies.time.IntervalPolling
 import com.bkahlert.koodies.time.poll
+import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.fail
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -25,12 +28,14 @@ import strikt.assertions.contains
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
+import strikt.assertions.isFalse
 import strikt.assertions.isGreaterThan
 import strikt.assertions.isLessThanOrEqualTo
 import strikt.assertions.isNotNull
 import strikt.assertions.isTrue
 import strikt.assertions.message
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 import kotlin.time.measureTime
 import kotlin.time.milliseconds
@@ -50,8 +55,9 @@ class LoggingProcessTest {
 
         @Test
         fun `should be alive`() {
-            val process = createCompletingLoggingProcess()
+            val process = createLoopingLoggingProcess()
             expectThat(process).isAlive()
+            process.destroyForcibly()
         }
 
         @Test
@@ -86,7 +92,7 @@ class LoggingProcessTest {
 
         @Slow @Test
         fun `should provide output processor access to own running process`() {
-            val process = Processes.startScript(ioProcessor = { output ->
+            val process = Processes.startShellScript(ioProcessor = { output ->
                 if (output.type != META) {
                     kotlin.runCatching {
                         enter("just read $output")
@@ -121,27 +127,53 @@ class LoggingProcessTest {
     @Nested
     inner class Termination {
 
-        @Test
-        fun `should be destroyable`() {
+        @TestFactory
+        fun `by waiting using`() = listOf(
+            Assertion.Builder<LoggingProcess>::waitedFor,
+            Assertion.Builder<LoggingProcess>::waitedForSuccess,
+            Assertion.Builder<LoggingProcess>::waitedForSomeDuration,
+            Assertion.Builder<LoggingProcess>::waitedForSomeTimeUnits,
+        ).test { waitOperation ->
             expect {
                 measureTime {
-                    that(createLoopingLoggingProcess()) {
+                    that(createCompletingLoggingProcess()) {
                         log.logs { any { it.type != META } }
-                        destroyed.completesUnsuccessfully().not { isAlive() }
+                        waitOperation.invoke(this).completesSuccessfully().not { isAlive() }
                     }
                 }.also { that(it).isLessThanOrEqualTo(5.seconds) }
             }
         }
 
         @Test
-        fun `should be destroyable forcibly`() {
-            expect {
-                measureTime {
-                    that(createLoopingLoggingProcess()) {
-                        log.logs { any { it.type != META } }
-                        destroyedForcibly.completesUnsuccessfully().not { isAlive() }
-                    }
-                }.also { that(it).isLessThanOrEqualTo(5.seconds) }
+        fun `by waiting not long enough`() {
+            val process = createLoopingLoggingProcess()
+            expectThat(process) {
+                log.logs { any { it.type != META } }
+                get { waitFor(1.milliseconds) }.isFalse()
+            }
+            process.destroyForcibly()
+        }
+
+        @Test
+        fun `by waiting for success on failure`() {
+            val process = createCompletingLoggingProcess(42)
+            expectCatching { process.waitForSuccess() }.isFailure().get { toString() }.containsDump()
+        }
+
+        @TestFactory
+        fun `by destroying using`() = listOf(
+            Assertion.Builder<LoggingProcess>::destroyed,
+            Assertion.Builder<LoggingProcess>::destroyedForcibly,
+        ).map { destroyOperation ->
+            dynamicTest(destroyOperation.name) {
+                expect {
+                    measureTime {
+                        that(createLoopingLoggingProcess()) {
+                            log.logs { any { it.type != META } }
+                            destroyOperation.invoke(this).completesUnsuccessfully().not { isAlive() }
+                        }
+                    }.also { that(it).isLessThanOrEqualTo(5.seconds) }
+                }
             }
         }
 
@@ -170,7 +202,7 @@ class LoggingProcessTest {
             fun `should call callback`() {
                 var callbackCalled = false
                 expect {
-                    that(createCompletingLoggingProcess(exitCode = 0, runAfterProcessTermination = { callbackCalled = true })).completesSuccessfully()
+                    that(createCompletingLoggingProcess(exitValue = 0, runAfterProcessTermination = { callbackCalled = true })).completesSuccessfully()
                     expectThat(callbackCalled).isTrue()
                 }
             }
@@ -189,7 +221,7 @@ class LoggingProcessTest {
             fun `should call callback`() {
                 var callbackCalled = false
                 expect {
-                    that(createCompletingLoggingProcess(exitCode = 42, runAfterProcessTermination = { callbackCalled = true })).completesUnsuccessfully()
+                    that(createCompletingLoggingProcess(exitValue = 42, runAfterProcessTermination = { callbackCalled = true })).completesUnsuccessfully()
                     expectThat(callbackCalled).isTrue()
                 }
             }
@@ -277,6 +309,18 @@ fun <T : Process> Assertion.Builder<T>.isAlive() = assert("is alive") {
     if (it.isAlive) pass() else fail("is not alive")
 }
 
+val <T : LoggingProcess> Assertion.Builder<T>.waitedForSuccess
+    get() = get("with waitForSuccess() called") { also { waitForSuccess() } }
+
+val <T : Process> Assertion.Builder<T>.waitedFor
+    get() = get("with waitFor() called") { also { waitFor() } }
+
+val <T : LoggingProcess> Assertion.Builder<T>.waitedForSomeDuration
+    get() = get("with waitFor(1.seconds) called") { also { waitFor(1.seconds) } }
+
+val <T : Process> Assertion.Builder<T>.waitedForSomeTimeUnits
+    get() = get("with waitFor(1, TimeUnit.SECONDS) called") { also { waitFor(1, TimeUnit.SECONDS) } }
+
 val <T : Process> Assertion.Builder<T>.destroyed
     get() = get("with destroy() called") { also { destroy() } }
 
@@ -359,7 +403,7 @@ fun <T : IOLog> Assertion.Builder<T>.logsWithin(timeFrame: Duration = 5.seconds,
 fun createLoopingLoggingProcess(
     runAfterProcessTermination: () -> Unit = {},
     ioProcessor: (LoggingProcess.(IO) -> Unit)? = { },
-) = Processes.startScript(runAfterProcessTermination = runAfterProcessTermination, ioProcessor = ioProcessor) {
+) = Processes.startShellScript(runAfterProcessTermination = runAfterProcessTermination, ioProcessor = ioProcessor) {
     !"""
         while true; do
             >&1 echo "test out"
@@ -378,12 +422,12 @@ fun createThrowingLoggingProcess(
 }
 
 fun createCompletingLoggingProcess(
-    exitCode: Int = 0,
+    exitValue: Int = 0,
     runAfterProcessTermination: () -> Unit = {},
-): LoggingProcess = Processes.startScript(runAfterProcessTermination = runAfterProcessTermination) {
+): LoggingProcess = Processes.startShellScript(runAfterProcessTermination = runAfterProcessTermination) {
     !"""
         >&1 echo "test out"
         >&2 echo "test err"
-        exit $exitCode
+        exit $exitValue
     """.trimIndent()
 }

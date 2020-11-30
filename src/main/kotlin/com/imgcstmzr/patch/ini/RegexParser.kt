@@ -1,9 +1,9 @@
 package com.imgcstmzr.patch.ini
 
+import com.bkahlert.koodies.string.quoted
 import com.imgcstmzr.patch.ini.ParsedElement.Companion.toParsedElement
 import com.imgcstmzr.patch.ini.ParsedElements.Companion.toParsedElements
 import com.imgcstmzr.util.namedGroup
-import com.imgcstmzr.util.quoted
 import com.imgcstmzr.util.values
 
 open class RegexParser(groups: Iterable<Pair<String, String>>, matchCompleteLine: Boolean = false) {

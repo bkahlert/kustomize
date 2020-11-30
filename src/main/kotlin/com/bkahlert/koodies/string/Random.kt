@@ -6,6 +6,7 @@ import kotlin.random.Random
 object Random {
     val alphanumericCharacters = RegexBuilder.alphanumericCharacters
     val alphanumericCapitalCharacters = RegexBuilder.alphanumericCapitalCharacters
+    val alphanumericLowerCaseCharacters = RegexBuilder.alphanumericLowerCaseCharacters
 
     operator fun invoke(
         length: Int = 16,

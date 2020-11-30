@@ -3,6 +3,7 @@ package com.imgcstmzr.patch.ini
 import com.bkahlert.koodies.nio.file.mkdirs
 import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.nio.file.tempDir
+import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.imgcstmzr.patch.ini.IniDocument.CommentLine
 import com.imgcstmzr.patch.ini.IniDocument.KeyLine
@@ -10,7 +11,6 @@ import com.imgcstmzr.patch.ini.IniDocument.Line
 import com.imgcstmzr.patch.ini.IniDocument.SectionLine
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.ImgFixture
-import com.imgcstmzr.util.quoted
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested

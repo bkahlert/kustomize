@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.exception
 
-import com.bkahlert.koodies.concurrent.process.CompletedProcess
+import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -57,8 +57,8 @@ class ToSingleLineStringKtTest {
             }
 
             @Test
-            fun `should format CompletedProcess as exit code`() {
-                val actual = Result.success(CompletedProcess(123, 42, emptyList())).toSingleLineString()
+            fun `should format LoggedProcess as exit code`() {
+                val actual = Result.success(startShellScript { !"exit 42" }.loggedProcess.get()).toSingleLineString()
                 expectThat(actual.removeEscapeSequences()).isEqualTo("42")
                 expectThat(actual.lines()).hasSize(1)
             }

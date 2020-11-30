@@ -1,9 +1,9 @@
 package com.bkahlert.koodies.test.junit.debug
 
+import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.test.junit.allTests
 import com.bkahlert.koodies.test.junit.isA
 import com.bkahlert.koodies.test.junit.testName
-import com.imgcstmzr.util.quoted
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ConditionEvaluationResult.disabled
 import org.junit.jupiter.api.extension.ConditionEvaluationResult.enabled

@@ -2,7 +2,7 @@ package com.imgcstmzr.util.logging
 
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
-import com.imgcstmzr.util.asString
+import com.bkahlert.koodies.test.strikt.asString
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution

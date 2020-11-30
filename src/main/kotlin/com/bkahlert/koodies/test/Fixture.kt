@@ -1,14 +1,15 @@
 package com.bkahlert.koodies.test
 
+import com.bkahlert.koodies.nio.file.baseName
 import com.bkahlert.koodies.nio.file.classPath
 import com.bkahlert.koodies.nio.file.copyTo
 import com.bkahlert.koodies.nio.file.copyToDirectory
+import com.bkahlert.koodies.nio.file.extension
+import com.bkahlert.koodies.nio.file.quoted
 import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.nio.file.tempPath
+import com.bkahlert.koodies.string.quoted
 import com.imgcstmzr.util.Paths
-import com.imgcstmzr.util.baseName
-import com.imgcstmzr.util.extension
-import com.imgcstmzr.util.quoted
 import java.nio.file.Path
 
 open class Fixture(val path: String) {
@@ -22,7 +23,7 @@ open class Fixture(val path: String) {
 
     fun copyToTemp(
         base: String = "${fileName.baseName}.",
-        extension: String = fileName.extension?.let { ".$it" } ?: "",
+        extension: String = fileName.extension,
     ): Path = copyTo(Paths.TEMP.tempPath(base, extension))
 
     fun copyTo(target: Path): Path = classPath(path, fun Path.(): Path = copyTo(target))

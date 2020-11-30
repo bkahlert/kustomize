@@ -31,7 +31,7 @@ import java.io.IOException
 class PersistDumpKtTest {
 
     private val tempDir = tempDir().deleteOnExit()
-    private val path get() = tempDir.tempPath(PersistDumpKtTest::class.toString(), ".log")
+    private val path get() = tempDir.tempPath(extension = ".log")
     private val data = { MiscFixture.BootingRaspberry.text }
 
     @Test

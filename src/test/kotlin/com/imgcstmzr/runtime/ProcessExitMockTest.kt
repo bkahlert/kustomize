@@ -17,9 +17,9 @@ class ProcessExitMockTest {
     fun `should provide exit code immediately`() {
         val processExit = ProcessExitMock.immediateExit(42)
 
-        val exitCode = processExit()
+        val exitValue = processExit()
 
-        expectThat(exitCode).isEqualTo(42)
+        expectThat(exitValue).isEqualTo(42)
     }
 
     @Test
@@ -28,9 +28,9 @@ class ProcessExitMockTest {
         val start = System.currentTimeMillis()
         val processExit = ProcessExitMock.delayedExit(42, exitDelay)
 
-        val exitCode = processExit()
+        val exitValue = processExit()
 
-        expectThat(exitCode).isEqualTo(42)
+        expectThat(exitValue).isEqualTo(42)
         expectThat(System.currentTimeMillis() - start).isGreaterThanOrEqualTo(exitDelay.toLongMilliseconds())
     }
 

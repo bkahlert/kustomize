@@ -2,6 +2,7 @@ package com.imgcstmzr.patch.new
 
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.string.mapLines
+import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.unit.Size
@@ -14,7 +15,6 @@ import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.Program
 import com.imgcstmzr.runtime.RunningOperatingSystem
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.util.quoted
 import java.nio.file.Path
 
 data class SimplePatch(
@@ -124,6 +124,18 @@ class GuestfishOperationsCollector(private val guestfishOperations: MutableList<
         guestfishOperations += GuestfishOperation(commands)
     }
 
+    fun userFile(path: String, content: String) {
+        val commands = arrayOf(
+            "touch ${path.quoted}",
+            "chown 0 0 ${path.quoted}",
+            "chmod 0700 ${path.quoted}",
+            *content.lines().map() { line ->
+                "write-append ${path.quoted} ${"$line\\n".replace("\"", "\\\"").quoted}"
+            }.toTypedArray(),
+        )
+        guestfishOperations += GuestfishOperation(commands)
+    }
+
     fun command(command: String) {
         guestfishOperations += GuestfishOperation(arrayOf(
             "command '${command.replace("'", "\\'")}'"
@@ -133,8 +145,11 @@ class GuestfishOperationsCollector(private val guestfishOperations: MutableList<
 
 @PatchDsl
 class FileSystemOperationsCollector(private val pathOperations: MutableList<PathOperation>) {
-    fun edit(path: String, validator: (Path) -> Any, operations: (Path) -> Any) =
+    fun edit(path: String, validator: (Path) -> Unit, operations: (Path) -> Unit) =
         pathOperations.add(PathOperation(Path.of(path), validator, operations))
+
+    fun create(validator: (Path) -> Unit, operations: (Path) -> Unit) =
+        pathOperations.add(PathOperation(Path.of("/"), validator, operations))
 }
 
 

@@ -11,7 +11,6 @@ import org.antlr.v4.test.runtime.java.api.perf.graphemesParser
 import org.antlr.v4.test.runtime.java.api.perf.graphemesParser.GraphemesContext
 import java.util.ArrayList
 import java.util.Objects
-import kotlin.streams.toList
 
 /**
  * Representation of a letter as perceived by a user.
@@ -21,7 +20,7 @@ import kotlin.streams.toList
  */
 inline class Grapheme(val codePoints: List<CodePoint>) {
     constructor(charSequence: CharSequence) : this(
-        charSequence.codePoints().mapToObj { CodePoint(it) }.toList()
+        charSequence.codePointSequence().toList()
             .also { require(count(charSequence) == 1) { "$it does not represent a single grapheme" } })
 
     /**

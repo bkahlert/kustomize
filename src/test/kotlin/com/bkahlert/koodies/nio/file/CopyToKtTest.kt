@@ -191,7 +191,7 @@ class CopyToKtTest {
 }
 
 
-fun Assertion.Builder<Path>.createsEqualTar(other: Path) =
+fun <T : Path> Assertion.Builder<T>.createsEqualTar(other: Path) =
     assert("is copy of $other") { self ->
         val selfTar = self.tar(tempFile()).deleteOnExit()
         val otherTar = other.tar(tempFile()).deleteOnExit()
@@ -202,7 +202,7 @@ fun Assertion.Builder<Path>.createsEqualTar(other: Path) =
         else fail("The resulting tarballs do not match. Expected size ${selfBytes.size} but was ${otherBytes.size}")
     }
 
-fun Assertion.Builder<Path>.isCopyOf(other: Path) =
+fun <T : Path> Assertion.Builder<T>.isCopyOf(other: Path) =
     assert("is copy of $other") { self ->
         if (self.isFile && !other.isFile) fail("$self is a file and can only be compared to another file")
         else if (self.isDirectory && !other.isDirectory) fail("$self is a directory and can only be compared to another directory")

@@ -2,7 +2,7 @@ package com.bkahlert.koodies.test.junit.debug
 
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
-import com.imgcstmzr.util.asString
+import com.bkahlert.koodies.test.strikt.asString
 import com.imgcstmzr.util.logging.CapturedOutput
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.OutputCaptureExtension
@@ -33,7 +33,7 @@ class DebugTest {
         logger.logStatus { IO.Type.OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logger.logResult { Result.success(Unit) }
 
-        expectThat(logger.logged).asString().contains("☎Σ⊂⊂(☉ω☉∩)")
+        expectThat(logger.logged).contains("☎Σ⊂⊂(☉ω☉∩)")
         expectThat(output.removeEscapeSequences()).asString().not { contains("☎Σ⊂⊂(☉ω☉∩)") }
     }
 
