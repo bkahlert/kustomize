@@ -49,8 +49,8 @@ inline class IntervalPolling(private val targetState: () -> Boolean) {
      * @sample PollSample.pollTargetState
      */
     class Polling(private val pollInterval: Duration, private val targetState: () -> Boolean) {
-        private var timeout: Duration = Duration.INFINITE
-        private var timeoutCallback: (Duration) -> Unit = {}
+        private var condition: () -> Boolean = { true }
+        private var callback: (Duration) -> Unit = {}
 
         /**
          * Polls the [targetState] indefinitely.
@@ -63,24 +63,51 @@ inline class IntervalPolling(private val targetState: () -> Boolean) {
 
         /**
          * Polls the [targetState] for at most the specified [timeout]
-         * and calls [timeoutCallback] if within that time the [targetState]
+         * and calls [callback] if within that time the [targetState]
          * did not evaluate to `true`.
          *
          * Returns whether the [targetState] was reached in time.
          */
-        fun forAtMost(timeout: Duration, timeoutCallback: (Duration) -> Unit = {}): Boolean {
-            this.timeout = timeout
-            this.timeoutCallback = timeoutCallback
+        fun forAtMost(timeout: Duration, callback: (Duration) -> Unit = {}): Boolean {
+            val failAfter = Now.instant + timeout
+            condition = { Now.instant <= failAfter }
+            this.callback = callback
+            return poll()
+        }
+
+        /**
+         * Polls the [targetState] for as long as the specified [invariant]
+         * evaluates to `true` and calls [callback] if [invariant] evaluates to `false`.
+         *
+         * Returns whether the [targetState] was reached.
+         */
+        fun forAsLongAs(invariant: () -> Boolean, callback: (Duration) -> Unit = {}): Boolean {
+            condition = invariant
+            this.callback = callback
+            return poll()
+        }
+
+        /**
+         * Polls the [targetState] for at most the specified [timeout]
+         * and only as long as the [invariant] holds `true`. Calls [callback] if
+         * either the time is up of the invariant no longer holds.
+         *
+         * Returns whether the [targetState] was reached in time and held invariant.
+         */
+        fun noLongerThan(invariant: () -> Boolean, timeout: Duration, callback: (Duration) -> Unit = {}): Boolean {
+            val failAfter = Now.instant + timeout
+            condition = { Now.instant <= failAfter && invariant() }
+            this.callback = callback
             return poll()
         }
 
         private fun poll(): Boolean {
             val startTime = System.currentTimeMillis()
-            while (!targetState() && Now.passedSince(startTime) < timeout) {
+            while (!targetState() && condition()) {
                 pollInterval.sleep()
             }
             return if (!targetState()) {
-                timeoutCallback(Now.passedSince(startTime))
+                callback(Now.passedSince(startTime))
                 false
             } else {
                 true

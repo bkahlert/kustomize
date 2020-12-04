@@ -39,8 +39,8 @@ class GuestfishTest {
         val commands = copyInCommands(listOf(Path.of("foo/bar"), Path.of("/bar/baz")))
         expectThat(commands).withCommands {
             containsExactly(
-                "- mkdir-p /foo", "copy-in /work/guestfish.shared/foo/bar /foo",
-                "- mkdir-p /bar", "copy-in /work/guestfish.shared/bar/baz /bar",
+                "- mkdir-p /foo", "copy-in /shared/guestfish.shared/foo/bar /foo",
+                "- mkdir-p /bar", "copy-in /shared/guestfish.shared/bar/baz /bar",
             )
         }
     }
@@ -50,8 +50,8 @@ class GuestfishTest {
         val commands = copyOutCommands(listOf(Path.of("foo/bar"), Path.of("/bar/baz")))
         expectThat(commands).withCommands {
             containsExactly(
-                "!mkdir -p /work/guestfish.shared/foo", "- copy-out /foo/bar /work/guestfish.shared/foo",
-                "!mkdir -p /work/guestfish.shared/bar", "- copy-out /bar/baz /work/guestfish.shared/bar",
+                "!mkdir -p /shared/guestfish.shared/foo", "- copy-out /foo/bar /shared/guestfish.shared/foo",
+                "!mkdir -p /shared/guestfish.shared/bar", "- copy-out /bar/baz /shared/guestfish.shared/bar",
             )
         }
     }

@@ -7,9 +7,11 @@ import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.LineSeparators.lines
 import com.bkahlert.koodies.string.Unicode.Emojis.heavyCheckMark
 import com.bkahlert.koodies.string.joinLinesToString
+import com.bkahlert.koodies.time.busyWait
 import org.apache.commons.io.output.ByteArrayOutputStream
 import java.nio.file.Path
 import kotlin.collections.Map.Entry
+import kotlin.time.seconds
 
 /**
  * An I/O log can be used to log what a [LoggingProcess] received and produces as data.
@@ -73,7 +75,10 @@ class IOLog {
     /**
      * Returns a dumps of the logged I/O log.
      */
-    fun dump(): String = logged.joinLinesToString { it.formatted }
+    fun dump(): String {
+        2.seconds.busyWait()
+        return logged.joinLinesToString { it.formatted }
+    }
 
     /**
      * Dumps the logged I/O log at TEMP using the name scheme `koodies.process.{PID}.{RANDOM}.log".

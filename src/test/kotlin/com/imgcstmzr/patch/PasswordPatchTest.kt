@@ -12,6 +12,7 @@ import com.imgcstmzr.runtime.IncorrectPasswordException
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
+import com.imgcstmzr.runtime.execute
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.logging.InMemoryLogger
@@ -71,7 +72,7 @@ class PasswordPatchTest {
 
         expectCatching {
             osImage.credentials = Credentials("pi", "wrong password")
-            osImage.boot(logger = logger)
+            osImage.execute(logger = logger, autoLogin = true)
         }.isFailure()
             .isA<ExecutionException>()
             .rootCause

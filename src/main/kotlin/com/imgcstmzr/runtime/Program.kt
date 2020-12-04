@@ -17,7 +17,7 @@ import com.imgcstmzr.util.debug
 
 /**
  * Instances of this class can interact with a process based on a state machine for the given [name].
- * Or in other words: A [Program] does not run in a [RunningOperatingSystem] but on it, like somehow a human interacts with a machine.
+ * Or in other words: A [Program] does not run in a [OperatingSystemProcess] but on it, like somehow a human interacts with a machine.
  *
  * The workflow is as follows:
  * 1. The handler of the [initialState] is called whenever the [Process] generates an output.
@@ -30,13 +30,13 @@ import com.imgcstmzr.util.debug
  */
 class Program(
     val name: String,
-    private val initialState: RunningOperatingSystem.() -> String?,
+    private val initialState: OperatingSystemProcess.() -> String?,
     private val states: List<ProgramState>,
 ) : HasStatus {
 
     constructor(
         purpose: String,
-        initialState: RunningOperatingSystem.() -> String?,
+        initialState: OperatingSystemProcess.() -> String?,
         vararg states: ProgramState,
     ) : this(purpose, initialState, states.toList())
 
@@ -48,24 +48,24 @@ class Program(
     val halted: Boolean
         get() = !initiating && state == null
 
-    private val stateMachine: Map<String, RunningOperatingSystem.(String) -> String?> = states.associate { it }
+    private val stateMachine: Map<String, OperatingSystemProcess.(String) -> String?> = states.associate { it }
     private var stateHistory: MutableList<HistoryElement> = mutableListOf()
 
     @Suppress("SpellCheckingInspection")
-    private fun handler(runningOperatingSystem: RunningOperatingSystem): RunningOperatingSystem.(String) -> String? {
+    private fun handler(operatingSystemProcess: OperatingSystemProcess): OperatingSystemProcess.(String) -> String? {
         if (initiating) {
             initiating = false
-            state = initialState(runningOperatingSystem)
+            state = initialState(operatingSystemProcess)
         }
         if (halted) {
-            return { output -> echo("Execution of ${name.quoted} already stopped. No more processing ${output.quoted}".red()); null }
+            return { output -> echo("Execution of ${this@Program.name.quoted} already stopped. No more processing ${output.quoted}".red()); null }
         }
         return stateMachine[state] ?: throw IllegalStateException("Unknown state $state. Available: ${stateMachine.keys}. History: $stateHistory")
     }
 
-    fun compute(runningOperatingSystem: RunningOperatingSystem, IO: IO): Boolean {
+    fun compute(operatingSystemProcess: OperatingSystemProcess, IO: IO): Boolean {
         val oldState = state
-        state = handler(runningOperatingSystem).invoke(runningOperatingSystem, IO.unformatted)
+        state = handler(operatingSystemProcess).invoke(operatingSystemProcess, IO.unformatted)
         val historyElement = HistoryElement(oldState, IO, state)
         if (logging) TermUi.debug("$name execution step #${stateHistory.size}: $historyElement")
         stateHistory.add(historyElement)
@@ -112,8 +112,8 @@ class Program(
          *
          * @return `true` if the calculation is ongoing; otherwise return `false`
          */
-        fun Collection<Program>.compute(runningOperatingSystem: RunningOperatingSystem, IO: IO): Boolean =
-            this.firstOrNull()?.compute(runningOperatingSystem, IO) ?: false
+        fun Collection<Program>.compute(operatingSystemProcess: OperatingSystemProcess, IO: IO): Boolean =
+            this.firstOrNull()?.compute(operatingSystemProcess, IO) ?: false
 
         /**
          * Formats an array of programs
@@ -174,14 +174,14 @@ class Program(
                     if (index + 1 < commands.size) stateName(index + 1, commands)
                     else completionState.first
 
-                val step: RunningOperatingSystem.(String) -> String? = { output: String ->
+                val step: OperatingSystemProcess.(String) -> String? = { output: String ->
                     if (output.matches(readyPattern)) {
                         enter("$command\r")
                         currentCompletionStateName
                     } else currentStateName
                 }
 
-                val completionStep: RunningOperatingSystem.(String) -> String? = { output: String ->
+                val completionStep: OperatingSystemProcess.(String) -> String? = { output: String ->
                     if (output.matches(readyPattern)) {
                         nextStateName
                     } else currentCompletionStateName
@@ -215,4 +215,4 @@ class Program(
     }
 }
 
-typealias ProgramState = Pair<String, RunningOperatingSystem.(String) -> String?>
+typealias ProgramState = Pair<String, OperatingSystemProcess.(String) -> String?>

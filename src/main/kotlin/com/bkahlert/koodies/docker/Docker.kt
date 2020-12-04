@@ -3,7 +3,7 @@ package com.bkahlert.koodies.docker
 import com.bkahlert.koodies.concurrent.process.Processes.checkIfOutputContains
 import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
 import com.bkahlert.koodies.concurrent.process.Processes.startShellScriptDetached
-import com.bkahlert.koodies.concurrent.process.ShellScript
+import com.bkahlert.koodies.shell.ShellScript
 import com.bkahlert.koodies.time.sleep
 import kotlin.time.seconds
 
@@ -33,8 +33,8 @@ object Docker {
     /**
      * Extends [ShellScript] with an entry point to build docker commands.
      */
-    fun image(init: DockerImageBuilder.() -> Any): DockerRunCommandBuilder.ImageProvidedBuilder =
-        DockerRunCommandBuilder.ImageProvidedBuilder(DockerImageBuilder.build(init))
+    fun image(init: DockerImageBuilder.() -> Any): DockerRunCommandLineBuilder.ImageProvidedBuilder =
+        DockerRunCommandLineBuilder.ImageProvidedBuilder(DockerImageBuilder.build(init))
 
     /**
      * Explicitly stops the Docker container with the given [name] **asynchronously**.

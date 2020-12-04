@@ -1,23 +1,30 @@
 package com.bkahlert.koodies.builder
 
-class ListBuilder<E>(private val list: MutableList<E>) {
-    companion object {
-        inline fun <reified E> build(init: ListBuilder<E>.() -> Unit): List<E> =
-            mutableListOf<E>().also { ListBuilder(it).apply(init) }
+/**
+ * Convenience type to easier use [build] accepts.
+ */
+typealias ListBuilderInit<E> = ListBuilder<E>.() -> Unit
 
-        inline fun <reified T, reified E> build(init: ListBuilder<T>.() -> Unit, transform: (T) -> E): List<E> =
-            mutableListOf<T>().also { ListBuilder(it).apply(init) }.map(transform)
+
+class ListBuilder<in E>(private val list: MutableList<E>) {
+    companion object {
+        inline fun <reified E> build(init: ListBuilderInit<E>): List<E> =
+            mutableListOf<E>().also { ListBuilder(it).apply(init) }
     }
 
     operator fun E.unaryPlus() {
         list.add(this)
     }
 
-    operator fun Iterable<E>.unaryPlus() {
+    operator fun Unit.plus(element: E) {
+        list.add(element)
+    }
+
+    operator fun List<E>.unaryPlus() {
         list.addAll(this)
     }
 
-    operator fun Array<E>.unaryPlus() {
+    operator fun Array<out E>.unaryPlus() {
         list.addAll(this)
     }
 
@@ -25,3 +32,33 @@ class ListBuilder<E>(private val list: MutableList<E>) {
         list.addAll(this)
     }
 }
+
+/**
+ * Using `this` [ListBuilderInit] builds a list of elements.
+ */
+fun <E> ListBuilderInit<E>.build(): List<E> =
+    mutableListOf<E>().also { ListBuilder(it).this() }
+
+/**
+ * Using `this` [ListBuilderInit] builds a list of elements.
+ *
+ * As as side effect the result is added to [target].
+ */
+fun <E> ListBuilderInit<E>.buildTo(target: MutableList<in E>): List<E> =
+    build().also { target.addAll(it) }
+
+/**
+ * Using `this` [ListBuilderInit] builds a list of elements
+ * and applies [transform] to the result.
+ */
+fun <E, T> ListBuilderInit<E>.build(transform: E.() -> T): List<T> =
+    build().map { it.transform() }
+
+/**
+ * Using `this` [ListBuilderInit] builds a list of elements
+ * and applies [transform] to the result.
+ *
+ * As as side effect the transformed result is added to [target].
+ */
+fun <E, T> ListBuilderInit<E>.buildTo(target: MutableCollection<in T>, transform: E.() -> T): List<T> =
+    build(transform).also { target.addAll(it) }

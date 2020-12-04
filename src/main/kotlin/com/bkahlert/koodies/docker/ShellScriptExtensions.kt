@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.docker
 
-import com.bkahlert.koodies.concurrent.process.ShellScript
+import com.bkahlert.koodies.shell.ShellScript
 
 
 /**
@@ -13,6 +13,6 @@ fun ShellScript.docker(init: DockerImageBuilder.() -> Any): ShellScriptAttaching
  * Builder that adds the built commands directly to the [shellScript].
  */
 class ShellScriptAttachingBuilder(private val shellScript: ShellScript, private val image: DockerImage) {
-    infix fun run(init: DockerRunCommandBuilder.() -> Unit): Unit =
-        DockerRunCommandBuilder.build(image, init).run { shellScript.command(this) }
+    infix fun run(init: DockerRunCommandLineBuilder.() -> Unit): Unit =
+        DockerRunCommandLineBuilder.build(image, init).run { shellScript.command(this) }
 }

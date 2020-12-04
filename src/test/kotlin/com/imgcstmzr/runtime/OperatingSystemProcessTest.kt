@@ -27,18 +27,17 @@ import java.util.concurrent.ExecutionException
 import kotlin.reflect.KFunction
 
 @Execution(CONCURRENT)
-class ArmRunnerTest {
+class OperatingSystemProcessTest {
 
     @FifteenMinutesTimeout @E2E @Test
-    fun `should boot and run program in user session`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    fun `should boot and run program in user session`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<*>) {
 
-        val exitValue = ArmRunner.run(
-            name = name(ArmRunnerTest::`should boot and run program in user session`),
-            osImage = osImage,
+        val exitValue = osImage.execute(
+            name = name(::`should boot and run program in user session`),
             logger = logger,
-            programs = arrayOf(
-                osImage.compileScript("ping", "ping -c 1 \"imgcstmzr.com\"", "sleep 1", "echo 'test'")
-            ))
+            autoLogin = true,
+            osImage.compileScript("ping", "ping -c 1 \"imgcstmzr.com\"", "sleep 1", "echo 'test'")
+        )
 
         expect {
             that(exitValue).isEqualTo(0)
@@ -50,13 +49,16 @@ class ArmRunnerTest {
     }
 
     @DockerRequiring @Test
-    fun `should terminate if obviously stuck`(@OS(TinyCore) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    fun `should terminate if obviously stuck`(@OS(TinyCore) osImage: OperatingSystemImage, logger: InMemoryLogger<*>) {
         val corruptingString = "Booting Linux"
         val corruptedOsImage = OperatingSystemImage(object : OperatingSystem by osImage {
             override val deadEndPattern: Regex get() = ".*$corruptingString.*".toRegex()
         }, osImage.credentials, osImage.file)
 
-        expectCatching { corruptedOsImage.boot(logger) }
+        expectCatching {
+            println(corruptedOsImage)
+            corruptedOsImage.execute(logger = logger)
+        }
             .isFailure()
             .isA<ExecutionException>()
             .rootCause
@@ -71,8 +73,8 @@ class ArmRunnerTest {
     @Suppress("unused")
     @AfterAll
     fun tearDown() {
-        Docker.remove(name(ArmRunnerTest::`should boot and run program in user session`), forcibly = true)
+        Docker.remove(name(::`should boot and run program in user session`), forcibly = true)
     }
 
-    private fun name(test: KFunction<Any>) = DockerContainerName(ArmRunnerTest::class.simpleName + "-" + test.name)
+    private fun name(test: KFunction<Any>) = DockerContainerName(OperatingSystemProcessTest::class.simpleName + "-" + test.name)
 }

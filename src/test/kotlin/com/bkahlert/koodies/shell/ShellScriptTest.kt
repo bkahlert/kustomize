@@ -1,9 +1,9 @@
 package com.bkahlert.koodies.shell
 
-import com.bkahlert.koodies.concurrent.process.ShellScript
 import com.bkahlert.koodies.docker.docker
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
+import com.bkahlert.koodies.shell.HereDocBuilder.hereDoc
 import com.bkahlert.koodies.test.strikt.toStringIsEqualTo
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.hasContent
@@ -82,24 +82,36 @@ class ShellScriptTest {
                 docker { "image" / "name" } run {
                     options {
                         name { "container-name" }
-                        volumes {
-                            Path.of("/a/b") to Path.of("/c/d")
-                            Path.of("/e/f/../g") to Path.of("//h")
+                        mounts {
+                            Path.of("/a/b") mountAt "/c/d"
+                            Path.of("/e/f/../g") mountAt "//h"
                         }
                     }
-                    args(listOf("-arg1", "--argument 2", listOf("heredoc 1", "-heredoc-line-2").toHereDoc("HEREDOC")))
+                    arguments {
+                        +"-arg1"
+                        +"--argument" + "2"
+                        +hereDoc(label = "HEREDOC") {
+                            +"heredoc 1"
+                            +"-heredoc-line-2"
+                        }
+                    }
                 }
             }.build()).isEqualTo("""
             #!/bin/sh
-            docker run \
-            --name "container-name" \
+            docker \
+            run \
+            --name \
+            container-name \
             --rm \
             -i \
-            --volume /a/b:/c/d \
-            --volume /e/g:/h \
+            --mount \
+            type=bind,source=/a/b,target=/c/d \
+            --mount \
+            type=bind,source=/e/f/../g,target=/h \
             image/name \
             -arg1 \
-            --argument 2 \
+            --argument \
+            2 \
             <<HEREDOC
             heredoc 1
             -heredoc-line-2
@@ -118,8 +130,10 @@ class ShellScriptTest {
                 }
             }.build()).isEqualTo("""
             #!/bin/sh
-            2>&1 docker run \
-            --name "container-name" \
+            docker \
+            run \
+            --name \
+            container-name \
             --rm \
             -i \
             image/name

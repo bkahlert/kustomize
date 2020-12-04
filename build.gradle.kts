@@ -21,6 +21,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.1")
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.10")
 
+//    docker('bkahlert:libguestfs:0.1.2') //
+
     implementation("com.github.ajalt.clikt:clikt:3.0.1")
     implementation("com.github.ajalt:mordant:1.2.1") // implementation("com.github.ajalt.mordant:mordant:2.0.0-alpha1")
     implementation("io.github.config4k:config4k:0.4.2")

@@ -12,11 +12,11 @@ class GuestfishOperationTest {
     fun `should provide summary`() {
         expectThat(GuestfishOperation(arrayOf(
             "!ls -lisa",
-            "!mkdir -p /work",
-            "!mkdir -p /work/guestfish.shared/boot",
-            "- copy-out /boot/cmdline.txt /work/guestfish.shared/boot",
-            "!mkdir -p /work/guestfish.shared/non",
-            "- copy-out /non/existing.txt /work/guestfish.shared/non",
+            "!mkdir -p /shared",
+            "!mkdir -p /shared/guestfish.shared/boot",
+            "- copy-out /boot/cmdline.txt /shared/guestfish.shared/boot",
+            "!mkdir -p /shared/guestfish.shared/non",
+            "- copy-out /non/existing.txt /shared/guestfish.shared/non",
         )).summary).matchesCurlyPattern("◀◀ ls…lisa  ◀ mkdir…work  ◀ …  ◀ copy…boot")
     }
 }

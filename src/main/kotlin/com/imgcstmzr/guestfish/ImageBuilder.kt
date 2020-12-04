@@ -125,9 +125,9 @@ object ImageBuilder {
         @Suppress("SpellCheckingInspection")
         Guestfish.execute(
             containerName = Guestfish::class.simpleName + "-image-preparation---" + imgName,
-            volumes = mapOf(hostDirectory to DOCKER_MOUNT_ROOT),
+            volumes = mapOf(hostDirectory to "/shared"),
             options = listOf("-N",
-                "${DOCKER_MOUNT_ROOT.resolve(imgName)}=bootroot:$bootFileSystem:$rootFileSystem:${totalSize.format()}:${bootSize.format()}:$partitionTableType"),
+                "/shared/$imgName=bootroot:$bootFileSystem:$rootFileSystem:${totalSize.format()}:${bootSize.format()}:$partitionTableType"),
             commands = GuestfishOperation(listOf(
                 "mount /dev/sda2 /",
                 "mkdir /boot",

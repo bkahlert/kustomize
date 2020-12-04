@@ -1,3 +1,5 @@
+@file:Suppress("FINAL_UPPER_BOUND", "unused", "BlockingMethodInNonBlockingContext")
+
 package com.bkahlert.koodies.concurrent.process
 
 import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
@@ -49,13 +51,13 @@ class LoggingProcessTest {
 
         @Test
         fun `should throw on start failure`() {
-            expectCatching { LoggingProcess(command = "invalid something", arguments = listOf(Kaomojis.FallDown.random().toString())) }
+            expectCatching { LoggingProcess(CommandLine("invalid something", Kaomojis.FallDown.random().toString())).waitForSuccess() }
                 .isFailure().isA<ExecutionException>()
         }
 
         @Test
         fun `should be alive`() {
-            val process = createLoopingLoggingProcess()
+            val process = createCompletingLoggingProcess(sleep = 5.seconds)
             expectThat(process).isAlive()
             process.destroyForcibly()
         }
@@ -92,7 +94,7 @@ class LoggingProcessTest {
 
         @Slow @Test
         fun `should provide output processor access to own running process`() {
-            val process = Processes.startShellScript(ioProcessor = { output ->
+            val process = Processes.startShellScript(processor = { output ->
                 if (output.type != META) {
                     kotlin.runCatching {
                         enter("just read $output")
@@ -285,7 +287,7 @@ class LoggingProcessTest {
                 val process = createThrowingLoggingProcess(runAfterProcessTermination = { callbackCalled = true })
                 expect {
                     catching { process.onExit().get() }.failed
-                    that(callbackCalled) { callbackCalled }.isTrue()
+                    that(callbackCalled).isTrue()
                 }
             }
 
@@ -306,7 +308,7 @@ private fun IntervalPolling.ioOrFail() = forAShortTimeOrFail("Missing I/O Log")
 
 
 fun <T : Process> Assertion.Builder<T>.isAlive() = assert("is alive") {
-    if (it.isAlive) pass() else fail("is not alive")
+    if (it.isAlive) pass() else fail("is not alive: ${(it as? LoggingProcess)?.ioLog?.dump() ?: "(${it::class.simpleName}—dump unavailable)"}")
 }
 
 val <T : LoggingProcess> Assertion.Builder<T>.waitedForSuccess
@@ -356,8 +358,7 @@ fun <T : LoggingProcess> Assertion.Builder<T>.completesUnsuccessfully(): Asserti
 
 fun <T : LoggingProcess> Assertion.Builder<T>.completesUnsuccessfully(expected: Int): Assertion.Builder<LoggedProcess> =
     completed.assert("unsuccessfully with exit code $expected") {
-        val actual = it.exitValue()
-        when (actual) {
+        when (val actual = it.exitValue()) {
             expected -> pass()
             0 -> fail("completed successfully")
             else -> fail("completed unsuccessfully with exit code $actual")
@@ -402,8 +403,8 @@ fun <T : IOLog> Assertion.Builder<T>.logsWithin(timeFrame: Duration = 5.seconds,
 
 fun createLoopingLoggingProcess(
     runAfterProcessTermination: () -> Unit = {},
-    ioProcessor: (LoggingProcess.(IO) -> Unit)? = { },
-) = Processes.startShellScript(runAfterProcessTermination = runAfterProcessTermination, ioProcessor = ioProcessor) {
+    processor: Processor? = { },
+) = Processes.startShellScript(runAfterProcessTermination = runAfterProcessTermination, processor = processor) {
     !"""
         while true; do
             >&1 echo "test out"
@@ -424,10 +425,12 @@ fun createThrowingLoggingProcess(
 fun createCompletingLoggingProcess(
     exitValue: Int = 0,
     runAfterProcessTermination: () -> Unit = {},
+    sleep: Duration = Duration.ZERO,
 ): LoggingProcess = Processes.startShellScript(runAfterProcessTermination = runAfterProcessTermination) {
     !"""
         >&1 echo "test out"
         >&2 echo "test err"
+        ${sleep.takeIf { it.isPositive() }?.let { "sleep ${sleep.inSeconds}" }}
         exit $exitValue
     """.trimIndent()
 }

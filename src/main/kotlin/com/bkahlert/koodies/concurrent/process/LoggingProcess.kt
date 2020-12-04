@@ -10,15 +10,13 @@ import com.bkahlert.koodies.exception.dump
 import com.bkahlert.koodies.exception.toSingleLineString
 import com.bkahlert.koodies.io.RedirectingOutputStream
 import com.bkahlert.koodies.nio.NonBlockingReader
+import com.bkahlert.koodies.nio.file.Paths
 import com.bkahlert.koodies.nio.file.exists
-import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.string.unquoted
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ansi.AnsiStyles.tag
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.util.Paths.WORKING_DIRECTORY
 import com.imgcstmzr.util.group
-import org.codehaus.plexus.util.cli.Commandline
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
@@ -37,55 +35,38 @@ import org.apache.commons.io.input.TeeInputStream as CommonsTeeInputStream
 import org.apache.commons.io.output.TeeOutputStream as CommonsTeeOutputStream
 
 /**
- * Starts the specified [command] with the [arguments] passed to it
- * using the specified [workingDirectory] and [env].
+ * Starts the specified [commandLine] using the specified [workingDirectory] and [env].
  *
  * Furthermore it can be specified if a [nonBlockingReader] should be used
  * to process the I/O of the process.
  *
- * If a [ioProcessor] is provided, all I/O will be passed to it.
+ * If a [processor] is provided, all I/O will be passed to it.
  * Nonetheless the I/O is also always logged to [ioLog].
  *
  * On termination—no matter if successful or not—[runAfterProcessTermination]
  * will be called.
  */
 open class LoggingProcess(
-    private val command: String,
-    private val arguments: List<String>,
-    private val workingDirectory: Path? = WORKING_DIRECTORY,
+    private val commandLine: CommandLine,
+    private val workingDirectory: Path = Paths.WorkingDirectory,
     private val env: Map<String, String> = emptyMap(),
     private val nonBlockingReader: Boolean = true,
     private val runAfterProcessTermination: (() -> Unit)? = null,
     private val userProvidedInputStream: InputStream? = InputStream.nullInputStream(),
-    private val ioProcessor: (LoggingProcess.(IO) -> Unit)? = { line -> echo(line) },
+    private val processor: Processor? = { line -> echo(line) },
 ) : Process() {
-
-    constructor(
-        command: Command,
-        workingDirectory: Path? = WORKING_DIRECTORY,
-        env: Map<String, String> = emptyMap(),
-        runAfterProcessTermination: (() -> Unit)? = null,
-        ioProcessor: (LoggingProcess.(IO) -> Unit)? = { line -> echo(line) },
-    ) : this(
-        command = Processes.buildShellScriptToTempFile(workingDirectory, command).serialized,
-        arguments = emptyList(),
-        workingDirectory = null,
-        env = env,
-        runAfterProcessTermination = runAfterProcessTermination,
-        ioProcessor = ioProcessor,
-    )
 
     companion object {
         /**
          * Contains all accessible files contained in this command line.
          */
-        val Commandline.includesFiles
-            get() = listOf(executable, arguments).map { Path.of(it.toString().unquoted) }.filter { it.exists }
+        val CommandLine.includesFiles
+            get() = commandLineParts.map { Path.of(it.unquoted) }.filter { it.exists }
 
         /**
          * Contains a formatted list of files contained in this command line.
          */
-        val Commandline.formattedIncludesFiles: String
+        val CommandLine.formattedIncludesFiles: String
             get() = includesFiles.joinToString("\n") { "📄 ${it.toUri()}" }
 
         /**
@@ -118,13 +99,8 @@ open class LoggingProcess(
     override fun isAlive(): Boolean = process.isAlive
     override fun pid(): Long = process.pid()
 
-    val commandLine = Commandline(command).apply {
-        addArguments(arguments)
-        @Suppress("ExplicitThis")
-        workingDirectory = this@LoggingProcess.workingDirectory?.toFile()
-        env.forEach { addEnvironment(it.key, it.value) }
-    }
-    private val process = kotlin.runCatching { commandLine.execute() }.getOrElse { throw ExecutionException(it) }
+    private val process =
+        kotlin.runCatching { commandLine.execute(workingDirectory, env) }.getOrElse { throw ExecutionException(it) }
     private val processHook: Thread = ShutdownHookUtils.processHookFor(process).also { ShutdownHookUtils.addShutDownHook(it) }
 
     var loggedProcess: CompletableFuture<LoggedProcess> = CompletableFuture.allOf(
@@ -143,14 +119,14 @@ open class LoggingProcess(
         }.exceptionallyThrow("stdin"),
         executor.startAsCompletableFuture(name = "$commandLine::stdout") {
             inputStream.readerForStream(nonBlockingReader).forEachLine { line ->
-                ioProcessor?.let { // TODO try out NIO processing; or just readLines with keepDelimiters respectively EOF as additional line separator
+                processor?.let { // TODO try out NIO processing; or just readLines with keepDelimiters respectively EOF as additional line separator
                     it(this, OUT typed line)
                 }
             }
         }.exceptionallyThrow("stdout"),
         executor.startAsCompletableFuture(name = "$commandLine::stderr") {
             errorStream.readerForStream(nonBlockingReader).forEachLine { line ->
-                ioProcessor?.let { it(this, ERR typed line) }
+                processor?.let { it(this, ERR typed line) }
             }
         }.exceptionallyThrow("stderr"),
     ).thenCombine(process.onExit()) { _, process ->
@@ -209,7 +185,7 @@ open class LoggingProcess(
 
     protected fun String.log() {
         metaStream.enter(this, delay = Duration.ZERO)
-        ioProcessor?.let { it(this@LoggingProcess, META typed this) }
+        processor?.let { it(this@LoggingProcess, META typed this) }
     }
 
     private fun CompletableFuture<*>.exceptionallyThrow(type: String) = exceptionally {

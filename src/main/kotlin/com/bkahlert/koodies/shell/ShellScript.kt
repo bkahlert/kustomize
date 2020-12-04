@@ -1,5 +1,6 @@
-package com.bkahlert.koodies.concurrent.process
+package com.bkahlert.koodies.shell
 
+import com.bkahlert.koodies.concurrent.process.CommandLine
 import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.LineSeparators.lines
@@ -65,7 +66,7 @@ class ShellScript(val name: String? = null, content: String? = null) {
     /**
      * Builds a [command] call.
      */
-    fun command(command: Command) {
+    fun command(command: CommandLine) {
         lines.addAll(command.lines)
     }
 

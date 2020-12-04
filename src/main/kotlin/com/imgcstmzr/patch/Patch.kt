@@ -3,6 +3,9 @@ package com.imgcstmzr.patch
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.docker.DockerContainerName
+import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
+import com.bkahlert.koodies.docker.DockerProcess
+import com.bkahlert.koodies.docker.DockerRunCommandLine
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
@@ -10,17 +13,21 @@ import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.guestfish.Guestfish
+import com.imgcstmzr.guestfish.GuestfishIoProcessor
 import com.imgcstmzr.guestfish.GuestfishOperation
+import com.imgcstmzr.libguestfs.CustomizationOption
+import com.imgcstmzr.libguestfs.LibguestfsRunner
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine
 import com.imgcstmzr.patch.Operation.Status.Failure
 import com.imgcstmzr.patch.Operation.Status.Finished
 import com.imgcstmzr.patch.Operation.Status.Ready
 import com.imgcstmzr.patch.Operation.Status.Running
 import com.imgcstmzr.patch.new.ImgOperation
 import com.imgcstmzr.patch.new.SimplePatch
-import com.imgcstmzr.runtime.ArmRunner.runOn
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.Program
+import com.imgcstmzr.runtime.execute
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.singleLineLogger
 import com.imgcstmzr.runtime.log.subLogger
@@ -44,6 +51,12 @@ interface Patch {
      * before operations "inside" the `.img` file take place.
      */
     val preFileImgOperations: List<ImgOperation>
+
+    /**
+     * Options to be applied on the img file
+     * using the [VirtCustomizeCommandLine].
+     */
+    val customizationOptions: List<CustomizationOption>
 
     /**
      * Operations to be applied on the mounted file system
@@ -81,6 +94,7 @@ class CompositePatch(
 ) : Patch by SimplePatch(
     patches.joinToString(" + ") { it.name },
     patches.flatMap { it.preFileImgOperations }.toList(),
+    patches.flatMap { it.customizationOptions }.toList(),
     patches.flatMap { it.guestfishOperations }.toList(),
     patches.flatMap { it.fileSystemOperations }.toList(),
     patches.flatMap { it.postFileImgOperations }.toList(),
@@ -99,6 +113,7 @@ fun Patch.banner() { // TODO make use of it or delete
 fun Patch.patch(osImage: OperatingSystemImage, logger: RenderingLogger<*>? = null) {
     logger.subLogger<Any>(name.toUpperCase(), null, borderedOutput = false) {
         applyPreFileImgOperations(osImage, this@patch)
+        applyCustomizationOptions(osImage, this@patch)
         applyGuestfishAndFileSystemOperations(osImage, this@patch)
         applyPostFileImgOperations(osImage, this@patch)
         applyPrograms(osImage, this@patch)
@@ -113,6 +128,28 @@ fun RenderingLogger<*>.applyPreFileImgOperations(osImage: OperatingSystemImage, 
             patch.preFileImgOperations.onEachIndexed { index, op ->
                 op(osImage, this)
             }
+        }
+    }
+
+fun RenderingLogger<*>.applyCustomizationOptions(osImage: OperatingSystemImage, patch: Patch): Any =
+    if (patch.customizationOptions.isEmpty()) {
+        logLine { META typed "Customization Options: —" }
+    } else {
+        subLogger("Customization Options (${patch.customizationOptions.size})", null, borderedOutput = false) {
+            val command = VirtCustomizeCommandLine {
+                colors { on }
+                verbose { on }
+                trace { on }
+                disks { +osImage.file }
+                options { +patch.customizationOptions }
+            }
+            val dockerCommandLine: DockerRunCommandLine = LibguestfsRunner.adapt(command)
+
+            DockerProcess(
+                commandLine = dockerCommandLine,
+                workingDirectory = osImage.directory.parent,
+                processor = GuestfishIoProcessor(this, verbose = true),
+            ).waitForSuccess()
         }
     }
 
@@ -182,7 +219,12 @@ fun RenderingLogger<*>.applyPrograms(osImage: OperatingSystemImage, patch: Patch
     } else {
         subLogger("Scripts (${patch.programs.size})", null) {
             patch.programs.onEach { program ->
-                program.runOn(osImage, this)
+                osImage.execute(
+                    name = program.name.toContainerName(),
+                    logger = this,
+                    autoLogin = true,
+                    program
+                )
             }
         }
     }

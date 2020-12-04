@@ -92,7 +92,7 @@ global kvm-pit.lost_tick_policy=discard \
 kernel /var/tmp/.guestfs-0/appliance.d/kernel \
 initrd /var/tmp/.guestfs-0/appliance.d/initrd \
 device virtio-scsi-pci,id=scsi \
-drive file=/work/NpekTjxkXJESfSko1U0iOsQl-tmp.img,cache=writeback,format=raw,id=hd0,if=none \
+drive file=/root/NpekTjxkXJESfSko1U0iOsQl-tmp.img,cache=writeback,format=raw,id=hd0,if=none \
 device scsi-hd,drive=hd0 \
 drive file=/var/tmp/.guestfs-0/appliance.d/root,snapshot=on,id=appliance,cache=unsafe,if=none \
 device scsi-hd,drive=appliance \

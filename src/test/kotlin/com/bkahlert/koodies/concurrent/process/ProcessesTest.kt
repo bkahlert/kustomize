@@ -74,9 +74,9 @@ class ProcessesTest {
         @Test
         fun `should process without logging to System out or in`(output: CapturedOutput) {
             val redirectedOutput = Collections.synchronizedList(mutableListOf<IO>())
-            val ioProcessor: LoggingProcess.(IO) -> Unit = { redirectedOutput.add(it) }
+            val processor: Processor = { redirectedOutput.add(it) }
 
-            startShellScript(ioProcessor = ioProcessor) { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.waitFor()
+            startShellScript(processor = processor) { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.waitFor()
 
             expectThat(output).get { out }.isEmpty()
             expectThat(output).get { err }.isEmpty()
@@ -85,9 +85,9 @@ class ProcessesTest {
         @Test
         fun `should format merged output`(output: CapturedOutput) {
             val redirectedOutput = Collections.synchronizedList(mutableListOf<IO>())
-            val ioProcessor: LoggingProcess.(IO) -> Unit = { redirectedOutput.add(it) }
+            val ioProcessor: Processor = { redirectedOutput.add(it) }
 
-            startShellScript(ioProcessor = ioProcessor) { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.waitFor()
+            startShellScript(processor = ioProcessor) { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.waitFor()
 
             expectThat(redirectedOutput.first { it.type == META }).matchesCurlyPattern("Executing {}")
             expectThat(redirectedOutput.first { it.type == OUT }).isEqualToStringWise(OUT.format("test output"), removeAnsi = false)

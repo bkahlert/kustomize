@@ -98,11 +98,12 @@ class ProcessMock(
         }
     }
 
-    fun start(): RunningOperatingSystem {
-        return object : RunningOperatingSystem("shutdown-command") {
-            override val process: Process = this@ProcessMock
-            override val logger: RenderingLogger<*> = this@ProcessMock.logger
-        }
+    fun start(): OperatingSystemProcess {
+        return TODO()
+//        object : OperatingSystemProcess("shutdown-command") {
+//            override val process: Process = this@ProcessMock
+//            override val logger: RenderingLogger<*> = this@ProcessMock.logger
+//        }
     }
 
     override fun destroy(): Unit = logger.miniTrace(::destroy) { }

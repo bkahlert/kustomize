@@ -4,7 +4,6 @@ import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.concurrent.synchronized
-import com.bkahlert.koodies.shell.HereDoc
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.time.poll
 import com.bkahlert.koodies.time.sleep
@@ -23,7 +22,6 @@ import strikt.assertions.isFalse
 import strikt.assertions.isGreaterThan
 import strikt.assertions.isLessThan
 import strikt.assertions.isTrue
-import java.nio.file.Path
 import kotlin.reflect.KFunction
 import kotlin.time.milliseconds
 import kotlin.time.seconds
@@ -36,13 +34,17 @@ class DockerProcessTest {
 
         @DockerRequiring @Test
         fun `should start docker and pass arguments`() {
-            val dockerProcess = DockerProcess(busybox(Lifecycle::`should start docker and pass arguments`, HereDoc(
-                "echo 'test'",
-            )))
+            val dockerProcess = DockerProcess(busybox(
+                Lifecycle::`should start docker and pass arguments`,
+                "echo", "test",
+            ))
 
             kotlin.runCatching {
                 poll { dockerProcess.ioLog.logged.any { it.type == OUT && it.unformatted == "test" } }
-                    .every(100.milliseconds).forAtMost(8.seconds) { fail("Did not log \"test\" output within 8 seconds.") }
+                    .every(100.milliseconds).noLongerThan({ dockerProcess.isAlive }, 8.seconds) {
+                        if (dockerProcess.isAlive) fail("Did not log \"test\" output within 8 seconds.")
+                        fail("Process terminated without logging: ${dockerProcess.ioLog.dump()}.")
+                    }
             }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
         }
 
@@ -71,8 +73,9 @@ class DockerProcessTest {
         @DockerRequiring @Test
         fun `should start docker and process output produced by own input`() {
             val dockerProcess = DockerProcess(
-                command = Docker.image { "busybox" }.run { options { testName(Lifecycle::`should start docker and process output produced by own input`) } },
-                ioProcessor = {
+                commandLine = Docker.image { "busybox" }
+                    .run { options { testName(Lifecycle::`should start docker and process output produced by own input`) } },
+                processor = {
                     if (it.type == OUT) {
                         if (ioLog.logged.any { output -> output.unformatted == "test 4 6" }) destroy()
                         val message = "echo '${it.unformatted} ${it.unformatted.length}'"
@@ -178,16 +181,16 @@ fun OptionsBuilder.testName(test: KFunction<Any>) = run { com.bkahlert.koodies.d
 @Suppress("SpellCheckingInspection")
 private fun runOsImage(name: String, osImage: OperatingSystemImage, ioProcessor: (DockerProcess.(IO) -> Unit)? = null): DockerProcess =
     DockerProcess(
-        command = Docker.image { "lukechilds" / "dockerpi" tag "vm" }.run {
+        commandLine = Docker.image { "lukechilds" / "dockerpi" tag "vm" }.run {
             options {
                 name { name }
-                volumes { osImage.file to Path.of("/sdcard/filesystem.img") }
+                mounts { osImage.file mountAt "/sdcard/filesystem.img" }
             }
         },
-        ioProcessor = ioProcessor)
+        processor = ioProcessor)
 
-private fun busybox(test: KFunction<Any>, hereDoc: HereDoc? = null): DockerRunCommand =
+private fun busybox(test: KFunction<Any>, vararg lines: String): DockerRunCommandLine =
     Docker.image { "busybox" }.run {
         options { testName(test) }
-        hereDoc?.let { args(it) }
+        arguments { +lines }
     }

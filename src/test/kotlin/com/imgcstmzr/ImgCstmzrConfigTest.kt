@@ -1,7 +1,7 @@
 package com.imgcstmzr
 
-import com.bkahlert.koodies.concurrent.process.ShellScript
 import com.bkahlert.koodies.nio.file.readText
+import com.bkahlert.koodies.shell.ShellScript
 import com.bkahlert.koodies.test.junit.systemproperties.SystemProperties
 import com.bkahlert.koodies.test.junit.systemproperties.SystemProperty
 import com.bkahlert.koodies.unit.Giga

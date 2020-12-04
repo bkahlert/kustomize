@@ -2,6 +2,11 @@ package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.string.quoted
 
+/**
+ * CLient side usage: `"repo" / "path" [ / ... ] [tag "tag" | digest "sha..."]`,
+ *
+ * e.g. `"bkahlert" / "guestfish" tag "latest"`
+ */
 @DockerCommandDsl
 interface DockerImageBuilder {
     companion object {

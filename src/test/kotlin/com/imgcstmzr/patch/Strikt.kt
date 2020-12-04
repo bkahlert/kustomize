@@ -3,10 +3,10 @@ package com.imgcstmzr.patch
 import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
 import com.bkahlert.koodies.docker.DockerContainerName.Companion.toUniqueContainerName
 import com.imgcstmzr.guestfish.Guestfish
-import com.imgcstmzr.runtime.ArmRunner
 import com.imgcstmzr.runtime.OperatingSystemImage
+import com.imgcstmzr.runtime.OperatingSystemProcess
 import com.imgcstmzr.runtime.Program
-import com.imgcstmzr.runtime.RunningOperatingSystem
+import com.imgcstmzr.runtime.execute
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.util.asRootFor
 import strikt.api.Assertion
@@ -35,11 +35,11 @@ inline fun Assertion.Builder<OperatingSystemImage>.mounted(
 
 inline fun Assertion.Builder<OperatingSystemImage>.booted(
     logger: BlockRenderingLogger<Any>,
-    crossinline assertion: RunningOperatingSystem.(String) -> ((String) -> Boolean)?,
+    crossinline assertion: OperatingSystemProcess.(String) -> ((String) -> Boolean)?,
 ): Assertion.Builder<OperatingSystemImage> {
     get("booted ${this.get { operatingSystem }}") {
 
-        val verificationStep: RunningOperatingSystem.(String) -> String? = { output: String ->
+        val verificationStep: OperatingSystemProcess.(String) -> String? = { output: String ->
             val asserter: ((String) -> Boolean)? = this.assertion(output)
             if (asserter != null) {
                 val successfullyTested = asserter(output)
@@ -50,13 +50,12 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
             }
         }
 
-        ArmRunner.run(
-            name = file.toUniqueContainerName(),
-            osImage = this,
-            logger = logger,
-            programs = arrayOf(
-                Program("test", { "testing" }, "testing" to verificationStep),//.logging(),
-            ))
+        execute(
+            file.toUniqueContainerName(),
+            logger,
+            true,
+            Program("test", { "testing" }, "testing" to verificationStep),//.logging(),
+        )
     }
 
     return this
@@ -67,13 +66,15 @@ fun Assertion.Builder<OperatingSystemImage>.booted(
     program: Program,
 ): Assertion.Builder<OperatingSystemImage> =
     compose("booted ${this.get { operatingSystem }}") {
-        get { ArmRunner.run(name = "Assertion Boot of $this".toContainerName(), osImage = this, logger = logger, programs = arrayOf(program)) }.isEqualTo(0)
+        get {
+            execute("Assertion Boot of $this".toContainerName(), logger, true, program)
+        }.isEqualTo(0)
     } then {
         if (allPassed) pass() else fail("Program ${program.name} did not return successfully")
     }
 
 
-inline fun <reified T : RunningOperatingSystem> Assertion.Builder<T>.command(input: String): DescribeableBuilder<String?> = get("running $input") {
+inline fun <reified T : OperatingSystemProcess> Assertion.Builder<T>.command(input: String): DescribeableBuilder<String?> = get("running $input") {
     enter(input)
     readLine()
 }

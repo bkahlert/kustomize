@@ -125,8 +125,16 @@ https://github.com/garthvh/ansible-raspi-playbooks/blob/master/playbooks/new-def
 - `RenderingLoggerIntTest.kt`
 - `Program` class (e.g. login script)
 - `ContainsExactlyInSomeOrder` (easily understandable builder pattern)
+  -> now in koodies.builder
 - `ImgFixture` (static builder)
 - `ShellScriptBuilder` (with !"echo 'this is a command'")
 - `ReadOnlyFileSystem`
 - `RegExDocument` (delegates properties)
 - `PatchTest` (Complex builder pattern)
+
+### Done and Deleted
+
+... because it later was provided by Kotlin
+
+- Java NIO extension functions
+- generic builder (e.g. `buildList`)

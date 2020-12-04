@@ -1,20 +1,12 @@
 package com.bkahlert.koodies.test.strikt
 
+import com.bkahlert.koodies.builder.ElementGroupsBuilder
 import com.bkahlert.koodies.collections.removeFirst
 import org.junit.jupiter.api.fail
 import strikt.api.Assertion
 import strikt.assertions.containsExactly
 import strikt.assertions.containsExactlyInAnyOrder
 
-/**
- * Builder used define expectation for [containsExactlyInSomeOrder].
- *
- * @sample [ContainsExactlyInSomeOrderKtTest.PassingAssertion]
- */
-class ElementGroupsBuilder<T>(private val elementGroups: MutableList<MutableList<T>>) {
-    operator fun T.unaryPlus(): MutableList<T> = mutableListOf(this).also { elementGroups.add(it) }
-    operator fun MutableList<T>.plus(element: T): MutableList<T> = also { it.add(element) }
-}
 
 /**
  * Asserts if this [Iterable] contains exactly the elements provided by [init].

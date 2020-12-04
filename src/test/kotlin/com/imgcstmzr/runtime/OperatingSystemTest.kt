@@ -160,12 +160,12 @@ class OperatingSystemTest {
                     }
                 }) {
                     runningOS.logger.logResult { Result.failure(IllegalStateException("Deadlock")) }
-                    META.format("Unprocessed output: ${runningOS.process.inputStream}")
+                    META.format("Unprocessed output: ${runningOS.inputStream}")
                 }
             }.onFailure { dump("Test failed.") { (processMock.logger as InMemoryLogger).logged } }
 
             expectThat(workflow).get("Halted") { halted }.isTrue()
-            expectThat((runningOS.process as ProcessMock).received).contains("john").contains("passwd123").not { contains("stuff") }
+            expectThat(processMock.received).contains("john").contains("passwd123").not { contains("stuff") }
         }
     }
 }

@@ -14,11 +14,12 @@ import kotlin.io.path.listDirectoryEntries
 import kotlin.time.Duration
 import kotlin.time.minutes
 
-private val cleanUpJobs = object : MutableList<() -> Unit> by mutableListOf() {
+private val cleanUpJobs = object : MutableList<() -> Unit> by mutableListOf<() -> Unit>().synchronized() {
     init {
         startOnShutdown {
             val log = sameFile("com.bkahlert.koodies.cleanup.log").delete()
-            forEach { cleanUpJob ->
+            val copy = toList()
+            copy.forEach { cleanUpJob ->
                 kotlin.runCatching {
                     cleanUpJob()
                 }.onFailure {

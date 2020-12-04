@@ -2,6 +2,7 @@ package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.boolean.asEmoji
 import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
+import com.bkahlert.koodies.shell.HereDocBuilder.hereDoc
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.time.poll
 import com.imgcstmzr.util.DockerRequiring
@@ -31,14 +32,13 @@ class DockerPsTest {
         ).mapTo(containers) {
             DockerProcess(Docker.image { "busybox" }.run {
                 options { name { it } }
-                args("""
-                    <<BE-BUSY
-                    while true; do
-                        sleep 1
-                    done
-                    BE-BUSY
-                """.trimIndent()
-                )
+                arguments {
+                    hereDoc(label = "BE-BUSY") {
+                        +"while true; do"
+                        +"    sleep 1"
+                        +"done"
+                    }
+                }
             }).also { poll { it.isRunning }.every(100.milliseconds).forAtMost(5.seconds) { fail("Docker containers did not start") } }
         }
     }

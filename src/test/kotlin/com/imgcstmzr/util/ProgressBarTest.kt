@@ -19,7 +19,7 @@ class ProgressBarTest {
     fun `should show progress bar`(logger: InMemoryLogger<*>) {
         startShellScript(
             workingDirectory = Path.of("").toAbsolutePath().resolve("src/main/resources"),
-            ioProcessor = { if (it.type == OUT) println(System.out) }) { !"progressbar.sh" }
+            processor = { if (it.type == OUT) println(System.out) }) { !"progressbar.sh" }
         (0..100).forEach {
             logger.logLine { "\u0013" + "X".repeat(it % 10) }
             Thread.sleep(50)

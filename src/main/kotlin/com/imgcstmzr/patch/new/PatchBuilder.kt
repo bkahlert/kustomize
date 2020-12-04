@@ -8,18 +8,22 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.unit.Size
 import com.imgcstmzr.guestfish.Guestfish
 import com.imgcstmzr.guestfish.GuestfishOperation
+import com.imgcstmzr.libguestfs.CustomizationOption
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.CustomizationOptionsBuilder
+import com.imgcstmzr.libguestfs.buildTo
 import com.imgcstmzr.patch.Patch
 import com.imgcstmzr.patch.PathOperation
 import com.imgcstmzr.runtime.OperatingSystemImage
+import com.imgcstmzr.runtime.OperatingSystemProcess
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.Program
-import com.imgcstmzr.runtime.RunningOperatingSystem
 import com.imgcstmzr.runtime.log.RenderingLogger
 import java.nio.file.Path
 
 data class SimplePatch(
     override val name: String,
     override val preFileImgOperations: List<ImgOperation>,
+    override val customizationOptions: List<CustomizationOption>,
     override val guestfishOperations: List<GuestfishOperation>,
     override val fileSystemOperations: List<PathOperation>,
     override val postFileImgOperations: List<ImgOperation>,
@@ -29,13 +33,14 @@ data class SimplePatch(
 fun buildPatch(name: String, init: PatchBuilder.() -> Unit): Patch {
 
     val preFileImgOperations = mutableListOf<ImgOperation>()
+    val customizationOptions = mutableListOf<CustomizationOption>()
     val guestfishOperations = mutableListOf<GuestfishOperation>()
     val fileSystemOperations = mutableListOf<PathOperation>()
     val postFileImgOperations = mutableListOf<ImgOperation>()
     val programs = mutableListOf<Program>()
 
-    PatchBuilder(preFileImgOperations, guestfishOperations, fileSystemOperations, postFileImgOperations, programs).apply(init)
-    return SimplePatch(name, preFileImgOperations, guestfishOperations, fileSystemOperations, postFileImgOperations, programs)
+    PatchBuilder(preFileImgOperations, customizationOptions, guestfishOperations, fileSystemOperations, postFileImgOperations, programs).apply(init)
+    return SimplePatch(name, preFileImgOperations, customizationOptions, guestfishOperations, fileSystemOperations, postFileImgOperations, programs)
 }
 
 @DslMarker
@@ -44,12 +49,14 @@ annotation class PatchDsl
 @PatchDsl
 class PatchBuilder(
     private val preFileImgOperations: MutableList<ImgOperation>,
+    private val customizationOptions: MutableList<CustomizationOption>,
     private val guestfishOperations: MutableList<GuestfishOperation>,
     private val fileSystemOperations: MutableList<PathOperation>,
     private val postFileImgOperations: MutableList<ImgOperation>,
     private val programs: MutableList<Program>,
 ) {
     fun preFile(init: ImgOperationsCollector.() -> Unit) = ImgOperationsCollector(preFileImgOperations).apply(init)
+    fun customize(init: CustomizationOptionsBuilder.() -> Unit) = init.buildTo(customizationOptions)
     fun guestfish(init: GuestfishOperationsCollector.() -> Unit) = GuestfishOperationsCollector(guestfishOperations).apply(init)
     fun files(init: FileSystemOperationsCollector.() -> Unit) = FileSystemOperationsCollector(fileSystemOperations).apply(init)
     fun postFile(init: ImgOperationsCollector.() -> Unit) = ImgOperationsCollector(postFileImgOperations).apply(init)
@@ -162,8 +169,8 @@ class ProgramsBuilder(private val programs: MutableList<Program>) {
 
     fun program(
         purpose: String,
-        initialState: RunningOperatingSystem.() -> String?,
-        vararg states: Pair<String, RunningOperatingSystem.(String) -> String?>,
+        initialState: OperatingSystemProcess.() -> String?,
+        vararg states: Pair<String, OperatingSystemProcess.(String) -> String?>,
     ) {
         programs += Program(purpose, initialState, *states)
     }

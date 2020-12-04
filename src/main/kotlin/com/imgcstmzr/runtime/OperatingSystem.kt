@@ -130,7 +130,7 @@ interface OperatingSystem {
      */
     fun loginProgram(credentials: Credentials): Program {
         var usernameLastEntered = 0L
-        fun RunningOperatingSystem.enterUsername() {
+        fun OperatingSystemProcess.enterUsername() {
             if (Now.passedSince(usernameLastEntered) > 10.seconds) {
                 enter(credentials.username)
                 usernameLastEntered = Now.millis
@@ -138,7 +138,7 @@ interface OperatingSystem {
         }
 
         var passwordLastEntered = 0L
-        fun RunningOperatingSystem.enterPassword() {
+        fun OperatingSystemProcess.enterPassword() {
             if (Now.passedSince(passwordLastEntered) > 10.seconds) {
                 enter(credentials.password, delay = 500.milliseconds)
                 passwordLastEntered = Now.millis
@@ -187,7 +187,7 @@ interface OperatingSystem {
                     }
                     listOf("'TAB'", "'ENTER'", "<Ok>").any { output.contains(it, ignoreCase = true) } -> {
                         enter("\t\t\t\t\t", delay = 500.milliseconds)
-                        feedback("If something goes wrong, I hope it helps: PID is ${process.pid()}")
+                        feedback("If something goes wrong, I hope it helps: PID is ${pid()}")
                         "4/4 confirm password"
                     }
                     output.matches(loginPattern) -> {
@@ -211,7 +211,7 @@ interface OperatingSystem {
      */
     fun shutdownProgram(): Program {
         var shutdownLastEntered = 0L
-        fun RunningOperatingSystem.enterShutdown() {
+        fun OperatingSystemProcess.enterShutdown() {
             if (Now.passedSince(shutdownLastEntered) > 10.seconds) {
                 enter(shutdownCommand)
                 shutdownLastEntered = Now.millis

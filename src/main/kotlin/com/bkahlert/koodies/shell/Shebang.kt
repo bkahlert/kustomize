@@ -1,6 +1,5 @@
 package com.bkahlert.koodies.shell
 
-import com.bkahlert.koodies.concurrent.process.ShellScript
 import com.bkahlert.koodies.nio.file.serialized
 import java.nio.file.Path
 

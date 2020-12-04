@@ -1,7 +1,7 @@
 package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.docker.DockerContainerName.Companion.toUniqueContainerName
+import com.bkahlert.koodies.docker.DockerContainerName
 import com.bkahlert.koodies.nio.file.appendBytes
 import com.bkahlert.koodies.nio.file.baseName
 import com.bkahlert.koodies.nio.file.duplicate
@@ -56,7 +56,7 @@ class OperatingSystemImage(
     private val updatedCredentials: Boolean get() = credentials != defaultCredentials
 
     fun boot(logger: RenderingLogger<Any>, vararg programs: Program): Int =
-        ArmRunner.run(name = path.toUniqueContainerName(), osImage = this, logger = logger, programs = programs)
+        execute(logger = logger, programs = programs)
 
     fun increaseDiskSpace(logger: RenderingLogger<Any>, size: Size): Any =
         logger.subLogger("Increasing Disk Space: ${path.size} ➜ $size", null) {
@@ -87,7 +87,7 @@ class OperatingSystemImage(
 
                     @Suppress("SpellCheckingInspection")
                     val compileScript = OperatingSystems.RaspberryPiLite.compileScript("expand-root", "sudo raspi-config --expand-rootfs")
-                    boot(logger = this, programs = arrayOf(compileScript))
+                    execute(DockerContainerName("ddd"), this, true, compileScript)
                 }
             }
         }

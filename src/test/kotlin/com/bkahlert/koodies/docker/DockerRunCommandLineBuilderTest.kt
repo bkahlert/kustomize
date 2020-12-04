@@ -1,8 +1,8 @@
 package com.bkahlert.koodies.docker
 
-import com.bkahlert.koodies.docker.DockerRunCommandBuilder.Companion.buildRunCommand
-import com.bkahlert.koodies.docker.DockerRunCommandTest.Companion.DOCKER_RUN_COMMAND
-import com.bkahlert.koodies.shell.HereDoc
+import com.bkahlert.koodies.docker.DockerRunCommandLineBuilder.Companion.buildRunCommand
+import com.bkahlert.koodies.docker.DockerRunCommandLineTest.Companion.DOCKER_RUN_COMMAND
+import com.bkahlert.koodies.shell.HereDocBuilder.hereDoc
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -11,7 +11,7 @@ import strikt.assertions.isEqualTo
 import java.nio.file.Path
 
 @Execution(CONCURRENT)
-class DockerRunCommandBuilderTest {
+class DockerRunCommandLineBuilderTest {
 
     @Test
     fun `should build valid docker run`() {
@@ -23,16 +23,19 @@ class DockerRunCommandBuilderTest {
                 autoCleanup { true }
                 interactive { true }
                 pseudoTerminal { true }
-                volumes {
-                    Path.of("/a/b") to Path.of("/c/d")
-                    Path.of("/e/f/../g") to Path.of("//h")
+                mounts {
+                    Path.of("/a/b") mountAt "/c/d"
+                    +MountOption("bind", Path.of("/e/f/../g"), Path.of("//h"))
                 }
             }
-            command("work")
-            args {
+            command { "work" }
+            arguments {
                 +"-arg1"
-                +"--argument 2"
-                +HereDoc("heredoc 1", "-heredoc-line-2", label = "HEREDOC")
+                +"--argument" + "2"
+                +hereDoc(label = "HEREDOC") {
+                    +"heredoc 1"
+                    +"-heredoc-line-2"
+                }
             }
         }
         expectThat(dockerRunCommand).isEqualTo(DOCKER_RUN_COMMAND)

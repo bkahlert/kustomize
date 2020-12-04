@@ -1,4 +1,5 @@
 ARG GRAALVM_VERSION=20.2.0-java11
+MAINTAINER "Björn Kahlert" <mail@bkahlert.com>
 
 # Download GraalVM and install Native Image Builder
 FROM oracle/graalvm-ce:${GRAALVM_VERSION}
@@ -27,7 +28,7 @@ LABEL org.label-schema.usage="README.md"
 LABEL org.label-schema.url="https://imgcstmzr.com"
 LABEL org.label-schema.vcs-url="https://github.com/imgcstmzr/imgcstmzr.git"
 LABEL org.label-schema.docker.cmd.help="docker run --rm $CONTAINER"
-LABEL org.label-schema.docker.cmd.debug="docker run --rm -v $(PWD):/root/$(PWD) --entrypoint /bin/bash -it $CONTAINER"
+LABEL org.label-schema.docker.cmd.debug="docker run --rm -v $(PWD):/shared --entrypoint /bin/bash -it $CONTAINER"
 COPY --from=0 /project/build/native-image/imgcstmzr .
 RUN groupadd -r app && useradd --no-log-init -r -g app app
 # TODO USER appuser ENV ANSIBLE_USER=ansible SUDO_GROUP=wheel DEPLOY_GROUP=deployer

@@ -11,27 +11,36 @@ import kotlin.time.milliseconds
 import kotlin.time.seconds
 
 /**
+ * Function that processes the [IO] of a [DockerProcess].
+ */
+typealias DockerProcessor = DockerProcess.(IO) -> Unit
+
+/**
  * A [Process] responsible to run a [Docker] container.
  */
-class DockerProcess private constructor(
+open class DockerProcess private constructor(
     override val name: DockerContainerName,
-    command: DockerRunCommand,
+    commandLine: DockerRunCommandLine,
     workingDirectory: Path = Paths.WorkingDirectory,
-    ioProcessor: (DockerProcess.(IO) -> Unit)? = null,
+    processor: DockerProcessor? = null,
 ) : DockerContainer, LoggingProcess(
-    command = command,
+    commandLine = commandLine,
     workingDirectory = workingDirectory,
-    ioProcessor = ioProcessor?.let { { output -> it(this as DockerProcess, output) } },
+    processor = processor?.let {
+        { io ->
+            it(this as DockerProcess, io)
+        }
+    },
     runAfterProcessTermination = {
         Docker.stop(name)
         Docker.remove(name, forcibly = true)
     },
 ) {
     constructor(
-        command: DockerRunCommand,
+        commandLine: DockerRunCommandLine,
         workingDirectory: Path = Paths.WorkingDirectory,
-        ioProcessor: (DockerProcess.(IO) -> Unit)? = null,
-    ) : this(command.options.name ?: error("Docker container name missing."), command, workingDirectory, ioProcessor)
+        processor: DockerProcessor? = null,
+    ) : this(commandLine.options.name ?: error("Docker container name missing."), commandLine, workingDirectory, processor)
 
     init {
         "🐳 docker attach ${name.sanitized.quoted}".log()

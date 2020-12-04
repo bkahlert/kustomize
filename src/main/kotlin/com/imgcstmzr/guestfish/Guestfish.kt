@@ -7,11 +7,12 @@ import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
 import com.bkahlert.koodies.docker.DockerImage
 import com.bkahlert.koodies.docker.DockerImageBuilder
 import com.bkahlert.koodies.docker.DockerProcess
-import com.bkahlert.koodies.docker.DockerRunCommandBuilder.Companion.buildRunCommand
+import com.bkahlert.koodies.docker.DockerRunCommandLineBuilder.Companion.buildRunCommand
 import com.bkahlert.koodies.io.TarArchiver.tar
 import com.bkahlert.koodies.kaomoji.Kaomojis
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.withExtension
+import com.bkahlert.koodies.shell.HereDocBuilder.hereDoc
 import com.bkahlert.koodies.string.match
 import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.string.random
@@ -35,13 +36,13 @@ import java.nio.file.Path
  * ## Developer Note
  * The following command starts Guestfish on a proper command line interactively:
  * ```bash
- * docker run --rm -v $(PWD):/work --entrypoint /usr/bin/guestfish -it cmattoon/guestfish
- * docker run --rm -v $(PWD):/work --entrypoint /usr/bin/guestfish -it cmattoon/guestfish -N /work/my.img=bootroot:vfat:ext4:6M:3M:mbr
+ * docker run --rm -v $(PWD):/shared --entrypoint /usr/bin/guestfish -it bkahlert/libguestfs
+ * docker run --rm -v $(PWD):/shared --entrypoint /usr/bin/guestfish -it bkahlert/libguestfs -N /shared/my.img=bootroot:vfat:ext4:6M:3M:mbr
  * ```
  *
  * For even more freedom the next command starts the bash:
  * ```bash
- * docker run --rm -v $(PWD):/work --entrypoint /bin/bash -it cmattoon/guestfish
+ * docker run --rm -v $(PWD):/shared --entrypoint /bin/bash -it bkahlert/libguestfs
  * ```
  */
 class Guestfish(
@@ -87,25 +88,27 @@ class Guestfish(
             val workingDirectory = imgPathOnHost.directory
 
             DockerProcess(
-                command = IMAGE.buildRunCommand {
+                commandLine = IMAGE.buildRunCommand {
                     redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
                     options {
                         containerName { containerName }
                         autoCleanup { false }
-                        volumes {
-                            workingDirectory.resolve(imgPathOnHost.fileName) to imgPathOnDocker
-                            workingDirectory.resolve(SHARED_DIRECTORY_NAME) to GUEST_ROOT_ON_DOCKER
+                        mounts {
+                            workingDirectory.resolve(imgPathOnHost.fileName) mountAt "/images/disk.img"
+                            workingDirectory.resolve("shared") mountAt "/shared"
                         }
                     }
-                    args(listOf(
-                        "--rw",
-                        "--add $imgPathOnDocker",
-                        "--mount /dev/sda2:/",
-                        "--mount /dev/sda1:/boot",
-                        (guestfishOperation + shutdownOperation).asHereDoc()))
+                    arguments {
+                        listOf(
+                            "--rw",
+                            "--add $imgPathOnDocker",
+                            "--mount /dev/sda2:/",
+                            "--mount /dev/sda1:/boot",
+                            (guestfishOperation + shutdownOperation).asHereDoc())
+                    }
                 },
                 workingDirectory = workingDirectory,
-                ioProcessor = GuestfishIoProcessor(this, verbose = false),
+                processor = GuestfishIoProcessor(this, verbose = false),
             ).waitForSuccess()
 
             guestfishOperation.commands.map { it.match("""! perl -i.{} -pe 's|(?<={}:)[^:]*|crypt("{}","\\\${'$'}6\\\${'$'}{}\\\${'$'}")|e' {}/shadow""") }
@@ -129,8 +132,8 @@ class Guestfish(
     fun tarIn(): Unit = run(tarInCommands(imgPathOnHost))
 
     companion object {
-        @Suppress("SpellCheckingInspection") val IMAGE: DockerImage = DockerImageBuilder.build { "cmattoon" / "guestfish" } //"curator/guestfish"
-        val DOCKER_MOUNT_ROOT: Path = Path.of("/work")///root")
+        @Suppress("SpellCheckingInspection") val IMAGE: DockerImage = DockerImageBuilder.build { "imgcstmzr" / "guestfish" } //"curator/guestfish"
+        val DOCKER_MOUNT_ROOT: Path = Path.of("/shared")///root")
         private val GUEST_MOUNT_ROOT: Path = Path.of("/")
         const val SHARED_DIRECTORY_NAME: String = "guestfish.shared"
         private val shutdownOperation = GuestfishOperation("umount-all", "quit")
@@ -204,24 +207,33 @@ class Guestfish(
          */
         fun execute(
             containerName: String,
-            volumes: Map<Path, Path>,
+            volumes: Map<Path, String>,
             options: List<String> = emptyList(),
             commands: GuestfishOperation,
             workingDirectory: Path = Paths.WORKING_DIRECTORY,
             logger: RenderingLogger<*>,
         ): LoggedProcess = logger.subLogger("Running ${commands.commandCount} guestfish operations... ${Kaomojis.fishing()}") {
             DockerProcess(
-                command = IMAGE.buildRunCommand {
+                commandLine = IMAGE.buildRunCommand {
                     redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
                     options {
                         name { containerName }
                         autoCleanup { false }
-                        volumes { +volumes }
+                        mounts {
+                            volumes.forEach { (source, target) -> source mountAt target }
+                        }
                     }
-                    args(listOf(*options.toTypedArray(), "--", (commands + shutdownOperation).asHereDoc()))
+                    arguments {
+                        +options
+                        +"--"
+                        hereDoc {
+                            commands.commands.forEach { +it }
+                            shutdownOperation.commands.forEach { +it }
+                        }
+                    }
                 },
                 workingDirectory = workingDirectory,
-                ioProcessor = GuestfishIoProcessor(this, verbose = false),
+                processor = GuestfishIoProcessor(this, verbose = false),
             ).loggedProcess.get()
         }
     }

@@ -1,6 +1,6 @@
 package com
 
-import com.bkahlert.koodies.docker.DockerRunCommandBuilder.Companion.buildRunCommand
+import com.bkahlert.koodies.docker.DockerRunCommandLineBuilder.Companion.buildRunCommand
 import com.bkahlert.koodies.nio.file.Paths
 import com.bkahlert.koodies.nio.file.mkdirs
 import com.bkahlert.koodies.nio.file.serialized
@@ -14,7 +14,6 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
 import com.imgcstmzr.cli.Options.os
 import com.imgcstmzr.guestfish.Guestfish
-import com.imgcstmzr.guestfish.Guestfish.Companion.DOCKER_MOUNT_ROOT
 import com.imgcstmzr.process.Downloader
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
@@ -54,7 +53,7 @@ class DebugCommand : NoOpCliktCommand(
             tmp.moveTo(imgFile, overwrite = true)
             logLine { "Moved to $imgFile" }
             val script = """
-                    docker run --rm -v ${'$'}(PWD):/work --entrypoint /usr/bin/guestfish -it cmattoon/guestfish
+                    docker run --rm -v ${'$'}(PWD):/shared --entrypoint /usr/bin/guestfish -it bkahlert/libguestfs
                 """.trimIndent()
 
             logLine { script }
@@ -64,17 +63,17 @@ class DebugCommand : NoOpCliktCommand(
                 options {
                     name { "guestfish" }
                     autoCleanup { false }
-                    volumes {
-                        path.resolve(path.fileName) to imgFile
-                        path.resolve(Guestfish.SHARED_DIRECTORY_NAME) to DOCKER_MOUNT_ROOT.resolve(Guestfish.SHARED_DIRECTORY_NAME)
+                    mounts {
+                        path.resolve(path.fileName) mountAt "/images/disk.img"
+                        path.resolve("shared") mountAt "/shared"
                     }
                 }
-                args(listOf(
-                    "--rw",
-                    "--add ${Guestfish.DOCKER_MOUNT_ROOT.resolve(imgFile.fileName)}",
-                    "--mount /dev/sda2:/",
-                    "--mount /dev/sda1:/boot",
-                ))
+                arguments {
+                    +"--rw"
+                    +"--add /images/disk.img"
+                    +"--mount /dev/sda2:/"
+                    +"--mount /dev/sda1:/boot"
+                }
             }
             logLine { z.toString() }
         }

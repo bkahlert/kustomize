@@ -1,6 +1,5 @@
 package com.bkahlert.koodies.shell
 
-import com.bkahlert.koodies.concurrent.process.ShellScript
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
