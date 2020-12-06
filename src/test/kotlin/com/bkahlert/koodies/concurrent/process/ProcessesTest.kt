@@ -5,11 +5,12 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.concurrent.process.Processes.cheapEvalShellScript
 import com.bkahlert.koodies.concurrent.process.Processes.evalShellScript
-import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
+import com.bkahlert.koodies.concurrent.process.Processes.executeShellScript
 import com.bkahlert.koodies.concurrent.process.Processes.startShellScriptDetached
 import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
+import com.bkahlert.koodies.shell.ShellScript
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.strikt.isEqualToStringWise
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
@@ -22,20 +23,25 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
 import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD
 import org.junit.jupiter.api.parallel.Isolated
+import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.containsExactly
+import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFalse
 import strikt.assertions.isGreaterThanOrEqualTo
 import strikt.assertions.isTrue
 import java.util.Collections
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
 import kotlin.time.milliseconds
 import kotlin.time.seconds
 
-@Execution(CONCURRENT)
+@Execution(SAME_THREAD)
 class ProcessesTest {
 
     private val tempDir = tempDir().deleteOnExit()
@@ -74,9 +80,9 @@ class ProcessesTest {
         @Test
         fun `should process without logging to System out or in`(output: CapturedOutput) {
             val redirectedOutput = Collections.synchronizedList(mutableListOf<IO>())
-            val processor: Processor = { redirectedOutput.add(it) }
+            val processor: Processor<DelegatingProcess> = { redirectedOutput.add(it) }
 
-            startShellScript(processor = processor) { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.waitFor()
+            executeShellScript { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.process(processor = processor).waitFor()
 
             expectThat(output).get { out }.isEmpty()
             expectThat(output).get { err }.isEmpty()
@@ -85,9 +91,9 @@ class ProcessesTest {
         @Test
         fun `should format merged output`(output: CapturedOutput) {
             val redirectedOutput = Collections.synchronizedList(mutableListOf<IO>())
-            val ioProcessor: Processor = { redirectedOutput.add(it) }
+            val processor: Processor<DelegatingProcess> = { redirectedOutput.add(it) }
 
-            startShellScript(processor = ioProcessor) { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.waitFor()
+            executeShellScript { line(">&1 echo \"test output\""); line(">&2 echo \"test error\"") }.process(processor = processor).waitFor()
 
             expectThat(redirectedOutput.first { it.type == META }).matchesCurlyPattern("Executing {}")
             expectThat(redirectedOutput.first { it.type == OUT }).isEqualToStringWise(OUT.format("test output"), removeAnsi = false)
@@ -144,3 +150,81 @@ class ProcessesTest {
         expectThat(completedProcess.error.lines()).containsExactly(ERR typed "test error")
     }
 }
+
+
+fun createLoopingScript() = ShellScript {
+    !"""
+        while true; do
+            >&1 echo "test out"
+            >&2 echo "test err"
+            sleep 1
+        done
+    """.trimIndent()
+}
+
+fun createCompletingScript(
+    exitValue: Int = 0,
+    sleep: Duration = Duration.ZERO,
+) = ShellScript {
+    !"""
+        >&1 echo "test out"
+        >&2 echo "test err"
+        ${sleep.takeIf { it.isPositive() }?.let { "sleep ${sleep.inSeconds}" } ?: ""}
+        exit $exitValue
+    """.trimIndent()
+}
+
+
+fun <T : Process> Assertion.Builder<T>.isAlive() = assert("is alive") {
+    if (it.isAlive) pass() else fail("is not alive: ${(it as? LoggingProcess)?.ioLog?.dump() ?: "(${it::class.simpleName}—dump unavailable)"}")
+}
+
+val <T : Process> Assertion.Builder<T>.waitedFor
+    get() = get("with waitFor() called") { also { waitFor() } }
+
+val <T : DelegatingProcess> Assertion.Builder<T>.waitedForSomeDuration
+    get() = get("with waitFor(1.seconds) called") { also { waitFor(1.seconds) } }
+
+val <T : Process> Assertion.Builder<T>.waitedForSomeTimeUnits
+    get() = get("with waitFor(1, TimeUnit.SECONDS) called") { also { waitFor(1, TimeUnit.SECONDS) } }
+
+val <T : Process> Assertion.Builder<T>.destroyed
+    get() = get("with destroy() called") { also { destroy() } }
+
+val <T : Process> Assertion.Builder<T>.destroyedForcibly
+    get() = get("with destroyForcibly() called") { also { destroyForcibly() } }
+
+val <T : Process> Assertion.Builder<T>.completed
+    get() = get("completed") {
+        onExit().get()
+    }
+
+val <T : Process> Assertion.Builder<Result<T>>.failed
+    get() = get("failed") { exceptionOrNull() }.isA<ExecutionException>()
+
+fun <T : Process> Assertion.Builder<T>.completesSuccessfully(): Assertion.Builder<Process> =
+    completed.assert("successfully") {
+        val actual = it.exitValue()
+        when (actual == 0) {
+            true -> pass()
+            else -> fail("completed with $actual")
+        }
+    }
+
+fun <T : Process> Assertion.Builder<T>.completesUnsuccessfully(): Assertion.Builder<Process> =
+    completed.assert("unsuccessfully with non-zero exit code") {
+        val actual = it.exitValue()
+        when (actual != 0) {
+            true -> pass()
+            else -> fail("completed successfully")
+        }
+    }
+
+fun <T : Process> Assertion.Builder<T>.completesUnsuccessfully(expected: Int): Assertion.Builder<Process> =
+    completed.assert("unsuccessfully with exit code $expected") {
+        when (val actual = it.exitValue()) {
+            expected -> pass()
+            0 -> fail("completed successfully")
+            else -> fail("completed unsuccessfully with exit code $actual")
+        }
+    }

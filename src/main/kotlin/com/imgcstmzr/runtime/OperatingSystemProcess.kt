@@ -5,6 +5,8 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.IN
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.Processor
+import com.bkahlert.koodies.concurrent.process.process
 import com.bkahlert.koodies.concurrent.startAsThread
 import com.bkahlert.koodies.docker.DockerContainerName
 import com.bkahlert.koodies.docker.DockerContainerName.Companion.toUniqueContainerName
@@ -30,7 +32,7 @@ import kotlin.time.milliseconds
 /**
  * Function that processes the [IO] of a [OperatingSystemProcess].
  */
-typealias OperatingSystemProcessor = OperatingSystemProcess.(IO) -> Unit
+typealias OperatingSystemProcessor = Processor<OperatingSystemProcess>
 
 fun stuckCheckingProcessor(processor: OperatingSystemProcessor): OperatingSystemProcessor = processor.run {
     var stuck = false
@@ -56,7 +58,6 @@ open class OperatingSystemProcess(
     override val name: DockerContainerName,
     val osImage: OperatingSystemImage,
     val logger: RenderingLogger<*>,
-    processor: OperatingSystemProcessor,
 ) : DockerProcess(
     commandLine = DOCKER_IMAGE.buildRunCommand {
         options {
@@ -64,12 +65,6 @@ open class OperatingSystemProcess(
             mounts { osImage.file mountAt "/sdcard/filesystem.img" }
         }
     },
-    processor = fun DockerProcess.(it: IO) {
-        println(this)
-        System.exit(0)
-        val stuckCheckingProcessor = stuckCheckingProcessor(processor)
-        (this as OperatingSystemProcess).stuckCheckingProcessor(it)
-    }
 ) {
     companion object {
         @Suppress("SpellCheckingInspection")
@@ -173,7 +168,8 @@ fun OperatingSystemImage.execute(
         shutdownProgram(),/*.logging()*/
     )
 
-    val operatingSystemProcess = OperatingSystemProcess(name, this@execute, this@subLogger) { io ->
+    val operatingSystemProcess = OperatingSystemProcess(name, this@execute, this@subLogger)
+    operatingSystemProcess.process(processor = stuckCheckingProcessor { io ->
         when (io.type) {
             META -> feedback(io.unformatted)
             IN -> logStatus(items = unfinished) { io }
@@ -181,7 +177,5 @@ fun OperatingSystemImage.execute(
             ERR -> feedback("Unfortunately an error occurred: ${io.formatted}")
         }
         if (!unfinished.compute(this, io)) unfinished.takeIf { it.isNotEmpty() }?.removeAt(0)
-    }
-    println(operatingSystemProcess)
-    operatingSystemProcess.waitFor()
+    }).exitValue()
 }

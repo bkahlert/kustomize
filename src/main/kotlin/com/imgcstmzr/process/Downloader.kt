@@ -1,6 +1,6 @@
 package com.imgcstmzr.process
 
-import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
+import com.bkahlert.koodies.concurrent.process.Processes.executeShellScript
 import com.bkahlert.koodies.nio.file.list
 import com.bkahlert.koodies.nio.file.tempDir
 import com.imgcstmzr.runtime.OperatingSystem
@@ -48,7 +48,7 @@ class Downloader(vararg customHandlers: Pair<String, Handler>) {
             logger.singleLineLogger("Downloading ${filename ?: url} to $temp") {
 
                 // TODO parse progress and feedback
-                startShellScript(workingDirectory = temp) {
+                executeShellScript(workingDirectory = temp) {
                     !"for i in ${(1..retries).joinToString(" ")} ; do"
                     command(
                         "2>&1",
@@ -63,7 +63,7 @@ class Downloader(vararg customHandlers: Pair<String, Handler>) {
                         url,
                     )
                     !"done"
-                }.waitForSuccess()
+                }.waitFor()
 
                 temp.list().singleOrNull()?.cleanUp() ?: throw IllegalStateException("Failed to download $url.")
             }

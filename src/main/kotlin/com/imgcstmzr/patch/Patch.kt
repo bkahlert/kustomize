@@ -2,6 +2,7 @@ package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.process
 import com.bkahlert.koodies.docker.DockerContainerName
 import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
 import com.bkahlert.koodies.docker.DockerProcess
@@ -13,7 +14,6 @@ import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.guestfish.Guestfish
-import com.imgcstmzr.guestfish.GuestfishIoProcessor
 import com.imgcstmzr.guestfish.GuestfishOperation
 import com.imgcstmzr.libguestfs.CustomizationOption
 import com.imgcstmzr.libguestfs.LibguestfsRunner
@@ -145,11 +145,8 @@ fun RenderingLogger<*>.applyCustomizationOptions(osImage: OperatingSystemImage, 
             }
             val dockerCommandLine: DockerRunCommandLine = LibguestfsRunner.adapt(command)
 
-            DockerProcess(
-                commandLine = dockerCommandLine,
-                workingDirectory = osImage.directory.parent,
-                processor = GuestfishIoProcessor(this, verbose = true),
-            ).waitForSuccess()
+            TODO("CONTINUE HERE")
+            DockerProcess(dockerCommandLine).process().waitFor()
         }
     }
 

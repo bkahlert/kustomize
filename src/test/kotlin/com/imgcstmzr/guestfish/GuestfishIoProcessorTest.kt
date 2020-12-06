@@ -75,8 +75,8 @@ class GuestfishIoProcessorTest {
         }
     }
 
-    private fun List<IO>.sendTo(guestfishIoProcessor: (Any?, IO) -> Unit) {
-        forEach { io -> guestfishIoProcessor.invoke(null, io) }
+    private fun List<IO>.sendTo(guestfishIoProcessor: (Process, IO) -> Unit) {
+        forEach { io -> guestfishIoProcessor.invoke(null as Process, io) }
     }
 }
 

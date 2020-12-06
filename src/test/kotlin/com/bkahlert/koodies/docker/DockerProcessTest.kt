@@ -2,7 +2,10 @@ package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.Processor
+import com.bkahlert.koodies.concurrent.process.Processors.noopProcessor
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
+import com.bkahlert.koodies.concurrent.process.process
 import com.bkahlert.koodies.concurrent.synchronized
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.time.poll
@@ -37,7 +40,7 @@ class DockerProcessTest {
             val dockerProcess = DockerProcess(busybox(
                 Lifecycle::`should start docker and pass arguments`,
                 "echo", "test",
-            ))
+            )).process()
 
             kotlin.runCatching {
                 poll { dockerProcess.ioLog.logged.any { it.type == OUT && it.unformatted == "test" } }
@@ -50,7 +53,7 @@ class DockerProcessTest {
 
         @DockerRequiring @Test
         fun `should start docker and process input`() {
-            val dockerProcess = DockerProcess(busybox(Lifecycle::`should start docker and process input`))
+            val dockerProcess = DockerProcess(busybox(Lifecycle::`should start docker and process input`)).process()
 
             kotlin.runCatching {
                 dockerProcess.enter("echo 'test'")
@@ -62,7 +65,7 @@ class DockerProcessTest {
 
         @DockerRequiring @Test
         fun `should start docker and process output`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
-            val dockerProcess = runOsImage(testName(Lifecycle::`should start docker and process output`), osImage)
+            val dockerProcess = runOsImage(testName(Lifecycle::`should start docker and process output`), osImage).process()
 
             kotlin.runCatching {
                 poll { dockerProcess.ioLog.logged.any { it.type == OUT } }
@@ -72,16 +75,16 @@ class DockerProcessTest {
 
         @DockerRequiring @Test
         fun `should start docker and process output produced by own input`() {
-            val dockerProcess = DockerProcess(
-                commandLine = Docker.image { "busybox" }
-                    .run { options { testName(Lifecycle::`should start docker and process output produced by own input`) } },
-                processor = {
-                    if (it.type == OUT) {
-                        if (ioLog.logged.any { output -> output.unformatted == "test 4 6" }) destroy()
-                        val message = "echo '${it.unformatted} ${it.unformatted.length}'"
-                        enter(message)
-                    }
-                })
+            val logged = mutableListOf<String>().synchronized()
+            val dockerProcess = DockerProcess(Docker.image { "busybox" }
+                .run { options { testName(Lifecycle::`should start docker and process output produced by own input`) } }).process { io ->
+                logged.add(io.unformatted)
+                if (io.type == OUT) {
+                    if (logged.contains("test 4 6")) destroy()
+                    val message = "echo '${io.unformatted} ${io.unformatted.length}'"
+                    enter(message)
+                }
+            }
 
             kotlin.runCatching {
                 dockerProcess.enter("echo 'test'")
@@ -179,15 +182,13 @@ fun testName(test: KFunction<Any>): String = DockerProcessTest::class.simpleName
 fun OptionsBuilder.testName(test: KFunction<Any>) = run { com.bkahlert.koodies.docker.testName(test).let { name { it } } }
 
 @Suppress("SpellCheckingInspection")
-private fun runOsImage(name: String, osImage: OperatingSystemImage, ioProcessor: (DockerProcess.(IO) -> Unit)? = null): DockerProcess =
-    DockerProcess(
-        commandLine = Docker.image { "lukechilds" / "dockerpi" tag "vm" }.run {
-            options {
-                name { name }
-                mounts { osImage.file mountAt "/sdcard/filesystem.img" }
-            }
-        },
-        processor = ioProcessor)
+private fun runOsImage(name: String, osImage: OperatingSystemImage, ioProcessor: Processor<DockerProcess> = noopProcessor()): DockerProcess =
+    DockerProcess(Docker.image { "lukechilds" / "dockerpi" tag "vm" }.run {
+        options {
+            name { name }
+            mounts { osImage.file mountAt "/sdcard/filesystem.img" }
+        }
+    }).apply { process(processor = ioProcessor) }
 
 private fun busybox(test: KFunction<Any>, vararg lines: String): DockerRunCommandLine =
     Docker.image { "busybox" }.run {

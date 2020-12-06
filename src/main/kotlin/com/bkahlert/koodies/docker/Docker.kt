@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.concurrent.process.Processes.checkIfOutputContains
-import com.bkahlert.koodies.concurrent.process.Processes.startShellScript
+import com.bkahlert.koodies.concurrent.process.Processes.executeShellScript
 import com.bkahlert.koodies.concurrent.process.Processes.startShellScriptDetached
 import com.bkahlert.koodies.shell.ShellScript
 import com.bkahlert.koodies.time.sleep
@@ -51,7 +51,7 @@ object Docker {
      */
     fun remove(name: DockerContainerName, forcibly: Boolean = false) {
         val forceOption = if (forcibly) " --force" else ""
-        startShellScript { !"docker rm$forceOption \"$name\"" }.waitFor(8.seconds)
+        executeShellScript { !"docker rm$forceOption \"$name\"" }.waitFor(8.seconds)
         1.seconds.sleep()
     }
 

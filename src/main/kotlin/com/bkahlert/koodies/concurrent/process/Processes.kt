@@ -2,6 +2,8 @@ package com.bkahlert.koodies.concurrent.process
 
 import com.bkahlert.koodies.concurrent.cleanUpOldTempFiles
 import com.bkahlert.koodies.concurrent.cleanUpOnShutdown
+import com.bkahlert.koodies.concurrent.process.Processors.noopProcessor
+import com.bkahlert.koodies.nio.file.Paths
 import com.bkahlert.koodies.nio.file.Paths.WorkingDirectory
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.tempFile
@@ -10,7 +12,6 @@ import com.bkahlert.koodies.shell.ShellScript.Companion.build
 import com.bkahlert.koodies.shell.shebang
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import org.codehaus.plexus.util.cli.Commandline
-import java.io.InputStream
 import java.nio.file.Path
 import kotlin.io.path.name
 import kotlin.time.minutes
@@ -42,6 +43,7 @@ object Processes {
      *
      * Returns the raw [Process].
      */
+    @Deprecated("Use start shell script (or new start as shell script)")
     fun startShellScriptDetached(
         workingDirectory: Path = WorkingDirectory,
         env: Map<String, String> = emptyMap(),
@@ -64,15 +66,17 @@ object Processes {
      * Same as [evalShellScript] but reads `std output` synchronously
      * with neither additional comfort nor additional threads overhead.
      */
+    @Deprecated("Use start shell script (or new start as shell script)")
     fun cheapEvalShellScript(
         workingDirectory: Path = WorkingDirectory,
         env: Map<String, String> = emptyMap(),
         shellScript: ShellScript.() -> Unit,
     ): String =
-        startShellScriptDetached(workingDirectory, env, shellScript)
+        startShellScript(workingDirectory = workingDirectory, env = env, shellScript = shellScript)
             .inputStream.bufferedReader().readText()
             .removeEscapeSequences()
             .trim()
+
 
     /**
      * Runs the [command] synchronously in a lightweight fashion and returns if the [substring] is contained in the output.
@@ -88,16 +92,66 @@ object Processes {
     fun evalShellScript(
         workingDirectory: Path = WorkingDirectory,
         env: Map<String, String> = emptyMap(),
-        inputStream: InputStream? = null,
         shellScriptBuilder: ShellScript.() -> Unit,
     ): LoggedProcess {
-        return startShellScript(
+        return executeShellScript(
             workingDirectory = workingDirectory,
             env = env,
-            inputStream = inputStream,
-            shellScriptBuilder = shellScriptBuilder,
-        ).loggedProcess.get()
+            shellScript = shellScriptBuilder.build(),
+            processor = noopProcessor()
+        ).loggedProcess.join().also { println("$it") }
     }
+
+    /**
+     * Executes the [shellScript] using the specified [processor] and returns the [LoggingProcess].
+     */
+    fun executeShellScript(
+        workingDirectory: Path = Paths.Temp,
+        env: Map<String, String> = emptyMap(),
+        expectedExitValue: Int = 0,
+        processTerminationCallback: (() -> Unit)? = null,
+        shellScript: ShellScript,
+        processor: Processor<DelegatingProcess> = noopProcessor(),
+    ): LoggingProcess {
+        val scriptFile = shellScript.buildTo(tempScriptFile())
+        return CommandLine(scriptFile).execute(workingDirectory, env, expectedExitValue, processTerminationCallback, processor = processor)
+    }
+
+    /**
+     * Executes the [shellScript] without printing to the console and returns the [LoggingProcess].
+     */
+    fun executeShellScript(
+        workingDirectory: Path = Paths.Temp,
+        env: Map<String, String> = emptyMap(),
+        expectedExitValue: Int = 0,
+        processTerminationCallback: (() -> Unit)? = null,
+        shellScript: ShellScript.() -> Unit,
+    ): LoggingProcess = executeShellScript(workingDirectory, env, expectedExitValue, processTerminationCallback, shellScript.build())
+
+    /**
+     * Starts the [shellScript] and returns the corresponding [DelegatingProcess].
+     */
+    fun startShellScript(
+        workingDirectory: Path = Paths.Temp,
+        env: Map<String, String> = emptyMap(),
+        expectedExitValue: Int = 0,
+        processTerminationCallback: (() -> Unit)? = null,
+        shellScript: ShellScript,
+    ): DelegatingProcess {
+        val scriptFile = shellScript.buildTo(tempScriptFile())
+        return CommandLine(scriptFile).lazyStart(workingDirectory, env, expectedExitValue, processTerminationCallback)
+    }
+
+    /**
+     * Starts the [shellScript] and returns the corresponding [DelegatingProcess].
+     */
+    fun startShellScript(
+        workingDirectory: Path = Paths.Temp,
+        env: Map<String, String> = emptyMap(),
+        expectedExitValue: Int = 0,
+        processTerminationCallback: (() -> Unit)? = null,
+        shellScript: ShellScript.() -> Unit,
+    ): DelegatingProcess = startShellScript(workingDirectory, env, expectedExitValue, processTerminationCallback, shellScript.build())
 
     /**
      * Builds a proper script that runs at [workingDirectory] and saved it as a
@@ -115,23 +169,4 @@ object Processes {
         }
         return shellScriptWithWorkingDirectory.buildTo(tempScriptFile())
     }
-
-    /**
-     * Runs the [shellScriptBuilder] asynchronously and returns the [LoggingProcess].
-     */
-    fun startShellScript(
-        workingDirectory: Path = WorkingDirectory,
-        env: Map<String, String> = emptyMap(),
-        runAfterProcessTermination: (() -> Unit)? = null,
-        inputStream: InputStream? = null,
-        processor: Processor? = null,
-        shellScriptBuilder: ShellScript.() -> Unit,
-    ): LoggingProcess = LoggingProcess(
-        commandLine = CommandLine(buildShellScriptToTempFile(workingDirectory, shellScriptBuilder).serialized),
-        workingDirectory = workingDirectory,
-        env = env,
-        runAfterProcessTermination = runAfterProcessTermination,
-        userProvidedInputStream = inputStream,
-        processor = processor,
-    )
 }

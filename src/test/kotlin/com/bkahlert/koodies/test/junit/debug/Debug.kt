@@ -3,15 +3,18 @@ package com.bkahlert.koodies.test.junit.debug
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightCyan
 import com.imgcstmzr.util.debug
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD
 import org.junit.jupiter.api.parallel.Isolated
 import strikt.api.Assertion
+import java.util.concurrent.TimeUnit
 
 /**
  * Annotated [Test] methods are run [Isolated] and sibling tests and their descendants
  * are ignored.
  */
+@Timeout(10, unit = TimeUnit.MINUTES)
 @Isolated
 @Execution(SAME_THREAD)
 annotation class Debug(val includeInReport: Boolean = true)

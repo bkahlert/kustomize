@@ -1,7 +1,7 @@
 package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
-import com.bkahlert.koodies.concurrent.process.LoggedProcess
+import com.bkahlert.koodies.concurrent.process.process
 import com.bkahlert.koodies.docker.DockerContainerName
 import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
 import com.bkahlert.koodies.docker.DockerImage
@@ -86,30 +86,29 @@ class Guestfish(
             require(imgPathOnHost.readable) { "Error running Guestfish: $imgPathOnHost can't be read.".wrapWithBorder() }
 
             val workingDirectory = imgPathOnHost.directory
+            val currentLogger = this
 
-            DockerProcess(
-                commandLine = IMAGE.buildRunCommand {
-                    redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
-                    options {
-                        containerName { containerName }
-                        autoCleanup { false }
-                        mounts {
-                            workingDirectory.resolve(imgPathOnHost.fileName) mountAt "/images/disk.img"
-                            workingDirectory.resolve("shared") mountAt "/shared"
-                        }
+            DockerProcess(IMAGE.buildRunCommand {
+                redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
+                options {
+                    containerName { containerName }
+                    autoCleanup { false }
+                    mounts {
+                        workingDirectory.resolve(imgPathOnHost.fileName) mountAt "/images/disk.img"
+                        workingDirectory.resolve("shared") mountAt "/shared"
                     }
-                    arguments {
-                        listOf(
-                            "--rw",
-                            "--add $imgPathOnDocker",
-                            "--mount /dev/sda2:/",
-                            "--mount /dev/sda1:/boot",
-                            (guestfishOperation + shutdownOperation).asHereDoc())
-                    }
-                },
-                workingDirectory = workingDirectory,
-                processor = GuestfishIoProcessor(this, verbose = false),
-            ).waitForSuccess()
+                }
+                arguments {
+                    listOf(
+                        "--rw",
+                        "--add $imgPathOnDocker",
+                        "--mount /dev/sda2:/",
+                        "--mount /dev/sda1:/boot",
+                        (guestfishOperation + shutdownOperation).asHereDoc())
+                }
+            }).run {
+                process(processor = GuestfishIoProcessor(currentLogger, verbose = false))
+            }.waitFor()
 
             guestfishOperation.commands.map { it.match("""! perl -i.{} -pe 's|(?<={}:)[^:]*|crypt("{}","\\\${'$'}6\\\${'$'}{}\\\${'$'}")|e' {}/shadow""") }
                 .filter { it.size > 2 }
@@ -210,31 +209,28 @@ class Guestfish(
             volumes: Map<Path, String>,
             options: List<String> = emptyList(),
             commands: GuestfishOperation,
-            workingDirectory: Path = Paths.WORKING_DIRECTORY,
             logger: RenderingLogger<*>,
-        ): LoggedProcess = logger.subLogger("Running ${commands.commandCount} guestfish operations... ${Kaomojis.fishing()}") {
-            DockerProcess(
-                commandLine = IMAGE.buildRunCommand {
-                    redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
-                    options {
-                        name { containerName }
-                        autoCleanup { false }
-                        mounts {
-                            volumes.forEach { (source, target) -> source mountAt target }
-                        }
+        ): Process = logger.subLogger("Running ${commands.commandCount} guestfish operations... ${Kaomojis.fishing()}") {
+            DockerProcess(IMAGE.buildRunCommand {
+                redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
+                options {
+                    name { containerName }
+                    autoCleanup { false }
+                    mounts {
+                        volumes.forEach { (source, target) -> source mountAt target }
                     }
-                    arguments {
-                        +options
-                        +"--"
-                        hereDoc {
-                            commands.commands.forEach { +it }
-                            shutdownOperation.commands.forEach { +it }
-                        }
+                }
+                arguments {
+                    +options
+                    +"--"
+                    hereDoc {
+                        commands.commands.forEach { +it }
+                        shutdownOperation.commands.forEach { +it }
                     }
-                },
-                workingDirectory = workingDirectory,
-                processor = GuestfishIoProcessor(this, verbose = false),
-            ).loggedProcess.get()
+                }
+            }).run {
+                process(processor = GuestfishIoProcessor(this@subLogger, verbose = false))
+            }
         }
     }
 }

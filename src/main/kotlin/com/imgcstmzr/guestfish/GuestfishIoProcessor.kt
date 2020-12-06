@@ -6,7 +6,7 @@ import com.imgcstmzr.runtime.log.RenderingLogger
 class GuestfishIoProcessor(
     private val renderingLogger: RenderingLogger<*>,
     verbose: Boolean = false,
-) : (Any?, IO) -> Unit {
+) : (Process, IO) -> Unit {
 
     @Suppress("SpellCheckingInspection")
     private var bootedPattern: Regex = ".*libguestfs: \\[\\d+\\w+] appliance is up.*".toRegex()
@@ -14,7 +14,7 @@ class GuestfishIoProcessor(
 
     var linesSkipped = 0
 
-    override fun invoke(process: Any?, io: IO) {
+    override fun invoke(process: Process, io: IO) {
         if (!logOutput) {
             if (io.unformatted.matches(bootedPattern)) {
                 renderingLogger.logLine { IO.Type.META typed "$linesSkipped lines skipped." }

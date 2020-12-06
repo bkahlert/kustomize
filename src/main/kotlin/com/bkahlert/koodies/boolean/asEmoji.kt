@@ -4,20 +4,23 @@ package com.bkahlert.koodies.boolean
 
 import com.bkahlert.koodies.string.Unicode.Emojis.checkMark_
 import com.bkahlert.koodies.string.Unicode.Emojis.crossMark
+import com.bkahlert.koodies.string.Unicode.Emojis.greenCircle
 import com.bkahlert.koodies.string.Unicode.Emojis.heavyLargeCircle
 
 /**
- * Emoji representation of this [Boolean]
+ * Emoji representation of this value.
  *
  * @sample Samples.emoji.trueValue
  * @sample Samples.emoji.falseValue
  * @sample Samples.emoji.nullValue
+ * @sample Samples.emoji.nonNullValue
  */
-val Boolean?.asEmoji: String
+val Any?.asEmoji: String
     inline get() = when (this) {
         true -> "$checkMark_"
         false -> "$crossMark"
         null -> "$heavyLargeCircle"
+        else -> "$greenCircle"
     }
 
 private object Samples {
@@ -32,6 +35,10 @@ private object Samples {
 
         fun nullValue() {
             null.asEmoji
+        }
+
+        fun nonNullValue() {
+            "Any".asEmoji
         }
     }
 }

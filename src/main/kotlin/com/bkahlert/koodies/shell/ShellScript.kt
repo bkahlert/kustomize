@@ -31,6 +31,7 @@ class ShellScript(val name: String? = null, content: String? = null) {
     val lines: MutableList<String> = mutableListOf()
 
     init {
+        !`#!`
         if (content != null) lines.addAll(content.trimIndent().lines())
     }
 
