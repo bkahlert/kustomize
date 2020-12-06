@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.concurrent.process
 
+import com.bkahlert.koodies.process.ProcessV
 import com.bkahlert.koodies.string.LineSeparators.CRLF
 import com.bkahlert.koodies.string.withSuffix
 import java.io.BufferedWriter
@@ -19,6 +20,13 @@ object UserInput {
      * each input on the [Process]'s [InputStream].
      */
     fun Process.enter(vararg input: String, delay: Duration = 10.milliseconds): Unit =
+        outputStream.enter(*input, delay = delay)
+
+    /**
+     * Write the given [input] strings with a slight delay between
+     * each input on the [ProcessV]'s [InputStream].
+     */
+    fun ProcessV.enter(vararg input: String, delay: Duration = 10.milliseconds): Unit =
         outputStream.enter(*input, delay = delay)
 
     /**

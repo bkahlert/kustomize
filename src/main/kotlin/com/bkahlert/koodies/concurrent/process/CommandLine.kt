@@ -139,6 +139,22 @@ open class CommandLine(
             command(commandLine)
         }.buildTo(Processes.tempScriptFile())
 
+    fun lazyProcess(
+        workingDirectory: Path = Paths.WorkingDirectory,
+        environment: Map<String, String> = emptyMap(),
+    ): Lazy<java.lang.Process> {
+        val scriptFile = if (command.toPath().isTempScriptFile()) commandLine else toScript(workingDirectory).serialized
+        return PlexusCommandLine(scriptFile).run {
+            addArguments(arguments)
+            @Suppress("ExplicitThis")
+            this.workingDirectory = workingDirectory.toFile()
+            environment.forEach { addEnvironment(it.key, it.value) }
+            lazy {
+                execute()
+            }
+        }
+    }
+
     fun lazyStart(
         workingDirectory: Path = Paths.WorkingDirectory,
         environment: Map<String, String> = emptyMap(),

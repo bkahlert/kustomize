@@ -105,7 +105,6 @@ fun <P : DelegatingProcess> P.process(
         override fun onExit(): CompletableFuture<Process> {
             return super.onExit().handle { process, processException -> process to processException?.cause }
                 .thenCombine(processedProcess) { (process: Process?, processException: Throwable?), ioException: Throwable? ->
-                    println("PROCESSORS")
                     if (processException != null) {
                         if (processException is ProcessExecutionException) throw processException.withCause(ioException)
                         throw processException

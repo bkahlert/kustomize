@@ -41,6 +41,9 @@ import kotlin.time.measureTime
 import kotlin.time.milliseconds
 import kotlin.time.seconds
 
+val <T : Process> Assertion.Builder<T>.exitValue: Assertion.Builder<Int>
+    get() = get("exit value %s") { this.exitValue() }
+
 @Execution(CONCURRENT)
 class DelegatingProcessTest {
 

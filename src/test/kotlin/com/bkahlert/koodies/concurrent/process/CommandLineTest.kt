@@ -2,7 +2,9 @@ package com.bkahlert.koodies.concurrent.process
 
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.tempPath
-import com.bkahlert.koodies.string.LineSeparators.LF
+import com.bkahlert.koodies.process.LightweightProcess
+import com.bkahlert.koodies.process.ManagedProcess
+import com.bkahlert.koodies.process.silentlyProcess
 import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.test.strikt.toStringIsEqualTo
 import com.bkahlert.koodies.time.sleep
@@ -18,6 +20,7 @@ import strikt.assertions.isEqualTo
 import java.nio.file.Path
 import kotlin.time.seconds
 import org.codehaus.plexus.util.cli.Commandline as PlexusCommandLine
+import java.lang.Process as JavaProcess
 
 @Execution(CONCURRENT)
 class CommandLineTest {
@@ -35,7 +38,7 @@ class CommandLineTest {
         @Test
         fun `should start if accessed`() {
             val (process, file) = createLazyFileCreatingProcess()
-            process.info()
+            process.alive
             2.seconds.sleep()
             expectThat(file).exists()
         }
@@ -209,21 +212,16 @@ class CommandLineTest {
 val Assertion.Builder<CommandLine>.continuationsRemoved
     get() = get("continuation removed %s") { toString().replace("\\s+\\\\.".toRegex(RegexOption.DOT_MATCHES_ALL), " ") }
 
-val Assertion.Builder<CommandLine>.evaluated
+val Assertion.Builder<CommandLine>.evaluated: Assertion.Builder<LightweightProcess>
     get() = get("evaluated %s") {
-        val commandLine = this.toString()
-        Processes.evalShellScript {
-            !commandLine
-        }
+        LightweightProcess(this).also { it.output }
     }
 
-val Assertion.Builder<LoggedProcess>.output
-    get() = get("output %s") {
-        output.unformatted.lines().drop(2).joinToString(LF)
-    }
+val Assertion.Builder<LightweightProcess>.output
+    get() = get("output %s") { output }
 
-val <P : Process> Assertion.Builder<P>.exitValue
-    get() = get("exit value %s") { exitValue() }
+val <P : LightweightProcess> Assertion.Builder<P>.exitValue
+    get() = get("exit value %s") { exitValue }
 
 fun Assertion.Builder<CommandLine>.evaluatesTo(expectedOutput: String, expectedExitValue: Int) {
     with(evaluated) {
@@ -232,26 +230,26 @@ fun Assertion.Builder<CommandLine>.evaluatesTo(expectedOutput: String, expectedE
     }
 }
 
-val Assertion.Builder<LoggedProcess>.evaluatedProcess
+val Assertion.Builder<LightweightProcess>.evaluatedProcess
     get() = output.get("parsed command line %s") { PlexusCommandLine(this) }.get("execute %s") { execute() }
 
-val Assertion.Builder<Process>.processOutput
+val Assertion.Builder<JavaProcess>.processOutput
     get() = get("all output %s") { inputStream.reader().readText().trim() }
 
-val Assertion.Builder<Process>.processExitValue
+val Assertion.Builder<JavaProcess>.processExitValue
     get() = get("exit value %s") { waitFor() }
 
-@JvmName("evaluatesToLoggedProcess")
-fun Assertion.Builder<LoggedProcess>.evaluatesTo(expectedOutput: String, expectedExitValue: Int) {
-    exitValue.isEqualTo(0)
+@JvmName("evaluatesToLightweightProcess")
+fun Assertion.Builder<LightweightProcess>.evaluatesTo(expectedOutput: String, expectedExitValue: Int) {
     with(evaluatedProcess) {
         processOutput.isEqualTo(expectedOutput)
         processExitValue.isEqualTo(expectedExitValue)
     }
+    exitValue.isEqualTo(0)
 }
 
-fun createLazyFileCreatingProcess(): Pair<DelegatingProcess, Path> {
+fun createLazyFileCreatingProcess(): Pair<ManagedProcess, Path> {
     val nonExistingFile = tempPath(extension = ".txt").deleteOnExit()
     val fileCreatingCommandLine = CommandLine("touch", nonExistingFile.serialized)
-    return fileCreatingCommandLine.lazyStart() to nonExistingFile
+    return ManagedProcess(fileCreatingCommandLine) to nonExistingFile
 }

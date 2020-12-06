@@ -4,8 +4,6 @@ package com.bkahlert.koodies.boolean
 
 import com.bkahlert.koodies.string.Unicode.Emojis.checkMark_
 import com.bkahlert.koodies.string.Unicode.Emojis.crossMark
-import com.bkahlert.koodies.string.Unicode.Emojis.greenCircle
-import com.bkahlert.koodies.string.Unicode.Emojis.heavyLargeCircle
 
 /**
  * Emoji representation of this value.
@@ -19,8 +17,8 @@ val Any?.asEmoji: String
     inline get() = when (this) {
         true -> "$checkMark_"
         false -> "$crossMark"
-        null -> "$heavyLargeCircle"
-        else -> "$greenCircle"
+        null -> "␀"
+        else -> "🔣"
     }
 
 private object Samples {
