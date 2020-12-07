@@ -1,7 +1,7 @@
 package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.docker.DockerContainerName
+import com.bkahlert.koodies.docker.DockerContainerName.Companion.toUniqueContainerName
 import com.bkahlert.koodies.nio.file.appendBytes
 import com.bkahlert.koodies.nio.file.baseName
 import com.bkahlert.koodies.nio.file.duplicate
@@ -87,7 +87,7 @@ class OperatingSystemImage(
 
                     @Suppress("SpellCheckingInspection")
                     val compileScript = OperatingSystems.RaspberryPiLite.compileScript("expand-root", "sudo raspi-config --expand-rootfs")
-                    execute(DockerContainerName("ddd"), this, true, compileScript)
+                    execute(path.toUniqueContainerName().sanitized, this, true, compileScript)
                 }
             }
         }

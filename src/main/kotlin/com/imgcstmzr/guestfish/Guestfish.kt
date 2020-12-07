@@ -1,6 +1,7 @@
 package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
+import com.bkahlert.koodies.concurrent.process.Process
 import com.bkahlert.koodies.concurrent.process.process
 import com.bkahlert.koodies.docker.DockerContainerName
 import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
@@ -228,9 +229,7 @@ class Guestfish(
                         shutdownOperation.commands.forEach { +it }
                     }
                 }
-            }).run {
-                process(processor = GuestfishIoProcessor(this@subLogger, verbose = false))
-            }
+            }).process(GuestfishIoProcessor(this@subLogger, verbose = false))
         }
     }
 }

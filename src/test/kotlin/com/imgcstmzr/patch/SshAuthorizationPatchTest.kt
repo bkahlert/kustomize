@@ -4,6 +4,8 @@ import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.listRecursively
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.writeText
+import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
+import com.imgcstmzr.E2E
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
@@ -17,9 +19,12 @@ import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import strikt.api.Assertion
+import strikt.api.DescribeableBuilder
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.all
+import strikt.assertions.contains
 import strikt.assertions.isSuccess
 import strikt.assertions.none
 
@@ -30,12 +35,19 @@ class SshAuthorizationPatchTest {
 
     // TODO test just correct commands
 
-    @Test
+    @FiveMinutesTimeout @E2E @Test
     fun `should clean all files`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
         val sshkey = "123"
 
         val patch = SshAuthorizationPatch("pi", listOf(sshkey))
         patch.patch(osImage, logger)
+
+        expectThat(logger).logged(
+            "SSH key inject: pi",
+            "chown 1000 1000 \"/home/pi/.ssh/authorized_keys\"",
+            "write_append \"/home/pi/.ssh/authorized_keys\" \"\"123\"\\x0a\"",
+            "Finishing off",
+        )
 
     }
 
@@ -96,3 +108,12 @@ class SshAuthorizationPatchTest {
 //        }
 //    }
 }
+
+fun <T : InMemoryLogger<*>> DescribeableBuilder<T>.logged(vararg texts: String): Assertion.Builder<String> =
+    unformattedLog.compose("contains text %s") { completeLog ->
+        texts.forEach { text -> contains(text) }
+    }.then { if (allPassed) pass() else fail() }
+
+val <T : InMemoryLogger<*>> DescribeableBuilder<T>.unformattedLog
+    get() = get("unformatted log %d") { logged }
+

@@ -1,14 +1,9 @@
-package com.bkahlert.koodies.process
+package com.bkahlert.koodies.concurrent.process
 
-import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.concurrent.process.ProcessExecutionException
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
-import com.bkahlert.koodies.concurrent.process.containsDump
-import com.bkahlert.koodies.concurrent.process.createCompletingScript
-import com.bkahlert.koodies.concurrent.process.createLoopingScript
-import com.bkahlert.koodies.concurrent.process.logs
 import com.bkahlert.koodies.exception.rootCause
 import com.bkahlert.koodies.exception.rootCauseMessage
+import com.bkahlert.koodies.shell.ShellScript
 import com.bkahlert.koodies.string.lines
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.test
@@ -138,8 +133,6 @@ class ManagedProcessTest {
             poll { process.ioLog.logged.size >= 6 }.every(100.milliseconds)
                 .forAtMost(800.seconds) { fail("Less than 6x I/O logged within 8 seconds.") }
             process.stop()
-
-            println(process.ioLog.logged)
 
             expectThat(process) {
                 killed
@@ -322,8 +315,31 @@ class ManagedProcessTest {
             }
         }
     }
-
 }
+
+
+fun createLoopingScript() = ShellScript {
+    !"""
+        while true; do
+            >&1 echo "test out"
+            >&2 echo "test err"
+            sleep 1
+        done
+    """.trimIndent()
+}
+
+fun createCompletingScript(
+    exitValue: Int = 0,
+    sleep: Duration = Duration.ZERO,
+) = ShellScript {
+    !"""
+        >&1 echo "test out"
+        >&2 echo "test err"
+        ${sleep.takeIf { it.isPositive() }?.let { "sleep ${sleep.inSeconds}" } ?: ""}
+        exit $exitValue
+    """.trimIndent()
+}
+
 
 fun createLoopingManagedProcess(): ManagedProcess = executeShellScript(shellScript = createLoopingScript())
 fun createThrowingManagedProcess(
@@ -359,25 +375,61 @@ val <T : ManagedProcess> Assertion.Builder<T>.mergedLog
         ioLog.logged.joinToString("\n")
     }
 
-val <T : ProcessV> Assertion.Builder<T>.exitValue: Assertion.Builder<Int>
+
+fun Assertion.Builder<String>.containsDump() {
+    compose("contains dump") {
+        contains("dump has been written")
+        contains(".sh")
+        contains(".log")
+        contains(".no-ansi.log")
+    }.then { if (allPassed) pass() else fail() }
+}
+
+
+fun <T : IOLog> Assertion.Builder<T>.logs(vararg io: IO) = logs(io.toList())
+fun <T : IOLog> Assertion.Builder<T>.logs(io: Collection<IO>) = logsWithin(io = io)
+fun <T : IOLog> Assertion.Builder<T>.logs(predicate: List<IO>.() -> Boolean) = logsWithin(predicate = predicate)
+
+fun <T : IOLog> Assertion.Builder<T>.logsWithin(timeFrame: Duration = 5.seconds, vararg io: IO) = logsWithin(timeFrame, io.toList())
+fun <T : IOLog> Assertion.Builder<T>.logsWithin(timeFrame: Duration = 5.seconds, io: Collection<IO>) =
+    assert("logs $io within $timeFrame") { ioLog ->
+        when (poll {
+            ioLog.logged.containsAll(io)
+        }.every(100.milliseconds).forAtMost(5.seconds)) {
+            true -> pass()
+            else -> fail("logged ${ioLog.logged} instead")
+        }
+    }
+
+fun <T : IOLog> Assertion.Builder<T>.logsWithin(timeFrame: Duration = 5.seconds, predicate: List<IO>.() -> Boolean) =
+    assert("logs within $timeFrame") { ioLog ->
+        when (poll {
+            ioLog.logged.predicate()
+        }.every(100.milliseconds).forAtMost(5.seconds)) {
+            true -> pass()
+            else -> fail("did not log within $timeFrame")
+        }
+    }
+
+val <T : Process> Assertion.Builder<T>.exitValue: Assertion.Builder<Int>
     get() = get("with exit value %s") { exitValue }
 
-val <T : ProcessV> Assertion.Builder<T>.waitedFor: Assertion.Builder<T>
+val <T : Process> Assertion.Builder<T>.waitedFor: Assertion.Builder<T>
     get() = get("with waitFor() called") { also { waitFor() } }
 
-val <T : ProcessV> Assertion.Builder<T>.stopped: Assertion.Builder<T>
+val <T : Process> Assertion.Builder<T>.stopped: Assertion.Builder<T>
     get() = get("with stop() called") { stop() as T }
 
-val <T : ProcessV> Assertion.Builder<T>.killed: Assertion.Builder<T>
+val <T : Process> Assertion.Builder<T>.killed: Assertion.Builder<T>
     get() = get("with kill() called") { kill() as T }
 
-val <T : ProcessV> Assertion.Builder<T>.completed: Assertion.Builder<T>
+val <T : Process> Assertion.Builder<T>.completed: Assertion.Builder<T>
     get() = get("completed") { onExit.get() as T }
 
-val <T : ProcessV> Assertion.Builder<Result<T>>.failed: Assertion.Builder<ExecutionException>
+val <T : Process> Assertion.Builder<Result<T>>.failed: Assertion.Builder<ExecutionException>
     get() = get("failed") { exceptionOrNull() }.isA()
 
-fun <T : ProcessV> Assertion.Builder<T>.completesSuccessfully(): Assertion.Builder<T> =
+fun <T : Process> Assertion.Builder<T>.completesSuccessfully(): Assertion.Builder<T> =
     completed.assert("successfully") {
         val actual = it.exitValue
         when (actual == 0) {
@@ -386,7 +438,7 @@ fun <T : ProcessV> Assertion.Builder<T>.completesSuccessfully(): Assertion.Build
         }
     }
 
-fun <T : ProcessV> Assertion.Builder<T>.completesUnsuccessfully(): Assertion.Builder<T> =
+fun <T : Process> Assertion.Builder<T>.completesUnsuccessfully(): Assertion.Builder<T> =
     completed.assert("unsuccessfully with non-zero exit code") {
         val actual = it.exitValue
         when (actual != 0) {
@@ -395,7 +447,7 @@ fun <T : ProcessV> Assertion.Builder<T>.completesUnsuccessfully(): Assertion.Bui
         }
     }
 
-fun <T : ProcessV> Assertion.Builder<T>.completesUnsuccessfully(expected: Int): Assertion.Builder<T> =
+fun <T : Process> Assertion.Builder<T>.completesUnsuccessfully(expected: Int): Assertion.Builder<T> =
     completed.assert("unsuccessfully with exit code $expected") {
         when (val actual = it.exitValue) {
             expected -> pass()

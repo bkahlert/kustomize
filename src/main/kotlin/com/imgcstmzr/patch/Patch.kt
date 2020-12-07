@@ -2,11 +2,7 @@ package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
-import com.bkahlert.koodies.concurrent.process.process
 import com.bkahlert.koodies.docker.DockerContainerName
-import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
-import com.bkahlert.koodies.docker.DockerProcess
-import com.bkahlert.koodies.docker.DockerRunCommandLine
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
@@ -16,8 +12,8 @@ import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.guestfish.Guestfish
 import com.imgcstmzr.guestfish.GuestfishOperation
 import com.imgcstmzr.libguestfs.CustomizationOption
-import com.imgcstmzr.libguestfs.LibguestfsRunner
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine
+import com.imgcstmzr.libguestfs.execute
 import com.imgcstmzr.patch.Operation.Status.Failure
 import com.imgcstmzr.patch.Operation.Status.Finished
 import com.imgcstmzr.patch.Operation.Status.Ready
@@ -138,15 +134,12 @@ fun RenderingLogger<*>.applyCustomizationOptions(osImage: OperatingSystemImage, 
         subLogger("Customization Options (${patch.customizationOptions.size})", null, borderedOutput = false) {
             val command = VirtCustomizeCommandLine {
                 colors { on }
-                verbose { on }
+//                verbose { on }
                 trace { on }
                 disks { +osImage.file }
                 options { +patch.customizationOptions }
             }
-            val dockerCommandLine: DockerRunCommandLine = LibguestfsRunner.adapt(command)
-
-            TODO("CONTINUE HERE")
-            DockerProcess(dockerCommandLine).process().waitFor()
+            command.execute(this)
         }
     }
 
@@ -217,7 +210,7 @@ fun RenderingLogger<*>.applyPrograms(osImage: OperatingSystemImage, patch: Patch
         subLogger("Scripts (${patch.programs.size})", null) {
             patch.programs.onEach { program ->
                 osImage.execute(
-                    name = program.name.toContainerName(),
+                    name = program.name,
                     logger = this,
                     autoLogin = true,
                     program

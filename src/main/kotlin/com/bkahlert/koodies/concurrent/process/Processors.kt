@@ -23,14 +23,14 @@ typealias Processor<P> = P.(IO) -> Unit
  */
 object Processors {
     /**
-     * Thread pool used for processing the [IO] of [DelegatingProcess].
+     * Thread pool used for processing the [IO] of [Process].
      */
     var ioProcessingThreadPool: ExecutorService = Executors.newCachedThreadPool()
 
     /**
      * A [Processor] that prints the encountered [IO] to the console.
      */
-    fun <P : DelegatingProcess> printingProcessor(): Processor<P> =
+    fun <P : Process> printingProcessor(): Processor<P> =
         { line -> TermUi.echo(line) }
 
     /**
@@ -39,7 +39,7 @@ object Processors {
      * This processor is suited if the process's input and output streams
      * should just be completely consumed—with the side effect of getting logged.
      */
-    fun <P : DelegatingProcess> noopProcessor(): Processor<P> =
+    fun <P : Process> noopProcessor(): Processor<P> =
         { _ -> }
 }
 
@@ -47,11 +47,12 @@ object Processors {
  * Just consumes the [IO] / depletes the input and output streams
  * so they get logged.
  */
-inline fun <reified P : DelegatingProcess> P.silentlyProcess(): LoggingProcess =
+inline fun <reified P : ManagedProcess> P.silentlyProcess(): ManagedProcess =
     process(false, InputStream.nullInputStream(), noopProcessor())
 
+
 /**
- * Attaches to the [Process.getOutputStream] and [Process.getErrorStream]
+ * Attaches to the [Process.outputStream] and [Process.errorStream]
  * of the specified [Process] and passed all [IO] to the specified [processor].
  *
  * If no [processor] is specified, the output and the error stream will be
@@ -59,23 +60,38 @@ inline fun <reified P : DelegatingProcess> P.silentlyProcess(): LoggingProcess =
  *
  * TOOD try out NIO processing; or just readLines with keepDelimiters respectively EOF as additional line separator
  */
-fun <P : DelegatingProcess> P.process(
-    nonBlockingReader: Boolean = true,
-    processInputStream: InputStream = InputStream.nullInputStream(),
+fun <P : ManagedProcess> P.process(
     processor: Processor<P> = Processors.printingProcessor(),
-): LoggingProcess {
+): ManagedProcess = process(true, InputStream.nullInputStream(), processor)
 
-    return object : LoggingProcess(this@process) {
+/**
+ * Attaches to the [Process.outputStream] and [Process.errorStream]
+ * of the specified [Process] and passed all [IO] to the specified [processor].
+ *
+ * If no [processor] is specified, the output and the error stream will be
+ * printed to the console.
+ *
+ * TOOD try out NIO processing; or just readLines with keepDelimiters respectively EOF as additional line separator
+ */
+fun <P : ManagedProcess> P.process(
+    nonBlockingReader: Boolean,
+    processInputStream: InputStream = InputStream.nullInputStream(),
+    processor: Processor<P> = noopProcessor(),
+): ManagedProcess {
 
-        fun CompletableFuture<*>.exceptionallyThrow(type: String) = exceptionally {
-            throw RuntimeException("An error occurred while processing ${type.tag()}.", it)
-        }
+    fun CompletableFuture<*>.exceptionallyThrow(type: String) = exceptionally {
+        throw RuntimeException("An error occurred while processing ${type.tag()}.", it)
+    }
 
-        fun InputStream.readerForStream(nonBlockingReader: Boolean): Reader =
-            if (nonBlockingReader) NonBlockingReader(this, blockOnEmptyLine = true) else InputStreamReader(this)
+    fun InputStream.readerForStream(nonBlockingReader: Boolean): Reader =
+        if (nonBlockingReader) NonBlockingReader(this, blockOnEmptyLine = true)
+        else InputStreamReader(this)
 
+    return apply {
 
-        val inputProvider = ioProcessingThreadPool.startAsCompletableFuture(name = "stdin") {
+//        val metaConsumer = metaStream. // TODO meta and info reading
+
+        val inputProvider = ioProcessingThreadPool.startAsCompletableFuture {
             processInputStream.use {
                 var bytesCopied: Long = 0
                 val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
@@ -88,35 +104,18 @@ fun <P : DelegatingProcess> P.process(
             }
         }.exceptionallyThrow("stdin")
 
-        val outputConsumer = ioProcessingThreadPool.startAsCompletableFuture(name = "stdout") {
+        val outputConsumer = ioProcessingThreadPool.startAsCompletableFuture {
             inputStream.readerForStream(nonBlockingReader).forEachLine { line ->
                 processor(this@process, IO.Type.OUT typed line)
             }
         }.exceptionallyThrow("stdout")
 
-        val errorConsumer = ioProcessingThreadPool.startAsCompletableFuture(name = "stderr") {
+        val errorConsumer = ioProcessingThreadPool.startAsCompletableFuture {
             errorStream.readerForStream(nonBlockingReader).forEachLine { line ->
                 processor(this@process, IO.Type.ERR typed line)
             }
         }.exceptionallyThrow("stderr")
 
-        val processedProcess = CompletableFuture.allOf(inputProvider, outputConsumer, errorConsumer).handle { _, ex: Throwable? -> ex?.cause }
-
-        override fun onExit(): CompletableFuture<Process> {
-            return super.onExit().handle { process, processException -> process to processException?.cause }
-                .thenCombine(processedProcess) { (process: Process?, processException: Throwable?), ioException: Throwable? ->
-                    if (processException != null) {
-                        if (processException is ProcessExecutionException) throw processException.withCause(ioException)
-                        throw processException
-                    }
-                    process
-                }
-        }
-    }.also {
-        // Redirect input stream of the wrapped process to ours.
-        // Ours in turn connect to the actual process.
-        // This circumvention let's us log input generated by ourself.
-        alternativeMetaStream = it.metaStream
-        alternativeOutputStream = it.outputStream
+        this@process.externalSync = CompletableFuture.allOf(inputProvider, outputConsumer, errorConsumer)
     }
 }

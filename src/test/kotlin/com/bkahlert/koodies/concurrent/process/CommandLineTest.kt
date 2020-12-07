@@ -2,9 +2,6 @@ package com.bkahlert.koodies.concurrent.process
 
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.tempPath
-import com.bkahlert.koodies.process.LightweightProcess
-import com.bkahlert.koodies.process.ManagedProcess
-import com.bkahlert.koodies.process.silentlyProcess
 import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.test.strikt.toStringIsEqualTo
 import com.bkahlert.koodies.time.sleep
@@ -18,6 +15,7 @@ import strikt.api.expectThat
 import strikt.assertions.exists
 import strikt.assertions.isEqualTo
 import java.nio.file.Path
+import kotlin.time.milliseconds
 import kotlin.time.seconds
 import org.codehaus.plexus.util.cli.Commandline as PlexusCommandLine
 import java.lang.Process as JavaProcess
@@ -226,6 +224,7 @@ val <P : LightweightProcess> Assertion.Builder<P>.exitValue
 fun Assertion.Builder<CommandLine>.evaluatesTo(expectedOutput: String, expectedExitValue: Int) {
     with(evaluated) {
         output.isEqualTo(expectedOutput)
+        50.milliseconds.sleep()
         exitValue.isEqualTo(expectedExitValue)
     }
 }

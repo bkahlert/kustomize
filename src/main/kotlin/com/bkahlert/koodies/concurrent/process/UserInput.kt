@@ -1,6 +1,5 @@
 package com.bkahlert.koodies.concurrent.process
 
-import com.bkahlert.koodies.process.ProcessV
 import com.bkahlert.koodies.string.LineSeparators.CRLF
 import com.bkahlert.koodies.string.withSuffix
 import java.io.BufferedWriter
@@ -15,6 +14,7 @@ import kotlin.time.milliseconds
  * Provides extension functions to simulate user input.
  */
 object UserInput {
+
     /**
      * Write the given [input] strings with a slight delay between
      * each input on the [Process]'s [InputStream].
@@ -22,11 +22,12 @@ object UserInput {
     fun Process.enter(vararg input: String, delay: Duration = 10.milliseconds): Unit =
         outputStream.enter(*input, delay = delay)
 
+
     /**
      * Write the given [input] strings with a slight delay between
-     * each input on the [ProcessV]'s [InputStream].
+     * each input on the [Process]'s [InputStream].
      */
-    fun ProcessV.enter(vararg input: String, delay: Duration = 10.milliseconds): Unit =
+    fun Process.input(vararg input: String, delay: Duration = 10.milliseconds): Unit =
         outputStream.enter(*input, delay = delay)
 
     /**

@@ -187,7 +187,7 @@ interface OperatingSystem {
                     }
                     listOf("'TAB'", "'ENTER'", "<Ok>").any { output.contains(it, ignoreCase = true) } -> {
                         enter("\t\t\t\t\t", delay = 500.milliseconds)
-                        feedback("If something goes wrong, I hope it helps: PID is ${pid()}")
+                        feedback("If something goes wrong, I hope it helps: PID is $pid")
                         "4/4 confirm password"
                     }
                     output.matches(loginPattern) -> {

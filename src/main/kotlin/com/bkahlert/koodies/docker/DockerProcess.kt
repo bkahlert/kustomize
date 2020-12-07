@@ -1,6 +1,7 @@
 package com.bkahlert.koodies.docker
 
-import com.bkahlert.koodies.concurrent.process.DelegatingProcess
+import com.bkahlert.koodies.concurrent.process.ManagedProcess
+import com.bkahlert.koodies.concurrent.process.Process
 import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.time.poll
 import java.util.concurrent.TimeoutException
@@ -11,32 +12,32 @@ import kotlin.time.seconds
  * A [Process] responsible to run a [Docker] container.
  */
 open class DockerProcess private constructor(
-    override val name: DockerContainerName,
-    delegatingProcess: DelegatingProcess,
-) : DockerContainer, DelegatingProcess(delegatingProcess) {
-    constructor(name: DockerContainerName, commandLine: DockerRunCommandLine) :
-        this(name, commandLine.lazyStart(processTerminationCallback = {
-            Docker.stop(name)
-            Docker.remove(name, forcibly = true)
-        }))
+    val name: String,
+    commandLine: DockerRunCommandLine,
+) : ManagedProcess(commandLine, processTerminationCallback = {
+    Docker.stop(name)
+    Docker.remove(name, forcibly = true)
+}) {
 
     constructor(commandLine: DockerRunCommandLine) :
-        this(commandLine.options.name ?: error("Docker container name missing."), commandLine)
+        this(commandLine.options.name?.sanitized ?: error("Docker container name missing."), commandLine)
 
     init {
-        "🐳 docker attach ${name.sanitized.quoted}".log()
+        start()
+        metaLog("🐳 docker attach ${name.quoted}") // TODO consume by Processors
     }
 
-    override fun destroy(): Unit = cleanUp(forcibly = false).also { super.destroy() }
-    override fun destroyForcibly(): Process = cleanUp(forcibly = true).let { super.destroyForcibly() }
+    val isRunning: Boolean get() = Docker.isContainerRunning(name)
 
-    override fun toString(): String = super.toString().replaceFirst("Process[", "DockerProcess[name=$name, ")
+    override fun stop(): Process = also { Docker.stop(name) }.also { pollTermination() }.also { super.stop() }
+    override fun kill(): Process = also { stop() }.also { super.kill() }
 
-    private fun cleanUp(forcibly: Boolean) {
-        stop() // asynchronous call; just trying to be nice to call stop
-        remove(forcibly)
+    private fun pollTermination(): DockerProcess {
         poll { !isRunning }.every(100.milliseconds).forAtMost(10.seconds) {
             throw TimeoutException("Could not clean up $this within $it.")
         }
+        return this
     }
+
+    override fun toString(): String = super.toString().replaceFirst("Process[", "DockerProcess[name=$name, ")
 }

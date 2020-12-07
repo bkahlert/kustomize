@@ -51,7 +51,7 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
         }
 
         execute(
-            file.toUniqueContainerName(),
+            file.toUniqueContainerName().sanitized,
             logger,
             true,
             Program("test", { "testing" }, "testing" to verificationStep),//.logging(),
@@ -67,7 +67,7 @@ fun Assertion.Builder<OperatingSystemImage>.booted(
 ): Assertion.Builder<OperatingSystemImage> =
     compose("booted ${this.get { operatingSystem }}") {
         get {
-            execute("Assertion Boot of $this".toContainerName(), logger, true, program)
+            execute("Assertion Boot of $this".toContainerName().sanitized, logger, true, program)
         }.isEqualTo(0)
     } then {
         if (allPassed) pass() else fail("Program ${program.name} did not return successfully")

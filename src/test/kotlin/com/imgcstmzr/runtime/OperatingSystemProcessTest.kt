@@ -51,12 +51,11 @@ class OperatingSystemProcessTest {
     @DockerRequiring @Test
     fun `should terminate if obviously stuck`(@OS(TinyCore) osImage: OperatingSystemImage, logger: InMemoryLogger<*>) {
         val corruptingString = "Booting Linux"
-        val corruptedOsImage = OperatingSystemImage(object : OperatingSystem by osImage {
+        val corruptedOsImage = OperatingSystemImage(object : OperatingSystem by osImage.operatingSystem {
             override val deadEndPattern: Regex get() = ".*$corruptingString.*".toRegex()
         }, osImage.credentials, osImage.file)
 
         expectCatching {
-            println(corruptedOsImage)
             corruptedOsImage.execute(logger = logger)
         }
             .isFailure()
@@ -76,5 +75,5 @@ class OperatingSystemProcessTest {
         Docker.remove(name(::`should boot and run program in user session`), forcibly = true)
     }
 
-    private fun name(test: KFunction<Any>) = DockerContainerName(OperatingSystemProcessTest::class.simpleName + "-" + test.name)
+    private fun name(test: KFunction<Any>) = DockerContainerName(OperatingSystemProcessTest::class.simpleName + "-" + test.name).sanitized
 }

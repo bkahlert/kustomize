@@ -1,7 +1,6 @@
 package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.boolean.asEmoji
-import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
 import com.bkahlert.koodies.shell.HereDocBuilder.hereDoc
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.time.poll
@@ -33,13 +32,13 @@ class DockerPsTest {
             DockerProcess(Docker.image { "busybox" }.run {
                 options { name { it } }
                 arguments {
-                    hereDoc(label = "BE-BUSY") {
+                    +hereDoc(label = "BE-BUSY") {
                         +"while true; do"
                         +"    sleep 1"
                         +"done"
                     }
                 }
-            }).also { poll { it.isRunning }.every(100.milliseconds).forAtMost(5.seconds) { fail("Docker containers did not start") } }
+            }).also { poll { it.isRunning }.every(100.milliseconds).forAtMost(15.seconds) { fail("Docker containers did not start") } }
         }
     }
 
@@ -53,10 +52,10 @@ class DockerPsTest {
     ).flatMap { (name, expectedIsRunning) ->
         listOf(
             dynamicTest("${expectedIsRunning.asEmoji} $name is running?") {
-                expectThat(Docker.isContainerRunning(name.toContainerName())).isEqualTo(expectedIsRunning)
+                expectThat(Docker.isContainerRunning(name)).isEqualTo(expectedIsRunning)
             },
             dynamicTest("${expectedIsRunning.asEmoji} $name exists?") {
-                expectThat(Docker.exists(name.toContainerName())).isEqualTo(expectedIsRunning)
+                expectThat(Docker.exists(name)).isEqualTo(expectedIsRunning)
             },
         )
     }
@@ -64,6 +63,6 @@ class DockerPsTest {
     @Slow
     @AfterAll
     fun tearDown() {
-        containers.forEach { it.destroyForcibly() }
+        containers.forEach { it.kill() }
     }
 }

@@ -297,7 +297,7 @@ class ProcessMockTest {
 
         startAsDaemon {
             Thread.sleep(5000)
-            p.enter("password")
+            p.outputStream.enter("password")
         }
 
         expectThat(reader.readLine()).isEqualTo("Welcome!")
@@ -327,7 +327,7 @@ class ProcessMockTest {
 
         startAsDaemon {
             Thread.sleep(5000)
-            p.enter("password1234")
+            p.outputStream.enter("password1234")
         }
 
         expectThat(reader.readLines().joinLinesToString()).isEqualToByteWise("""

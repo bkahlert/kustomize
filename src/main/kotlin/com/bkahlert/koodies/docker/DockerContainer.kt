@@ -5,27 +5,10 @@ import com.bkahlert.koodies.regex.RegexBuilder
 import com.bkahlert.koodies.string.random
 import java.nio.file.Path
 
-/**
- * A [Docker] container identified by its name.
- */
-interface DockerContainer {
-    /**
-     * Name of this [Docker] container.
-     */
-    val name: DockerContainerName
-
-    /**
-     * Whether the Docker container is currently running.
-     */
-    val isRunning: Boolean get() = Docker.isContainerRunning(name)
-
-    fun stop() = Docker.stop(name)
-
-    fun remove(forcibly: Boolean = false) = Docker.remove(name, forcibly)
-}
 
 inline class DockerContainerName(val name: String) {
-    val sanitized get() = name.sanitize()
+    val sanitized: String get() = name.sanitize()
+
     override fun toString(): String = sanitized
 
     companion object {

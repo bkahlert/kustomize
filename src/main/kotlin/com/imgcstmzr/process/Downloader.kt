@@ -1,6 +1,6 @@
 package com.imgcstmzr.process
 
-import com.bkahlert.koodies.concurrent.process.Processes.executeShellScript
+import com.bkahlert.koodies.concurrent.process.executeShellScript
 import com.bkahlert.koodies.nio.file.list
 import com.bkahlert.koodies.nio.file.tempDir
 import com.imgcstmzr.runtime.OperatingSystem

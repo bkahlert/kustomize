@@ -44,11 +44,11 @@ class DockerProcessTest {
 
             kotlin.runCatching {
                 poll { dockerProcess.ioLog.logged.any { it.type == OUT && it.unformatted == "test" } }
-                    .every(100.milliseconds).noLongerThan({ dockerProcess.isAlive }, 8.seconds) {
-                        if (dockerProcess.isAlive) fail("Did not log \"test\" output within 8 seconds.")
+                    .every(100.milliseconds).noLongerThan({ dockerProcess.alive }, 8.seconds) {
+                        if (dockerProcess.alive) fail("Did not log \"test\" output within 8 seconds.")
                         fail("Process terminated without logging: ${dockerProcess.ioLog.dump()}.")
                     }
-            }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
+            }.onFailure { dockerProcess.kill() }.getOrThrow()
         }
 
         @DockerRequiring @Test
@@ -59,8 +59,8 @@ class DockerProcessTest {
                 dockerProcess.enter("echo 'test'")
                 poll { dockerProcess.ioLog.logged.any { it.type == OUT && it.unformatted == "test" } }
                     .every(100.milliseconds).forAtMost(8.seconds) { fail("Did not log self-induced \"test\" output within 8 seconds.") }
-                dockerProcess.destroy()
-            }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
+                dockerProcess.stop()
+            }.onFailure { dockerProcess.kill() }.getOrThrow()
         }
 
         @DockerRequiring @Test
@@ -70,7 +70,7 @@ class DockerProcessTest {
             kotlin.runCatching {
                 poll { dockerProcess.ioLog.logged.any { it.type == OUT } }
                     .every(100.milliseconds).forAtMost(8.seconds) { fail("Did not log any output within 8 seconds.") }
-            }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
+            }.onFailure { dockerProcess.kill() }.getOrThrow()
         }
 
         @DockerRequiring @Test
@@ -80,7 +80,7 @@ class DockerProcessTest {
                 .run { options { testName(Lifecycle::`should start docker and process output produced by own input`) } }).process { io ->
                 logged.add(io.unformatted)
                 if (io.type == OUT) {
-                    if (logged.contains("test 4 6")) destroy()
+                    if (logged.contains("test 4 6")) stop()
                     val message = "echo '${io.unformatted} ${io.unformatted.length}'"
                     enter(message)
                 }
@@ -93,7 +93,7 @@ class DockerProcessTest {
                 }
                     .every(100.milliseconds)
                     .forAtMost(30.seconds) { fail("Did not log self-produced \"test\", \"test 4\" and \"test 4 6\" output within 30 seconds.") }
-            }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
+            }.onFailure { dockerProcess.kill() }.getOrThrow()
         }
 
         @Nested
@@ -104,7 +104,7 @@ class DockerProcessTest {
                 val dockerProcess = runOsImage(testName(IsRunning::`should return false on not yet started container container`), osImage)
                 kotlin.runCatching {
                     expectThat(dockerProcess.isRunning).isFalse()
-                }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
+                }.onFailure { dockerProcess.kill() }.getOrThrow()
             }
 
             @DockerRequiring @Test
@@ -114,7 +114,7 @@ class DockerProcessTest {
                     poll { dockerProcess.isRunning }
                         .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not start container within 5 seconds.") }
                     expectThat(dockerProcess.isRunning).isTrue()
-                }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
+                }.onFailure { dockerProcess.kill() }.getOrThrow()
             }
 
             @DockerRequiring @Test
@@ -124,12 +124,12 @@ class DockerProcessTest {
                     poll { dockerProcess.isRunning }
                         .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not start container within 5 seconds.") }
 
-                    dockerProcess.destroy()
+                    dockerProcess.stop()
 
                     poll { !dockerProcess.isRunning }
                         .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not stop container within 5 seconds.") }
                     expectThat(dockerProcess.isRunning).isFalse()
-                }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
+                }.onFailure { dockerProcess.kill() }.getOrThrow()
             }
 
             @DockerRequiring @Test
@@ -144,7 +144,7 @@ class DockerProcessTest {
                     poll { !dockerProcess.isRunning }
                         .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not stop container within 5 seconds.") }
                     expectThat(dockerProcess.isRunning).isFalse()
-                }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
+                }.onFailure { dockerProcess.kill() }.getOrThrow()
             }
         }
 
@@ -156,12 +156,12 @@ class DockerProcessTest {
                     .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not start container within 5 seconds.") }
                 expectThat(Docker.exists(dockerProcess.name)).isTrue()
 
-                dockerProcess.destroy()
+                dockerProcess.stop()
 
                 poll { !Docker.exists(dockerProcess.name) }
-                    .every(100.milliseconds).forAtMost(15.seconds) { fail("Did not destroy container within 15 seconds.") }
+                    .every(100.milliseconds).forAtMost(15.seconds) { fail("Did not stop container within 15 seconds.") }
                 expectThat(Docker.exists(dockerProcess.name)).isFalse()
-            }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
+            }.onFailure { dockerProcess.kill() }.getOrThrow()
         }
     }
 
@@ -171,27 +171,33 @@ class DockerProcessTest {
         val dockerProcess = runOsImage(testName(DockerProcessTest::`should not produce incorrect empty lines`), osImage) { output.add(it) }
         kotlin.runCatching {
             20.seconds.sleep()
-            dockerProcess.destroy()
+            dockerProcess.stop()
             expectThat(output).get { size }.isGreaterThan(20)
             expectThat(output.filter { it.isBlank }.size).isLessThan(output.size / 4)
-        }.onFailure { dockerProcess.destroyForcibly() }.getOrThrow()
+        }.onFailure { dockerProcess.kill() }.getOrThrow()
     }
 }
 
 fun testName(test: KFunction<Any>): String = DockerProcessTest::class.simpleName + "-" + test.name
 fun OptionsBuilder.testName(test: KFunction<Any>) = run { com.bkahlert.koodies.docker.testName(test).let { name { it } } }
 
+fun busybox(test: KFunction<Any>, vararg lines: String): DockerRunCommandLine =
+    Docker.image { "busybox" }.run {
+        options { testName(test) }
+        arguments { +lines }
+    }
+
+
 @Suppress("SpellCheckingInspection")
-private fun runOsImage(name: String, osImage: OperatingSystemImage, ioProcessor: Processor<DockerProcess> = noopProcessor()): DockerProcess =
+private fun runOsImage(
+    name: String,
+    osImage: OperatingSystemImage,
+    processor: Processor<DockerProcess> = noopProcessor(),
+): DockerProcess =
     DockerProcess(Docker.image { "lukechilds" / "dockerpi" tag "vm" }.run {
         options {
             name { name }
             mounts { osImage.file mountAt "/sdcard/filesystem.img" }
         }
-    }).apply { process(processor = ioProcessor) }
+    }).apply { process(processor) }
 
-private fun busybox(test: KFunction<Any>, vararg lines: String): DockerRunCommandLine =
-    Docker.image { "busybox" }.run {
-        options { testName(test) }
-        arguments { +lines }
-    }

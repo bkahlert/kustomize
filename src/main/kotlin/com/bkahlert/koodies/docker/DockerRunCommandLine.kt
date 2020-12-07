@@ -88,7 +88,7 @@ abstract class DockerRunCommandLineBuilder {
     protected abstract var dockerCommand: String?
     protected abstract val dockerArguments: MutableList<String>
 
-    fun redirects(init: ListBuilderInit<String>) = init.build()
+    fun redirects(init: ListBuilderInit<String>) = init.buildTo(redirects)
     fun options(init: OptionsBuilder.() -> Unit) = OptionsBuilder.build(init).run { dockerOptions = this }
     fun command(init: () -> String?) = init.build()?.run { dockerCommand = this }
     fun arguments(init: ListBuilderInit<String>) = init.buildTo(dockerArguments)

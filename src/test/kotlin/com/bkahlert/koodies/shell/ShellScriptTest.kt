@@ -1,9 +1,11 @@
 package com.bkahlert.koodies.shell
 
 import com.bkahlert.koodies.docker.docker
+import com.bkahlert.koodies.nio.file.Paths
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.shell.HereDocBuilder.hereDoc
+import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.bkahlert.koodies.test.strikt.toStringIsEqualTo
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.hasContent
@@ -53,6 +55,30 @@ class ShellScriptTest {
             #!/bin/sh
             cd "/some/where" || exit -1
             echo "Hello World!"
+            echo "Bye!"
+            exit 42
+            
+        """.trimIndent())
+    }
+
+    @Test
+    fun `should sanitize script`() {
+        val sanitized = ShellScript(content = """
+              
+              
+            cd "/some/where" 
+            echo "Hello World!"
+            
+            #!/bin/sh
+            echo "Bye!"
+            exit 42
+        """.trimIndent()).sanitize(Paths.Temp)
+
+        expectThat(sanitized.build()).matchesCurlyPattern("""
+            #!/bin/sh
+            cd "{}" || exit -1
+            echo "Hello World!"
+            
             echo "Bye!"
             exit 42
             

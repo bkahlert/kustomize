@@ -5,10 +5,12 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.IN
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.Process
 import com.bkahlert.koodies.concurrent.process.Processor
+import com.bkahlert.koodies.concurrent.process.UserInput.input
 import com.bkahlert.koodies.concurrent.process.process
+import com.bkahlert.koodies.concurrent.process.waitForTermination
 import com.bkahlert.koodies.concurrent.startAsThread
-import com.bkahlert.koodies.docker.DockerContainerName
 import com.bkahlert.koodies.docker.DockerContainerName.Companion.toUniqueContainerName
 import com.bkahlert.koodies.docker.DockerImage
 import com.bkahlert.koodies.docker.DockerImageBuilder.Companion.build
@@ -55,13 +57,13 @@ fun stuckCheckingProcessor(processor: OperatingSystemProcessor): OperatingSystem
  * non-virtually on actual hardware.
  */
 open class OperatingSystemProcess(
-    override val name: DockerContainerName,
+    name: String,
     val osImage: OperatingSystemImage,
     val logger: RenderingLogger<*>,
 ) : DockerProcess(
     commandLine = DOCKER_IMAGE.buildRunCommand {
         options {
-            containerName { name }
+            name { name }
             mounts { osImage.file mountAt "/sdcard/filesystem.img" }
         }
     },
@@ -75,9 +77,9 @@ open class OperatingSystemProcess(
      * Forwards the [values] to the OS running process.
      */
     fun enter(vararg values: String, delay: Duration = 10.milliseconds) {
-        if (isAlive) {
+        if (alive) {
             feedback("Entering ${values.joinToString { it.withoutTrailingLineSeparator }.quoted}")
-            enter(*values, delay = delay)
+            input(*values, delay = delay)
         } else {
             feedback("Process $this is not alive.")
         }
@@ -127,7 +129,7 @@ open class OperatingSystemProcess(
             startAsThread {
                 negativeFeedback("The VM is stuck. Chances are the VM starts correctly with less load on this machine.")
             }
-            destroy()
+            stop()
             throw IllegalStateException(io.unformatted)
         }
         return stuck
@@ -157,7 +159,7 @@ open class OperatingSystemProcess(
  * @return exit code `0` if no errors occurred.
  */
 fun OperatingSystemImage.execute(
-    name: DockerContainerName = file.toUniqueContainerName(),
+    name: String = file.toUniqueContainerName().sanitized,
     logger: RenderingLogger<*>,
     autoLogin: Boolean = true,
     vararg programs: Program,
@@ -169,7 +171,7 @@ fun OperatingSystemImage.execute(
     )
 
     val operatingSystemProcess = OperatingSystemProcess(name, this@execute, this@subLogger)
-    operatingSystemProcess.process(processor = stuckCheckingProcessor { io ->
+    operatingSystemProcess.process(stuckCheckingProcessor { io ->
         when (io.type) {
             META -> feedback(io.unformatted)
             IN -> logStatus(items = unfinished) { io }
@@ -177,5 +179,5 @@ fun OperatingSystemImage.execute(
             ERR -> feedback("Unfortunately an error occurred: ${io.formatted}")
         }
         if (!unfinished.compute(this, io)) unfinished.takeIf { it.isNotEmpty() }?.removeAt(0)
-    }).exitValue()
+    }).waitForTermination()
 }

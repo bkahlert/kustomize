@@ -2,15 +2,56 @@
 
 package com.imgcstmzr.libguestfs
 
+import com.bkahlert.koodies.builder.OnOffBuilder.on
+import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.process
+import com.bkahlert.koodies.concurrent.process.waitForTermination
 import com.bkahlert.koodies.docker.DockerImage
 import com.bkahlert.koodies.docker.DockerImageBuilder
+import com.bkahlert.koodies.docker.DockerProcess
 import com.bkahlert.koodies.docker.DockerRunCommandLine
 import com.bkahlert.koodies.docker.DockerRunCommandLineBuilder.Companion.buildRunCommand
 import com.bkahlert.koodies.nio.exception.noSuchFile
+import com.bkahlert.koodies.nio.file.mkdirs
+import com.bkahlert.koodies.nio.file.requireExists
+import com.bkahlert.koodies.nio.file.toPath
+import com.bkahlert.koodies.terminal.ANSI
+import com.imgcstmzr.runtime.log.RenderingLogger
+import com.imgcstmzr.runtime.log.subLogger
 import java.nio.file.Path
 import kotlin.io.path.isReadable
 
 fun libguestfs(init: VirtCustomizeCommandLine.OptionsBuilder.() -> Unit) = com.imgcstmzr.libguestfs.VirtCustomizeCommandLine(init)
+
+class LibguestfsProcess(
+    commandLine: VirtCustomizeCommandLine,
+    val logger: RenderingLogger<*>,
+) : DockerProcess(LibguestfsRunner.adapt(commandLine))
+
+
+fun VirtCustomizeCommandLine.execute(
+    logger: RenderingLogger<*>,
+): Int = logger.subLogger("Running $commandLine", ansiCode = ANSI.termColors.blue) {
+
+    logLine { "Preparing shared folder" }
+    options.filterIsInstance<DiskOption>().forEach { diskOption ->
+        val disk = diskOption.disk.toPath()
+        disk.requireExists()
+        val sharedDir = disk.resolveSibling("shared")
+        sharedDir.mkdirs()
+    }
+
+    val libguestfsProcess = LibguestfsProcess(this@execute, this@subLogger)
+    libguestfsProcess.process(nonBlockingReader = false) { io ->
+        when (io.type) {
+            IO.Type.META -> logLine { io }
+            IO.Type.IN -> logLine { io }
+            IO.Type.OUT -> logLine { io }
+            IO.Type.ERR -> logLine { "Unfortunately an error occurred: ${io.formatted}" }
+        }
+    }.waitForTermination()
+}
+
 
 object LibguestfsRunner {
 
@@ -52,7 +93,7 @@ object LibguestfsRunner {
             options {
                 entrypoint { commandLine.command }
                 name { "libguestfs" }
-                autoCleanup { false }
+                autoCleanup { on }
                 mounts {
                     disk.resolveSibling("shared") mountAt "/shared"
                     disk mountAt "/images/disk.img"

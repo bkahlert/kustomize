@@ -2,7 +2,7 @@ package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
-import com.bkahlert.koodies.concurrent.process.LoggedProcess
+import com.bkahlert.koodies.concurrent.process.ManagedProcess
 import com.bkahlert.koodies.string.LineSeparators.lines
 import com.bkahlert.koodies.test.junit.test
 import com.imgcstmzr.util.MiscFixture
@@ -26,7 +26,7 @@ class GuestfishIoProcessorTest {
     @Nested
     inner class Verbosity {
         @Test
-        fun `should log all on active verbose option`(logger: InMemoryLogger<LoggedProcess>) {
+        fun `should log all on active verbose option`(logger: InMemoryLogger<ManagedProcess>) {
             val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = true)
             guestfishIO.lines().map { OUT typed it }.sendTo(guestfishIoProcessor)
             expectThat(logger.logged.lines()) {
@@ -36,7 +36,7 @@ class GuestfishIoProcessorTest {
         }
 
         @Test
-        fun `should not log boot sequence on inactive verbose option`(logger: InMemoryLogger<LoggedProcess>) {
+        fun `should not log boot sequence on inactive verbose option`(logger: InMemoryLogger<ManagedProcess>) {
             val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = false)
             guestfishIO.lines().map { OUT typed it }.sendTo(guestfishIoProcessor)
             expectThat(logger.logged.lines()) {
@@ -46,7 +46,7 @@ class GuestfishIoProcessorTest {
         }
 
         @Test
-        fun `should only log errors on inactive verbose option`(logger: InMemoryLogger<LoggedProcess>) {
+        fun `should only log errors on inactive verbose option`(logger: InMemoryLogger<ManagedProcess>) {
             val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = false)
             IO.Type.values().map { type -> type typed "$type" }.sendTo(guestfishIoProcessor)
             expectThat(logger).get { logged }
@@ -63,7 +63,7 @@ class GuestfishIoProcessorTest {
         inner class SkippingLines {
 
             @TestFactory
-            fun `should meta log skipped lines depending on verbosity`(logger: InMemoryLogger<LoggedProcess>) =
+            fun `should meta log skipped lines depending on verbosity`(logger: InMemoryLogger<ManagedProcess>) =
                 listOf(true, false).test { verbose ->
                     val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = verbose)
                     guestfishIO.lines().map { IO.Type.META typed it }.sendTo(guestfishIoProcessor)
@@ -75,8 +75,8 @@ class GuestfishIoProcessorTest {
         }
     }
 
-    private fun List<IO>.sendTo(guestfishIoProcessor: (Process, IO) -> Unit) {
-        forEach { io -> guestfishIoProcessor.invoke(null as Process, io) }
+    private fun List<IO>.sendTo(guestfishIoProcessor: (ManagedProcess, IO) -> Unit) {
+        forEach { io -> guestfishIoProcessor.invoke(null as ManagedProcess, io) }
     }
 }
 

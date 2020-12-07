@@ -31,7 +31,6 @@ class ShellScript(val name: String? = null, content: String? = null) {
     val lines: MutableList<String> = mutableListOf()
 
     init {
-        !`#!`
         if (content != null) lines.addAll(content.trimIndent().lines())
     }
 
@@ -77,6 +76,16 @@ class ShellScript(val name: String? = null, content: String? = null) {
 
     fun comment(text: String) {
         lines += text.prefixLinesWith(prefix = "# ")
+    }
+
+    fun sanitize(workingDirectory: Path? = null): ShellScript {
+        var linesKept = lines.dropWhile { it.isShebang() || it.isBlank() }
+        if (workingDirectory != null && linesKept.firstOrNull()?.startsWith("cd ") == true) linesKept = linesKept.drop(1)
+        return ShellScript().apply {
+            shebang
+            workingDirectory?.let { changeDirectoryOrExit(it) }
+            linesKept.filter { !it.isShebang() }.forEach { lines += it }
+        }
     }
 
     fun build(): String = lines.joinToString(LineSeparators.LF, postfix = LineSeparators.LF)

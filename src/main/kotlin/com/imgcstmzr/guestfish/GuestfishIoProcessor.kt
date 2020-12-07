@@ -1,6 +1,7 @@
 package com.imgcstmzr.guestfish
 
 import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.Process
 import com.imgcstmzr.runtime.log.RenderingLogger
 
 class GuestfishIoProcessor(

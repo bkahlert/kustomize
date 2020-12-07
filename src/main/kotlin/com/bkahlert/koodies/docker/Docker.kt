@@ -1,10 +1,11 @@
 package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.concurrent.process.Processes.checkIfOutputContains
-import com.bkahlert.koodies.concurrent.process.Processes.executeShellScript
+import com.bkahlert.koodies.concurrent.process.Processes.evalShellScript
 import com.bkahlert.koodies.concurrent.process.Processes.startShellScriptDetached
 import com.bkahlert.koodies.shell.ShellScript
 import com.bkahlert.koodies.time.sleep
+import java.util.concurrent.TimeUnit
 import kotlin.time.seconds
 
 /**
@@ -19,14 +20,14 @@ object Docker {
     /**
      * Whether a Docker container with the given [name] is running.
      */
-    fun isContainerRunning(name: DockerContainerName): Boolean = name.sanitized.let { sanitizedName ->
+    fun isContainerRunning(name: String): Boolean = name.let { sanitizedName ->
         checkIfOutputContains("""docker ps --no-trunc --format "{{.Names}}" --filter "name=^$sanitizedName${'$'}"""", sanitizedName)
     }
 
     /**
      * Whether a Docker container—no matter if it's running or not—exists.
      */
-    fun exists(name: DockerContainerName): Boolean = name.sanitized.let { sanitizedName ->
+    fun exists(name: String): Boolean = name.let { sanitizedName ->
         checkIfOutputContains("""docker ps --no-trunc --format "{{.Names}}" --filter "name=^$sanitizedName${'$'}" --all""", sanitizedName)
     }
 
@@ -39,7 +40,7 @@ object Docker {
     /**
      * Explicitly stops the Docker container with the given [name] **asynchronously**.
      */
-    fun stop(name: DockerContainerName) {
+    fun stop(name: String) {
         startShellScriptDetached { !"docker stop \"$name\"" }
         1.seconds.sleep()
     }
@@ -49,9 +50,9 @@ object Docker {
      *
      * If needed even [forcibly].
      */
-    fun remove(name: DockerContainerName, forcibly: Boolean = false) {
+    fun remove(name: String, forcibly: Boolean = false) {
         val forceOption = if (forcibly) " --force" else ""
-        executeShellScript { !"docker rm$forceOption \"$name\"" }.waitFor(8.seconds)
+        evalShellScript { !"docker rm$forceOption \"$name\"" }.onExit.orTimeout(8, TimeUnit.SECONDS)
         1.seconds.sleep()
     }
 
