@@ -49,9 +49,9 @@ object ImageBuilder {
      * Dynamically creates a raw image with two partitions containing the files
      * as specified by the [uri].
      */
-    fun buildFrom(uri: URI, logger: RenderingLogger<*>): Path {
+    fun buildFrom(uri: URI, logger: RenderingLogger): Path {
         var path: List<Pair<Path, Path>>? = null
-        logger.singleLineLogger<String>("Initiating raw image creation from $uri") {
+        logger.singleLineLogger("Initiating raw image creation from $uri") {
 
             require(uri.scheme == schema) { "URI $uri is invalid as its scheme differs from ${schema.quoted}" }
             require(uri.host == host) { "URI $uri is invalid as its host differs from ${host.quoted}" }
@@ -73,9 +73,9 @@ object ImageBuilder {
         return prepareImg(logger, *path!!.toTypedArray())
     }
 
-    private fun prepareImg(logger: RenderingLogger<*>, vararg paths: Pair<Path, Path>): Path =
+    private fun prepareImg(logger: RenderingLogger, vararg paths: Pair<Path, Path>): Path =
         buildFrom(Paths.TEMP.resolve("imgcstmzr-" + paths.take(5).mapNotNull { it.first.fileName }.joinToString(separator = "-")).mkdirs().run {
-            logger.singleLineLogger<Unit>("Copying ${paths.size} files to ${toUri()}") {
+            logger.singleLineLogger("Copying ${paths.size} files to ${toUri()}") {
                 paths.forEach { (from, to) -> from.copyToDirectory(resolve(to)) }
             }
             @Suppress("SpellCheckingInspection")
@@ -94,7 +94,7 @@ object ImageBuilder {
      */
     fun buildFrom(
         archive: Path,
-        logger: RenderingLogger<*>,
+        logger: RenderingLogger,
         bootFileSystem: FileSystemType = FileSystemType.FAT,
         rootFileSystem: FileSystemType = FileSystemType.EXT4,
         totalSize: Size = 1.Gibi.bytes,

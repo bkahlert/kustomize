@@ -7,7 +7,7 @@ import com.imgcstmzr.runtime.HasStatus.Companion.status
 import kotlin.properties.Delegates.vetoable
 import kotlin.reflect.KProperty
 
-abstract class MicroLogger<R>(private val symbol: Grapheme? = null) : RenderingLogger<R> {
+abstract class MicroLogger(private val symbol: Grapheme? = null) : RenderingLogger {
 
     var strings: List<String>? by vetoable(listOf(),
         onChange = { _: KProperty<*>, oldValue: List<String>?, _: List<String>? -> oldValue != null })
@@ -24,7 +24,7 @@ abstract class MicroLogger<R>(private val symbol: Grapheme? = null) : RenderingL
             strings?.plus(items.status().lines().size.let { "($it)" })
     }
 
-    override fun logResult(block: () -> Result<R>): R {
+    override fun <R> logResult(block: () -> Result<R>): R {
         val returnValue = super.logResult(block)
         render { strings?.joinToString(prefix = "(" + (symbol?.let { "$it " } ?: ""), separator = " ˃ ", postfix = ")") ?: "" }
         return returnValue

@@ -57,7 +57,7 @@ class GuestfishTest {
     }
 
     @FiveMinutesTimeout @DockerRequiring @Test
-    fun `should copy file from osImage, skip non-existing and override one`(osImage: OperatingSystemImage, logger: InMemoryLogger<Any>, @Debug debug: Boolean) {
+    fun `should copy file from osImage, skip non-existing and override one`(osImage: OperatingSystemImage, logger: InMemoryLogger, @Debug debug: Boolean) {
         val guestfish = Guestfish(osImage, logger, debug = debug).withRandomSuffix()
         guestfish.run(copyOutCommands(listOf(Path.of("/boot/cmdline.txt"), Path.of("/non/existing.txt"))))
         val dir = guestfish.guestRootOnHost
@@ -70,7 +70,7 @@ class GuestfishTest {
     }
 
     @FiveMinutesTimeout @DockerRequiring @TestFactory
-    fun `should copy new file to osImage and overwrite a second one`(osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) =
+    fun `should copy new file to osImage and overwrite a second one`(osImage: OperatingSystemImage, logger: InMemoryLogger) =
         listOf(
             "using copy-in" to { guestfish: Guestfish, guestPaths: List<Path> -> guestfish.run(copyInCommands(guestPaths)) },
             "using tar-in" to { guestfish: Guestfish, guestPaths: List<Path> -> guestfish.tarIn() },
@@ -94,7 +94,7 @@ class GuestfishTest {
         }
 
     @FiveMinutesTimeout @DockerRequiring @Test
-    fun `should change password`(@OS(DietPi) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    fun `should change password`(@OS(DietPi) osImage: OperatingSystemImage, logger: InMemoryLogger) {
         val guestfish = Guestfish(osImage, logger).withRandomSuffix()
         val shadowPath = Path.of("/etc/shadow")
         val hostShadow = guestfish.guestRootOnHost.asRootFor(shadowPath)
@@ -104,7 +104,7 @@ class GuestfishTest {
     }
 
     @FiveMinutesTimeout @DockerRequiring @Test
-    fun `should update credentials password`(@OS(DietPi) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    fun `should update credentials password`(@OS(DietPi) osImage: OperatingSystemImage, logger: InMemoryLogger) {
         val guestfish = Guestfish(osImage, logger).withRandomSuffix()
         val password = String.random()
 

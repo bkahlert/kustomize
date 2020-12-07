@@ -26,7 +26,7 @@ import java.time.temporal.TemporalAccessor
 
 class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: Int = 3) : ManagedDirectory(dir) {
 
-    fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, logger: RenderingLogger<*>, provider: () -> Path): Path =
+    fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, logger: RenderingLogger, provider: () -> Path): Path =
         ProjectDirectory(dir, name, reuseLastWorkingCopy, maxConcurrentWorkingDirectories).require(logger, provider)
 
     companion object {
@@ -81,7 +81,7 @@ private class ProjectDirectory(parentDir: Path, dirName: String, private val reu
             }
     }
 
-    fun require(logger: RenderingLogger<*>, provider: () -> Path): Path {
+    fun require(logger: RenderingLogger, provider: () -> Path): Path {
         deleteOldWorkDirs()
 
         val workDirs = workDirs()

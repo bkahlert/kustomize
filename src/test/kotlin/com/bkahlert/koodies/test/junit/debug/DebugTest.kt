@@ -2,7 +2,7 @@ package com.bkahlert.koodies.test.junit.debug
 
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
-import com.bkahlert.koodies.test.strikt.asString
+import com.bkahlert.koodies.test.strikt.toStringContains
 import com.imgcstmzr.util.logging.CapturedOutput
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.OutputCaptureExtension
@@ -29,19 +29,19 @@ class DebugTest {
     }
 
     @Test
-    fun `should not automatically log to console without @Debug`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
+    fun `should not automatically log to console without @Debug`(output: CapturedOutput, logger: InMemoryLogger) {
         logger.logStatus { IO.Type.OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logger.logResult { Result.success(Unit) }
 
         expectThat(logger.logged).contains("☎Σ⊂⊂(☉ω☉∩)")
-        expectThat(output.removeEscapeSequences()).asString().not { contains("☎Σ⊂⊂(☉ω☉∩)") }
+        expectThat(output.removeEscapeSequences()).not { toStringContains("☎Σ⊂⊂(☉ω☉∩)") }
     }
 
     @Test
-    fun `should not catch exceptions`(output: CapturedOutput, logger: InMemoryLogger<Unit>) {
+    fun `should not catch exceptions`(output: CapturedOutput, logger: InMemoryLogger) {
         logger.logStatus { IO.Type.OUT typed "(*｀へ´*)" }
 
-        expectCatching { logger.logResult { Result.failure(IllegalStateException("test")) } }
+        expectCatching { logger.logResult<Any> { Result.failure(IllegalStateException("test")) } }
             .isFailure().isA<IllegalStateException>()
     }
 }

@@ -45,7 +45,7 @@ class DebugCommand : NoOpCliktCommand(
     private val shared by findOrSetObject { mutableMapOf<KClass<*>, Any>() }
 
     override fun run() {
-        BlockRenderingLogger<Any?>("ImgCstmzr").applyLogging {
+        BlockRenderingLogger("ImgCstmzr").applyLogging {
             logLine { "Getting OS copy" }
             val tmp = Downloader().download(os.downloadUrl, logger = this)
             logLine { "Downloaded to $tmp" }

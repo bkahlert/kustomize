@@ -26,7 +26,7 @@ class ProcessMock(
     private var outputStream: OutputStream = ByteArrayOutputStream(),
     private val inputStream: InputStream = InputStream.nullInputStream(),
     private val processExit: ProcessMock.() -> ProcessExitMock,
-    var logger: RenderingLogger<*>,
+    var logger: RenderingLogger,
 ) : Process() {
 
     private val completeOutputSequence = ByteArrayOutputStream()
@@ -42,7 +42,7 @@ class ProcessMock(
             baseDelayPerInput: Duration = 1.seconds,
             echoInput: Boolean,
             processExit: ProcessMock.() -> ProcessExitMock,
-            logger: RenderingLogger<*>,
+            logger: RenderingLogger,
         ): ProcessMock {
             val outputStream = ByteArrayOutputStream()
             val slowInputStream = SlowInputStream(
@@ -65,7 +65,7 @@ class ProcessMock(
             baseDelayPerInput: Duration = 1.seconds,
             echoInput: Boolean,
             processExit: ProcessMock.() -> ProcessExitMock,
-            logger: BlockRenderingLogger<*>,
+            logger: BlockRenderingLogger,
         ): ProcessMock {
             val outputStream = ByteArrayOutputStream()
             val slowInputStream = SlowInputStream(
@@ -102,7 +102,7 @@ class ProcessMock(
         return TODO()
 //        object : OperatingSystemProcess("shutdown-command") {
 //            override val process: Process = this@ProcessMock
-//            override val logger: RenderingLogger<*> = this@ProcessMock.logger
+//            override val logger: RenderingLogger = this@ProcessMock.logger
 //        }
     }
 
@@ -116,14 +116,14 @@ class SlowInputStream(
     val baseDelayPerInput: Duration,
     val byteArrayOutputStream: ByteArrayOutputStream? = null,
     val echoInput: Boolean = false,
-    var logger: RenderingLogger<*>?,
+    var logger: RenderingLogger?,
 ) : InputStream() {
     constructor(
         vararg inputs: String,
         baseDelayPerInput: Duration,
         byteArrayOutputStream: ByteArrayOutputStream? = null,
         echoInput: Boolean = false,
-        logger: RenderingLogger<*>?,
+        logger: RenderingLogger?,
     ) : this(inputs = inputs.map { Duration.ZERO to it }.toTypedArray(), baseDelayPerInput, byteArrayOutputStream, echoInput, logger)
 
     val terminated: Boolean get() = unreadCount == 0 || !processAlive
@@ -138,7 +138,7 @@ class SlowInputStream(
     private val Int.padded get() = this.toString().padStart(originalCountLength)
 
     private val inputs = mutableListOf<String>()
-    fun processInput(logger: MiniTracer<*>?): Boolean = logger.microTrace(Grapheme("✏️")) {
+    fun processInput(logger: MiniTracer?): Boolean = logger.microTrace(Grapheme("✏️")) {
         byteArrayOutputStream?.apply {
             toString(Charsets.UTF_8).takeUnless { it.isEmpty() }?.let { newInput ->
                 inputs.add(newInput)

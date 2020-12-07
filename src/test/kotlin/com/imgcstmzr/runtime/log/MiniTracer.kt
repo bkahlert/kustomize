@@ -11,23 +11,23 @@ import kotlin.reflect.KFunction1
 import kotlin.reflect.KFunction2
 import kotlin.reflect.KFunction3
 
-class RenderingLoggerBasedMiniTracer<R>(private val renderingLogger: RenderingLogger<R>) : MiniTracer<R> {
+class RenderingLoggerBasedMiniTracer(private val renderingLogger: RenderingLogger) : MiniTracer {
     override fun trace(input: String) = renderingLogger.logStatus { IO.Type.META typed input }
-    override fun <U> microTrace(grapheme: Grapheme, block: MicroTracer<U>.() -> U): U = microTrace(grapheme, block)
-    override fun <U> microTrace(f: String, block: MicroTracer<U>.() -> U): U = microTrace(Grapheme("𝙛"), block)
-    override fun <U> microTrace(f: KCallable<U>, block: MicroTracer<U>.() -> U): U = microTrace(Grapheme("𝙛"), block)
-    override fun <U> microTrace(f: KFunction0<U>, block: MicroTracer<U>.() -> U): U = microTrace(Grapheme("𝙛"), block)
-    override fun <U> microTrace1(f: KFunction1<*, U>, block: MicroTracer<U>.() -> U): U = microTrace(Grapheme("𝙛"), block)
-    override fun <U> microTrace2(f: KFunction2<*, *, U>, block: MicroTracer<U>.() -> U): U = microTrace(Grapheme("𝙛"), block)
-    override fun <U> microTrace3(f: KFunction3<*, *, *, U>, block: MicroTracer<U>.() -> U): U = microTrace(Grapheme("𝙛"), block)
+    override fun <U> microTrace(grapheme: Grapheme, block: MicroTracer.() -> U): U = microTrace(grapheme, block)
+    override fun <U> microTrace(f: String, block: MicroTracer.() -> U): U = microTrace(Grapheme("𝙛"), block)
+    override fun <U> microTrace(f: KCallable<U>, block: MicroTracer.() -> U): U = microTrace(Grapheme("𝙛"), block)
+    override fun <U> microTrace(f: KFunction0<U>, block: MicroTracer.() -> U): U = microTrace(Grapheme("𝙛"), block)
+    override fun <U> microTrace1(f: KFunction1<*, U>, block: MicroTracer.() -> U): U = microTrace(Grapheme("𝙛"), block)
+    override fun <U> microTrace2(f: KFunction2<*, *, U>, block: MicroTracer.() -> U): U = microTrace(Grapheme("𝙛"), block)
+    override fun <U> microTrace3(f: KFunction3<*, *, *, U>, block: MicroTracer.() -> U): U = microTrace(Grapheme("𝙛"), block)
 }
 
-inline fun <reified R> RenderingLogger<*>?.subTrace(f: String, crossinline block: MiniTracer<R>?.() -> R): R =
+inline fun <reified R> RenderingLogger?.subTrace(f: String, crossinline block: MiniTracer?.() -> R): R =
     singleLineLogger(f.format()) { RenderingLoggerBasedMiniTracer(this).run(block) }
 
-inline fun <reified U> RenderingLogger<*>?.miniTrace(f: String, crossinline block: MiniTracer<U>?.() -> U): U = subTrace(f.format(), block)
-inline fun <reified U> RenderingLogger<*>?.miniTrace(f: KCallable<U>, crossinline block: MiniTracer<U>?.() -> U): U = subTrace(f.format(), block)
-inline fun <reified U> RenderingLogger<*>?.miniTrace(f: KFunction0<U>, crossinline block: MiniTracer<U>?.() -> U): U = subTrace(f.format(), block)
-inline fun <reified U> RenderingLogger<*>?.miniTrace1(f: KFunction1<*, U>, crossinline block: MiniTracer<U>?.() -> U): U = subTrace(f.format(), block)
-inline fun <reified U> RenderingLogger<*>?.miniTrace2(f: KFunction2<*, *, U>, crossinline block: MiniTracer<U>?.() -> U): U = subTrace(f.format(), block)
-inline fun <reified U> RenderingLogger<*>?.miniTrace3(f: KFunction3<*, *, *, U>, crossinline block: MiniTracer<U>?.() -> U): U = subTrace(f.format(), block)
+inline fun <reified U> RenderingLogger?.miniTrace(f: String, crossinline block: MiniTracer?.() -> U): U = subTrace(f.format(), block)
+inline fun <reified U> RenderingLogger?.miniTrace(f: KCallable<U>, crossinline block: MiniTracer?.() -> U): U = subTrace(f.format(), block)
+inline fun <reified U> RenderingLogger?.miniTrace(f: KFunction0<U>, crossinline block: MiniTracer?.() -> U): U = subTrace(f.format(), block)
+inline fun <reified U> RenderingLogger?.miniTrace1(f: KFunction1<*, U>, crossinline block: MiniTracer?.() -> U): U = subTrace(f.format(), block)
+inline fun <reified U> RenderingLogger?.miniTrace2(f: KFunction2<*, *, U>, crossinline block: MiniTracer?.() -> U): U = subTrace(f.format(), block)
+inline fun <reified U> RenderingLogger?.miniTrace3(f: KFunction3<*, *, *, U>, crossinline block: MiniTracer?.() -> U): U = subTrace(f.format(), block)

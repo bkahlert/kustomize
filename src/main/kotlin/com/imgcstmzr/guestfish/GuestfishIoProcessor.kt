@@ -5,7 +5,7 @@ import com.bkahlert.koodies.concurrent.process.Process
 import com.imgcstmzr.runtime.log.RenderingLogger
 
 class GuestfishIoProcessor(
-    private val renderingLogger: RenderingLogger<*>,
+    private val renderingLogger: RenderingLogger,
     verbose: Boolean = false,
 ) : (Process, IO) -> Unit {
 

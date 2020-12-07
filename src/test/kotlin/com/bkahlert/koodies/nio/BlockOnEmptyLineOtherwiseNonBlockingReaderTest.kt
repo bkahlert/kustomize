@@ -18,12 +18,12 @@ import kotlin.time.toJavaDuration
 
 @Execution(CONCURRENT)
 class BlockOnEmptyLineOtherwiseNonBlockingReaderTest :
-    SharedReaderTest({ inputStream: InputStream, timeout: Duration, logger: RenderingLogger<*> ->
+    SharedReaderTest({ inputStream: InputStream, timeout: Duration, logger: RenderingLogger ->
         NonBlockingReader(inputStream = inputStream, timeout = timeout, logger = logger, blockOnEmptyLine = true)
     }) {
 
     @Slow @Test
-    fun `should not read empty lines due to timeout`(logger: InMemoryLogger<*>) {
+    fun `should not read empty lines due to timeout`(logger: InMemoryLogger) {
         val reader = readerFactory(object : InputStream() {
             override fun read(): Int {
                 5.seconds.sleep()

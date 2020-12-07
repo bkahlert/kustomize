@@ -13,7 +13,7 @@ import strikt.api.expectThat
 @Execution(CONCURRENT)
 class BoxesTest {
     @Test
-    fun `should render FAIL`(@Columns(150) logger: InMemoryLogger<Unit>) {
+    fun `should render FAIL`(@Columns(150) logger: InMemoryLogger) {
         logger.logLine { IO.Type.ERR typed Boxes.FAIL.toString() }
         expectThat(logger).matches("""
             ╭─────╴BoxesTest ➜ should render FAIL{}
@@ -28,7 +28,7 @@ class BoxesTest {
     }
 
     @Test
-    fun `should render sphere box`(@Columns(100) logger: InMemoryLogger<Unit>) {
+    fun `should render sphere box`(@Columns(100) logger: InMemoryLogger) {
         logger.logLine { IO.Type.META typed Boxes.SPHERICAL("SPHERICAL") }
         expectThat(logger).matches("""
             ╭─────╴BoxesTest ➜ should render sphere box{}
@@ -42,7 +42,7 @@ class BoxesTest {
     }
 
     @Test
-    fun `should render single line sphere box`(@Columns(100) logger: InMemoryLogger<Unit>) {
+    fun `should render single line sphere box`(@Columns(100) logger: InMemoryLogger) {
         logger.logLine { IO.Type.META typed Boxes.SINGLE_LINE_SPHERICAL("SINGLE LINE SPHERICAL") }
         expectThat(logger).matches("""
             ╭─────╴BoxesTest ➜ should render single line sphere box{}
@@ -54,7 +54,7 @@ class BoxesTest {
     }
 
     @Test
-    fun `should render wide pillars`(@Columns(100) logger: InMemoryLogger<Unit>) {
+    fun `should render wide pillars`(@Columns(100) logger: InMemoryLogger) {
         logger.logLine { IO.Type.META typed Boxes.WIDE_PILLARS("WIDE PILLARS") }
         expectThat(logger).matches("""
             ╭─────╴BoxesTest ➜ should render wide pillars{}
@@ -66,7 +66,7 @@ class BoxesTest {
     }
 
     @Test
-    fun `should render pillars`(@Columns(100) logger: InMemoryLogger<Unit>) {
+    fun `should render pillars`(@Columns(100) logger: InMemoryLogger) {
         logger.logLine { IO.Type.META typed Boxes.PILLARS("PILLARS") }
         expectThat(logger).matches("""
             ╭─────╴BoxesTest ➜ should render pillars{}

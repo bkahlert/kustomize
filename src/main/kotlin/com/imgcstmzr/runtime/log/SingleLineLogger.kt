@@ -6,7 +6,7 @@ import com.imgcstmzr.runtime.HasStatus.Companion.status
 import kotlin.properties.Delegates.vetoable
 import kotlin.reflect.KProperty
 
-abstract class SingleLineLogger<R>(caption: CharSequence) : RenderingLogger<R> {
+abstract class SingleLineLogger(caption: CharSequence) : RenderingLogger {
     init {
         require(caption.isNotBlank()) { "No blank caption allowed." }
     }
@@ -26,7 +26,7 @@ abstract class SingleLineLogger<R>(caption: CharSequence) : RenderingLogger<R> {
             strings?.plus(items.status().lines().joinToString(", ", "(", ")"))
     }
 
-    override fun logResult(block: () -> Result<R>): R {
+    override fun <R> logResult(block: () -> Result<R>): R {
         val returnValue = super.logResult(block)
         render { strings?.joinToString(" ") ?: "" }
         return returnValue

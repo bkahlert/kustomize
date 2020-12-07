@@ -22,7 +22,7 @@ class UsbOnTheGoPatchTest {
     }
 
     @Test
-    fun `should patch configtxt and cmdlinetxt file`(logger: InMemoryLogger<Any>) {
+    fun `should patch configtxt and cmdlinetxt file`(logger: InMemoryLogger) {
         val root = FixtureResolverExtension.prepareSharedDirectory()
             .also {
                 expectThat(it).get { resolve("boot/cmdline.txt") }.not { this.containsContent("g_ether,g_webcam") }
@@ -38,7 +38,7 @@ class UsbOnTheGoPatchTest {
     }
 
     @Test
-    fun `should not patch twice`(logger: InMemoryLogger<Any>) {
+    fun `should not patch twice`(logger: InMemoryLogger) {
         val root = FixtureResolverExtension.prepareSharedDirectory()
         val usbOnTheGoPatch = UsbOnTheGoPatch(listOf("foo", "bar"))
 

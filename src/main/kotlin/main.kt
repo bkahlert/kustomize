@@ -98,7 +98,7 @@ class CliCommand : NoOpCliktCommand(
     private val shared by findOrSetObject { mutableMapOf<KClass<*>, Any>() }
 
     override fun run() {
-        BlockRenderingLogger<Any?>("ImgCstmzr").applyLogging {
+        BlockRenderingLogger("ImgCstmzr").applyLogging {
             configFile?.apply {
                 valueSources.add(Config4kValueSource.from(this))
                 logLine { "Using config (file: $this, name: $name, size: ${readText().length})".cyan().bold() }
@@ -124,7 +124,7 @@ class ImgCommand : CliktCommand(help = "Provides an IMG file containing the spec
 
     override fun run() {
         val cache: Cache = shared[Cache::class] as Cache
-        val logger = BlockRenderingLogger<Any>("ImgCommand")
+        val logger = BlockRenderingLogger("ImgCommand")
         shared[Path::class] =
             cache.provideCopy(name, reuseLastWorkingCopy, logger) {
                 with(downloader) {
@@ -182,7 +182,7 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
 
             exitProcess(0)
 
-            val logger = BlockRenderingLogger<Any>("Project: $fullName")
+            val logger = BlockRenderingLogger("Project: $fullName")
 
             val guestfish = Guestfish(this, logger, DockerContainerName("$fullName-guestfish"))
             guestfish.run(copyOutCommands(listOf("/etc/hostname", "/boot/cmdline.txt", "/boot/config.txt").map(Path::of)))

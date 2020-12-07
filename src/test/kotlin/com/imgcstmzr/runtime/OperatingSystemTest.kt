@@ -125,7 +125,7 @@ class OperatingSystemTest {
 
     @Slow
     @TestFactory
-    fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory<String?>): List<DynamicTest> = listOf(
+    fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory): List<DynamicTest> = listOf(
         LoginSimulation(2.0, "\n"),
         LoginSimulation(0.5, "\n"),
         LoginSimulation(2.0, null),
@@ -159,7 +159,7 @@ class OperatingSystemTest {
                         }
                     }
                 }) {
-                    runningOS.logger.logResult { Result.failure(IllegalStateException("Deadlock")) }
+                    runningOS.logger.logResult<Any> { Result.failure(IllegalStateException("Deadlock")) }
                     META.format("Unprocessed output: ${runningOS.inputStream}")
                 }
             }.onFailure { dump("Test failed.") { (processMock.logger as InMemoryLogger).logged } }
@@ -188,7 +188,7 @@ data class LoginSimulation(val readerTimeout: Duration, val ioDelay: Duration, v
         0.seconds to "juergen@raspberrypi:~$ \n",
     )
 
-    fun buildProcess(loggerFactory: InMemoryLoggerFactory<String?>): ProcessMock =
+    fun buildProcess(loggerFactory: InMemoryLoggerFactory): ProcessMock =
         ProcessMock.withIndividuallySlowInput(
             inputs = generateProcessOutput(promptTerminator),
             baseDelayPerInput = ioDelay,

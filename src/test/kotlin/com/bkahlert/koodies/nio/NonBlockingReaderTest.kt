@@ -7,6 +7,6 @@ import java.io.InputStream
 import kotlin.time.Duration
 
 @Execution(CONCURRENT)
-class NonBlockingReaderTest : SharedReaderTest({ inputStream: InputStream, timeout: Duration, logger: RenderingLogger<*> ->
+class NonBlockingReaderTest : SharedReaderTest({ inputStream: InputStream, timeout: Duration, logger: RenderingLogger ->
     NonBlockingReader(inputStream = inputStream, timeout = timeout, logger = logger, blockOnEmptyLine = false)
 })

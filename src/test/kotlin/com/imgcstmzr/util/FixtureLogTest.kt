@@ -23,7 +23,7 @@ class FixtureLogTest {
     private val tempDir = tempDir().deleteOnExit()
 
     @BeforeEach
-    private fun reset(logger: InMemoryLogger<Any>) {
+    private fun reset(logger: InMemoryLogger) {
         FixtureLog.apply { logger.delete() }
     }
 
@@ -62,7 +62,7 @@ class FixtureLogTest {
     }
 
     @Test
-    fun `should delete read-only files`(logger: InMemoryLogger<Any>) {
+    fun `should delete read-only files`(logger: InMemoryLogger) {
         val file = tempDir.tempFile().deleteOnExit()
         file.toFile().setReadOnly()
         FixtureLog.apply { logger.delete() }

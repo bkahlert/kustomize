@@ -4,6 +4,7 @@ import com.bkahlert.koodies.string.CodePoint
 import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
+import com.bkahlert.koodies.terminal.ansi.contains
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.Size
 import com.imgcstmzr.guestfish.GuestfishOperation
@@ -14,6 +15,14 @@ infix fun <T> Assertion.Builder<T>.toStringIsEqualTo(expected: String): Assertio
     assert("is equal to %s", expected) {
         when (val actual = it.toString()) {
             expected -> pass()
+            else -> fail(actual = actual)
+        }
+    }
+
+infix fun <T> Assertion.Builder<T>.toStringContains(expected: String): Assertion.Builder<T> =
+    assert("contains %s", expected) {
+        when (val actual = it.toString().contains(expected)) {
+            true -> pass()
             else -> fail(actual = actual)
         }
     }

@@ -11,7 +11,7 @@ import java.net.URI
 import java.nio.file.Path
 
 //class X(caption: String, borderedOutput: Boolean = false) :
-//    BlockRenderingLogger<Int>(caption = caption, borderedOutput = borderedOutput),
+//    BlockRenderingLogger(caption = caption, borderedOutput = borderedOutput),
 //        (RunningProcess, IO) -> Unit {
 //    override fun invoke(runningProcess: RunningProcess, io: IO) {
 //        logLine { io.formatted }
@@ -36,14 +36,14 @@ class Downloader(vararg customHandlers: Pair<String, Handler>) {
      * Downloads an image copy containing the [OperatingSystem] and returns the [Path] where the
      * copy can be found after successful download.
      */
-    fun OperatingSystem.download(logger: RenderingLogger<*>): Path = download(downloadUrl, logger = logger, filename = fullName)
+    fun OperatingSystem.download(logger: RenderingLogger): Path = download(downloadUrl, logger = logger, filename = fullName)
 
     /**
      * Downloads the specified [url], [retries] the specified amount of times.
      *
      * Optionally a [filename] can be provided which is used for logging at places where the [url] would otherwise have been used.
      */
-    fun download(url: String, logger: RenderingLogger<*>, retries: Int = 5, filename: String? = null): Path =
+    fun download(url: String, logger: RenderingLogger, retries: Int = 5, filename: String? = null): Path =
         customHandlerMapping[url.findScheme()]?.invoke(URI.create(url), logger) ?: tempDir("imgcstmzr").let { temp ->
             logger.singleLineLogger("Downloading ${filename ?: url} to $temp") {
 
@@ -70,4 +70,4 @@ class Downloader(vararg customHandlers: Pair<String, Handler>) {
         }
 }
 
-typealias Handler = (URI, RenderingLogger<*>) -> Path
+typealias Handler = (URI, RenderingLogger) -> Path

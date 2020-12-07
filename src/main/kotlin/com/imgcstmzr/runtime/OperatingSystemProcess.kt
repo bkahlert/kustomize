@@ -59,7 +59,7 @@ fun stuckCheckingProcessor(processor: OperatingSystemProcessor): OperatingSystem
 open class OperatingSystemProcess(
     name: String,
     val osImage: OperatingSystemImage,
-    val logger: RenderingLogger<*>,
+    val logger: RenderingLogger,
 ) : DockerProcess(
     commandLine = DOCKER_IMAGE.buildRunCommand {
         options {
@@ -160,7 +160,7 @@ open class OperatingSystemProcess(
  */
 fun OperatingSystemImage.execute(
     name: String = file.toUniqueContainerName().sanitized,
-    logger: RenderingLogger<*>,
+    logger: RenderingLogger,
     autoLogin: Boolean = true,
     vararg programs: Program,
 ): Int = logger.subLogger("Running $shortName with ${programs.format()}", ansiCode = ANSI.termColors.cyan) {

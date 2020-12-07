@@ -5,7 +5,6 @@ package com.bkahlert.koodies.builder
  */
 typealias ListBuilderInit<E> = ListBuilder<E>.() -> Unit
 
-
 class ListBuilder<in E>(private val list: MutableList<E>) {
     companion object {
         inline fun <reified E> build(init: ListBuilderInit<E>): List<E> =

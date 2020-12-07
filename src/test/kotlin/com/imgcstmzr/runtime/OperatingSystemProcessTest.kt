@@ -30,7 +30,7 @@ import kotlin.reflect.KFunction
 class OperatingSystemProcessTest {
 
     @FifteenMinutesTimeout @E2E @Test
-    fun `should boot and run program in user session`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<*>) {
+    fun `should boot and run program in user session`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger) {
 
         val exitValue = osImage.execute(
             name = name(::`should boot and run program in user session`),
@@ -49,7 +49,7 @@ class OperatingSystemProcessTest {
     }
 
     @DockerRequiring @Test
-    fun `should terminate if obviously stuck`(@OS(TinyCore) osImage: OperatingSystemImage, logger: InMemoryLogger<*>) {
+    fun `should terminate if obviously stuck`(@OS(TinyCore) osImage: OperatingSystemImage, logger: InMemoryLogger) {
         val corruptingString = "Booting Linux"
         val corruptedOsImage = OperatingSystemImage(object : OperatingSystem by osImage.operatingSystem {
             override val deadEndPattern: Regex get() = ".*$corruptingString.*".toRegex()

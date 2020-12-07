@@ -63,25 +63,25 @@ class PatchBuilder(
     fun booted(init: ProgramsBuilder.() -> Unit) = ProgramsBuilder(programs).apply(init)
 }
 
-typealias ImgOperation = (osImage: OperatingSystemImage, logger: RenderingLogger<Any>) -> Unit
+typealias ImgOperation = (osImage: OperatingSystemImage, logger: RenderingLogger) -> Unit
 
 @PatchDsl
 class ImgOperationsCollector(private val imgOperations: MutableList<ImgOperation>) {
     fun resize(size: Size) {
-        imgOperations += { osImage: OperatingSystemImage, logger: RenderingLogger<Any> ->
+        imgOperations += { osImage: OperatingSystemImage, logger: RenderingLogger ->
             osImage.increaseDiskSpace(logger, size)
         }
     }
 
     fun updateUsername(username: String) {
-        imgOperations += { osImage: OperatingSystemImage, logger: RenderingLogger<Any> ->
+        imgOperations += { osImage: OperatingSystemImage, logger: RenderingLogger ->
             osImage.credentials = osImage.credentials.copy(username = username)
             logger.logLine { META.format("Username of user ${username.quoted} updated.") }
         }
     }
 
     fun updatePassword(username: String, password: String) {
-        imgOperations += { osImage: OperatingSystemImage, logger: RenderingLogger<Any> ->
+        imgOperations += { osImage: OperatingSystemImage, logger: RenderingLogger ->
             if (osImage.credentials.username == username) {
                 osImage.credentials = osImage.credentials.copy(password = password)
                 logger.logLine { META.format("Password of user ${password.quoted} updated.") }

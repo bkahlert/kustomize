@@ -36,7 +36,7 @@ class UsernamePatchTest {
     }
 
     @Test
-    fun `should clean all files`(logger: InMemoryLogger<Any>) {
+    fun `should clean all files`(logger: InMemoryLogger) {
         val root = prepareSharedDirectory()
         val patch = UsernamePatch("pi", "ella")
 
@@ -52,7 +52,7 @@ class UsernamePatchTest {
     }
 
     @Test
-    fun `should finish if files are missing`(logger: InMemoryLogger<Any>) {
+    fun `should finish if files are missing`(logger: InMemoryLogger) {
         val root = prepareSharedDirectory().apply {
             resolve("etc").delete(true)
         }
@@ -65,7 +65,7 @@ class UsernamePatchTest {
     }
 
     @Test
-    fun `should not touch other files`(logger: InMemoryLogger<Any>) {
+    fun `should not touch other files`(logger: InMemoryLogger) {
         val root = prepareSharedDirectory().apply { resolve("dont-touch-me").writeText("pi\npi\n") }
         val patch = UsernamePatch("pi", "ella")
 
@@ -77,7 +77,7 @@ class UsernamePatchTest {
     }
 
     @Test
-    fun `should not pull a single word apart`(logger: InMemoryLogger<Any>) {
+    fun `should not pull a single word apart`(logger: InMemoryLogger) {
         val root = prepareSharedDirectory()
         val patch = UsernamePatch("pi", "ella")
 
@@ -95,7 +95,7 @@ class UsernamePatchTest {
     }
 
     @FifteenMinutesTimeout @E2E @Test
-    fun `should log in with updated username`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    fun `should log in with updated username`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger) {
         val newUsername = "ella".also { check(it != osImage.defaultCredentials.username) { "$it is already the default username." } }
         val patch = UsernamePatch(osImage.defaultCredentials.username, newUsername)
 

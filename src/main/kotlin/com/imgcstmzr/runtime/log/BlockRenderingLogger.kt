@@ -22,7 +22,7 @@ import com.imgcstmzr.runtime.HasStatus.Companion.status
 import com.imgcstmzr.runtime.log.RenderingLogger.Companion.formatException
 import com.imgcstmzr.runtime.log.RenderingLogger.Companion.formatResult
 
-open class BlockRenderingLogger<R>(
+open class BlockRenderingLogger(
     private val caption: CharSequence,
     val borderedOutput: Boolean = false,
     val statusInformationColumn: Int = 100,
@@ -31,15 +31,15 @@ open class BlockRenderingLogger<R>(
     val log: (String) -> Any = { output: String ->
         TermUi.echo(output, trailingNewline = false)
     },
-) : RenderingLogger<R> {
+) : RenderingLogger {
 
     val totalColumns = statusInformationColumn + statusInformationPadding + statusInformationColumns
 
     override val nestingPrefix: String get() = if (borderedOutput) "├─╴ " else " :"
 
-    override fun render(trailingNewline: Boolean, block: () -> CharSequence): Unit = block().let { message: CharSequence ->
-        val finalMessage: String? = "$message" + if (trailingNewline) "\n" else ""
-        if (finalMessage != null) log.invoke(finalMessage)
+    final override fun render(trailingNewline: Boolean, block: () -> CharSequence): Unit = block().let { message: CharSequence ->
+        val finalMessage: String = "$message" + if (trailingNewline) "\n" else ""
+        log.invoke(finalMessage)
     }
 
     private fun getStatusPadding(text: String): String =
@@ -48,7 +48,7 @@ open class BlockRenderingLogger<R>(
     private val blockStart
         get() = if (borderedOutput) "\n╭─────╴" + ANSI.termColors.bold("$caption") + "\n$prefix" else ANSI.termColors.bold("Started: $caption")
     val prefix: String get() = if (borderedOutput) "│   " else " "
-    fun getBlockEnd(result: Result<R>): CharSequence {
+    fun <R> getBlockEnd(result: Result<R>): CharSequence {
         val message: String =
             if (result.isSuccess) {
                 val renderedSuccess = formatResult(result)
@@ -84,7 +84,7 @@ open class BlockRenderingLogger<R>(
         }
     }
 
-    override fun logResult(block: () -> Result<R>): R {
+    override fun <R> logResult(block: () -> Result<R>): R {
         val result = block()
         render(true) {
             getBlockEnd(result).asAnsiString().wrapLines(totalColumns)
@@ -94,36 +94,34 @@ open class BlockRenderingLogger<R>(
 }
 
 @Deprecated("replaced by subLogger", ReplaceWith("subLogger"))
-inline fun <R, R2> BlockRenderingLogger<R>?.segment(
+inline fun <R> BlockRenderingLogger?.segment(
     caption: CharSequence,
     ansiCode: AnsiCode? = ANSI.termColors.magenta,
     borderedOutput: Boolean = this?.borderedOutput ?: false,
-    block: BlockRenderingLogger<R2>.() -> R2,
-): R2 {
-    val logger: BlockRenderingLogger<R2> =
+    block: BlockRenderingLogger.() -> R,
+): R {
+    val logger: BlockRenderingLogger =
         when {
             this == null -> BlockRenderingLogger(
                 caption = caption,
                 borderedOutput = borderedOutput,
             )
-            this is MutedBlockRenderingLogger -> {
-                MutedBlockRenderingLogger(
-                    "$caption>",
-                    borderedOutput = borderedOutput,
-                )
-            }
+            this is MutedRenderingLogger -> this
             else -> {
                 BlockRenderingLogger(
                     caption = caption,
                     borderedOutput = borderedOutput,
                 ) { output ->
-                    val indentedOutput = output.asAnsiString().mapLines {
-                        val truncateBy = it.replaceFirst("\\s{3}".toRegex(), "").let { ansiCode?.invoke(it) ?: it }
+                    val indentedOutput = output.asAnsiString().mapLines { line ->
+                        val truncateBy = line.replaceFirst("\\s{3}".toRegex(), "").let { ansiCode?.invoke(it) ?: it }
                         truncateBy.prefixWith(prefix)
                     }
                     logText { indentedOutput }
                 }
             }
         }
-    return kotlin.runCatching { block(logger) }.also { logger.logResult { it } }.getOrThrow()
+
+    val result: Result<R> = kotlin.runCatching { block(logger) }
+    logger.logResult { result }
+    return result.getOrThrow()
 }

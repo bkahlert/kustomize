@@ -21,19 +21,18 @@ import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.asAnsiString
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.mordant.AnsiCode
 import com.imgcstmzr.runtime.HasStatus
+import com.imgcstmzr.runtime.HasStatus.Companion.asStatus
+import koodies.io.path.bufferedWriter
 import java.nio.file.Path
-import java.nio.file.StandardOpenOption.CREATE
-import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
-import java.nio.file.StandardOpenOption.WRITE
+import java.nio.file.StandardOpenOption
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
-import kotlin.io.path.bufferedWriter
 
 /**
  * Logger interface to implement loggers that don't just log
  * but render log messages to provide easier understandable feedback.
  */
-interface RenderingLogger<R> { // TODO remove R?
+interface RenderingLogger {
 
     /**
      * Prefix used to signify a nested logger.
@@ -71,9 +70,21 @@ interface RenderingLogger<R> { // TODO remove R?
     }
 
     /**
+     * Logs some programs [IO] and the status of processed [items].
+     */
+    fun logStatus(vararg items: HasStatus, block: () -> IO = { OUT typed "" }): Unit =
+        logStatus(items.toList(), block)
+
+    /**
+     * Logs some programs [IO] and the processed items [statuses].
+     */
+    fun logStatus(vararg statuses: String, block: () -> IO = { OUT typed "" }): Unit =
+        logStatus(statuses.map { it.asStatus() }, block)
+
+    /**
      * Logs the result of the process this logger is used for.
      */
-    fun logResult(block: () -> Result<R>): R {
+    fun <R> logResult(block: () -> Result<R>): R {
         val result = block()
         render(true) { formatResult(result) }
         return result.getOrThrow()
@@ -91,28 +102,28 @@ interface RenderingLogger<R> { // TODO remove R?
      * Logs a caught [Throwable]. In contrast to [logResult] with a failed [Result] and [logException]
      * this method only marks the current logging context as failed but does not escalate (rethrow).
      */
-    fun logCaughtException(block: () -> Throwable): Unit = block().let { ex ->
+    fun <R : Throwable> logCaughtException(block: () -> R): Unit = block().let { ex ->
         recoveredLoggers.add(this)
         render(true) { formatResult(Result.failure<R>(ex)) }
     }
 
     companion object {
-        val DEFAULT: RenderingLogger<Any> = object : RenderingLogger<Any> {
+        val DEFAULT: RenderingLogger = object : RenderingLogger {
             override fun render(trailingNewline: Boolean, block: () -> CharSequence) = block().let { TermUi.echo(it, trailingNewline) }
         }
 
-        val recoveredLoggers = mutableListOf<RenderingLogger<*>>()
+        val recoveredLoggers = mutableListOf<RenderingLogger>()
 
-        fun RenderingLogger<*>.formatResult(result: Result<*>): CharSequence =
+        fun RenderingLogger.formatResult(result: Result<*>): CharSequence =
             if (result.isSuccess) formatReturnValue(result.toSingleLineString()) else formatException(" ", result.toSingleLineString())
 
-        fun RenderingLogger<*>.formatReturnValue(oneLiner: CharSequence): CharSequence {
+        fun RenderingLogger.formatReturnValue(oneLiner: CharSequence): CharSequence {
             val format = if (recoveredLoggers.contains(this)) ANSI.termColors.green else ANSI.termColors.green
             val symbol = if (recoveredLoggers.contains(this)) heavyBallotX else heavyCheckMark
             return if (oneLiner.isEmpty()) format("$symbol") else format("$symbol") + " returned".italic() + " $oneLiner"
         }
 
-        fun RenderingLogger<*>.formatException(prefix: CharSequence, oneLiner: CharSequence?): CharSequence {
+        fun RenderingLogger.formatException(prefix: CharSequence, oneLiner: CharSequence?): CharSequence {
             val format = if (recoveredLoggers.contains(this)) ANSI.termColors.green else ANSI.termColors.red
             return oneLiner?.let {
                 val event = if (recoveredLoggers.contains(this)) "recovered from" else "failed with"
@@ -122,12 +133,12 @@ interface RenderingLogger<R> { // TODO remove R?
     }
 }
 
-inline fun <reified R> RenderingLogger<R>.applyLogging(crossinline block: RenderingLogger<R>.() -> R) {
+inline fun <reified R> RenderingLogger.applyLogging(crossinline block: RenderingLogger.() -> R) {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     logResult { runCatching { block() } }
 }
 
-inline fun <reified R> RenderingLogger<R>.runLogging(crossinline block: RenderingLogger<R>.() -> R): R {
+inline fun <reified R> RenderingLogger.runLogging(crossinline block: RenderingLogger.() -> R): R {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     return logResult { runCatching { block() } }
 }
@@ -138,22 +149,19 @@ inline fun <reified R> RenderingLogger<R>.runLogging(crossinline block: Renderin
  *
  * This logger uses at least one line per log event. If less room is available [singleLineLogger] is more suitable.
  */
-inline fun <reified R> RenderingLogger<*>?.subLogger(
+inline fun <reified R> RenderingLogger?.subLogger(
     caption: CharSequence,
     ansiCode: AnsiCode? = null,
-    borderedOutput: Boolean = (this as? BlockRenderingLogger<*>)?.borderedOutput ?: false,
-    block: RenderingLogger<R>.() -> R,
+    borderedOutput: Boolean = (this as? BlockRenderingLogger)?.borderedOutput ?: false,
+    block: RenderingLogger.() -> R,
 ): R {
-    val logger: RenderingLogger<R> =
+    val logger: RenderingLogger =
         when {
             this == null -> BlockRenderingLogger(
                 caption = caption,
                 borderedOutput = borderedOutput,
             )
-            this is MutedBlockRenderingLogger -> MutedBlockRenderingLogger(
-                caption = caption,
-                borderedOutput = borderedOutput,
-            )
+            this is MutedRenderingLogger -> MutedRenderingLogger()
             else -> ((this as? BlockRenderingLogger)?.prefix ?: "$this::").let { prefix ->
                 BlockRenderingLogger(
                     caption = caption,
@@ -168,22 +176,23 @@ inline fun <reified R> RenderingLogger<*>?.subLogger(
                 }
             }
         }
-    return kotlin.runCatching { block(logger) }.also { logger.logResult { it } }.getOrThrow()
+    val result: Result<R> = kotlin.runCatching { block(logger) }
+    logger.logResult { result }
+    return result.getOrThrow()
 }
-
 
 /**
  * Creates a logger which logs to [path].
  */
-inline fun <reified R> RenderingLogger<*>?.fileLogger(
+inline fun <reified R> RenderingLogger?.fileLogger(
     path: Path,
     caption: CharSequence,
-    block: RenderingLogger<R>.() -> R,
+    block: RenderingLogger.() -> R,
 ): R = subLogger(caption) {
     logLine { "This process might produce pretty much log messages. Logging to …" }
     logLine { "${Unicode.Emojis.pageFacingUp} ${path.toUri()}" }
-    val writer = path.bufferedWriter(options = arrayOf(CREATE, TRUNCATE_EXISTING, WRITE))
-    val logger: RenderingLogger<R> = BlockRenderingLogger(
+    val writer = path.bufferedWriter(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)
+    val logger: RenderingLogger = BlockRenderingLogger(
         caption = caption,
         borderedOutput = false,
         log = { output: String ->
@@ -199,18 +208,18 @@ inline fun <reified R> RenderingLogger<*>?.fileLogger(
  *
  * This logger logs all events using a single line of text. If more room is needed [subLogger] is more suitable.
  */
-inline fun <reified R> RenderingLogger<*>?.singleLineLogger(
+inline fun <reified R> RenderingLogger?.singleLineLogger(
     caption: CharSequence,
-    noinline block: SingleLineLogger<R>.() -> R,
+    noinline block: SingleLineLogger.() -> R,
 ): R = if (this == null) {
-    val logger: SingleLineLogger<R> =
-        object : SingleLineLogger<R>(caption) {
+    val logger: SingleLineLogger =
+        object : SingleLineLogger(caption) {
             override fun render(block: () -> CharSequence) {
             }
         }
     kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
 } else {
-    val logger: SingleLineLogger<R> = object : SingleLineLogger<R>(caption) {
+    val logger: SingleLineLogger = object : SingleLineLogger(caption) {
         override fun render(block: () -> CharSequence) {
             val message = block()
             val prefix = this@singleLineLogger.nestingPrefix
@@ -226,18 +235,18 @@ inline fun <reified R> RenderingLogger<*>?.singleLineLogger(
  *
  * This logger logs all events using only a couple of characters. If more room is needed [singleLineLogger] or even [subLogger] is more suitable.
  */
-inline fun <reified R> RenderingLogger<*>?.microLog(
+inline fun <reified R> RenderingLogger?.microLog(
     symbol: Grapheme,
-    noinline block: MicroLogger<R>.() -> R,
+    noinline block: MicroLogger.() -> R,
 ): R = if (this == null) {
-    val logger: MicroLogger<R> =
-        object : MicroLogger<R>(symbol) {
+    val logger: MicroLogger =
+        object : MicroLogger(symbol) {
             override fun render(block: () -> CharSequence) {
             }
         }
     kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
 } else {
-    val logger: MicroLogger<R> = object : MicroLogger<R>(symbol) {
+    val logger: MicroLogger = object : MicroLogger(symbol) {
         override fun render(block: () -> CharSequence) {
             val message = block()
             val prefix = this@microLog.nestingPrefix
@@ -253,17 +262,17 @@ inline fun <reified R> RenderingLogger<*>?.microLog(
  *
  * This logger logs all events using only a couple of characters. If more room is needed [singleLineLogger] or even [subLogger] is more suitable.
  */
-inline fun <reified R> RenderingLogger<*>?.microLog(
-    noinline block: MicroLogger<R>.() -> R,
+inline fun <reified R> RenderingLogger?.microLog(
+    noinline block: MicroLogger.() -> R,
 ): R = if (this == null) {
-    val logger: MicroLogger<R> =
-        object : MicroLogger<R>() {
+    val logger: MicroLogger =
+        object : MicroLogger() {
             override fun render(block: () -> CharSequence) {
             }
         }
     kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
 } else {
-    val logger: MicroLogger<R> = object : MicroLogger<R>() {
+    val logger: MicroLogger = object : MicroLogger() {
         override fun render(block: () -> CharSequence) {
             val message = block()
             val prefix = this@microLog.nestingPrefix

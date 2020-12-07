@@ -16,6 +16,14 @@ interface HasStatus {
         private val fastForwardSymbol = ANSI.termColors.green("◀◀")
 
         /**
+         * Convenience method in cases there is no complex object having a status.
+         */
+        fun String.asStatus(): HasStatus =
+            object : HasStatus {
+                override fun status() = this@asStatus
+            }
+
+        /**
          * Default implementation to render the status of a [List] of [HasStatus] instances.
          */
         fun List<HasStatus>.status(): String = map { it.status() }.asStatus()

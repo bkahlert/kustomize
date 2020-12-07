@@ -25,14 +25,14 @@ object FixtureLog : (Path) -> Path {
     val location = sameFile("fixture.log")
 
     init {
-        val renderingLogger: RenderingLogger<Any> = BlockRenderingLogger<Any>("Fixture Leftovers Cleanup 🧻", borderedOutput = true)
+        val renderingLogger: RenderingLogger = BlockRenderingLogger("Fixture Leftovers Cleanup 🧻", borderedOutput = true)
         renderingLogger.applyLogging { delete() }
         addShutDownHook {
-            BlockRenderingLogger<Any>("Fixture Leftovers Cleanup 🧻", borderedOutput = true).applyLogging { delete() }
+            BlockRenderingLogger("Fixture Leftovers Cleanup 🧻", borderedOutput = true).applyLogging { delete() }
         }
     }
 
-    fun RenderingLogger<Any>.delete(): String {
+    fun RenderingLogger.delete(): String {
         val entriesPerLines = 1
         var deleted = 0
         paths()

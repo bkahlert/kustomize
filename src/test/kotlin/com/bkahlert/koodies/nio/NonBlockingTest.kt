@@ -49,7 +49,7 @@ class NonBlockingTest {
         }
 
         @Test
-        fun `should read no non-BEM unicode extremely slow input streams`(logger: InMemoryLogger<String?>) {
+        fun `should read no non-BEM unicode extremely slow input streams`(logger: InMemoryLogger) {
             val input = "A𝌪\n𝌫\n𝌬𝌭𝌮\nZ"
             val inputStream = SlowInputStream(0.seconds to input, baseDelayPerInput = 1.seconds, logger = logger)
             val reader = NonBlocking.nonBlocking(String.random(), NonBlocking.nonBlocking(String.random(), BufferedInputStream(inputStream)), Charsets.UTF_8)
@@ -58,7 +58,7 @@ class NonBlockingTest {
         }
 
         @Test
-        fun `should read no non-BEM unicode extremely slow input streams if buffered`(logger: InMemoryLogger<String?>) {
+        fun `should read no non-BEM unicode extremely slow input streams if buffered`(logger: InMemoryLogger) {
             val input = "A𝌪\n𝌫\n𝌬𝌭𝌮\nZ"
             val inputStream = SlowInputStream(0.seconds to input, baseDelayPerInput = 1.seconds, logger = logger)
             val reader =
@@ -69,7 +69,7 @@ class NonBlockingTest {
         }
 
         @Test
-        fun `should be equally readable like any other byte input stream`(logger: InMemoryLogger<String?>) {
+        fun `should be equally readable like any other byte input stream`(logger: InMemoryLogger) {
             val input = "A𝌪\n𝌫\n𝌬𝌭𝌮\nZ"
             val inputStream = SlowInputStream(0.seconds to input, baseDelayPerInput = 10.seconds, logger = logger)
 

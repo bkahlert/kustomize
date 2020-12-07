@@ -55,10 +55,10 @@ class OperatingSystemImage(
 
     private val updatedCredentials: Boolean get() = credentials != defaultCredentials
 
-    fun boot(logger: RenderingLogger<Any>, vararg programs: Program): Int =
+    fun boot(logger: RenderingLogger, vararg programs: Program): Int =
         execute(logger = logger, programs = programs)
 
-    fun increaseDiskSpace(logger: RenderingLogger<Any>, size: Size): Any =
+    fun increaseDiskSpace(logger: RenderingLogger, size: Size): Any =
         logger.subLogger("Increasing Disk Space: ${path.size} ➜ $size", null) {
             var missing = size - path.size
             val bytesPerStep = 100.Mega.bytes
@@ -72,7 +72,7 @@ class OperatingSystemImage(
                     logStatus { IO.Type.OUT typed "${path.fileName} is has already ${path.size}" }
                 }
                 else -> {
-                    singleLineLogger<Size>("Progress:") {
+                    singleLineLogger("Progress:") {
                         logStatus { IO.Type.OUT typed path.size.toString() }
                         while (missing > 0.bytes) {
                             val write = if (missing < bytesPerStep) missing.toZeroFilledByteArray() else oneHundredMegaBytes

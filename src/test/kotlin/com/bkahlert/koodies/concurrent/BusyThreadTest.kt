@@ -10,7 +10,7 @@ import strikt.assertions.isGreaterThan
 @Execution(CONCURRENT)
 class BusyThreadTest {
     @Test
-    fun `should not stop until asked`(tracer: InMemoryLogger<*>) {
+    fun `should not stop until asked`(tracer: InMemoryLogger) {
         val thread = BusyThread(tracer)
 
         val start = System.currentTimeMillis()

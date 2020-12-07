@@ -25,14 +25,14 @@ import kotlin.time.seconds
 class NonBlockingCharReaderTest {
 
     @Test
-    fun `should read null if empty`(logger: InMemoryLogger<String?>) {
+    fun `should read null if empty`(logger: InMemoryLogger) {
         val reader = NonBlockingCharReader("".byteInputStream(), 100.milliseconds)
         5 times { expectThat(reader.read(CharArray(1), 0, logger)).isLessThanOrEqualTo(0) }
         10 times { expectThat(reader.read(CharArray(1), 0, logger)).isEqualTo(-1) }
     }
 
     @Test
-    fun `should return null if source is closed`(logger: InMemoryLogger<String?>) {
+    fun `should return null if source is closed`(logger: InMemoryLogger) {
         val reader = NonBlockingCharReader("123".byteInputStream(), 100.milliseconds)
         expectThat(reader.readText()).isEqualTo("123")
         5 times { expectThat(reader.read(CharArray(1), 0, logger)).isLessThanOrEqualTo(0) }
@@ -47,7 +47,7 @@ class NonBlockingCharReaderTest {
     }
 
     @Slow @Test
-    fun `should read in a non-greedy fashion resp just as much as needed to avoid blocking`(logger: InMemoryLogger<String?>) {
+    fun `should read in a non-greedy fashion resp just as much as needed to avoid blocking`(logger: InMemoryLogger) {
         val inputStream =
             SlowInputStream(
                 1.seconds to "123",

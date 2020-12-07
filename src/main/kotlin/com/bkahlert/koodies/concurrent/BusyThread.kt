@@ -8,7 +8,7 @@ import kotlin.time.milliseconds
 /**
  * [Thread] that drains your battery and can only be stopped by calling [stop].
  */
-class BusyThread private constructor(private var stopped: AtomicBoolean, private val logger: RenderingLogger<*>? = null) : Thread({
+class BusyThread private constructor(private var stopped: AtomicBoolean, private val logger: RenderingLogger? = null) : Thread({
     while (!stopped.get()) {
         logger?.logLine { "THREAD stopped? $stopped" }
         try {
@@ -20,7 +20,7 @@ class BusyThread private constructor(private var stopped: AtomicBoolean, private
         }
     }
 }) {
-    constructor(logger: RenderingLogger<*>? = null) : this(AtomicBoolean(false), logger)
+    constructor(logger: RenderingLogger? = null) : this(AtomicBoolean(false), logger)
 
     init {
         start()

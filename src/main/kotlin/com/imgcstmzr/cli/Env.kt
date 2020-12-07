@@ -9,9 +9,8 @@ import com.imgcstmzr.runtime.log.RenderingLogger
 import com.typesafe.config.ConfigFactory
 import java.nio.file.Path
 
-class Env private constructor(logger: RenderingLogger<*>, vararg maps: Map<String, String?>) : Map<String, String?> by maps.flatMap({ it.toList() }).toMap() {
-    constructor(logger: RenderingLogger<*>, path: Path) : this(
-        logger,
+class Env private constructor(vararg maps: Map<String, String?>) : Map<String, String?> by maps.flatMap({ it.toList() }).toMap() {
+    constructor(logger: RenderingLogger, path: Path) : this(
         if (path.exists) {
             ConfigFactory.parseFile(path.toFile()) // TODO remove toFile()
                 .root()

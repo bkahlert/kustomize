@@ -14,6 +14,7 @@ import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.E2E
 import com.imgcstmzr.guestfish.Guestfish
 import com.imgcstmzr.guestfish.Guestfish.Companion.copyOutCommands
+import com.imgcstmzr.libguestfs.libguestfs
 import com.imgcstmzr.patch.new.buildPatch
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
@@ -73,7 +74,7 @@ class PatchKtTest {
     @Isolated("flaky OutputCapture")
     inner class NoSystemOut {
         @Test
-        fun `should only log using specified logger`(osImage: OperatingSystemImage, logger: InMemoryLogger<Any>, capturedOutput: CapturedOutput) {
+        fun `should only log using specified logger`(osImage: OperatingSystemImage, logger: InMemoryLogger, capturedOutput: CapturedOutput) {
             val nullPatch = buildPatch("No-Op Patch") {}
             nullPatch.patch(osImage, logger)
             expectThat(logger.logged.removeEscapeSequences()).isNotEmpty()
@@ -83,7 +84,7 @@ class PatchKtTest {
 
     @Test
     fun `should log not bordered if specified`(osImage: OperatingSystemImage, capturedOutput: CapturedOutput) {
-        val logger = InMemoryLogger<Any>("not-bordered", false, -1, emptyList())
+        val logger = InMemoryLogger("not-bordered", false, -1, emptyList())
         val nullPatch = buildPatch("No-Op Patch") {}
         nullPatch.patch(osImage, logger)
         expectThat(logger.logged.removeEscapeSequences()).matchesCurlyPattern("""
@@ -98,7 +99,7 @@ class PatchKtTest {
     }
 
     @FiveMinutesTimeout @DockerRequiring @Test
-    fun `should prepare root directory then patch and copy everything back`(osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    fun `should prepare root directory then patch and copy everything back`(osImage: OperatingSystemImage, logger: InMemoryLogger) {
         val sshPatch = SshEnablementPatch()
 
         sshPatch.patch(osImage, logger)
@@ -109,16 +110,20 @@ class PatchKtTest {
     }
 
     @ThirtyMinutesTimeout @E2E @Test
-    fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger) {
         val timestamp = Instant.now()
 
         val patch = buildPatch("Try Everything Patch") {
             preFile {
                 resize(2.Giga.bytes)
             }
-            guestfish {
-                changePassword("pi", "po")
+            libguestfs {
+                // TODO TODO TODO test and guestfish and command line (format)
+                hostname { "test-machine" }
             }
+//            guestfish {
+//                changePassword("pi", "po")
+//            }
             files {
                 edit("/root/.imgcstmzr.created", { path ->
                     require(path.readText().parseableInstant<Any>())
@@ -144,6 +149,7 @@ class PatchKtTest {
             booted(logger, Program("check",
                 { "init" },
                 "init" to {
+                    enter("sudo cat /etc/hostname")
                     enter("sudo cat /root/.imgcstmzr.created")
                     "demo"
                 },

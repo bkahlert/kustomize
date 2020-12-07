@@ -33,7 +33,7 @@ class RandomKtTest {
     }
 
     @Test
-    fun `should not easily produce the same string`(logger: InMemoryLogger<Unit>) {
+    fun `should not easily produce the same string`(logger: InMemoryLogger) {
         val calculated = mutableListOf<String>()
         (0 until 1000).onEach {
             calculated += String.random(8).also {

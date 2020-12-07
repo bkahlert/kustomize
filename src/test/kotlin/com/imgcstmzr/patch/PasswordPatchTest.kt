@@ -43,7 +43,7 @@ class PasswordPatchTest {
     }
 
     @FifteenMinutesTimeout @E2E @Test
-    fun `should update shadow file correctly`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    fun `should update shadow file correctly`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger) {
         val passwordPath = "/etc/shadow"
         val username = RaspberryPiLite.defaultCredentials.username
         val newPassword = "on-a-diet"
@@ -65,7 +65,7 @@ class PasswordPatchTest {
     }
 
     @FifteenMinutesTimeout @E2E @Test
-    fun `should not be able to use old password`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    fun `should not be able to use old password`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger) {
         val passwordPatch = PasswordPatch(RaspberryPiLite.defaultCredentials.username, "po", salt)
 
         passwordPatch.patch(osImage, logger)

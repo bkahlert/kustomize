@@ -5,7 +5,7 @@ import com.imgcstmzr.util.logging.InMemoryLogger
 import strikt.api.Assertion
 
 
-fun Assertion.Builder<InMemoryLogger<Unit>>.matches(
+fun Assertion.Builder<InMemoryLogger>.matches(
     curlyPattern: String,
     removeTrailingBreak: Boolean = true,
     removeEscapeSequences: Boolean = true,

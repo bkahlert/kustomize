@@ -25,12 +25,12 @@ fun libguestfs(init: VirtCustomizeCommandLine.OptionsBuilder.() -> Unit) = com.i
 
 class LibguestfsProcess(
     commandLine: VirtCustomizeCommandLine,
-    val logger: RenderingLogger<*>,
+    val logger: RenderingLogger,
 ) : DockerProcess(LibguestfsRunner.adapt(commandLine))
 
 
 fun VirtCustomizeCommandLine.execute(
-    logger: RenderingLogger<*>,
+    logger: RenderingLogger,
 ): Int = logger.subLogger("Running $commandLine", ansiCode = ANSI.termColors.blue) {
 
     logLine { "Preparing shared folder" }

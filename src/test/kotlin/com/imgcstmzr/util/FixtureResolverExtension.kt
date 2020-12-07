@@ -14,7 +14,7 @@ import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
-import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
+import com.imgcstmzr.runtime.log.MutedRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.runLogging
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
@@ -48,10 +48,10 @@ open class FixtureResolverExtension : ParameterResolver {
         val annotation = parameterContext.parameter.getAnnotation(OS::class.java)
         val operatingSystem: OperatingSystem = annotation?.value ?: OperatingSystems.ImgCstmzrTestOS
         val autoDelete = annotation?.autoDelete ?: true
-        val logger: RenderingLogger<OperatingSystemImage> = if (!extensionContext.isCapturingOutput()) {
+        val logger: RenderingLogger = if (!extensionContext.isCapturingOutput()) {
             BlockRenderingLogger("Provisioning an image containing ${operatingSystem.fullName.cyan()} (${operatingSystem.name})...")
         } else {
-            MutedBlockRenderingLogger()
+            MutedRenderingLogger()
         }
         logger.runLogging {
             operatingSystem.getCopy(logger).apply {
@@ -65,7 +65,7 @@ open class FixtureResolverExtension : ParameterResolver {
         private val downloader = Downloader(ImageBuilder.schema to { uri, logger -> ImageBuilder.buildFrom(uri, logger) })
 
         private val cache = Cache(Paths.TEST.resolve("test"), maxConcurrentWorkingDirectories = 500)
-        private fun OperatingSystem.getCopy(logger: RenderingLogger<*>): OperatingSystemImage = synchronized(this) {
+        private fun OperatingSystem.getCopy(logger: RenderingLogger): OperatingSystemImage = synchronized(this) {
             this based cache.provideCopy(name, false, logger) {
                 with(downloader) { download(logger) }
             }

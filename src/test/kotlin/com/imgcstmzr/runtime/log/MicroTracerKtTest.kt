@@ -12,7 +12,7 @@ import strikt.api.expectThat
 @Execution(CONCURRENT)
 class MicroTracerKtTest {
     @Test
-    fun `should micro seq`(logger: InMemoryLogger<Any>) {
+    fun `should micro seq`(logger: InMemoryLogger) {
         logger.subTrace<Any?>("segment") {
             trace("@")
             microTrace<Any?>(Grapheme("🤠")) {

@@ -52,7 +52,7 @@ class Guestfish(
      */
     private val imgPathOnHost: OperatingSystemImage,
 
-    private val logger: RenderingLogger<Any>,
+    private val logger: RenderingLogger,
 
     /**
      * Name to be used for the underlying Docker container. If a container with the same name exists, it will be stopped and removed.
@@ -83,7 +83,7 @@ class Guestfish(
         }
 
         val caption = "Running ${imgPathOnHost.fileName} ${guestfishOperation.summary} "
-        val block: RenderingLogger<Unit>.() -> Unit = {
+        val block: RenderingLogger.() -> Unit = {
             require(imgPathOnHost.readable) { "Error running Guestfish: $imgPathOnHost can't be read.".wrapWithBorder() }
 
             val workingDirectory = imgPathOnHost.directory
@@ -210,7 +210,7 @@ class Guestfish(
             volumes: Map<Path, String>,
             options: List<String> = emptyList(),
             commands: GuestfishOperation,
-            logger: RenderingLogger<*>,
+            logger: RenderingLogger,
         ): Process = logger.subLogger("Running ${commands.commandCount} guestfish operations... ${Kaomojis.fishing()}") {
             DockerProcess(IMAGE.buildRunCommand {
                 redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr

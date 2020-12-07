@@ -12,14 +12,14 @@ import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import org.apache.commons.io.output.TeeOutputStream
 import java.io.OutputStream
 
-open class InMemoryLogger<T> private constructor(
+open class InMemoryLogger private constructor(
     caption: CharSequence,
     borderedOutput: Boolean = false,
     statusInformationColumn: Int = -1,
     private val outputStream: TeeOutputStream,
     private val captured: MutableList<String>,
     private val start: Long,
-) : BlockRenderingLogger<T>(
+) : BlockRenderingLogger(
     caption = caption,
     borderedOutput = borderedOutput,
     statusInformationColumn = if (statusInformationColumn > 0) statusInformationColumn else 60,
@@ -48,14 +48,14 @@ open class InMemoryLogger<T> private constructor(
 
     constructor() : this("Test", true, -1, emptyList())
 
-    val messages: List<CharSequence> by withNegativeIndices { captured }
-    val raw: String get() = messages.joinToString("\n")
+    private val messages: List<CharSequence> by withNegativeIndices { captured }
+    private val raw: String get() = messages.joinToString("\n")
     val logged: String get() = messages.joinToString("\n").removeEscapeSequences().withoutTrailingLineSeparator.trim()
 
     /**
      * Returns the so far rendered content—pretending this block was finished with [result].
      */
-    fun finalizedDump(result: Result<T>): String = raw + "\n" + getBlockEnd(result)
+    fun <R> finalizedDump(result: Result<R>): String = raw + "\n" + getBlockEnd(result)
 
     @Suppress("UNCHECKED_CAST")
     override fun toString(): String = finalizedDump(Result.success(Unit) as Result<Nothing>)

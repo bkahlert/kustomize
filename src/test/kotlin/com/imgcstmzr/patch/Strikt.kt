@@ -24,7 +24,7 @@ fun Assertion.Builder<Guestfish>.path(guestPath: Path): Assertion.Builder<Path> 
 }
 
 inline fun Assertion.Builder<OperatingSystemImage>.mounted(
-    logger: BlockRenderingLogger<Any>,
+    logger: BlockRenderingLogger,
     crossinline assertion: Assertion.Builder<Guestfish>.() -> Unit,
 ): Assertion.Builder<OperatingSystemImage> {
     get("mounted") {
@@ -34,7 +34,7 @@ inline fun Assertion.Builder<OperatingSystemImage>.mounted(
 }
 
 inline fun Assertion.Builder<OperatingSystemImage>.booted(
-    logger: BlockRenderingLogger<Any>,
+    logger: BlockRenderingLogger,
     crossinline assertion: OperatingSystemProcess.(String) -> ((String) -> Boolean)?,
 ): Assertion.Builder<OperatingSystemImage> {
     get("booted ${this.get { operatingSystem }}") {
@@ -62,7 +62,7 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
 }
 
 fun Assertion.Builder<OperatingSystemImage>.booted(
-    logger: BlockRenderingLogger<Any>,
+    logger: BlockRenderingLogger,
     program: Program,
 ): Assertion.Builder<OperatingSystemImage> =
     compose("booted ${this.get { operatingSystem }}") {

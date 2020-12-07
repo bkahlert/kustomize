@@ -26,7 +26,7 @@ class GuestfishIoProcessorTest {
     @Nested
     inner class Verbosity {
         @Test
-        fun `should log all on active verbose option`(logger: InMemoryLogger<ManagedProcess>) {
+        fun `should log all on active verbose option`(logger: InMemoryLogger) {
             val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = true)
             guestfishIO.lines().map { OUT typed it }.sendTo(guestfishIoProcessor)
             expectThat(logger.logged.lines()) {
@@ -36,7 +36,7 @@ class GuestfishIoProcessorTest {
         }
 
         @Test
-        fun `should not log boot sequence on inactive verbose option`(logger: InMemoryLogger<ManagedProcess>) {
+        fun `should not log boot sequence on inactive verbose option`(logger: InMemoryLogger) {
             val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = false)
             guestfishIO.lines().map { OUT typed it }.sendTo(guestfishIoProcessor)
             expectThat(logger.logged.lines()) {
@@ -46,7 +46,7 @@ class GuestfishIoProcessorTest {
         }
 
         @Test
-        fun `should only log errors on inactive verbose option`(logger: InMemoryLogger<ManagedProcess>) {
+        fun `should only log errors on inactive verbose option`(logger: InMemoryLogger) {
             val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = false)
             IO.Type.values().map { type -> type typed "$type" }.sendTo(guestfishIoProcessor)
             expectThat(logger).get { logged }
@@ -63,7 +63,7 @@ class GuestfishIoProcessorTest {
         inner class SkippingLines {
 
             @TestFactory
-            fun `should meta log skipped lines depending on verbosity`(logger: InMemoryLogger<ManagedProcess>) =
+            fun `should meta log skipped lines depending on verbosity`(logger: InMemoryLogger) =
                 listOf(true, false).test { verbose ->
                     val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = verbose)
                     guestfishIO.lines().map { IO.Type.META typed it }.sendTo(guestfishIoProcessor)

@@ -42,7 +42,7 @@ class CacheTest {
     }
 
     @Test
-    fun `should provide a retrieved copy`(logger: InMemoryLogger<*>) {
+    fun `should provide a retrieved copy`(logger: InMemoryLogger) {
         val cache = Cache(tempDir.tempDir())
 
         val copy = cache.provideCopy("my-copy", logger = logger) {
@@ -55,7 +55,7 @@ class CacheTest {
     }
 
     @Test
-    fun `should only retrieve copy once`(logger: InMemoryLogger<*>) {
+    fun `should only retrieve copy once`(logger: InMemoryLogger) {
         val cache = Cache(tempDir.tempDir())
         var providerCalls = 0
         val provider by spyable(FunnyImgZip::copyToTemp) { providerCalls++ }

@@ -10,7 +10,7 @@ import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
 import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.time.Now
-import com.imgcstmzr.runtime.log.MutedBlockRenderingLogger
+import com.imgcstmzr.runtime.log.MutedRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.singleLineLogger
 import com.imgcstmzr.runtime.log.subLogger
@@ -32,7 +32,7 @@ import kotlin.time.seconds
 class NonBlockingReader(
     inputStream: InputStream,
     private val timeout: Duration = 6.seconds,
-    private val logger: RenderingLogger<*> = MutedBlockRenderingLogger<Any>("NonBlockingReader"),
+    private val logger: RenderingLogger = MutedRenderingLogger(),
     private val blockOnEmptyLine: Boolean = false,
 ) : BufferedReader(Reader.nullReader()) {
     init {
@@ -118,7 +118,7 @@ class NonBlockingReader(
      * for the next attempt. The unfinished line will be completed until a line separator
      * or EOF was encountered.
      */
-    fun forEachLine(block: (String) -> Unit): String? = logger.singleLineLogger(NonBlockingReader::class.simpleName + "." + ::forEachLine.name + "()") {
+    fun forEachLine(block: (String) -> Unit): String = logger.singleLineLogger(NonBlockingReader::class.simpleName + "." + ::forEachLine.name + "()") {
         var lineCount = 0
         while (true) {
             val readLine: String? = readLine()

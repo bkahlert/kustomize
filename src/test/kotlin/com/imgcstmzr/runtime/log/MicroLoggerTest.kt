@@ -14,8 +14,8 @@ import strikt.api.expectThat
 class MicroLoggerTest {
 
     @Test
-    fun `should micro log`(logger: InMemoryLogger<Any>) {
-        logger.subLogger<Any?>("segment") {
+    fun `should micro log`(logger: InMemoryLogger) {
+        logger.subLogger("segment") {
             logLine { "@" }
             microLog<Any?> {
                 logStatus { IO.Type.OUT typed "ABC" }
@@ -29,7 +29,7 @@ class MicroLoggerTest {
                 logLine { "123" }
             }
             logLine { "@" }
-            singleLineLogger<Any?>("single") {
+            singleLineLogger("single") {
                 microLog<Any?> {
                     logStatus { IO.Type.OUT typed "ABC" }
                     logLine { "" }

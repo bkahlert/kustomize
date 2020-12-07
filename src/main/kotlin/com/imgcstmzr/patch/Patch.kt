@@ -106,8 +106,8 @@ fun Patch.banner() { // TODO make use of it or delete
     echo("")
 }
 
-fun Patch.patch(osImage: OperatingSystemImage, logger: RenderingLogger<*>? = null) {
-    logger.subLogger<Any>(name.toUpperCase(), null, borderedOutput = false) {
+fun Patch.patch(osImage: OperatingSystemImage, logger: RenderingLogger? = null) {
+    logger.subLogger(name.toUpperCase(), null, borderedOutput = false) {
         applyPreFileImgOperations(osImage, this@patch)
         applyCustomizationOptions(osImage, this@patch)
         applyGuestfishAndFileSystemOperations(osImage, this@patch)
@@ -116,7 +116,7 @@ fun Patch.patch(osImage: OperatingSystemImage, logger: RenderingLogger<*>? = nul
     }
 }
 
-fun RenderingLogger<*>.applyPreFileImgOperations(osImage: OperatingSystemImage, patch: Patch): Any =
+fun RenderingLogger.applyPreFileImgOperations(osImage: OperatingSystemImage, patch: Patch): Any =
     if (patch.preFileImgOperations.isEmpty()) {
         logLine { META typed "IMG Operations: —" }
     } else {
@@ -127,7 +127,7 @@ fun RenderingLogger<*>.applyPreFileImgOperations(osImage: OperatingSystemImage, 
         }
     }
 
-fun RenderingLogger<*>.applyCustomizationOptions(osImage: OperatingSystemImage, patch: Patch): Any =
+fun RenderingLogger.applyCustomizationOptions(osImage: OperatingSystemImage, patch: Patch): Any =
     if (patch.customizationOptions.isEmpty()) {
         logLine { META typed "Customization Options: —" }
     } else {
@@ -143,7 +143,7 @@ fun RenderingLogger<*>.applyCustomizationOptions(osImage: OperatingSystemImage, 
         }
     }
 
-fun RenderingLogger<*>.applyGuestfishAndFileSystemOperations(osImage: OperatingSystemImage, patch: Patch): Any =
+fun RenderingLogger.applyGuestfishAndFileSystemOperations(osImage: OperatingSystemImage, patch: Patch): Any =
     if (patch.guestfishOperations.isEmpty() && patch.fileSystemOperations.isEmpty()) {
         logLine { META typed "File System Operations: —" }
     } else {
@@ -190,12 +190,12 @@ fun RenderingLogger<*>.applyGuestfishAndFileSystemOperations(osImage: OperatingS
         }
     }
 
-fun RenderingLogger<*>.applyPostFileImgOperations(osImage: OperatingSystemImage, patch: Patch): Any =
+fun RenderingLogger.applyPostFileImgOperations(osImage: OperatingSystemImage, patch: Patch): Any =
     if (patch.postFileImgOperations.isEmpty()) {
         logLine { META typed "IMG Operations II: —" }
         false
     } else {
-        subLogger<Any>("IMG Operations II (${patch.postFileImgOperations.size})", null, borderedOutput = false) {
+        subLogger("IMG Operations II (${patch.postFileImgOperations.size})", null, borderedOutput = false) {
             patch.postFileImgOperations.onEachIndexed { index, op ->
                 op(osImage, this)
             }
@@ -203,7 +203,7 @@ fun RenderingLogger<*>.applyPostFileImgOperations(osImage: OperatingSystemImage,
         true
     }
 
-fun RenderingLogger<*>.applyPrograms(osImage: OperatingSystemImage, patch: Patch): Any =
+fun RenderingLogger.applyPrograms(osImage: OperatingSystemImage, patch: Patch): Any =
     if (patch.programs.isEmpty()) {
         logLine { META typed "Scripts: —" }
     } else {
@@ -235,7 +235,7 @@ interface Operation<TARGET> : HasStatus {
         operator fun invoke(label: String): String = formatter(label)
     }
 
-    operator fun invoke(target: TARGET, log: RenderingLogger<Any>)
+    operator fun invoke(target: TARGET, log: RenderingLogger)
 
     val target: TARGET
 
@@ -246,8 +246,8 @@ class PathOperation(override val target: Path, val verifier: (Path) -> Any, val 
 
     override var currentStatus: Operation.Status = Ready
 
-    override operator fun invoke(target: Path, log: RenderingLogger<Any>) {
-        log.singleLineLogger<Any>(target.fileName.toString()) {
+    override operator fun invoke(target: Path, log: RenderingLogger) {
+        log.singleLineLogger(target.fileName.toString()) {
             logLine { OUT typed ANSI.termColors.yellow("Action needed? ...") }
             val result = runCatching { verifier.invoke(target) }
             if (result.isFailure) {

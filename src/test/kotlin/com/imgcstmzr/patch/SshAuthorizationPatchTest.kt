@@ -36,7 +36,7 @@ class SshAuthorizationPatchTest {
     // TODO test just correct commands
 
     @FiveMinutesTimeout @E2E @Test
-    fun `should clean all files`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    fun `should clean all files`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger) {
         val sshkey = "123"
 
         val patch = SshAuthorizationPatch("pi", listOf(sshkey))
@@ -52,7 +52,7 @@ class SshAuthorizationPatchTest {
     }
 
     @Test
-    fun `should finish if files are missing`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+    fun `should finish if files are missing`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger) {
         val root = prepareSharedDirectory().apply {
             resolve("etc").delete(true)
         }
@@ -65,7 +65,7 @@ class SshAuthorizationPatchTest {
     }
 
     @Test
-    fun `should not touch other files`(logger: InMemoryLogger<Any>) {
+    fun `should not touch other files`(logger: InMemoryLogger) {
         val root = prepareSharedDirectory().apply { resolve("dont-touch-me").writeText("pi\npi\n") }
         val patch = UsernamePatch("pi", "ella")
 
@@ -77,7 +77,7 @@ class SshAuthorizationPatchTest {
     }
 
     @Test
-    fun `should not pull a single word apart`(logger: InMemoryLogger<Any>) {
+    fun `should not pull a single word apart`(logger: InMemoryLogger) {
         val root = prepareSharedDirectory()
         val patch = UsernamePatch("pi", "ella")
 
@@ -95,7 +95,7 @@ class SshAuthorizationPatchTest {
     }
 //
 //    @FifteenMinutesTimeout @E2E @Test
-//    fun `should log in with updated username`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger<Any>) {
+//    fun `should log in with updated username`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger) {
 //        val newUsername = "ella".also { check(it != osImage.defaultCredentials.username) { "$it is already the default username." } }
 //        val patch = UsernamePatch(osImage.defaultCredentials.username, newUsername)
 //
@@ -109,11 +109,11 @@ class SshAuthorizationPatchTest {
 //    }
 }
 
-fun <T : InMemoryLogger<*>> DescribeableBuilder<T>.logged(vararg texts: String): Assertion.Builder<String> =
+fun <T : InMemoryLogger> DescribeableBuilder<T>.logged(vararg texts: String): Assertion.Builder<String> =
     unformattedLog.compose("contains text %s") { completeLog ->
         texts.forEach { text -> contains(text) }
     }.then { if (allPassed) pass() else fail() }
 
-val <T : InMemoryLogger<*>> DescribeableBuilder<T>.unformattedLog
+val <T : InMemoryLogger> DescribeableBuilder<T>.unformattedLog
     get() = get("unformatted log %d") { logged }
 
