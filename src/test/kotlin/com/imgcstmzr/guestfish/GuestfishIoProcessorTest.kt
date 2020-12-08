@@ -3,6 +3,7 @@ package com.imgcstmzr.guestfish
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.concurrent.process.ManagedProcess
+import com.bkahlert.koodies.concurrent.process.Noop
 import com.bkahlert.koodies.string.LineSeparators.lines
 import com.bkahlert.koodies.test.junit.test
 import com.imgcstmzr.util.MiscFixture
@@ -76,7 +77,7 @@ class GuestfishIoProcessorTest {
     }
 
     private fun List<IO>.sendTo(guestfishIoProcessor: (ManagedProcess, IO) -> Unit) {
-        forEach { io -> guestfishIoProcessor.invoke(null as ManagedProcess, io) }
+        forEach { io -> guestfishIoProcessor.invoke(ManagedProcess.Noop, io) }
     }
 }
 

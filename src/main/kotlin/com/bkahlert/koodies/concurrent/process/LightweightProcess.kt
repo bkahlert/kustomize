@@ -18,4 +18,8 @@ open class LightweightProcess(
 
     override val onExit: CompletableFuture<Process>
         get() = javaProcess.onExit().thenApply { this }
+
+    init {
+        waitForTermination()
+    }
 }

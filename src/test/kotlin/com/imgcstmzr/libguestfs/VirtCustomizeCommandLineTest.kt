@@ -21,7 +21,7 @@ class VirtCustomizeCommandLineTest {
     fun `should break even arguments by default`() {
         expectThat(createVirtCustomizeCommand().toString()).isEqualTo("""
             virt-customize \
-            -a \
+            --add \
             my/disk.img \
             --verbose \
             -x \
@@ -68,9 +68,9 @@ class VirtCustomizeCommandLineTest {
             --root-password \
             disabled \
             --ssh-inject \
-            file-user:file:file/key \
+            "file-user:file:\"file/key\"" \
             --ssh-inject \
-            string-user:string:string-key \
+            "string-user:string:\"string-key\"" \
             --timezone \
             Europe/Berlin \
             --touch \

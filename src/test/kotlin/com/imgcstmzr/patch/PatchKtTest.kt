@@ -62,6 +62,7 @@ class PatchKtTest {
             expectThat(capturedOutput.out.trim().removeEscapeSequences()).matchesCurlyPattern("""
             Started: NO-OP PATCH
              IMG Operations: —
+             Customization Options: —
              File System Operations: —
              IMG Operations II: —
              Scripts: —
@@ -91,6 +92,7 @@ class PatchKtTest {
         Started: not-bordered
          Started: NO-OP PATCH
           IMG Operations: —
+          Customization Options: —
           File System Operations: —
           IMG Operations II: —
           Scripts: —

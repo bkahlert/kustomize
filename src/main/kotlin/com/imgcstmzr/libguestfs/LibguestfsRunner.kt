@@ -21,6 +21,11 @@ import com.imgcstmzr.runtime.log.subLogger
 import java.nio.file.Path
 import kotlin.io.path.isReadable
 
+/**
+ * Libguestfs integration
+ *
+ * @see <a href="https://libguestfs.org/">libguestfs—tools for accessing and modifying virtual machine disk images</a>
+ */
 fun libguestfs(init: VirtCustomizeCommandLine.OptionsBuilder.() -> Unit) = com.imgcstmzr.libguestfs.VirtCustomizeCommandLine(init)
 
 class LibguestfsProcess(

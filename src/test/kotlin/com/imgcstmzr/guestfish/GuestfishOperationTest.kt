@@ -17,6 +17,6 @@ class GuestfishOperationTest {
             "- copy-out /boot/cmdline.txt /shared/guestfish.shared/boot",
             "!mkdir -p /shared/guestfish.shared/non",
             "- copy-out /non/existing.txt /shared/guestfish.shared/non",
-        )).summary).matchesCurlyPattern("◀◀ ls…lisa  ◀ mkdir…work  ◀ …  ◀ copy…boot")
+        )).summary).matchesCurlyPattern("◀◀ ls…lisa  ◀ mkdir…shared  ◀ …  ◀ copy…boot")
     }
 }

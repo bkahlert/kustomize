@@ -20,7 +20,7 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import java.net.URI
 import java.nio.file.Path
-import java.util.concurrent.ExecutionException
+import java.util.concurrent.CompletionException
 
 @Execution(CONCURRENT)
 class DownloaderTest {
@@ -65,6 +65,6 @@ class DownloaderTest {
     @Test
     fun `should throw on error`(logger: InMemoryLogger) {
         expectCatching { downloader.download("#+ü protocol--------/uploads/2017/10/file_example_JPG_100kB.jpg", logger) }
-            .isFailure().isA<ExecutionException>()
+            .isFailure().isA<CompletionException>()
     }
 }

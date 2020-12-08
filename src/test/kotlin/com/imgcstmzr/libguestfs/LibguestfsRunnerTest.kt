@@ -29,6 +29,7 @@ class LibguestfsRunnerTest {
             virt-customize \
             --name \
             libguestfs \
+            --rm \
             -i \
             --mount \
             type=bind,source={}/shared,target=/shared \

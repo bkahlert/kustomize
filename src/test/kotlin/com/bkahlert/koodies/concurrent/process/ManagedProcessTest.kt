@@ -3,6 +3,7 @@ package com.bkahlert.koodies.concurrent.process
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
 import com.bkahlert.koodies.exception.rootCause
 import com.bkahlert.koodies.exception.rootCauseMessage
+import com.bkahlert.koodies.nio.file.Paths
 import com.bkahlert.koodies.shell.ShellScript
 import com.bkahlert.koodies.string.lines
 import com.bkahlert.koodies.test.junit.Slow
@@ -317,6 +318,15 @@ class ManagedProcessTest {
     }
 }
 
+object NoopManagedProcess : ManagedProcess(
+    CommandLine(""), Paths.Temp, emptyMap(), 0, {}, false
+) {
+    init {
+        start()
+    }
+}
+
+val ManagedProcess.Companion.Noop: NoopManagedProcess get() = NoopManagedProcess
 
 fun createLoopingScript() = ShellScript {
     !"""

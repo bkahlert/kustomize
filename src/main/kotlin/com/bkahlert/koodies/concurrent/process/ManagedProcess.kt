@@ -43,6 +43,7 @@ open class ManagedProcess(
     protected val processTerminationCallback: (() -> Unit)? = {},
     protected val destroyOnShutdown: Boolean = true,
 ) : ProcessDelegate() {
+    companion object;
 
     /**
      * Explicitly starts this process in case no other stimulus
