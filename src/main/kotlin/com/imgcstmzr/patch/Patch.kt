@@ -24,9 +24,10 @@ import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.Program
 import com.imgcstmzr.runtime.execute
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.singleLineLogger
-import com.imgcstmzr.runtime.log.subLogger
+import com.imgcstmzr.runtime.log.logging
+import com.imgcstmzr.runtime.log.singleLineLogging
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.isFile
 import com.imgcstmzr.util.listFilesRecursively
@@ -107,7 +108,7 @@ fun Patch.banner() { // TODO make use of it or delete
 }
 
 fun Patch.patch(osImage: OperatingSystemImage, logger: RenderingLogger? = null) {
-    logger.subLogger(name.toUpperCase(), null, borderedOutput = false) {
+    logger.logging(name.toUpperCase(), null, borderedOutput = false) {
         applyPreFileImgOperations(osImage, this@patch)
         applyCustomizationOptions(osImage, this@patch)
         applyGuestfishAndFileSystemOperations(osImage, this@patch)
@@ -120,8 +121,8 @@ fun RenderingLogger.applyPreFileImgOperations(osImage: OperatingSystemImage, pat
     if (patch.preFileImgOperations.isEmpty()) {
         logLine { META typed "IMG Operations: —" }
     } else {
-        subLogger("IMG Operations (${patch.preFileImgOperations.size})", null, borderedOutput = false) {
-            patch.preFileImgOperations.onEachIndexed { index, op ->
+        logging("IMG Operations (${patch.preFileImgOperations.size})", null, borderedOutput = false) {
+            patch.preFileImgOperations.onEachIndexed { _, op ->
                 op(osImage, this)
             }
         }
@@ -131,8 +132,8 @@ fun RenderingLogger.applyCustomizationOptions(osImage: OperatingSystemImage, pat
     if (patch.customizationOptions.isEmpty()) {
         logLine { META typed "Customization Options: —" }
     } else {
-        subLogger("Customization Options (${patch.customizationOptions.size})", null, borderedOutput = false) {
-            val command = VirtCustomizeCommandLine {
+        logging("Customization Options (${patch.customizationOptions.size})", null, borderedOutput = false) {
+            val execute: Int = VirtCustomizeCommandLine {
                 colors { on }
 //                verbose { on }
                 trace { on }
@@ -147,7 +148,7 @@ fun RenderingLogger.applyGuestfishAndFileSystemOperations(osImage: OperatingSyst
     if (patch.guestfishOperations.isEmpty() && patch.fileSystemOperations.isEmpty()) {
         logLine { META typed "File System Operations: —" }
     } else {
-        subLogger("File System Operations (${patch.guestfishOperations.size + patch.fileSystemOperations.size})", null) {
+        logging("File System Operations (${patch.guestfishOperations.size + patch.fileSystemOperations.size})", null) {
             logLine { META typed "Starting Guestfish VM..." }
             val guestfish = Guestfish(osImage, this, DockerContainerName(patch.name + "." + String.random(16)))
 
@@ -195,7 +196,7 @@ fun RenderingLogger.applyPostFileImgOperations(osImage: OperatingSystemImage, pa
         logLine { META typed "IMG Operations II: —" }
         false
     } else {
-        subLogger("IMG Operations II (${patch.postFileImgOperations.size})", null, borderedOutput = false) {
+        logging("IMG Operations II (${patch.postFileImgOperations.size})", null, borderedOutput = false) {
             patch.postFileImgOperations.onEachIndexed { index, op ->
                 op(osImage, this)
             }
@@ -207,7 +208,7 @@ fun RenderingLogger.applyPrograms(osImage: OperatingSystemImage, patch: Patch): 
     if (patch.programs.isEmpty()) {
         logLine { META typed "Scripts: —" }
     } else {
-        subLogger("Scripts (${patch.programs.size})", null) {
+        logging("Scripts (${patch.programs.size})", null) {
             patch.programs.onEach { program ->
                 osImage.execute(
                     name = program.name,
@@ -235,7 +236,7 @@ interface Operation<TARGET> : HasStatus {
         operator fun invoke(label: String): String = formatter(label)
     }
 
-    operator fun invoke(target: TARGET, log: RenderingLogger)
+    operator fun invoke(target: TARGET, log: BlockRenderingLogger)
 
     val target: TARGET
 
@@ -246,8 +247,8 @@ class PathOperation(override val target: Path, val verifier: (Path) -> Any, val 
 
     override var currentStatus: Operation.Status = Ready
 
-    override operator fun invoke(target: Path, log: RenderingLogger) {
-        log.singleLineLogger(target.fileName.toString()) {
+    override operator fun invoke(target: Path, log: BlockRenderingLogger) {
+        log.singleLineLogging(target.fileName.toString()) {
             logLine { OUT typed ANSI.termColors.yellow("Action needed? ...") }
             val result = runCatching { verifier.invoke(target) }
             if (result.isFailure) {

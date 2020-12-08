@@ -21,8 +21,8 @@ import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.fileLogger
-import com.imgcstmzr.runtime.log.subLogger
+import com.imgcstmzr.runtime.log.fileLogging
+import com.imgcstmzr.runtime.log.logging
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.moveTo
@@ -119,8 +119,8 @@ class Guestfish(
                     imgPathOnHost.credentials = credentials
                 }
         }
-        if (debug) logger.subLogger(caption = caption, ansiCode = null, block = block)
-        else logger.fileLogger(path = imgPathOnHost.newLogFilePath(), caption = caption, block = block)
+        if (debug) logger.logging(caption = caption, ansiCode = null, block = block)
+        else logger.fileLogging(path = imgPathOnHost.newLogFilePath(), caption = caption, block = block)
     }
 
     fun copyOut(guestPathAsString: String): Path {
@@ -211,7 +211,7 @@ class Guestfish(
             options: List<String> = emptyList(),
             commands: GuestfishOperation,
             logger: RenderingLogger,
-        ): Process = logger.subLogger("Running ${commands.commandCount} guestfish operations... ${Kaomojis.fishing()}") {
+        ): Process = logger.logging("Running ${commands.commandCount} guestfish operations... ${Kaomojis.fishing()}") {
             DockerProcess(IMAGE.buildRunCommand {
                 redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
                 options {
@@ -229,7 +229,7 @@ class Guestfish(
                         shutdownOperation.commands.forEach { +it }
                     }
                 }
-            }).process(GuestfishIoProcessor(this@subLogger, verbose = false))
+            }).process(GuestfishIoProcessor(this@logging, verbose = false))
         }
     }
 }

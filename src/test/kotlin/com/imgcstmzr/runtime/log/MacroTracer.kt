@@ -23,7 +23,7 @@ class RenderingLoggerBasedMacroTracer(private val logger: RenderingLogger) : Mac
 }
 
 inline fun <reified mR> RenderingLogger?._segment(f: String, crossinline block: MacroTracer.() -> mR): mR =
-    subLogger(f, null, false) { RenderingLoggerBasedMacroTracer(this).run(block) }
+    logging(f, null, false) { RenderingLoggerBasedMacroTracer(this).run(block) }
 
 inline fun <reified mR> RenderingLogger?.macroTrace(f: String, crossinline block: MacroTracer?.() -> mR): mR = _segment(f.format(), block)
 inline fun <reified mR> RenderingLogger?.macroTrace(f: KCallable<mR>, crossinline block: MacroTracer?.() -> mR): mR = _segment(f.format(), block)

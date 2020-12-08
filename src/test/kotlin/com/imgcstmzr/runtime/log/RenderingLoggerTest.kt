@@ -1,20 +1,15 @@
 package com.imgcstmzr.runtime.log
 
-import com.bkahlert.koodies.builder.ListBuilder
 import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
-import com.bkahlert.koodies.docker.DockerImage
-import com.bkahlert.koodies.docker.DockerRepository
-import com.bkahlert.koodies.docker.DockerRunCommandLineBuilder.Companion.buildRunCommand
-import com.bkahlert.koodies.docker.MountOption
-import com.bkahlert.koodies.docker.OptionsBuilder
 import com.bkahlert.koodies.nio.file.readLines
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.string.Unicode
 import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
+import com.imgcstmzr.patch.unformattedLog
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.containsAtMost
@@ -33,7 +28,9 @@ import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.endsWith
 import strikt.assertions.first
+import strikt.assertions.isA
 import strikt.assertions.isEqualTo
+import strikt.assertions.isFailure
 import strikt.assertions.isSuccess
 
 @Execution(CONCURRENT)
@@ -61,7 +58,7 @@ class RenderingLoggerTest {
     @Test
     fun `should allow single line logging`(@Columns(100) logger: InMemoryLogger) {
         logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
-        logger.singleLineLogger("mini") {
+        logger.singleLineLogging("mini") {
             logLine { OUT typed "A" }
 //            logException { RuntimeException("exception message") }
             logStatus { OUT typed "bb" }
@@ -88,7 +85,7 @@ class RenderingLoggerTest {
     fun `should allow nested logging`(@Columns(100) logger: InMemoryLogger) {
         logger.logStatus { OUT typed "outer 1" }
         logger.logStatus { OUT typed "outer 2" }
-        logger.subLogger("nested log", null) {
+        logger.logging("nested log", null) {
             logStatus { OUT typed "nested 1" }
             logStatus { OUT typed "nested 2" }
             logStatus { OUT typed "nested 3" }
@@ -178,15 +175,15 @@ class RenderingLoggerTest {
             dynamicTest("should allow complex layout—$label") {
                 logger.logStatus { OUT typed "outer 1" }
                 logger.logLine { "outer 2" }
-                logger.subLogger("nested log") {
+                logger.logging("nested log") {
                     logStatus { OUT typed "nested 1" }
-                    singleLineLogger("mini segment") {
+                    singleLineLogging("mini segment") {
                         logStatus { ERR typed "12345" }
                         logStatus { META typed "sample" }
                     }
-                    subLogger("nested log") {
+                    logging("nested log") {
                         logStatus { OUT typed "nested 1" }
-                        singleLineLogger("mini segment") {
+                        singleLineLogging("mini segment") {
                             logStatus { ERR typed "12345" }
                             logStatus { META typed "sample" }
                         }
@@ -219,10 +216,11 @@ class RenderingLoggerTest {
                 """.trimIndent())
     }
 
+    @Suppress("LongLine")
     @Test
     fun `should log status in same column`(@Columns(100) logger: InMemoryLogger) {
         logger.logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
-        logger.subLogger("nested", null) {
+        logger.logging("nested", null) {
             logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         }
         logger.logResult { Result.success(Unit) }
@@ -239,7 +237,7 @@ class RenderingLoggerTest {
         kotlin.runCatching {
             logger.logStatus { OUT typed "outer 1" }
             logger.logStatus { OUT typed "outer 2" }
-            logger.subLogger<Any>("nested log", null) {
+            logger.logging<Any>("nested log", null) {
                 logStatus { OUT typed "nested 1" }
                 throw IllegalStateException("an exception")
             }
@@ -276,7 +274,7 @@ class RenderingLoggerTest {
     @Test
     fun `should simply log multiple calls to logResult`(@Columns(100) logger: InMemoryLogger) {
         expectCatching {
-            logger.singleLineLogger("close twice") {
+            logger.singleLineLogging("close twice") {
                 logStatus { META typed "line" }
                 logResult { Result.success(1) }
                 logResult { Result.success(2) }
@@ -337,7 +335,7 @@ class RenderingLoggerTest {
         logger.logLine { "｀、ヽ｀ヽ｀、ヽ(ノ＞＜)ノ ｀、ヽ｀☂ヽ｀、ヽ" }
         logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         val file = tempDir.tempFile("file-log", ".log")
-        logger.fileLogger(file, "Some logging heavy operation") {
+        logger.fileLogging(file, "Some logging heavy operation") {
             logLine { "line" }
             logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
             logException { RuntimeException("just a test") }
@@ -374,59 +372,40 @@ class RenderingLoggerTest {
         }
     }
 
-    fun calc(arg: String): Int {
-        return arg.toInt()
-    }
-
+    @Suppress("UNREACHABLE_CODE")
     @Test
     fun `should show full exception only on outermost logger`() {
-
-        val logger = InMemoryLogger(caption = "level 0", borderedOutput = true, statusInformationColumn = -1, outputStreams = emptyList())
-
-
-        fun calc(arg: String): Int = logging {
-            arg.toInt()
-        }
-
-        fun calc2(arg: String): Int = logging {
-            arg.toInt()
-        }
-
-        val x: String = logging {
-            val calc2: Int = calc2("2")
-            calc2.toString()
-        }
-
-        logger.subLogger("level 1") {
-            "dd"
-
-            4
-        }
-
-        DockerImage.image(DockerRepository.of("")).buildRunCommand {
-            options {
-                testExtension()
-                mounts {
-                    test2Extension()
+        val logger = InMemoryLogger("root", false, -1, emptyList())
+        expect {
+            catching {
+                logger.logging("level 0") {
+                    logLine { "doing stuff" }
+                    logging("level 1") {
+                        logLine { "doing stuff" }
+                        logging("level 2") {
+                            logLine { "doing stuff" }
+                            throw RuntimeException("something happened\nsomething happened #2\nsomething happened #3")
+                            logStatus { OUT typed "doing stuff" }
+                            2
+                        }
+                        logLine { "doing stuff" }
+                    }
+                    logLine { "doing stuff" }
                 }
-            }
+            }.isFailure().isA<RuntimeException>()
+
+            that(logger).unformattedLog.matchesCurlyPattern("""
+                Started: root
+                 Started: level 0
+                  doing stuff
+                  Started: level 1
+                   doing stuff
+                   Started: level 2
+                    doing stuff
+                   ϟ failed with RuntimeException: something happened at.(RenderingLoggerTest.kt:{})
+                  ϟ failed with RuntimeException: something happened at.(RenderingLoggerTest.kt:{})
+                 ϟ failed with RuntimeException: something happened at.(RenderingLoggerTest.kt:{})
+            """.trimIndent())
         }
     }
 }
-
-fun zzzz(s: String): Int {
-    return 0
-}
-
-fun <T, R> T.logging(block: T.() -> R): R {
-//    return this.call(arg)
-    return null as R
-}
-
-fun (CharSequence.() -> Int).xxx() {
-    invoke("s")
-}
-
-fun OptionsBuilder.testExtension() {}
-
-fun (ListBuilder<MountOption>).test2Extension() {}

@@ -71,6 +71,7 @@ open class AnsiString private constructor(val string: String) : CharSequence {
             var read = 0
             val codes = mutableListOf<Int>()
             val sb = StringBuilder()
+
             forEach { (token, tokenLength) ->
                 val needed = endIndex - read
                 if (needed > 0 && tokenLength == 0) {
@@ -205,6 +206,7 @@ open class AnsiString private constructor(val string: String) : CharSequence {
      * Returns a sequence of strings of which each but possibly the last is of length [size].
      */
     fun chunkedSequence(size: Int): Sequence<AnsiString> {
+        check(size > 0)
         var processed = 0
         var unprocessed = length
         return generateSequence {

@@ -11,9 +11,8 @@ import com.bkahlert.koodies.nio.file.readLines
 import com.bkahlert.koodies.nio.file.sameFile
 import com.bkahlert.koodies.nio.file.serialized
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.applyLogging
-import com.imgcstmzr.runtime.log.singleLineLogger
+import com.imgcstmzr.runtime.log.singleLineLogging
 import java.nio.file.Path
 
 /**
@@ -25,14 +24,14 @@ object FixtureLog : (Path) -> Path {
     val location = sameFile("fixture.log")
 
     init {
-        val renderingLogger: RenderingLogger = BlockRenderingLogger("Fixture Leftovers Cleanup 🧻", borderedOutput = true)
+        val renderingLogger = BlockRenderingLogger("Fixture Leftovers Cleanup 🧻", borderedOutput = true)
         renderingLogger.applyLogging { delete() }
         addShutDownHook {
             BlockRenderingLogger("Fixture Leftovers Cleanup 🧻", borderedOutput = true).applyLogging { delete() }
         }
     }
 
-    fun RenderingLogger.delete(): String {
+    fun BlockRenderingLogger.delete(): String {
         val entriesPerLines = 1
         var deleted = 0
         paths()
@@ -49,7 +48,7 @@ object FixtureLog : (Path) -> Path {
             }
             .plusElement(location)
             .windowed(entriesPerLines, entriesPerLines).forEach { paths ->
-                singleLineLogger("deleting") {
+                singleLineLogging("deleting") {
                     paths.forEach {
                         logLine { "$it" }
                         kotlin.runCatching {

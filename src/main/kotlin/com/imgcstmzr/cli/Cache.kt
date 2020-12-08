@@ -11,6 +11,7 @@ import com.imgcstmzr.cli.Cache.Companion.defaultFilter
 import com.imgcstmzr.guestfish.ImageBuilder
 import com.imgcstmzr.guestfish.ImageExtractor.extractImage
 import com.imgcstmzr.patch.ini.RegexElement
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.isFile
@@ -26,7 +27,7 @@ import java.time.temporal.TemporalAccessor
 
 class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: Int = 3) : ManagedDirectory(dir) {
 
-    fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, logger: RenderingLogger, provider: () -> Path): Path =
+    fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, logger: BlockRenderingLogger, provider: () -> Path): Path =
         ProjectDirectory(dir, name, reuseLastWorkingCopy, maxConcurrentWorkingDirectories).require(logger, provider)
 
     companion object {

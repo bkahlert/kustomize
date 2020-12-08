@@ -8,7 +8,6 @@ import com.bkahlert.koodies.time.sleep
 import com.bkahlert.koodies.tracing.MiniTracer
 import com.bkahlert.koodies.tracing.trace
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.microTrace
 import com.imgcstmzr.runtime.log.miniTrace
 import com.imgcstmzr.util.debug
@@ -26,7 +25,7 @@ class ProcessMock(
     private var outputStream: OutputStream = ByteArrayOutputStream(),
     private val inputStream: InputStream = InputStream.nullInputStream(),
     private val processExit: ProcessMock.() -> ProcessExitMock,
-    var logger: RenderingLogger,
+    var logger: BlockRenderingLogger,
 ) : Process() {
 
     private val completeOutputSequence = ByteArrayOutputStream()
@@ -42,7 +41,7 @@ class ProcessMock(
             baseDelayPerInput: Duration = 1.seconds,
             echoInput: Boolean,
             processExit: ProcessMock.() -> ProcessExitMock,
-            logger: RenderingLogger,
+            logger: BlockRenderingLogger,
         ): ProcessMock {
             val outputStream = ByteArrayOutputStream()
             val slowInputStream = SlowInputStream(
@@ -116,14 +115,14 @@ class SlowInputStream(
     val baseDelayPerInput: Duration,
     val byteArrayOutputStream: ByteArrayOutputStream? = null,
     val echoInput: Boolean = false,
-    var logger: RenderingLogger?,
+    var logger: BlockRenderingLogger?,
 ) : InputStream() {
     constructor(
         vararg inputs: String,
         baseDelayPerInput: Duration,
         byteArrayOutputStream: ByteArrayOutputStream? = null,
         echoInput: Boolean = false,
-        logger: RenderingLogger?,
+        logger: BlockRenderingLogger?,
     ) : this(inputs = inputs.map { Duration.ZERO to it }.toTypedArray(), baseDelayPerInput, byteArrayOutputStream, echoInput, logger)
 
     val terminated: Boolean get() = unreadCount == 0 || !processAlive

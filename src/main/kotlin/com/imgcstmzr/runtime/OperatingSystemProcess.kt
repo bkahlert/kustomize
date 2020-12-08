@@ -25,8 +25,8 @@ import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.green
 import com.imgcstmzr.runtime.Program.Companion.compute
 import com.imgcstmzr.runtime.Program.Companion.format
-import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.subLogger
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
+import com.imgcstmzr.runtime.log.logging
 import kotlin.properties.Delegates
 import kotlin.time.Duration
 import kotlin.time.milliseconds
@@ -59,7 +59,7 @@ fun stuckCheckingProcessor(processor: OperatingSystemProcessor): OperatingSystem
 open class OperatingSystemProcess(
     name: String,
     val osImage: OperatingSystemImage,
-    val logger: RenderingLogger,
+    val logger: BlockRenderingLogger,
 ) : DockerProcess(
     commandLine = DOCKER_IMAGE.buildRunCommand {
         options {
@@ -160,17 +160,17 @@ open class OperatingSystemProcess(
  */
 fun OperatingSystemImage.execute(
     name: String = file.toUniqueContainerName().sanitized,
-    logger: RenderingLogger,
+    logger: BlockRenderingLogger,
     autoLogin: Boolean = true,
     vararg programs: Program,
-): Int = logger.subLogger("Running $shortName with ${programs.format()}", ansiCode = ANSI.termColors.cyan) {
+): Int = logger.logging("Running $shortName with ${programs.format()}", ansiCode = ANSI.termColors.cyan) {
     val unfinished: MutableList<Program> = mutableListOf(
         *(if (autoLogin) arrayOf(loginProgram(credentials)/*.logging()*/) else emptyArray()),
         *programs,
         shutdownProgram(),/*.logging()*/
     )
 
-    val operatingSystemProcess = OperatingSystemProcess(name, this@execute, this@subLogger)
+    val operatingSystemProcess = OperatingSystemProcess(name, this@execute, this@logging)
     operatingSystemProcess.process(stuckCheckingProcessor { io ->
         when (io.type) {
             META -> feedback(io.unformatted)

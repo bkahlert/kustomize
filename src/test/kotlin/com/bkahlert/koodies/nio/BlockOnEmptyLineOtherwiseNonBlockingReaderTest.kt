@@ -2,7 +2,7 @@ package com.bkahlert.koodies.nio
 
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.time.sleep
-import com.imgcstmzr.runtime.log.RenderingLogger
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertTimeoutPreemptively
@@ -18,7 +18,7 @@ import kotlin.time.toJavaDuration
 
 @Execution(CONCURRENT)
 class BlockOnEmptyLineOtherwiseNonBlockingReaderTest :
-    SharedReaderTest({ inputStream: InputStream, timeout: Duration, logger: RenderingLogger ->
+    SharedReaderTest({ inputStream: InputStream, timeout: Duration, logger: BlockRenderingLogger ->
         NonBlockingReader(inputStream = inputStream, timeout = timeout, logger = logger, blockOnEmptyLine = true)
     }) {
 

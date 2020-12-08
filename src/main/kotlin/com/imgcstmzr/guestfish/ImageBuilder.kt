@@ -20,9 +20,10 @@ import com.bkahlert.koodies.unit.Mebi
 import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.guestfish.Guestfish.Companion.DOCKER_MOUNT_ROOT
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.singleLineLogger
-import com.imgcstmzr.runtime.log.subLogger
+import com.imgcstmzr.runtime.log.logging
+import com.imgcstmzr.runtime.log.singleLineLogging
 import com.imgcstmzr.util.Paths
 import java.net.URI
 import java.nio.file.Path
@@ -49,9 +50,9 @@ object ImageBuilder {
      * Dynamically creates a raw image with two partitions containing the files
      * as specified by the [uri].
      */
-    fun buildFrom(uri: URI, logger: RenderingLogger): Path {
+    fun buildFrom(uri: URI, logger: BlockRenderingLogger): Path {
         var path: List<Pair<Path, Path>>? = null
-        logger.singleLineLogger("Initiating raw image creation from $uri") {
+        logger.singleLineLogging("Initiating raw image creation from $uri") {
 
             require(uri.scheme == schema) { "URI $uri is invalid as its scheme differs from ${schema.quoted}" }
             require(uri.host == host) { "URI $uri is invalid as its host differs from ${host.quoted}" }
@@ -73,13 +74,13 @@ object ImageBuilder {
         return prepareImg(logger, *path!!.toTypedArray())
     }
 
-    private fun prepareImg(logger: RenderingLogger, vararg paths: Pair<Path, Path>): Path =
+    private fun prepareImg(logger: BlockRenderingLogger, vararg paths: Pair<Path, Path>): Path =
         buildFrom(Paths.TEMP.resolve("imgcstmzr-" + paths.take(5).mapNotNull { it.first.fileName }.joinToString(separator = "-")).mkdirs().run {
-            logger.singleLineLogger("Copying ${paths.size} files to ${toUri()}") {
+            logger.singleLineLogging("Copying ${paths.size} files to ${toUri()}") {
                 paths.forEach { (from, to) -> from.copyToDirectory(resolve(to)) }
             }
             @Suppress("SpellCheckingInspection")
-            logger.singleLineLogger("Gzipping") { archive("tar", overwrite = true) }
+            logger.singleLineLogging("Gzipping") { archive("tar", overwrite = true) }
         }, logger, totalSize = 4.Mebi.bytes, bootSize = 2.Mebi.bytes)
 
     /**
@@ -100,7 +101,7 @@ object ImageBuilder {
         totalSize: Size = 1.Gibi.bytes,
         bootSize: Size = 128.Mebi.bytes,
         partitionTableType: PartitionTableType = PartitionTableType.MasterBootRecord,
-    ): Path = logger.subLogger(
+    ): Path = logger.logging(
         caption = "${Now.emoji} Preparing raw image using the content of ${archive.fileName}. This takes a moment...",
         ansiCode = gray,
         borderedOutput = false,

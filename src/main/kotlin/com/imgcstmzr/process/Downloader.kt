@@ -4,8 +4,8 @@ import com.bkahlert.koodies.concurrent.process.executeShellScript
 import com.bkahlert.koodies.nio.file.list
 import com.bkahlert.koodies.nio.file.tempDir
 import com.imgcstmzr.runtime.OperatingSystem
-import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.singleLineLogger
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
+import com.imgcstmzr.runtime.log.singleLineLogging
 import com.imgcstmzr.util.cleanUp
 import java.net.URI
 import java.nio.file.Path
@@ -36,16 +36,16 @@ class Downloader(vararg customHandlers: Pair<String, Handler>) {
      * Downloads an image copy containing the [OperatingSystem] and returns the [Path] where the
      * copy can be found after successful download.
      */
-    fun OperatingSystem.download(logger: RenderingLogger): Path = download(downloadUrl, logger = logger, filename = fullName)
+    fun OperatingSystem.download(logger: BlockRenderingLogger): Path = download(downloadUrl, logger = logger, filename = fullName)
 
     /**
      * Downloads the specified [url], [retries] the specified amount of times.
      *
      * Optionally a [filename] can be provided which is used for logging at places where the [url] would otherwise have been used.
      */
-    fun download(url: String, logger: RenderingLogger, retries: Int = 5, filename: String? = null): Path =
+    fun download(url: String, logger: BlockRenderingLogger, retries: Int = 5, filename: String? = null): Path =
         customHandlerMapping[url.findScheme()]?.invoke(URI.create(url), logger) ?: tempDir("imgcstmzr").let { temp ->
-            logger.singleLineLogger("Downloading ${filename ?: url} to $temp") {
+            logger.singleLineLogging("Downloading ${filename ?: url} to $temp") {
 
                 // TODO parse progress and feedback
                 executeShellScript(workingDirectory = temp) {
@@ -70,4 +70,4 @@ class Downloader(vararg customHandlers: Pair<String, Handler>) {
         }
 }
 
-typealias Handler = (URI, RenderingLogger) -> Path
+typealias Handler = (URI, BlockRenderingLogger) -> Path

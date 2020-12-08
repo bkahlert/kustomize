@@ -12,9 +12,10 @@ import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.bkahlert.koodies.unit.Size.Companion.size
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.singleLineLogger
-import com.imgcstmzr.runtime.log.subLogger
+import com.imgcstmzr.runtime.log.logging
+import com.imgcstmzr.runtime.log.singleLineLogging
 import com.imgcstmzr.util.isReadable
 import java.nio.file.Path
 import kotlin.io.path.listDirectoryEntries
@@ -55,11 +56,11 @@ class OperatingSystemImage(
 
     private val updatedCredentials: Boolean get() = credentials != defaultCredentials
 
-    fun boot(logger: RenderingLogger, vararg programs: Program): Int =
+    fun boot(logger: BlockRenderingLogger, vararg programs: Program): Int =
         execute(logger = logger, programs = programs)
 
     fun increaseDiskSpace(logger: RenderingLogger, size: Size): Any =
-        logger.subLogger("Increasing Disk Space: ${path.size} ➜ $size", null) {
+        logger.logging("Increasing Disk Space: ${path.size} ➜ $size", null) {
             var missing = size - path.size
             val bytesPerStep = 100.Mega.bytes
             val oneHundredMegaBytes = bytesPerStep.toZeroFilledByteArray()
@@ -72,7 +73,7 @@ class OperatingSystemImage(
                     logStatus { IO.Type.OUT typed "${path.fileName} is has already ${path.size}" }
                 }
                 else -> {
-                    singleLineLogger("Progress:") {
+                    singleLineLogging("Progress:") {
                         logStatus { IO.Type.OUT typed path.size.toString() }
                         while (missing > 0.bytes) {
                             val write = if (missing < bytesPerStep) missing.toZeroFilledByteArray() else oneHundredMegaBytes

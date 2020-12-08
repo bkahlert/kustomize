@@ -1,6 +1,7 @@
 package com.bkahlert.koodies.exception
 
 import com.bkahlert.koodies.concurrent.process.Process
+import com.bkahlert.koodies.string.LineSeparators.lines
 import java.nio.file.Path
 
 fun Any?.toSingleLineString(): String {
@@ -13,8 +14,10 @@ fun Any?.toSingleLineString(): String {
 
 fun Throwable?.toSingleLineString(): String {
     if (this == null) return ""
+    val messagePart = message?.let { ": " + it.lines()?.get(0) } ?: ""
     return rootCause.run {
-        this::class.simpleName + ": " + message + stackTrace?.firstOrNull()?.let { element -> " at.(${element.fileName}:${element.lineNumber})" }
+        this::class.simpleName + messagePart + stackTrace?.firstOrNull()
+            ?.let { element -> " at.(${element.fileName}:${element.lineNumber})" }
     }
 }
 

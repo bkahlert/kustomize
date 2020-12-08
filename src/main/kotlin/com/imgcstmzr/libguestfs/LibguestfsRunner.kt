@@ -16,8 +16,9 @@ import com.bkahlert.koodies.nio.file.mkdirs
 import com.bkahlert.koodies.nio.file.requireExists
 import com.bkahlert.koodies.nio.file.toPath
 import com.bkahlert.koodies.terminal.ANSI
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.subLogger
+import com.imgcstmzr.runtime.log.logging
 import java.nio.file.Path
 import kotlin.io.path.isReadable
 
@@ -35,8 +36,8 @@ class LibguestfsProcess(
 
 
 fun VirtCustomizeCommandLine.execute(
-    logger: RenderingLogger,
-): Int = logger.subLogger("Running $commandLine", ansiCode = ANSI.termColors.blue) {
+    logger: BlockRenderingLogger,
+): Int = logger.logging("Running $commandLine", ansiCode = ANSI.termColors.blue) {
 
     logLine { "Preparing shared folder" }
     options.filterIsInstance<DiskOption>().forEach { diskOption ->
@@ -46,7 +47,7 @@ fun VirtCustomizeCommandLine.execute(
         sharedDir.mkdirs()
     }
 
-    val libguestfsProcess = LibguestfsProcess(this@execute, this@subLogger)
+    val libguestfsProcess = LibguestfsProcess(this@execute, this@logging)
     libguestfsProcess.process(nonBlockingReader = false) { io ->
         when (io.type) {
             IO.Type.META -> logLine { io }

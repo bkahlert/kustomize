@@ -8,7 +8,7 @@ import com.bkahlert.koodies.string.fuzzyLevenshteinDistance
 import com.bkahlert.koodies.string.joinLinesToString
 import com.bkahlert.koodies.test.junit.Slow
 import com.imgcstmzr.runtime.SlowInputStream
-import com.imgcstmzr.runtime.log.RenderingLogger
+import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.notContainsLineSeparator
 import com.imgcstmzr.util.prefixes
@@ -32,7 +32,7 @@ import kotlin.time.seconds
 import kotlin.time.toJavaDuration
 
 @Disabled
-abstract class SharedReaderTest(val readerFactory: (InputStream, Duration, RenderingLogger) -> Reader) {
+abstract class SharedReaderTest(val readerFactory: (InputStream, Duration, BlockRenderingLogger) -> Reader) {
 
     @Slow
     @RepeatedTest(3)

@@ -26,7 +26,7 @@ class MicroTracerKtTest {
         expectThat(logger.logged).matchesCurlyPattern("""
             ╭─────╴{}
             │   
-            ├─╴ segment: @ (🤠 a ˃  ˃ b c) @ {}
+            │   segment: @ (🤠 a ˃  ˃ b c) @ {}
         """.trimIndent())
     }
 }

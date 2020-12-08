@@ -295,7 +295,7 @@ fun <T : CharSequence> Assertion.Builder<T>.isMultiline() =
 fun <T : CharSequence> Assertion.Builder<T>.isSingleLine() =
     assert("is single line") {
         if (!it.isMultiline) pass()
-        else fail()
+        else fail("has ${it.lines().size} lines")
     }
 
 fun <T : CharSequence> Assertion.Builder<T>.lines(

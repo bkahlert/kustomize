@@ -37,8 +37,8 @@ class InMemoryLoggerResolver : ParameterResolver, AfterEachCallback {
             statusInformationColumn = parameterContext.findAnnotation(Columns::class.java).map { it.value }.orElse(-1),
             outputStreams = if (isVerbose || parameterContext.isVerbose) listOf(System.out) else emptyList(),
         ) {
-            private var resultLogged = false
             override fun <R> logResult(block: () -> Result<R>): R {
+                @Suppress("UNCHECKED_CAST")
                 return if (!resultLogged) {
                     super.logResult(block).also { resultLogged = true }
                 } else Unit as R

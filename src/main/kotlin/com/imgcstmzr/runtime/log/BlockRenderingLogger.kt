@@ -31,6 +31,12 @@ open class BlockRenderingLogger(
     },
 ) : RenderingLogger {
 
+    init {
+        check(statusInformationColumn > 0)
+        check(statusInformationPadding > 0)
+        check(statusInformationColumns > 0)
+    }
+
     val totalColumns = statusInformationColumn + statusInformationPadding + statusInformationColumns
 
     final override fun render(trailingNewline: Boolean, block: () -> CharSequence): Unit = block().let { message: CharSequence ->
@@ -87,6 +93,8 @@ open class BlockRenderingLogger(
         render(true) { IO.Type.ERR.format(it.stackTraceToString()).prefixLinesWith(ignoreTrailingSeparator = false, prefix) }
     }
 
+    var resultLogged = false
+
     override fun <R> logResult(block: () -> Result<R>): R {
         val result = block()
         render(true) {
@@ -94,4 +102,12 @@ open class BlockRenderingLogger(
         }
         return result.getOrThrow()
     }
+
+    override fun toString(): String =
+        if (!resultLogged)
+            "╷".let { vline ->
+                vline +
+                    LF + vline + IO.Type.META.format(" no result logged yet") +
+                    LF + vline
+            } else IO.Type.META.format("❕ result already logged")
 }

@@ -115,5 +115,5 @@ fun <T : InMemoryLogger> DescribeableBuilder<T>.logged(vararg texts: String): As
     }.then { if (allPassed) pass() else fail() }
 
 val <T : InMemoryLogger> DescribeableBuilder<T>.unformattedLog
-    get() = get("unformatted log %d") { logged }
+    get() = get("unformatted log %s") { logged }
 
