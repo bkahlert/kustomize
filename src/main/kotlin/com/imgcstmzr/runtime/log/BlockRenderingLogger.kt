@@ -7,7 +7,6 @@ import com.bkahlert.koodies.string.TruncationStrategy.MIDDLE
 import com.bkahlert.koodies.string.addColumn
 import com.bkahlert.koodies.string.mapLines
 import com.bkahlert.koodies.string.prefixLinesWith
-import com.bkahlert.koodies.string.prefixWith
 import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.string.truncate
 import com.bkahlert.koodies.string.wrapLines
@@ -16,7 +15,6 @@ import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequenc
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.asAnsiString
 import com.github.ajalt.clikt.output.TermUi
-import com.github.ajalt.mordant.AnsiCode
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.HasStatus.Companion.status
 import com.imgcstmzr.runtime.log.RenderingLogger.Companion.formatException
@@ -34,8 +32,6 @@ open class BlockRenderingLogger(
 ) : RenderingLogger {
 
     val totalColumns = statusInformationColumn + statusInformationPadding + statusInformationColumns
-
-    override val nestingPrefix: String get() = if (borderedOutput) "├─╴ " else " :"
 
     final override fun render(trailingNewline: Boolean, block: () -> CharSequence): Unit = block().let { message: CharSequence ->
         val finalMessage: String = "$message" + if (trailingNewline) "\n" else ""
@@ -64,9 +60,12 @@ open class BlockRenderingLogger(
         render(true) { blockStart }
     }
 
-    override fun logException(block: () -> Throwable): Unit = block().let {
-        render(true) { IO.Type.ERR.format(it.stackTraceToString()).prefixLinesWith(ignoreTrailingSeparator = false, prefix) }
+    override fun logText(block: () -> CharSequence): Unit = block().let {
+        render(false) {
+            it.asAnsiString().wrapLines(totalColumns).prefixLinesWith(ignoreTrailingSeparator = true, prefix = prefix)
+        }
     }
+
 
     override fun logLine(block: () -> CharSequence): Unit = block().let {
         render(true) {
@@ -84,6 +83,10 @@ open class BlockRenderingLogger(
         }
     }
 
+    override fun logException(block: () -> Throwable): Unit = block().let {
+        render(true) { IO.Type.ERR.format(it.stackTraceToString()).prefixLinesWith(ignoreTrailingSeparator = false, prefix) }
+    }
+
     override fun <R> logResult(block: () -> Result<R>): R {
         val result = block()
         render(true) {
@@ -91,37 +94,4 @@ open class BlockRenderingLogger(
         }
         return result.getOrThrow()
     }
-}
-
-@Deprecated("replaced by subLogger", ReplaceWith("subLogger"))
-inline fun <R> BlockRenderingLogger?.segment(
-    caption: CharSequence,
-    ansiCode: AnsiCode? = ANSI.termColors.magenta,
-    borderedOutput: Boolean = this?.borderedOutput ?: false,
-    block: BlockRenderingLogger.() -> R,
-): R {
-    val logger: BlockRenderingLogger =
-        when {
-            this == null -> BlockRenderingLogger(
-                caption = caption,
-                borderedOutput = borderedOutput,
-            )
-            this is MutedRenderingLogger -> this
-            else -> {
-                BlockRenderingLogger(
-                    caption = caption,
-                    borderedOutput = borderedOutput,
-                ) { output ->
-                    val indentedOutput = output.asAnsiString().mapLines { line ->
-                        val truncateBy = line.replaceFirst("\\s{3}".toRegex(), "").let { ansiCode?.invoke(it) ?: it }
-                        truncateBy.prefixWith(prefix)
-                    }
-                    logText { indentedOutput }
-                }
-            }
-        }
-
-    val result: Result<R> = kotlin.runCatching { block(logger) }
-    logger.logResult { result }
-    return result.getOrThrow()
 }

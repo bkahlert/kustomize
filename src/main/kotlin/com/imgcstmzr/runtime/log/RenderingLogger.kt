@@ -9,15 +9,10 @@ import com.bkahlert.koodies.string.Unicode
 import com.bkahlert.koodies.string.Unicode.Emojis.heavyBallotX
 import com.bkahlert.koodies.string.Unicode.Emojis.heavyCheckMark
 import com.bkahlert.koodies.string.Unicode.greekSmallLetterKoppa
-import com.bkahlert.koodies.string.mapLines
-import com.bkahlert.koodies.string.prefixWith
-import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
-import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.italic
-import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.asAnsiString
 import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.mordant.AnsiCode
 import com.imgcstmzr.runtime.HasStatus
@@ -33,11 +28,6 @@ import kotlin.contracts.contract
  * but render log messages to provide easier understandable feedback.
  */
 interface RenderingLogger {
-
-    /**
-     * Prefix used to signify a nested logger.
-     */
-    val nestingPrefix: String get() = " :"
 
     /**
      * Method that is responsible to render what gets logged.
@@ -152,30 +142,34 @@ inline fun <reified R> RenderingLogger.runLogging(crossinline block: RenderingLo
 inline fun <reified R> RenderingLogger?.subLogger(
     caption: CharSequence,
     ansiCode: AnsiCode? = null,
-    borderedOutput: Boolean = (this as? BlockRenderingLogger)?.borderedOutput ?: false,
+    borderedOutput: Boolean = false,
     block: RenderingLogger.() -> R,
 ): R {
-    val logger: RenderingLogger =
-        when {
-            this == null -> BlockRenderingLogger(
-                caption = caption,
-                borderedOutput = borderedOutput,
-            )
-            this is MutedRenderingLogger -> MutedRenderingLogger()
-            else -> ((this as? BlockRenderingLogger)?.prefix ?: "$this::").let { prefix ->
-                BlockRenderingLogger(
-                    caption = caption,
-                    borderedOutput = borderedOutput,
-                ) { output ->
-                    val indentedOutput = output.asAnsiString().mapLines {
-                        val prefixLength = "5"
-                        val truncateBy = ansiCode.invoke(it.replaceFirst(("\\s{$prefixLength}").toRegex(), ' '.repeat(5 - prefix.length)))
-                        truncateBy.prefixWith(prefix)
-                    }
-                    logText { indentedOutput }
-                }
-            }
-        }
+    val logger: RenderingLogger = when (this) {
+        is BlockRenderingLogger -> return subLogger(caption, ansiCode, block = block)
+        null -> BlockRenderingLogger(caption = caption, borderedOutput = borderedOutput)
+        else -> BlockRenderingLogger(caption = caption, borderedOutput = borderedOutput) { output -> logLine { ansiCode.invoke(output) } }
+    }
+    val result: Result<R> = kotlin.runCatching { block(logger) }
+    logger.logResult { result }
+    return result.getOrThrow()
+}
+
+fun MutedRenderingLogger.subLogger() = this
+
+inline fun <reified R> BlockRenderingLogger.subLogger(
+    caption: CharSequence,
+    ansiCode: AnsiCode? = null,
+    borderedOutput: Boolean = this.borderedOutput,
+    block: RenderingLogger.() -> R,
+): R {
+    val logger = BlockRenderingLogger(
+        caption = caption,
+        borderedOutput = borderedOutput,
+        statusInformationColumn = statusInformationColumn - prefix.length,
+        statusInformationPadding = statusInformationPadding,
+        statusInformationColumns = statusInformationColumns,
+    ) { output -> logText { ansiCode.invoke(output) } }
     val result: Result<R> = kotlin.runCatching { block(logger) }
     logger.logResult { result }
     return result.getOrThrow()
@@ -202,7 +196,6 @@ inline fun <reified R> RenderingLogger?.fileLogger(
     kotlin.runCatching { block(logger) }.also { logger.logResult { it }; writer.close() }.getOrThrow()
 }
 
-
 /**
  * Creates a logger which serves for logging a sub-process and all of its corresponding events.
  *
@@ -211,23 +204,13 @@ inline fun <reified R> RenderingLogger?.fileLogger(
 inline fun <reified R> RenderingLogger?.singleLineLogger(
     caption: CharSequence,
     noinline block: SingleLineLogger.() -> R,
-): R = if (this == null) {
-    val logger: SingleLineLogger =
-        object : SingleLineLogger(caption) {
-            override fun render(block: () -> CharSequence) {
-            }
-        }
-    kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
-} else {
-    val logger: SingleLineLogger = object : SingleLineLogger(caption) {
+): R {
+    val logger = object : SingleLineLogger(caption) {
         override fun render(block: () -> CharSequence) {
-            val message = block()
-            val prefix = this@singleLineLogger.nestingPrefix
-            val logMessage = prefix + message.bold()
-            this@singleLineLogger.render(true) { logMessage }
+            this@singleLineLogger?.apply { logLine(block) } ?: TermUi.echo(block())
         }
     }
-    kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
+    return kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
 }
 
 /**
@@ -248,10 +231,7 @@ inline fun <reified R> RenderingLogger?.microLog(
 } else {
     val logger: MicroLogger = object : MicroLogger(symbol) {
         override fun render(block: () -> CharSequence) {
-            val message = block()
-            val prefix = this@microLog.nestingPrefix
-            val logMessage = prefix + message.bold()
-            this@microLog.render(true) { logMessage }
+            this@microLog.logLine(block)
         }
     }
     kotlin.runCatching { block(logger) }.let { logger.logResult { it } }
@@ -274,10 +254,7 @@ inline fun <reified R> RenderingLogger?.microLog(
 } else {
     val logger: MicroLogger = object : MicroLogger() {
         override fun render(block: () -> CharSequence) {
-            val message = block()
-            val prefix = this@microLog.nestingPrefix
-            val logMessage = prefix + message.bold()
-            this@microLog.render(true) { logMessage }
+            this@microLog.logLine(block)
         }
     }
     kotlin.runCatching { block(logger) }.let { logger.logResult { it } }

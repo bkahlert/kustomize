@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD
 import strikt.api.expect
 import strikt.api.expectCatching
 import strikt.api.expectThat
@@ -61,7 +62,8 @@ class RenderingLoggerTest {
     fun `should allow single line logging`(@Columns(100) logger: InMemoryLogger) {
         logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logger.singleLineLogger("mini") {
-            logStatus { OUT typed "A" }
+            logLine { OUT typed "A" }
+//            logException { RuntimeException("exception message") }
             logStatus { OUT typed "bb" }
             logStatus { OUT typed " " }
         }
@@ -74,7 +76,7 @@ class RenderingLoggerTest {
                     ╭─────╴{}
                     │{}
                     │   ☎Σ⊂⊂(☉ω☉∩)                                            {}                                      ▮▮
-                    ├─╴ mini: A bb   ✔
+                    │   mini: A bb   ✔
                     │   ☎Σ⊂⊂(☉ω☉∩)                                            {}                                      ▮▮
                     │   ☎Σ⊂⊂(☉ω☉∩)                                            {}                                      ▮▮
                     │{}
@@ -116,6 +118,7 @@ class RenderingLoggerTest {
                 """.trimIndent())
     }
 
+    @Execution(SAME_THREAD)
     @TestFactory
     fun `should allow complex layout`(@Columns(100) loggerFactory: InMemoryLoggerFactory) = listOf(
         true to """
@@ -127,12 +130,12 @@ class RenderingLoggerTest {
             │   ╭─────╴nested log
             │   │{}
             │   │   nested 1                                          {}                                      ▮▮
-            │   ├─╴ mini segment: 12345 sample ✔
+            │   │   mini segment: 12345 sample ✔
             │   │{}
             │   │   ╭─────╴nested log
             │   │   │{}
             │   │   │   nested 1                                      {}                                      ▮▮
-            │   │   ├─╴ mini segment: 12345 sample ✔
+            │   │   │   mini segment: 12345 sample ✔
             │   │   │   nested 2                                      {}                                      ▮▮
             │   │   │   nested 3                                      {}                                      ▮▮
             │   │   │{}
@@ -154,10 +157,10 @@ class RenderingLoggerTest {
              outer 2
              Started: nested log{}
               nested 1                                                {}                                      ▮▮
-              :mini segment: 12345 sample ✔{}
+              mini segment: 12345 sample ✔{}
               Started: nested log{}
                nested 1                                               {}                                      ▮▮
-               :mini segment: 12345 sample ✔{}
+               mini segment: 12345 sample ✔{}
                nested 2                                               {}                                      ▮▮
                nested 3                                               {}                                      ▮▮
               Completed: ✔{}
@@ -283,9 +286,9 @@ class RenderingLoggerTest {
         expectThat(logger.logged).matchesCurlyPattern("""
             ╭─────╴{}
             │   
-            ├─╴ close twice: line ✔ returned 1
-            ├─╴ close twice: line ✔ returned 1 ✔ returned 2
-            ├─╴ close twice: line ✔ returned 1 ✔ returned 2 ✔ returned 3
+            │   close twice: line ✔ returned 1
+            │   close twice: line ✔ returned 1 ✔ returned 2
+            │   close twice: line ✔ returned 1 ✔ returned 2 ✔ returned 3
         """.trimIndent())
     }
 
