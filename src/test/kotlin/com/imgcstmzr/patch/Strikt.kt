@@ -2,36 +2,16 @@ package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
 import com.bkahlert.koodies.docker.DockerContainerName.Companion.toUniqueContainerName
-import com.imgcstmzr.guestfish.Guestfish
+import com.bkahlert.koodies.nio.file.toPath
+import com.imgcstmzr.libguestfs.resolveOnHost
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemProcess
 import com.imgcstmzr.runtime.Program
 import com.imgcstmzr.runtime.execute
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
-import com.imgcstmzr.util.asRootFor
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
 import strikt.assertions.isEqualTo
-import java.nio.file.Path
-
-fun Assertion.Builder<Guestfish>.path(guestPath: String): Assertion.Builder<Path> = path(Path.of(guestPath))
-
-fun Assertion.Builder<Guestfish>.path(guestPath: Path): Assertion.Builder<Path> = get("running $guestPath") {
-    run(Guestfish.copyOutCommands(listOf(guestPath)))
-
-    val root = guestRootOnHost
-    root.asRootFor(guestPath)
-}
-
-inline fun Assertion.Builder<OperatingSystemImage>.mounted(
-    logger: BlockRenderingLogger,
-    crossinline assertion: Assertion.Builder<Guestfish>.() -> Unit,
-): Assertion.Builder<OperatingSystemImage> {
-    get("mounted") {
-        get { Guestfish(this, logger) }.apply(assertion)
-    }
-    return this
-}
 
 inline fun Assertion.Builder<OperatingSystemImage>.booted(
     logger: BlockRenderingLogger,
@@ -60,6 +40,12 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
 
     return this
 }
+
+/**
+ * Assertions on the directory used to share files with the [OperatingSystemImage].
+ */
+val Assertion.Builder<OperatingSystemImage>.shared
+    get() = get("shared directory %s") { resolveOnHost(".".toPath()) }
 
 fun Assertion.Builder<OperatingSystemImage>.booted(
     logger: BlockRenderingLogger,

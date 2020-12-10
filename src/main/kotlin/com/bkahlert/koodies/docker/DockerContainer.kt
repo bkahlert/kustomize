@@ -3,6 +3,7 @@ package com.bkahlert.koodies.docker
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.regex.RegexBuilder
 import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.string.withRandomSuffix
 import java.nio.file.Path
 
 
@@ -53,6 +54,6 @@ inline class DockerContainerName(val name: String) {
          * Transforms this [Path] to a unique [DockerContainerName].
          */
         fun Path.toUniqueContainerName(): DockerContainerName =
-            DockerContainerName(fileName.serialized.take(18) + "-${String.random(4)}")
+            DockerContainerName(fileName.serialized.take(18).withRandomSuffix())
     }
 }

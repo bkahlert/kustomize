@@ -3,12 +3,14 @@ package com.bkahlert.koodies.docker
 import com.bkahlert.koodies.builder.ListBuilder
 import com.bkahlert.koodies.builder.ListBuilderInit
 import com.bkahlert.koodies.builder.build
-import com.bkahlert.koodies.builder.buildTo
+import com.bkahlert.koodies.builder.buildListTo
 import com.bkahlert.koodies.concurrent.process.CommandLine
 import com.bkahlert.koodies.docker.DockerRunCommandLine.Options
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.toPath
 import java.nio.file.Path
+import kotlin.properties.ReadOnlyProperty
+import kotlin.reflect.KProperty
 
 data class DockerRunCommandLine(
     val dockerRedirects: List<String> = emptyList(),
@@ -30,7 +32,7 @@ data class DockerRunCommandLine(
         val interactive: Boolean = true,
         val pseudoTerminal: Boolean = false,
         val mounts: List<MountOption> = emptyList(),
-    ) : List<String> by ListBuilder.build({
+    ) : List<String> by (ListBuilder.build {
         entryPoint?.also { +"--entrypoint" + entryPoint }
         name?.also { +"--name" + name.sanitized }
         privileged.takeIf { it }?.also { +"--privileged" }
@@ -45,7 +47,12 @@ data class DockerRunCommandLine(
 
 
 @DockerCommandDsl
-abstract class DockerRunCommandLineBuilder {
+class DockerRunCommandLineBuilder(
+    private val redirects: MutableList<String> = mutableListOf(),
+    private var dockerOptions: Options = Options(),
+    private var dockerCommand: String? = null,
+    private val dockerArguments: MutableList<String> = mutableListOf(),
+) {
 
     class ImageProvidedBuilder(private val image: DockerImage) {
         infix fun run(init: DockerRunCommandLineBuilder.() -> Unit): DockerRunCommandLine = build(image, init)
@@ -57,42 +64,32 @@ abstract class DockerRunCommandLineBuilder {
 
         fun DockerImage.buildRunCommand(init: DockerRunCommandLineBuilder.() -> Unit): DockerRunCommandLine = build(this, init)
 
-        fun build(dockerImage: DockerImage, init: DockerRunCommandLineBuilder.() -> Unit): DockerRunCommandLine {
-            val dockerRedirects = mutableListOf<String>()
-            var dockerOptions = Options()
-            var dockerCommand: String? = null
-            val dockerArguments = mutableListOf<String>()
-            object : DockerRunCommandLineBuilder() {
-                override val redirects
-                    get() = dockerRedirects
-                override var dockerOptions
-                    get() = dockerOptions
-                    set(value) = value.run { dockerOptions = this }
-                override var dockerCommand
-                    get() = dockerCommand
-                    set(value) = value.run { dockerCommand = this }
-                override val dockerArguments
-                    get() = dockerArguments
-            }.apply(init)
-            return DockerRunCommandLine(
-                dockerRedirects = dockerRedirects,
-                options = dockerOptions,
-                dockerImage = dockerImage,
-                dockerCommand = dockerCommand,
-                dockerArguments = dockerArguments,
-            )
-        }
+        fun build(dockerImage: DockerImage, init: DockerRunCommandLineBuilder.() -> Unit): DockerRunCommandLine =
+            DockerRunCommandLineBuilder().apply(init).run {
+                DockerRunCommandLine(
+                    dockerRedirects = redirects,
+                    options = dockerOptions,
+                    dockerImage = dockerImage,
+                    dockerCommand = dockerCommand,
+                    dockerArguments = dockerArguments,
+                )
+            }
     }
 
-    protected abstract val redirects: MutableList<String>
-    protected abstract var dockerOptions: Options
-    protected abstract var dockerCommand: String?
-    protected abstract val dockerArguments: MutableList<String>
-
-    fun redirects(init: ListBuilderInit<String>) = init.buildTo(redirects)
+    fun redirects(init: ListBuilderInit<String>) = init.buildListTo(redirects)
     fun options(init: OptionsBuilder.() -> Unit) = OptionsBuilder.build(init).run { dockerOptions = this }
     fun command(init: () -> String?) = init.build()?.run { dockerCommand = this }
-    fun arguments(init: ListBuilderInit<String>) = init.buildTo(dockerArguments)
+    fun arguments(init: ListBuilderInit<String>) = init.buildListTo(dockerArguments)
+}
+
+class OptionBuilder : ReadOnlyProperty<OptionsBuilder, OptionBuilder> {
+    override fun getValue(thisRef: OptionsBuilder, property: KProperty<*>): OptionBuilder {
+        return this
+    }
+
+    operator fun invoke(init: () -> String) {
+
+    }
 }
 
 @DockerCommandDsl
@@ -110,6 +107,8 @@ abstract class OptionsBuilder {
     }
 
     protected abstract var options: Options
+
+    val sample by OptionBuilder()
 
     fun entrypoint(entryPoint: () -> String?) = options.copy(entryPoint = entryPoint()).run { options = this }
     fun name(name: () -> String?) = options.copy(name = name()?.let { DockerContainerName(it) }).run { options = this }
@@ -131,3 +130,4 @@ abstract class OptionsBuilder {
 
 data class MountOption(val type: String = "bind", val source: Path, val target: Path) :
     List<String> by listOf("--mount", "type=$type,source=${source.serialized},target=${target.serialized}")
+

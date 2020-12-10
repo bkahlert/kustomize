@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.nio
 
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
-import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.string.withRandomSuffix
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.MutedRenderingLogger
 import com.imgcstmzr.runtime.log.singleLineLogging
@@ -25,7 +25,7 @@ class NonBlockingCharReader(
     private val inputStream: InputStream,
     private val timeout: Duration = 6.seconds,
     private val charset: Charset = Charsets.UTF_8,
-    name: String = "ImgCstmzr-${NonBlockingCharReader::class.simpleName}-${String.random()}",
+    name: String = "ImgCstmzr-${NonBlockingCharReader::class.simpleName}".withRandomSuffix(),
 ) : Reader() {
 
     val timeoutMillis = timeout.toLongMilliseconds()

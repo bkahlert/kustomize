@@ -18,10 +18,11 @@ import com.bkahlert.koodies.string.truncate
 import com.bkahlert.koodies.test.strikt.asString
 import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.time.minus
-import com.imgcstmzr.guestfish.GuestfishOperation
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
+import com.imgcstmzr.patch.ImgOperation
 import com.imgcstmzr.patch.Patch
 import com.imgcstmzr.patch.PathOperation
-import com.imgcstmzr.patch.new.ImgOperation
 import com.imgcstmzr.runtime.Program
 import strikt.api.Assertion
 import strikt.api.expectThat
@@ -203,19 +204,16 @@ fun <T : Path> Assertion.Builder<T>.lastModified(duration: Duration) =
         }
     }
 
-
-fun Assertion.Builder<GuestfishOperation>.withCommands(assertion: Assertion.Builder<List<String>>.() -> Unit) {
-    get { commands.toList() }.run(assertion)
-}
-
 fun <T : Patch> Assertion.Builder<T>.matches(
     imgOperationsAssertion: Assertion.Builder<List<ImgOperation>>.() -> Unit = { hasSize(0) },
-    guestfishOperationsAssertion: Assertion.Builder<List<GuestfishOperation>>.() -> Unit = { hasSize(0) },
+    customizationOptionsAssertion: Assertion.Builder<List<VirtCustomizeCustomizationOption>>.() -> Unit = { hasSize(0) },
+    guestfishCommandsAssertion: Assertion.Builder<List<GuestfishCommand>>.() -> Unit = { hasSize(0) },
     fileSystemOperationsAssertion: Assertion.Builder<List<PathOperation>>.() -> Unit = { hasSize(0) },
     programsAssertion: Assertion.Builder<List<Program>>.() -> Unit = { hasSize(0) },
 ) = compose("matches") { patch ->
     imgOperationsAssertion(get { preFileImgOperations })
-    guestfishOperationsAssertion(get { guestfishOperations })
+    customizationOptionsAssertion(get { customizationOptions })
+    guestfishCommandsAssertion(get { guestfishCommands })
     fileSystemOperationsAssertion(get { fileSystemOperations })
     programsAssertion(get { programs })
-}
+}.then { if (allPassed) pass() else fail() }

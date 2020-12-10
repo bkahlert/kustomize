@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.builder
 
 /**
- * Convenience type to easier use [build] accepts.
+ * Convenience type to easier use [buildMap] accepts.
  */
 typealias MapBuilderInit<K, V> = MapBuilder<K, V>.() -> Unit
 
@@ -27,7 +27,7 @@ class MapBuilder<K, in V>(private val map: MutableMap<K, V>) {
 /**
  * Using `this` [MapBuilderInit] builds a map of [K] and [V].
  */
-fun <K, V> MapBuilderInit<K, V>.build(): Map<K, V> =
+fun <K, V> MapBuilderInit<K, V>.buildMap(): Map<K, V> =
     linkedMapOf<K, V>().also { MapBuilder(it).this() }
 
 /**
@@ -35,15 +35,15 @@ fun <K, V> MapBuilderInit<K, V>.build(): Map<K, V> =
  *
  * As as side effect the result is added to [target].
  */
-fun <K, V> MapBuilderInit<K, V>.buildTo(target: MutableMap<in K, in V>): Map<K, V> =
-    build().also { target.putAll(it) }
+fun <K, V> MapBuilderInit<K, V>.buildMapTo(target: MutableMap<in K, in V>): Map<K, V> =
+    buildMap().also { target.putAll(it) }
 
 /**
  * Using `this` [MapBuilderInit] builds a map of [K] and [V]
  * and applies [transform] to the result.
  */
-fun <K, V, T> MapBuilderInit<K, V>.build(transform: Map.Entry<K, V>.() -> T): List<T> =
-    build().entries.map { it.transform() }
+fun <K, V, T> MapBuilderInit<K, V>.buildMap(transform: Map.Entry<K, V>.() -> T): List<T> =
+    buildMap().entries.map { it.transform() }
 
 /**
  * Using `this` [MapBuilderInit] builds a map of [K] and [V]
@@ -51,5 +51,5 @@ fun <K, V, T> MapBuilderInit<K, V>.build(transform: Map.Entry<K, V>.() -> T): Li
  *
  * As as side effect the transformed result is added to [target].
  */
-fun <K, V, T> MapBuilderInit<K, V>.buildTo(target: MutableCollection<in T>, transform: Map.Entry<K, V>.() -> T): List<T> =
-    build(transform).also { target.addAll(it) }
+fun <K, V, T> MapBuilderInit<K, V>.buildMapTo(target: MutableCollection<in T>, transform: Map.Entry<K, V>.() -> T): List<T> =
+    buildMap(transform).also { target.addAll(it) }

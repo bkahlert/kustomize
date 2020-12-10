@@ -1,18 +1,16 @@
-package com.imgcstmzr.patch.new
+package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.builder.buildListTo
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
-import com.bkahlert.koodies.string.mapLines
 import com.bkahlert.koodies.string.quoted
-import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.unit.Size
-import com.imgcstmzr.guestfish.Guestfish
-import com.imgcstmzr.guestfish.GuestfishOperation
-import com.imgcstmzr.libguestfs.CustomizationOption
-import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.CustomizationOptionsBuilder
-import com.imgcstmzr.libguestfs.buildTo
-import com.imgcstmzr.patch.Patch
-import com.imgcstmzr.patch.PathOperation
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine
+import com.imgcstmzr.libguestfs.guestfish.GuestfishDsl
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.VirtCustomizeCustomizationOptionsBuilder
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeDsl
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemProcess
 import com.imgcstmzr.runtime.OperatingSystems
@@ -23,8 +21,8 @@ import java.nio.file.Path
 data class SimplePatch(
     override val name: String,
     override val preFileImgOperations: List<ImgOperation>,
-    override val customizationOptions: List<CustomizationOption>,
-    override val guestfishOperations: List<GuestfishOperation>,
+    override val customizationOptions: List<VirtCustomizeCustomizationOption>,
+    override val guestfishCommands: List<GuestfishCommand>,
     override val fileSystemOperations: List<PathOperation>,
     override val postFileImgOperations: List<ImgOperation>,
     override val programs: List<Program>,
@@ -33,31 +31,37 @@ data class SimplePatch(
 fun buildPatch(name: String, init: PatchBuilder.() -> Unit): Patch {
 
     val preFileImgOperations = mutableListOf<ImgOperation>()
-    val customizationOptions = mutableListOf<CustomizationOption>()
-    val guestfishOperations = mutableListOf<GuestfishOperation>()
+    val customizationOptions = mutableListOf<VirtCustomizeCustomizationOption>()
+    val guestfishCommands = mutableListOf<GuestfishCommand>()
     val fileSystemOperations = mutableListOf<PathOperation>()
     val postFileImgOperations = mutableListOf<ImgOperation>()
     val programs = mutableListOf<Program>()
 
-    PatchBuilder(preFileImgOperations, customizationOptions, guestfishOperations, fileSystemOperations, postFileImgOperations, programs).apply(init)
-    return SimplePatch(name, preFileImgOperations, customizationOptions, guestfishOperations, fileSystemOperations, postFileImgOperations, programs)
+    PatchBuilder(preFileImgOperations, customizationOptions, guestfishCommands, fileSystemOperations, postFileImgOperations, programs).apply(init)
+    return SimplePatch(name, preFileImgOperations, customizationOptions, guestfishCommands, fileSystemOperations, postFileImgOperations, programs)
 }
 
 @DslMarker
 annotation class PatchDsl
 
 @PatchDsl
+@VirtCustomizeDsl
+@GuestfishDsl
 class PatchBuilder(
     private val preFileImgOperations: MutableList<ImgOperation>,
-    private val customizationOptions: MutableList<CustomizationOption>,
-    private val guestfishOperations: MutableList<GuestfishOperation>,
+    private val virtCustomizeCustomizationOptions: MutableList<VirtCustomizeCustomizationOption>,
+    private val guestfishCommands: MutableList<GuestfishCommand>,
     private val fileSystemOperations: MutableList<PathOperation>,
     private val postFileImgOperations: MutableList<ImgOperation>,
     private val programs: MutableList<Program>,
 ) {
     fun preFile(init: ImgOperationsCollector.() -> Unit) = ImgOperationsCollector(preFileImgOperations).apply(init)
-    fun customize(init: CustomizationOptionsBuilder.() -> Unit) = init.buildTo(customizationOptions)
-    fun guestfish(init: GuestfishOperationsCollector.() -> Unit) = GuestfishOperationsCollector(guestfishOperations).apply(init)
+
+    @VirtCustomizeDsl
+    fun customize(init: VirtCustomizeCustomizationOptionsBuilder.() -> Unit) = init.buildListTo(virtCustomizeCustomizationOptions)
+
+    @GuestfishDsl
+    fun guestfish(init: GuestfishCommandLine.GuestfishCommandsBuilder.() -> Unit) = init.buildListTo(guestfishCommands)
     fun files(init: FileSystemOperationsCollector.() -> Unit) = FileSystemOperationsCollector(fileSystemOperations).apply(init)
     fun postFile(init: ImgOperationsCollector.() -> Unit) = ImgOperationsCollector(postFileImgOperations).apply(init)
     fun booted(init: ProgramsBuilder.() -> Unit) = ProgramsBuilder(programs).apply(init)
@@ -90,63 +94,6 @@ class ImgOperationsCollector(private val imgOperations: MutableList<ImgOperation
                 logger.logLine { META.format("ImgCstmzr will to continue to use user ${osImage.credentials.username.quoted}.") }
             }
         }
-    }
-}
-
-@PatchDsl
-class GuestfishOperationsCollector(private val guestfishOperations: MutableList<GuestfishOperation>) {
-    fun changePassword(username: String, password: String, salt: String = String.random.cryptSalt()) {
-        guestfishOperations += Guestfish.changePasswordCommand(username, password, salt)
-    }
-
-    fun touch(path: String) {
-        guestfishOperations += GuestfishOperation("touch ${path.quoted}")
-    }
-
-    fun changeOwner(path: String, userId: Int, groupId: Int) {
-        guestfishOperations += GuestfishOperation("chown $userId $groupId ${path.quoted}")
-    }
-
-    // TODO use PosixFilePermission
-    fun changeMode(path: String, owner: Byte, group: Byte, other: Byte) {
-        listOf(owner, group, other).forEach { require(it in 0..7) { "Permission $it must be between 0 and 7 (both inclusive)." } }
-        guestfishOperations += GuestfishOperation("chmod 0$owner$group$other ${path.quoted}")
-    }
-
-    fun appendToFile(path: String, content: String) {
-        guestfishOperations += GuestfishOperation(content.mapLines(ignoreTrailingSeparator = false) { line ->
-            "write-append ${path.quoted} ${"$line".replace("\"", "\\\"").quoted}"
-        })
-    }
-
-    fun rootFile(path: String, content: String) {
-        val commands = arrayOf(
-            "touch ${path.quoted}",
-            "chown 0 0 ${path.quoted}",
-            "chmod 0700 ${path.quoted}",
-            *content.lines().map() { line ->
-                "write-append ${path.quoted} ${"$line\\n".replace("\"", "\\\"").quoted}"
-            }.toTypedArray(),
-        )
-        guestfishOperations += GuestfishOperation(commands)
-    }
-
-    fun userFile(path: String, content: String) {
-        val commands = arrayOf(
-            "touch ${path.quoted}",
-            "chown 0 0 ${path.quoted}",
-            "chmod 0700 ${path.quoted}",
-            *content.lines().map() { line ->
-                "write-append ${path.quoted} ${"$line\\n".replace("\"", "\\\"").quoted}"
-            }.toTypedArray(),
-        )
-        guestfishOperations += GuestfishOperation(commands)
-    }
-
-    fun command(command: String) {
-        guestfishOperations += GuestfishOperation(arrayOf(
-            "command '${command.replace("'", "\\'")}'"
-        ))
     }
 }
 

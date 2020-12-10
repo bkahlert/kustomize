@@ -1,5 +1,6 @@
 package com.imgcstmzr.cli
 
+import com.bkahlert.koodies.nio.file.cloneTo
 import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.extensionOrNull
@@ -183,7 +184,7 @@ private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireVal
 
         fun from(dir: Path, file: Path): WorkDirectory {
             val workDirectory = WorkDirectory(dir.resolve(WorkDirectoryName().toString()))
-            Files.copy(file, workDirectory.dir.resolve(file.fileName))
+            file.cloneTo(workDirectory.dir.resolve(file.fileName))
             return workDirectory
         }
     }

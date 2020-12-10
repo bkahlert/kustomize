@@ -46,6 +46,7 @@ import java.nio.file.Path
  * docker run --rm -v $(PWD):/shared --entrypoint /bin/bash -it bkahlert/libguestfs
  * ```
  */
+@Deprecated("use GuestfishCommandLine instead")
 class Guestfish(
     /**
      * [Path] of the [imgPathOnHost] this [Guestfish] mounts before running any command.

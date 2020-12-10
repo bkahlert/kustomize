@@ -24,6 +24,16 @@ import java.lang.Process as JavaProcess
 class CommandLineTest {
 
     @Nested
+    inner class Equality {
+        @Test
+        fun `should equal based on command and arguments`() {
+            val cmdLine1 = CommandLine("/bin/command", "arg1", "arg 2")
+            val cmdLine2 = CommandLine(Path.of("/bin/command"), "arg1", "arg 2")
+            expectThat(cmdLine1).isEqualTo(cmdLine2)
+        }
+    }
+
+    @Nested
     inner class LazyStartedProcess {
 
         @Test

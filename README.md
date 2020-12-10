@@ -130,7 +130,7 @@ https://github.com/garthvh/ansible-raspi-playbooks/blob/master/playbooks/new-def
 - `ShellScriptBuilder` (with !"echo 'this is a command'")
 - `ReadOnlyFileSystem`
 - `RegExDocument` (delegates properties)
-- `PatchTest` (Complex builder pattern)
+- `PatchTest`, esp. GuestfishCommandBuilder (Complex builder pattern)
 
 ### Done and Deleted
 

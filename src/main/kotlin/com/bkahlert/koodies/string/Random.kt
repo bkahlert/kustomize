@@ -14,8 +14,6 @@ object Random {
     ): String =
         (1..length).map { allowedCharacters[Random.nextInt(0, allowedCharacters.size)] }
             .joinToString("")
-
-    fun cryptSalt() = this(2, alphanumericCharacters)
 }
 
 val String.Companion.random by lazy { com.bkahlert.koodies.string.Random }

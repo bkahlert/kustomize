@@ -11,7 +11,7 @@ import com.bkahlert.koodies.nio.file.requireNotEmpty
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempPath
 import com.bkahlert.koodies.nio.file.writeText
-import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.string.withRandomSuffix
 import com.bkahlert.koodies.unit.Size.Companion.size
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.hasEqualContent
@@ -76,7 +76,7 @@ class GzCompressorTest {
         val gzippedFile = file.gzip()
         expectThat(gzippedFile.size).isLessThan(file.size)
 
-        val renamedFile = file.renameTo("example-${String.random()}.html")
+        val renamedFile = file.renameTo("example".withRandomSuffix() + ".html")
 
         val gunzippedFile = gzippedFile.gunzip()
         gunzippedFile.requireNotEmpty()

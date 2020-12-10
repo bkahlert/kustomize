@@ -1,14 +1,69 @@
 package com.bkahlert.koodies.builder
 
+
 /**
- * Convenience type to easier use [build] accepts.
+ * Builds a list [E] by
+ * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
+ * 2) apply `this` initializer to it
+ * 3) retrieving the result using `(B) -> T`.
+ *
+ * @return the build instance
+ */
+inline fun <reified B : (B) -> List<E>, reified E : Any> (B.() -> Unit).buildList(): List<E> {
+    val zeroArgConstructors = B::class.java.declaredConstructors.filter { it.parameterCount == 0 }
+    val builder: B = zeroArgConstructors.singleOrNull()?.newInstance() as? B
+        ?: throw IllegalArgumentException("${B::class.simpleName} has no zero-arg constructor and cannot be used to create a list of ${E::class.simpleName}.")
+    return builder.apply(this).let { it.invoke(it) }
+}
+
+/**
+ * Builds a list of [E] and adds it to [target] by
+ * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
+ * 2) apply `this` initializer to it
+ * 3) retrieving the result using `(B) -> T`.
+ *
+ * @return the build instance
+ */
+inline fun <reified B : (B) -> List<E>, reified E : Any> (B.() -> Unit).buildListTo(target: MutableCollection<in E>): List<E> =
+    buildList().also { target.addAll(it) }
+
+/**
+ * Builds a list of [E] and [transform]s it to [U] by
+ * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
+ * 2) apply `this` initializer to it
+ * 3) retrieving the result using `(B) -> T`
+ * 4) applying [transform].
+ *
+ * @return the transformed instance
+ */
+inline fun <reified B : (B) -> List<E>, reified E : Any, reified U> (B.() -> Unit).buildList(transform: E.() -> U): List<U> =
+    buildList().map(transform)
+
+/**
+ * Builds a list of [E] and adds the to [U] [transform]ed instance to [target] by
+ * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
+ * 2) apply `this` initializer to it
+ * 3) retrieving the result using `(B) -> T`
+ * 4) applying [transform].
+ *
+ * @return the transformed instance
+ */
+inline fun <reified B : (B) -> List<E>, reified E : Any, reified U> (B.() -> Unit).buildListTo(target: MutableCollection<in U>, transform: E.() -> U): List<U> =
+    buildList(transform).also { target.addAll(it) }
+
+
+
+/**
+ * Convenience type to easier use [buildMap] accepts.
  */
 typealias ListBuilderInit<E> = ListBuilder<E>.() -> Unit
 
-class ListBuilder<in E>(private val list: MutableList<E>) {
+open class ListBuilder<E> : (ListBuilder<E>) -> List<E> by { it.list } {
+
+    protected val list: MutableList<E> = mutableListOf()
+
     companion object {
-        inline fun <reified E> build(init: ListBuilderInit<E>): List<E> =
-            mutableListOf<E>().also { ListBuilder(it).apply(init) }
+        inline fun <reified E> build(noinline init: ListBuilder<E>.() -> Unit): List<E> = init.build()
     }
 
     operator fun E.unaryPlus() {
@@ -30,34 +85,6 @@ class ListBuilder<in E>(private val list: MutableList<E>) {
     operator fun Sequence<E>.unaryPlus() {
         list.addAll(this)
     }
+
+    override fun toString(): String = "ListBuilder[list=$list]"
 }
-
-/**
- * Using `this` [ListBuilderInit] builds a list of elements.
- */
-fun <E> ListBuilderInit<E>.build(): List<E> =
-    mutableListOf<E>().also { ListBuilder(it).this() }
-
-/**
- * Using `this` [ListBuilderInit] builds a list of elements.
- *
- * As as side effect the result is added to [target].
- */
-fun <E> ListBuilderInit<E>.buildTo(target: MutableList<in E>): List<E> =
-    build().also { target.addAll(it) }
-
-/**
- * Using `this` [ListBuilderInit] builds a list of elements
- * and applies [transform] to the result.
- */
-fun <E, T> ListBuilderInit<E>.build(transform: E.() -> T): List<T> =
-    build().map { it.transform() }
-
-/**
- * Using `this` [ListBuilderInit] builds a list of elements
- * and applies [transform] to the result.
- *
- * As as side effect the transformed result is added to [target].
- */
-fun <E, T> ListBuilderInit<E>.buildTo(target: MutableCollection<in T>, transform: E.() -> T): List<T> =
-    build(transform).also { target.addAll(it) }

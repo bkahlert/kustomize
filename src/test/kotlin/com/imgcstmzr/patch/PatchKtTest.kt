@@ -2,6 +2,7 @@ package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.readText
+import com.bkahlert.koodies.nio.file.toPath
 import com.bkahlert.koodies.nio.file.writeLine
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
@@ -14,8 +15,8 @@ import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.E2E
 import com.imgcstmzr.guestfish.Guestfish
 import com.imgcstmzr.guestfish.Guestfish.Companion.copyOutCommands
-import com.imgcstmzr.libguestfs.libguestfs
-import com.imgcstmzr.patch.new.buildPatch
+import com.imgcstmzr.libguestfs.guestfish.CopyOutCommand
+import com.imgcstmzr.libguestfs.resolveOnHost
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.runtime.Program
@@ -23,6 +24,7 @@ import com.imgcstmzr.runtime.size
 import com.imgcstmzr.util.DockerRequiring
 import com.imgcstmzr.util.MiscFixture
 import com.imgcstmzr.util.OS
+import com.imgcstmzr.util.hasContent
 import com.imgcstmzr.util.logging.CapturedOutput
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.OutputCaptureExtension
@@ -33,11 +35,13 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import org.junit.jupiter.api.parallel.Isolated
+import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.exists
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
+import strikt.assertions.resolve
 import java.nio.file.Path
 import java.time.Instant
 
@@ -119,13 +123,12 @@ class PatchKtTest {
             preFile {
                 resize(2.Giga.bytes)
             }
-            libguestfs {
-                // TODO TODO TODO test and guestfish and command line (format)
+            customize {
                 hostname { "test-machine" }
             }
-//            guestfish {
-//                changePassword("pi", "po")
-//            }
+            guestfish {
+                copyOut { CopyOutCommand("/etc/hostname".toPath()) }
+            }
             files {
                 edit("/root/.imgcstmzr.created", { path ->
                     require(path.readText().parseableInstant<Any>())
@@ -146,20 +149,25 @@ class PatchKtTest {
 
         patch.patch(osImage, logger)
 
-        expectThat(osImage) {
-            size.isEqualTo(2.Giga.bytes)
-            booted(logger, Program("check",
-                { "init" },
-                "init" to {
-                    enter("sudo cat /etc/hostname")
-                    enter("sudo cat /root/.imgcstmzr.created")
-                    "demo"
-                },
-                "validate" to {
-                    if (it != timestamp.format()) "validate"
-                    else null
-                }
-            ))
+        expect {
+            that(osImage.resolveOnHost("/etc/hostname".toPath()))
+            that(osImage) {
+                shared.resolve("/etc/hostname").hasContent("test-machine")
+                size.isEqualTo(2.Giga.bytes)
+                booted(logger, Program("check",
+                    { "init" },
+                    "init" to {
+                        enter("sudo cat /etc/hostname")
+                        enter("sudo cat /root/.imgcstmzr.created")
+                        "demo"
+                    },
+                    "validate" to {
+                        if (it != timestamp.format()) "validate"
+                        else null
+                    }
+                ))
+            }
         }
     }
 }
+

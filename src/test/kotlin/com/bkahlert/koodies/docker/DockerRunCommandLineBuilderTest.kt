@@ -21,6 +21,8 @@ class DockerRunCommandLineBuilderTest {
         val dockerRunCommand = dockerImage.buildRunCommand {
             redirects {}
             options {
+                sample.invoke { "kll" }
+                sample { "" }
                 name { "container-name" }
                 privileged { true }
                 autoCleanup { true }

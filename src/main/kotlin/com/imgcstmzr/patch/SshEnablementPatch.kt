@@ -1,16 +1,12 @@
 package com.imgcstmzr.patch
 
-import com.bkahlert.koodies.nio.file.exists
-import com.imgcstmzr.patch.new.buildPatch
-import com.imgcstmzr.util.touch
+import com.bkahlert.koodies.nio.file.toPath
 
 /**
  * Activates SSH.
  */
 class SshEnablementPatch : Patch by buildPatch("Enable SSH", {
-    files {
-        edit("/boot/ssh", { require(it.exists) { "$it is missing" } }, { path ->
-            path.touch()
-        })
+    customize {
+        touch { "/boot/ssh".toPath() }
     }
 })

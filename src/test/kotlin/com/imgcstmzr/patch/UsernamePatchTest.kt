@@ -32,7 +32,9 @@ class UsernamePatchTest {
 
     @Test
     fun `should not do anything but patch 6 password files`() {
-        expectThat(UsernamePatch("pi", "ella")).matches(fileSystemOperationsAssertion = { hasSize(6) })
+        expectThat(UsernamePatch("pi", "ella")).matches(
+            customizationOptionsAssertion = { hasSize(2) },
+            fileSystemOperationsAssertion = { hasSize(6) })
     }
 
     @Test

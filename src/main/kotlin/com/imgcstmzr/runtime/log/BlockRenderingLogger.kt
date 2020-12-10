@@ -83,7 +83,7 @@ open class BlockRenderingLogger(
         if (output.unformatted.isNotBlank()) {
             render(true) {
                 val leftColumn = output.formatted.asAnsiString().wrapLines(statusInformationColumn).asAnsiString()
-                val statusColumn = items.status().asAnsiString().truncate(maxLength = statusInformationColumns, MIDDLE)
+                val statusColumn = items.status().asAnsiString().truncate(maxLength = statusInformationColumns - 1, MIDDLE)
                 leftColumn.addColumn(statusColumn, columnWidth = statusInformationColumn + statusInformationPadding).prefixLinesWith(prefix = prefix)
             }
         }

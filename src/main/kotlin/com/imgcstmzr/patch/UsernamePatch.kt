@@ -1,9 +1,9 @@
 package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.nio.file.readText
+import com.bkahlert.koodies.nio.file.toPath
 import com.bkahlert.koodies.nio.file.writeText
 import com.imgcstmzr.patch.Requirements.requireNotMatchingContent
-import com.imgcstmzr.patch.new.buildPatch
 
 // "Change username pi to $username?"
 class UsernamePatch(
@@ -13,10 +13,16 @@ class UsernamePatch(
 
     val oldUsernamePattern = Regex("\\b$oldUsername\\b", RegexOption.MULTILINE)
 
-    guestfish {
-        rootFile("/etc/sudoers.d/privacy", "Defaults        lecture = never")
-        @Suppress("SpellCheckingInspection")
-        rootFile("/etc/sudoers", "$newUsername ALL=(ALL) NOPASSWD:ALL")
+    @Suppress("SpellCheckingInspection")
+    customize {
+        appendLine {
+            com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.AppendLineOption("/etc/sudoers.d/privacy".toPath(),
+                "Defaults        lecture = never")
+        }
+        appendLine {
+            com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.AppendLineOption("/etc/sudoers".toPath(),
+                "$newUsername ALL=(ALL) NOPASSWD:ALL")
+        }
     }
 
     files {

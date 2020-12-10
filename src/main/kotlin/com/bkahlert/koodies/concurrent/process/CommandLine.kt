@@ -9,6 +9,7 @@ import com.bkahlert.koodies.shell.ShellScript
 import com.bkahlert.koodies.shell.shebang
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.unquoted
+import com.imgcstmzr.runtime.HasStatus.Companion.asStatus
 import com.imgcstmzr.util.get
 import org.codehaus.plexus.util.StringUtils
 import org.codehaus.plexus.util.cli.CommandLineUtils
@@ -65,6 +66,20 @@ open class CommandLine(
     val multiLineCommandLine: String by lazy {
         commandLineParts.joinToString(separator = " \\${LineSeparators.LF}") { StringUtils.quoteAndEscape(it.trim(), '\"') }.fixHereDoc()
     }
+
+    // TODO Test
+    val summary: String
+        get() = arguments
+            .map { line -> line.split("\\b".toRegex()).filter { x -> x.trim().length > 1 } }
+            .map { words ->
+                when (words.size) {
+                    0 -> "❓"
+                    1 -> words.first()
+                    2 -> words.joinToString("…")
+                    else -> words.first() + "…" + words.last()
+                }
+            }
+            .asStatus()
 
     companion object {
 
@@ -126,6 +141,20 @@ open class CommandLine(
             }
         }
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as CommandLine
+
+        if (!commandLineParts.contentEquals(other.commandLineParts)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int = commandLineParts.contentHashCode()
+
 
     /**
      * Contains all accessible files contained in this command line.

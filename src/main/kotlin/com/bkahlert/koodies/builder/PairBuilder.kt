@@ -45,7 +45,7 @@ inline fun <reified A, reified B, reified T> PairBuilderInit<A, B>.buildTo(targe
     build(transform).also { target.add(it) }
 
 /**
- * Convenience type to easier use [build] accepts.
+ * Convenience type to easier use [buildMap] accepts.
  */
 typealias PairBuilderInit<reified A, reified B> = PairBuilder.() -> Pair<A, B>
 

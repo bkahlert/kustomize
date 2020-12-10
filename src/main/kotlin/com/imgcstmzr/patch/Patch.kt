@@ -3,23 +3,29 @@ package com.imgcstmzr.patch
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.docker.DockerContainerName
+import com.bkahlert.koodies.nio.file.serialized
+import com.bkahlert.koodies.nio.file.toPath
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.terminal.ANSI
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.blue
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightBlue
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.guestfish.Guestfish
-import com.imgcstmzr.guestfish.GuestfishOperation
-import com.imgcstmzr.libguestfs.CustomizationOption
-import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine
-import com.imgcstmzr.libguestfs.execute
+import com.imgcstmzr.libguestfs.Libguestfs
+import com.imgcstmzr.libguestfs.guestfish.CopyOutCommand
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.fish
+import com.imgcstmzr.libguestfs.resolveOnHost
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.Companion.customize
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
 import com.imgcstmzr.patch.Operation.Status.Failure
 import com.imgcstmzr.patch.Operation.Status.Finished
 import com.imgcstmzr.patch.Operation.Status.Ready
 import com.imgcstmzr.patch.Operation.Status.Running
-import com.imgcstmzr.patch.new.ImgOperation
-import com.imgcstmzr.patch.new.SimplePatch
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.Program
@@ -32,6 +38,7 @@ import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.isFile
 import com.imgcstmzr.util.listFilesRecursively
 import java.nio.file.Path
+import kotlin.io.path.relativeTo
 
 /**
  * A patch to customize an [OperatingSystemImage]
@@ -47,19 +54,20 @@ interface Patch {
      * Operations to be applied on the actual raw `.img` file
      * before operations "inside" the `.img` file take place.
      */
+    @Deprecated("replace with virtcustomize")
     val preFileImgOperations: List<ImgOperation>
 
     /**
      * Options to be applied on the img file
      * using the [VirtCustomizeCommandLine].
      */
-    val customizationOptions: List<CustomizationOption>
+    val customizationOptions: List<VirtCustomizeCustomizationOption>
 
     /**
      * Operations to be applied on the mounted file system
      * using the [Guestfish] tool.
      */
-    val guestfishOperations: List<GuestfishOperation>
+    val guestfishCommands: List<GuestfishCommand>
 
     /**
      * Operations on files of the externally, not immediately
@@ -92,7 +100,7 @@ class CompositePatch(
     patches.joinToString(" + ") { it.name },
     patches.flatMap { it.preFileImgOperations }.toList(),
     patches.flatMap { it.customizationOptions }.toList(),
-    patches.flatMap { it.guestfishOperations }.toList(),
+    patches.flatMap { it.guestfishCommands }.toList(),
     patches.flatMap { it.fileSystemOperations }.toList(),
     patches.flatMap { it.postFileImgOperations }.toList(),
     patches.flatMap { it.programs }.toList(),
@@ -101,7 +109,7 @@ class CompositePatch(
 fun Patch.banner() { // TODO make use of it or delete
     echo("""
             Patch: $name
-              img.raw: ${preFileImgOperations.size}    img.fs: ${guestfishOperations.size}
+              img.raw: ${preFileImgOperations.size}    img.fs: ${guestfishCommands.size}
               host.fs: ${fileSystemOperations.size}    img.run: ${programs.size}
         """.trimIndent().wrapWithBorder(padding = 6, margin = 1, ansiCode = (ANSI.termColors.bold + ANSI.termColors.cyan)))
     echo("")
@@ -111,7 +119,7 @@ fun Patch.patch(osImage: OperatingSystemImage, logger: RenderingLogger? = null) 
     logger.logging(name.toUpperCase(), null, borderedOutput = false) {
         applyPreFileImgOperations(osImage, this@patch)
         applyCustomizationOptions(osImage, this@patch)
-        applyGuestfishAndFileSystemOperations(osImage, this@patch)
+        applyGuestfishCommandsAndFileSystemOperations(osImage, this@patch)
         applyPostFileImgOperations(osImage, this@patch)
         applyPrograms(osImage, this@patch)
     }
@@ -133,38 +141,55 @@ fun RenderingLogger.applyCustomizationOptions(osImage: OperatingSystemImage, pat
         logLine { META typed "Customization Options: —" }
     } else {
         logging("Customization Options (${patch.customizationOptions.size})", null, borderedOutput = false) {
-            val execute: Int = VirtCustomizeCommandLine {
-                colors { on }
-//                verbose { on }
-                trace { on }
-                disks { +osImage.file }
-                options { +patch.customizationOptions }
+            customize(osImage) {
+                +patch.customizationOptions
             }
-            command.execute(this)
         }
     }
 
-fun RenderingLogger.applyGuestfishAndFileSystemOperations(osImage: OperatingSystemImage, patch: Patch): Any =
-    if (patch.guestfishOperations.isEmpty() && patch.fileSystemOperations.isEmpty()) {
+fun RenderingLogger.applyGuestfishCommands(osImage: OperatingSystemImage, patch: Patch): Any =
+    if (patch.guestfishCommands.isEmpty()) {
+        logLine { META typed "Guestfish Commands: —" }
+    } else {
+        logging("Guestfish Commands (${patch.guestfishCommands.size})", null, borderedOutput = false) {
+            fish(osImage) {
+                +patch.guestfishCommands
+            }
+        }
+    }
+
+fun RenderingLogger.applyGuestfishCommandsAndFileSystemOperations(osImage: OperatingSystemImage, patch: Patch): Any =
+    if (patch.guestfishCommands.isEmpty() && patch.fileSystemOperations.isEmpty()) {
         logLine { META typed "File System Operations: —" }
     } else {
-        logging("File System Operations (${patch.guestfishOperations.size + patch.fileSystemOperations.size})", null) {
+        logging("File System Operations (${patch.guestfishCommands.size + patch.fileSystemOperations.size})", null) {
             logLine { META typed "Starting Guestfish VM..." }
             val guestfish = Guestfish(osImage, this, DockerContainerName(patch.name + "." + String.random(16)))
 
-            val remainingGuestfishOperations = patch.guestfishOperations.toMutableList()
-            if (remainingGuestfishOperations.isNotEmpty()) {
-                while (remainingGuestfishOperations.isNotEmpty()) {
-                    val op = remainingGuestfishOperations.removeFirst()
-                    guestfish.run(op) // TODO
-                }
-            } else {
-                logLine { META typed "No Guestfish operations to run." }
-            }
+            applyGuestfishCommands(osImage, patch)
 
-            val guestPaths = patch.fileSystemOperations.map { it.target }
+            val guestPaths: List<Path> = patch.fileSystemOperations.map { it.target }
             if (guestPaths.isNotEmpty()) {
-                guestfish.run(Guestfish.copyOutCommands(guestPaths))
+                val guestfishOperation = Guestfish.copyOutCommands(guestPaths)
+                guestfish.run(guestfishOperation)
+
+                val guestfishCommands: List<GuestfishCommand> = Libguestfs.Guestfish.commands {
+                    guestPaths.forEach { sourcePath ->
+                        val sanitizedSourcePath = Path.of("/").asRootFor(sourcePath)
+                        val destDir = osImage.file.resolveSibling("shared").asRootFor(sourcePath).parent
+                        listOf("!mkdir -p $destDir", "- copy-out $sanitizedSourcePath $destDir")
+
+                        runLocally {
+                            command("mkdir", "-p", destDir.relativeTo(osImage.resolveOnHost("..".toPath()).normalize()).serialized)
+                        }
+
+                        ignoreErrors {
+                            copyOut { CopyOutCommand(sanitizedSourcePath) }
+                        }
+                    }
+                }
+                println(guestfishOperation.toString().blue())
+                println(guestfishCommands.toString().brightBlue())
             } else {
                 logLine { META typed "No files to extract." }
             }

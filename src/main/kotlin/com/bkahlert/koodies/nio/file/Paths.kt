@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.nio.file
 
+import com.bkahlert.koodies.concurrent.cleanUpOnShutdown
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.string.withoutPrefix
 import java.net.URI
@@ -11,6 +12,14 @@ import java.nio.file.Paths as NioPaths
  * Functions to access unknown and well known paths.
  */
 object Paths {
+
+    val clonefileSupport by lazy {
+        val file = kotlin.io.path.createTempFile().writeText("cloneFile test").cleanUpOnShutdown()
+        val clone = file.resolveSibling("cloned").cleanUpOnShutdown()
+        Runtime.getRuntime()?.exec(arrayOf("cp", "-c", file.serialized, clone.serialized))?.waitFor()?.let { exitValue ->
+            exitValue == 0 && clone.exists && clone.readText() == "cloneFile test"
+        } ?: false
+    }
 
     internal fun fileNameFrom(base: String, extension: String): String {
         val minLength = 6

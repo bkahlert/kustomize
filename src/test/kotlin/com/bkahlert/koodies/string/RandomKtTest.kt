@@ -49,13 +49,6 @@ class RandomKtTest {
         expectThat(String.random(1000, charArrayOf('A', 'B'))).containsOnlyCharacters(charArrayOf('A', 'B'))
     }
 
-    @Test
-    fun `should create crypt salt`() {
-        expectThat(String.random.cryptSalt())
-            .hasLength(2)
-            .containsOnlyCharacters(String.random.alphanumericCharacters)
-    }
-
     @RepeatedTest(100)
     fun `should create valid random CodePoint`() {
         expectThat(CodePoint.random.toString().codePointSequence().count()).isEqualTo(1)

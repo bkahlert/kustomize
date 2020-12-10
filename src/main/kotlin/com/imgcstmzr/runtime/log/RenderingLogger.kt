@@ -152,7 +152,7 @@ inline fun <reified R> Any?.logging(
             borderedOutput = borderedOutput,
             statusInformationColumn = statusInformationColumn - prefix.length,
             statusInformationPadding = statusInformationPadding,
-            statusInformationColumns = statusInformationColumns,
+            statusInformationColumns = statusInformationColumns - prefix.length,
         ) { output -> logText { ansiCode.invoke(output) } }
         is RenderingLogger -> BlockRenderingLogger(caption = caption, borderedOutput = borderedOutput) { output -> logText { ansiCode.invoke(output) } }
         else -> BlockRenderingLogger(caption = caption, borderedOutput = borderedOutput)

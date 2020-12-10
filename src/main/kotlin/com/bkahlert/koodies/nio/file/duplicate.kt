@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.nio.file
 
-import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.string.withRandomSuffix
 import java.nio.file.Path
 
 /**
@@ -16,7 +16,7 @@ import java.nio.file.Path
  *
  * E.g. `/a/b/c`'s 2 order duplication can be found at `/a/b-random/c`.
  */
-fun Path.duplicate(order: Int = 1, suffix: String = "-${String.random(4)}"): Path {
+fun Path.duplicate(order: Int = 1, suffix: String = "".withRandomSuffix()): Path {
     val sibling = resolveSibling(order) { resolveSibling(fileName.serialized + suffix) }
     return copyTo(sibling)
 }
