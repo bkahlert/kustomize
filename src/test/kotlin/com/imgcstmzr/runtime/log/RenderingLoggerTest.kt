@@ -7,16 +7,16 @@ import com.bkahlert.koodies.nio.file.readLines
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.string.Unicode
+import com.bkahlert.koodies.string.matchesCurlyPattern
 import com.bkahlert.koodies.string.repeat
+import com.bkahlert.koodies.test.junit.test
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
-import com.imgcstmzr.patch.unformattedLog
 import com.imgcstmzr.runtime.HasStatus
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.containsAtMost
 import com.imgcstmzr.util.logging.Columns
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.InMemoryLoggerFactory
-import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
@@ -39,12 +39,12 @@ class RenderingLoggerTest {
     private val tempDir = tempDir().deleteOnExit()
 
     @Test
-    fun `should log`(@Columns(100) logger: InMemoryLogger) {
-        logger.logLine { "｀、ヽ｀ヽ｀、ヽ(ノ＞＜)ノ ｀、ヽ｀☂ヽ｀、ヽ" }
-        logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
-        logger.logResult { Result.success(Unit) }
+    fun @receiver:Columns(100) InMemoryLogger.`should log`() {
+        logLine { "｀、ヽ｀ヽ｀、ヽ(ノ＞＜)ノ ｀、ヽ｀☂ヽ｀、ヽ" }
+        logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+        logResult { Result.success(Unit) }
 
-        expectThat(logger.logged).matchesCurlyPattern(
+        expectThat(logged).matchesCurlyPattern(
             """
                     ╭─────╴{}
                     │{}
@@ -56,19 +56,19 @@ class RenderingLoggerTest {
     }
 
     @Test
-    fun `should allow single line logging`(@Columns(100) logger: InMemoryLogger) {
-        logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
-        logger.singleLineLogging("mini") {
+    fun @receiver:Columns(100) InMemoryLogger.`should allow single line logging`() {
+        logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+        singleLineLogging("mini") {
             logLine { OUT typed "A" }
 //            logException { RuntimeException("exception message") }
             logStatus { OUT typed "bb" }
             logStatus { OUT typed " " }
         }
-        logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
-        logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
-        logger.logResult { Result.success(Unit) }
+        logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+        logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+        logResult { Result.success(Unit) }
 
-        expectThat(logger.logged).matchesCurlyPattern(
+        expectThat(logged).matchesCurlyPattern(
             """
                     ╭─────╴{}
                     │{}
@@ -82,19 +82,19 @@ class RenderingLoggerTest {
     }
 
     @Test
-    fun `should allow nested logging`(@Columns(100) logger: InMemoryLogger) {
-        logger.logStatus { OUT typed "outer 1" }
-        logger.logStatus { OUT typed "outer 2" }
-        logger.logging("nested log", null) {
+    fun @receiver:Columns(100) InMemoryLogger.`should allow nested logging`() {
+        logStatus { OUT typed "outer 1" }
+        logStatus { OUT typed "outer 2" }
+        logging("nested log", null) {
             logStatus { OUT typed "nested 1" }
             logStatus { OUT typed "nested 2" }
             logStatus { OUT typed "nested 3" }
         }
-        logger.logStatus { OUT typed "outer 3" }
-        logger.logStatus { OUT typed "outer 4" }
-        logger.logResult { Result.success("end") }
+        logStatus { OUT typed "outer 3" }
+        logStatus { OUT typed "outer 4" }
+        logResult { Result.success("end") }
 
-        expectThat(logger.logged).matchesCurlyPattern("""
+        expectThat(logged).matchesCurlyPattern("""
                     ╭─────╴{}
                     │{}
                     │   outer 1                                               {}                                      ▮▮
@@ -117,7 +117,7 @@ class RenderingLoggerTest {
 
     @Execution(SAME_THREAD)
     @TestFactory
-    fun `should allow complex layout`(@Columns(100) loggerFactory: InMemoryLoggerFactory) = listOf(
+    fun @receiver:Columns(100) InMemoryLoggerFactory.`should allow complex layout`() = listOf(
         true to """
             ╭─────╴{}
             │{}
@@ -168,45 +168,43 @@ class RenderingLoggerTest {
              outer 4                                                  {}                                      ▮▮
             Completed: ✔{}
         """.trimIndent(),
-    )
-        .map { (borderedOutput, expectation) ->
-            val label = if (borderedOutput) "bordered" else "not-bordered"
-            val logger = loggerFactory.createLogger(label, borderedOutput = borderedOutput)
-            dynamicTest("should allow complex layout—$label") {
-                logger.logStatus { OUT typed "outer 1" }
-                logger.logLine { "outer 2" }
-                logger.logging("nested log") {
+    ).test("bordered={}") { (borderedOutput, expectation) ->
+        val label = if (borderedOutput) "bordered" else "not-bordered"
+        with(createLogger(label, borderedOutput = borderedOutput)) {
+            logStatus { OUT typed "outer 1" }
+            logLine { "outer 2" }
+            logging("nested log") {
+                logStatus { OUT typed "nested 1" }
+                singleLineLogging("mini segment") {
+                    logStatus { ERR typed "12345" }
+                    logStatus { META typed "sample" }
+                }
+                logging("nested log") {
                     logStatus { OUT typed "nested 1" }
                     singleLineLogging("mini segment") {
                         logStatus { ERR typed "12345" }
                         logStatus { META typed "sample" }
                     }
-                    logging("nested log") {
-                        logStatus { OUT typed "nested 1" }
-                        singleLineLogging("mini segment") {
-                            logStatus { ERR typed "12345" }
-                            logStatus { META typed "sample" }
-                        }
-                        logStatus { OUT typed "nested 2" }
-                        logStatus { OUT typed "nested 3" }
-                    }
                     logStatus { OUT typed "nested 2" }
                     logStatus { OUT typed "nested 3" }
                 }
-                logger.logStatus { OUT typed "outer 3" }
-                logger.logStatus { OUT typed "outer 4" }
-                logger.logResult { Result.success(Unit) }
-
-                expectThat(logger.logged).matchesCurlyPattern(expectation)
+                logStatus { OUT typed "nested 2" }
+                logStatus { OUT typed "nested 3" }
             }
+            logStatus { OUT typed "outer 3" }
+            logStatus { OUT typed "outer 4" }
+            logResult { Result.success(Unit) }
+
+            expectThat(logged).matchesCurlyPattern(expectation)
         }
+    }
 
     @Test
-    fun `should log status`(@Columns(100) logger: InMemoryLogger) {
-        logger.logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
-        logger.logResult { Result.success(Unit) }
+    fun @receiver:Columns(100) InMemoryLogger.`should log status`() {
+        logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+        logResult { Result.success(Unit) }
 
-        expectThat(logger.logged).matchesCurlyPattern(
+        expectThat(logged).matchesCurlyPattern(
             """
                     ╭─────╴{}
                     │{}
@@ -218,14 +216,14 @@ class RenderingLoggerTest {
 
     @Suppress("LongLine")
     @Test
-    fun `should log status in same column`(@Columns(100) logger: InMemoryLogger) {
-        logger.logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
-        logger.logging("nested", null) {
+    fun @receiver:Columns(100) InMemoryLogger.`should log status in same column`() {
+        logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+        logging("nested", null) {
             logStatus(listOf(StringStatus("getting phone call"))) { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         }
-        logger.logResult { Result.success(Unit) }
+        logResult { Result.success(Unit) }
 
-        expectThat(logger.logged)
+        expectThat(logged)
             .contains("│   ☎Σ⊂⊂(☉ω☉∩)                                                                                                    ◀◀ getting phone call")
             .contains("│   │   ☎Σ⊂⊂(☉ω☉∩)                                                                                                ◀◀ getting phone call")
             .not { contains("│   │   ☎Σ⊂⊂(☉ω☉∩)                                                                                                     ◀◀ getting phone call") } // too much indent
@@ -234,37 +232,35 @@ class RenderingLoggerTest {
 
     @Suppress("LongLine")
     @Test
-    fun `should not break status line`(@Columns(10) logger: InMemoryLogger) {
-        with(logger) {
-            logStatus(listOf(StringStatus("1234567890"))) { OUT typed "abc....xyz" }
+    fun @receiver:Columns(10) InMemoryLogger.`should not break status line`() {
+        logStatus(listOf(StringStatus("1234567890"))) { OUT typed "abc....xyz" }
+        logging("nested", null) {
+            logStatus(listOf(StringStatus("123456789 01234567890"))) { OUT typed "abc....xyz" }
             logging("nested", null) {
-                logStatus(listOf(StringStatus("123456789 01234567890"))) { OUT typed "abc....xyz" }
-                logging("nested", null) {
-                    logStatus(listOf(StringStatus("1234567890 1234567890 1234567890 1234567890"))) { OUT typed "abc....xyz" }
-                }
+                logStatus(listOf(StringStatus("1234567890 1234567890 1234567890 1234567890"))) { OUT typed "abc....xyz" }
             }
-            logResult { Result.success(Unit) }
         }
+        logResult { Result.success(Unit) }
 
-        expectThat(logger.logged)
+        expectThat(logged)
             .contains("│   │   │   ab          ◀◀ 1234567890 1234…567890 1234567890")
     }
 
     @Test
-    fun `should log exception`(@Columns(100) logger: InMemoryLogger) {
+    fun @receiver:Columns(100) InMemoryLogger.`should log exception`() {
         kotlin.runCatching {
-            logger.logStatus { OUT typed "outer 1" }
-            logger.logStatus { OUT typed "outer 2" }
-            logger.logging<Any>("nested log", null) {
+            logStatus { OUT typed "outer 1" }
+            logStatus { OUT typed "outer 2" }
+            logging<Any>("nested log", null) {
                 logStatus { OUT typed "nested 1" }
                 throw IllegalStateException("an exception")
             }
-            logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
-            logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
-            logger.logResult { Result.success("success") }
+            logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+            logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+            logResult { Result.success("success") }
         }
 
-        expectThat(logger.logged).matchesCurlyPattern(
+        expectThat(logged).matchesCurlyPattern(
             """
                     ╭─────╴{}
                     │{}
@@ -281,25 +277,25 @@ class RenderingLoggerTest {
     }
 
     @Test
-    fun `should simple log when closed twice`(@Columns(100) logger: InMemoryLogger) {
-        logger.logResult { Result.success(Unit) }
-        logger.logResult { Result.success(Unit) }
-        expectThat(logger.logged)
+    fun @receiver:Columns(100) InMemoryLogger.`should simple log when closed twice`() {
+        logResult { Result.success(Unit) }
+        logResult { Result.success(Unit) }
+        expectThat(logged)
             .containsAtMost("╰─────╴", 1)
             .contains("✔")
     }
 
     @Test
-    fun `should simply log multiple calls to logResult`(@Columns(100) logger: InMemoryLogger) {
+    fun @receiver:Columns(100) InMemoryLogger.`should simply log multiple calls to logResult`() {
         expectCatching {
-            logger.singleLineLogging("close twice") {
+            singleLineLogging("close twice") {
                 logStatus { META typed "line" }
                 logResult { Result.success(1) }
                 logResult { Result.success(2) }
                 3
             }
         }.isSuccess()
-        expectThat(logger.logged).matchesCurlyPattern("""
+        expectThat(logged).matchesCurlyPattern("""
             ╭─────╴{}
             │   
             │   close twice: line ✔ returned 1
@@ -309,7 +305,7 @@ class RenderingLoggerTest {
     }
 
     @Test
-    fun `should wrap long lines`(logger: InMemoryLogger) {
+    fun InMemoryLogger.`should wrap long lines`() {
         val status: (String) -> HasStatus = {
             object : HasStatus {
                 override fun status(): String = it
@@ -317,15 +313,15 @@ class RenderingLoggerTest {
         }
         val shortLine = "┬┴┬┴┤(･_├┬┴┬┴"
         val longLine = "｀、ヽ｀ヽ｀、ヽ".repeat(10) + "ノ＞＜)ノ" + " ｀、ヽ｀、ヽ｀、ヽ".repeat(10)
-        logger.logLine { shortLine }
-        logger.logLine { longLine }
-        logger.logStatus(listOf(status(shortLine))) { OUT typed shortLine }
-        logger.logStatus(listOf(status(shortLine))) { OUT typed longLine }
-        logger.logStatus(listOf(status(longLine))) { OUT typed shortLine }
-        logger.logStatus(listOf(status(longLine))) { OUT typed longLine }
-        logger.logResult { Result.success(longLine) }
+        logLine { shortLine }
+        logLine { longLine }
+        logStatus(listOf(status(shortLine))) { OUT typed shortLine }
+        logStatus(listOf(status(shortLine))) { OUT typed longLine }
+        logStatus(listOf(status(longLine))) { OUT typed shortLine }
+        logStatus(listOf(status(longLine))) { OUT typed longLine }
+        logResult { Result.success(longLine) }
 
-        expectThat(logger.logged).matchesCurlyPattern(
+        expectThat(logged).matchesCurlyPattern(
             """
                 ╭─────╴{}
                 │   
@@ -349,22 +345,22 @@ class RenderingLoggerTest {
     }
 
     @Test
-    fun `should log to file`(@Columns(100) logger: InMemoryLogger) {
-        logger.logLine { "｀、ヽ｀ヽ｀、ヽ(ノ＞＜)ノ ｀、ヽ｀☂ヽ｀、ヽ" }
-        logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+    fun @receiver:Columns(100) InMemoryLogger.`should log to file`() {
+        logLine { "｀、ヽ｀ヽ｀、ヽ(ノ＞＜)ノ ｀、ヽ｀☂ヽ｀、ヽ" }
+        logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         val file = tempDir.tempFile("file-log", ".log")
-        logger.fileLogging(file, "Some logging heavy operation") {
+        fileLogging(file, "Some logging heavy operation") {
             logLine { "line" }
             logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
             logException { RuntimeException("just a test") }
             logCaughtException { RuntimeException("covered") }
             "👍"
         }
-        logger.logLine { "Normal logging continues..." }
-        logger.logResult { Result.success(Unit) }
+        logLine { "Normal logging continues..." }
+        logResult { Result.success(Unit) }
 
         expect {
-            that(logger.logged).matchesCurlyPattern(
+            that(logged).matchesCurlyPattern(
                 """
                     ╭─────╴{}
                     │{}
@@ -412,7 +408,7 @@ class RenderingLoggerTest {
                 }
             }.isFailure().isA<RuntimeException>()
 
-            that(logger).unformattedLog.matchesCurlyPattern("""
+            logger.logged.matchesCurlyPattern("""
                 Started: root
                  Started: level 0
                   doing stuff

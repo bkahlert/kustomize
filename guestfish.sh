@@ -62,7 +62,7 @@ HERE
 --mount /dev/sda2:/ \
 --mount /dev/sda1:/boot \
 #--firstBoot
-#--firstBoot-install
+#--firstboot-install
 #--hostname 
 #--password
 #--root-password

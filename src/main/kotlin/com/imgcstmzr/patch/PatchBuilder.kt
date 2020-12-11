@@ -11,9 +11,9 @@ import com.imgcstmzr.libguestfs.guestfish.GuestfishDsl
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.VirtCustomizeCustomizationOptionsBuilder
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeDsl
+import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemProcess
-import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.Program
 import com.imgcstmzr.runtime.log.RenderingLogger
 import java.nio.file.Path
@@ -28,7 +28,7 @@ data class SimplePatch(
     override val programs: List<Program>,
 ) : Patch
 
-fun buildPatch(name: String, init: PatchBuilder.() -> Unit): Patch {
+fun buildPatch(os: OperatingSystem, name: String, init: PatchBuilder.() -> Unit): Patch {
 
     val preFileImgOperations = mutableListOf<ImgOperation>()
     val customizationOptions = mutableListOf<VirtCustomizeCustomizationOption>()
@@ -37,7 +37,7 @@ fun buildPatch(name: String, init: PatchBuilder.() -> Unit): Patch {
     val postFileImgOperations = mutableListOf<ImgOperation>()
     val programs = mutableListOf<Program>()
 
-    PatchBuilder(preFileImgOperations, customizationOptions, guestfishCommands, fileSystemOperations, postFileImgOperations, programs).apply(init)
+    PatchBuilder(os, preFileImgOperations, customizationOptions, guestfishCommands, fileSystemOperations, postFileImgOperations, programs).apply(init)
     return SimplePatch(name, preFileImgOperations, customizationOptions, guestfishCommands, fileSystemOperations, postFileImgOperations, programs)
 }
 
@@ -48,6 +48,7 @@ annotation class PatchDsl
 @VirtCustomizeDsl
 @GuestfishDsl
 class PatchBuilder(
+    private val os: OperatingSystem,
     private val preFileImgOperations: MutableList<ImgOperation>,
     private val virtCustomizeCustomizationOptions: MutableList<VirtCustomizeCustomizationOption>,
     private val guestfishCommands: MutableList<GuestfishCommand>,
@@ -64,7 +65,7 @@ class PatchBuilder(
     fun guestfish(init: GuestfishCommandLine.GuestfishCommandsBuilder.() -> Unit) = init.buildListTo(guestfishCommands)
     fun files(init: FileSystemOperationsCollector.() -> Unit) = FileSystemOperationsCollector(fileSystemOperations).apply(init)
     fun postFile(init: ImgOperationsCollector.() -> Unit) = ImgOperationsCollector(postFileImgOperations).apply(init)
-    fun booted(init: ProgramsBuilder.() -> Unit) = ProgramsBuilder(programs).apply(init)
+    fun booted(init: ProgramsBuilder.() -> Unit) = ProgramsBuilder(os, programs).apply(init)
 }
 
 typealias ImgOperation = (osImage: OperatingSystemImage, logger: RenderingLogger) -> Unit
@@ -108,7 +109,7 @@ class FileSystemOperationsCollector(private val pathOperations: MutableList<Path
 
 
 @PatchDsl
-class ProgramsBuilder(private val programs: MutableList<Program>) {
+class ProgramsBuilder(private val os: OperatingSystem, private val programs: MutableList<Program>) {
 
     fun run(program: Program) {
         programs += program
@@ -122,11 +123,11 @@ class ProgramsBuilder(private val programs: MutableList<Program>) {
         programs += Program(purpose, initialState, *states)
     }
 
-    fun setupScript(name: String, readyPattern: Regex = OperatingSystems.RaspberryPiLite.readyPattern, setupScript: String) {
-        programs += Program.fromSetupScript(name, readyPattern, setupScript)
+    fun setupScript(name: String, commandBlocks: String) {
+        programs += os.compileSetupScript(name, commandBlocks)
     }
 
-    fun script(name: String, readyPattern: Regex = OperatingSystems.RaspberryPiLite.readyPattern, vararg commands: String) {
-        programs += Program.fromScript(name, readyPattern, *commands)
+    fun script(name: String, vararg commandLines: String) {
+        programs += os.compileScript(name, *commandLines)
     }
 }

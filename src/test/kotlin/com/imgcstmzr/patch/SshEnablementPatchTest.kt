@@ -1,8 +1,14 @@
 package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.nio.file.toPath
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
-import com.imgcstmzr.util.FixtureResolverExtension
+import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.copyOut
+import com.imgcstmzr.libguestfs.guestfish.TouchCommand
+import com.imgcstmzr.libguestfs.resolveOnHost
+import com.imgcstmzr.runtime.OperatingSystemImage
+import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
+import com.imgcstmzr.util.DockerRequiring
+import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.matches
 import org.junit.jupiter.api.Test
@@ -17,11 +23,18 @@ import strikt.assertions.isEqualTo
 class SshEnablementPatchTest {
 
     @Test
-    fun `should create ssh file`(logger: InMemoryLogger) {
-        val root = FixtureResolverExtension.prepareSharedDirectory().also { expectThat(it).get { resolve("boot/ssh") }.not { exists() } }
-        val sshPatch = SshEnablementPatch()
-        expectThat(sshPatch).matches(customizationOptionsAssertion = {
-            first().isEqualTo(VirtCustomizeCustomizationOption.TouchOption("/boot/ssh".toPath()))
+    fun `should create ssh file`() {
+        expectThat(SshEnablementPatch(RaspberryPiLite)).matches(guestfishCommandsAssertion = {
+            first().isEqualTo(TouchCommand("/boot/ssh".toPath()))
         })
+    }
+
+    @FiveMinutesTimeout @DockerRequiring @Test
+    fun InMemoryLogger.`should create ssh file on disk`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+        with(SshEnablementPatch(osImage.operatingSystem)) {
+            patch(osImage)
+        }
+        osImage.copyOut("/boot/ssh")
+        expectThat(osImage.resolveOnHost("/boot/ssh")).exists()
     }
 }

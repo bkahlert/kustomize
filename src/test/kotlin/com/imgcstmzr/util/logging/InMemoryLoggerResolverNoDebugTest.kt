@@ -18,18 +18,18 @@ import strikt.assertions.isFailure
 class InMemoryLoggerResolverNoDebugTest {
 
     @Test
-    fun `should not automatically log to console without @Debug`(output: CapturedOutput, logger: InMemoryLogger) {
-        logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+    fun InMemoryLogger.`should not automatically log to console without @Debug`(output: CapturedOutput) {
+        logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
 
-        expectThat(logger.logged).contains("☎Σ⊂⊂(☉ω☉∩)")
+        getExpectThatLogged().contains("☎Σ⊂⊂(☉ω☉∩)")
         expectThat(output.removeEscapeSequences()).not { toStringContains("☎Σ⊂⊂(☉ω☉∩)") }
     }
 
     @Test
-    fun `should not catch exceptions`(output: CapturedOutput, logger: InMemoryLogger) {
-        logger.logStatus { OUT typed "(*｀へ´*)" }
+    fun InMemoryLogger.`should not catch exceptions`(output: CapturedOutput) {
+        logStatus { OUT typed "(*｀へ´*)" }
 
-        expectCatching { logger.logResult<Any> { Result.failure(IllegalStateException("test")) } }
+        expectCatching { logResult<Any> { Result.failure(IllegalStateException("test")) } }
             .isFailure().isA<IllegalStateException>()
     }
 }

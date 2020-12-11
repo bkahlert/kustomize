@@ -8,6 +8,7 @@ import com.bkahlert.koodies.string.LineSeparators.lines
 import com.bkahlert.koodies.test.junit.test
 import com.imgcstmzr.util.MiscFixture
 import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.util.logging.getExpectThatLogged
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
@@ -27,30 +28,30 @@ class GuestfishIoProcessorTest {
     @Nested
     inner class Verbosity {
         @Test
-        fun `should log all on active verbose option`(logger: InMemoryLogger) {
-            val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = true)
+        fun InMemoryLogger.`should log all on active verbose option`() {
+            val guestfishIoProcessor = GuestfishIoProcessor(this, verbose = true)
             guestfishIO.lines().map { OUT typed it }.sendTo(guestfishIoProcessor)
-            expectThat(logger.logged.lines()) {
+            expectThat(logged.lines()) {
                 get { size }.isGreaterThan(950).isLessThanOrEqualTo(1050)
                 get { take(20).joinToString("\n") }.contains("libguestfs: create: flags = 0, handle = 0x1b19580, program = guestfish")
             }
         }
 
         @Test
-        fun `should not log boot sequence on inactive verbose option`(logger: InMemoryLogger) {
-            val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = false)
+        fun InMemoryLogger.`should not log boot sequence on inactive verbose option`() {
+            val guestfishIoProcessor = GuestfishIoProcessor(this, verbose = false)
             guestfishIO.lines().map { OUT typed it }.sendTo(guestfishIoProcessor)
-            expectThat(logger.logged.lines()) {
+            expectThat(logged.lines()) {
                 get { size }.isGreaterThan(80).isLessThanOrEqualTo(120)
                 get { take(10).joinToString("\n") }.contains("guestfsd: main_loop: new request, len 0x3c")
             }
         }
 
         @Test
-        fun `should only log errors on inactive verbose option`(logger: InMemoryLogger) {
-            val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = false)
+        fun InMemoryLogger.`should only log errors on inactive verbose option`() {
+            val guestfishIoProcessor = GuestfishIoProcessor(this, verbose = false)
             IO.Type.values().map { type -> type typed "$type" }.sendTo(guestfishIoProcessor)
-            expectThat(logger).get { logged }
+            getExpectThatLogged()
                 .contains("ERR").and {
                     not {
                         contains("META")
@@ -64,11 +65,11 @@ class GuestfishIoProcessorTest {
         inner class SkippingLines {
 
             @TestFactory
-            fun `should meta log skipped lines depending on verbosity`(logger: InMemoryLogger) =
+            fun InMemoryLogger.`should meta log skipped lines depending on verbosity`() =
                 listOf(true, false).test { verbose ->
-                    val guestfishIoProcessor = GuestfishIoProcessor(logger, verbose = verbose)
+                    val guestfishIoProcessor = GuestfishIoProcessor(this, verbose = verbose)
                     guestfishIO.lines().map { IO.Type.META typed it }.sendTo(guestfishIoProcessor)
-                    expectThat(logger.logged.lines()) {
+                    expectThat(logged.lines()) {
                         if (verbose) none { contains("lines skipped") }
                         else any { contains("lines skipped") }
                     }

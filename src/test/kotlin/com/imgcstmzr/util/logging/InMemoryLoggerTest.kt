@@ -1,13 +1,14 @@
 package com.imgcstmzr.util.logging
 
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
-import com.bkahlert.koodies.test.strikt.asString
+import com.bkahlert.koodies.test.strikt.toStringContainsAll
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import org.junit.jupiter.api.parallel.Isolated
+import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.isEmpty
@@ -17,6 +18,7 @@ import strikt.assertions.startsWith
 @ExtendWith(OutputCaptureExtension::class)
 @Isolated("flaky OutputCapture")
 class InMemoryLoggerTest {
+
     @Test
     fun `should log using OutputStream`(capturedOutput: CapturedOutput) {
         val outputStream = ByteArrayOutputStream()
@@ -25,9 +27,7 @@ class InMemoryLoggerTest {
         logger.logLine { "abc" }
 
         expectThat(capturedOutput).isEmpty()
-        expectThat(outputStream).asString()
-            .contains("caption")
-            .contains("abc")
+        expectThat(outputStream).toStringContainsAll("caption", "abc")
     }
 
     @Test
@@ -51,3 +51,12 @@ class InMemoryLoggerTest {
         expectThat(logger.logged.removeEscapeSequences()).startsWith("╭─────╴caption")
     }
 }
+
+
+fun <T : InMemoryLogger> T.logged(vararg texts: String): Assertion.Builder<String> =
+    getExpectThatLogged().compose("contains text %s") { completeLog ->
+        texts.forEach { text -> contains(text) }
+    }.then { if (allPassed) pass() else fail() }
+
+fun <T : InMemoryLogger> T.getExpectThatLogged() =
+    expectThat(logged)

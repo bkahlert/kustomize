@@ -15,6 +15,7 @@ import com.bkahlert.koodies.unit.Kibi
 import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.empty
+import com.imgcstmzr.runtime.ProcessMock.Companion.withIndividuallySlowInput
 import com.imgcstmzr.runtime.SlowInputStream.Companion.prompt
 import com.imgcstmzr.runtime.log.miniTrace
 import com.imgcstmzr.util.debug
@@ -189,13 +190,14 @@ data class LoginSimulation(val readerTimeout: Duration, val ioDelay: Duration, v
     )
 
     fun buildProcess(loggerFactory: InMemoryLoggerFactory): ProcessMock =
-        ProcessMock.withIndividuallySlowInput(
-            inputs = generateProcessOutput(promptTerminator),
-            baseDelayPerInput = ioDelay,
-            echoInput = true,
-            processExit = { ProcessExitMock.immediateSuccess() },
-            logger = loggerFactory.createLogger(toString()),
-        )
+        with(loggerFactory.createLogger(toString())) {
+            withIndividuallySlowInput(
+                inputs = generateProcessOutput(promptTerminator),
+                baseDelayPerInput = ioDelay,
+                echoInput = true,
+                processExit = { ProcessExitMock.immediateSuccess() },
+            )
+        }
 
     override fun toString(): String = "login" + (promptTerminator?.let { "\\n" } ?: "\\̵n") + "$ioDelay delay per I/O line"
 }

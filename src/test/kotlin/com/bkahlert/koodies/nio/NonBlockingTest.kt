@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.nio
 
 import com.bkahlert.koodies.string.random
-import com.imgcstmzr.runtime.SlowInputStream
+import com.imgcstmzr.runtime.SlowInputStream.Companion.slowInputStream
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.jline.utils.InputStreamReader
 import org.jline.utils.NonBlocking
@@ -49,29 +49,29 @@ class NonBlockingTest {
         }
 
         @Test
-        fun `should read no non-BEM unicode extremely slow input streams`(logger: InMemoryLogger) {
+        fun InMemoryLogger.`should read no non-BEM unicode extremely slow input streams`() {
             val input = "A𝌪\n𝌫\n𝌬𝌭𝌮\nZ"
-            val inputStream = SlowInputStream(0.seconds to input, baseDelayPerInput = 1.seconds, logger = logger)
+            val inputStream = slowInputStream(0.seconds to input, baseDelayPerInput = 1.seconds)
             val reader = NonBlocking.nonBlocking(String.random(), NonBlocking.nonBlocking(String.random(), BufferedInputStream(inputStream)), Charsets.UTF_8)
             val readLines = reader.readLines()
             expectThat(readLines).isEqualTo(listOf("A\uD834\uDF2A", "\uD834\uDF2B", "\uD834\uDF2C\uD834\uDF2D\uD834\uDF2E", "Z"))
         }
 
         @Test
-        fun `should read no non-BEM unicode extremely slow input streams if buffered`(logger: InMemoryLogger) {
+        fun InMemoryLogger.`should read no non-BEM unicode extremely slow input streams if buffered`() {
             val input = "A𝌪\n𝌫\n𝌬𝌭𝌮\nZ"
-            val inputStream = SlowInputStream(0.seconds to input, baseDelayPerInput = 1.seconds, logger = logger)
+            val inputStream = slowInputStream(0.seconds to input, baseDelayPerInput = 1.seconds)
             val reader =
-                NonBlocking.nonBlocking(::`should read no non-BEM unicode extremely slow input streams if buffered`.toString(),
+                NonBlocking.nonBlocking("should read no non-BEM unicode extremely slow input streams if buffered",
                     BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)))
             val readLines = reader.readLines()
             expectThat(readLines).isEqualTo(listOf("A\uD834\uDF2A", "\uD834\uDF2B", "\uD834\uDF2C\uD834\uDF2D\uD834\uDF2E", "Z"))
         }
 
         @Test
-        fun `should be equally readable like any other byte input stream`(logger: InMemoryLogger) {
+        fun InMemoryLogger.`should be equally readable like any other byte input stream`() {
             val input = "A𝌪\n𝌫\n𝌬𝌭𝌮\nZ"
-            val inputStream = SlowInputStream(0.seconds to input, baseDelayPerInput = 10.seconds, logger = logger)
+            val inputStream = slowInputStream(0.seconds to input, baseDelayPerInput = 10.seconds)
 
             val readFromSlowInput =
                 NonBlocking.nonBlocking(String.random(), BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8))).readAll(2.seconds)

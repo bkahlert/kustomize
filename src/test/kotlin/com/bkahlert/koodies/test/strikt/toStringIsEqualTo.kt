@@ -4,7 +4,6 @@ import com.bkahlert.koodies.string.CodePoint
 import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
-import com.bkahlert.koodies.terminal.ansi.contains
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.Size
 import com.imgcstmzr.guestfish.GuestfishOperation
@@ -26,6 +25,12 @@ infix fun <T> Assertion.Builder<T>.toStringContains(expected: String): Assertion
             else -> fail(actual = actual)
         }
     }
+
+fun <T> Assertion.Builder<T>.toStringContainsAll(vararg expected: String): Assertion.Builder<T> =
+    if (expected.size == 1) toStringContains(expected.single())
+    else compose("contains %s", expected.joinToString(", ")) {
+        expected.forEach { toStringContains(it) }
+    }.then { if (allPassed && passedCount > 0) pass() else fail() }
 
 @Deprecated("toStringIsEqualTo")
 fun Assertion.Builder<*>.isEqualToStringWise(other: Any?, removeAnsi: Boolean = true) =

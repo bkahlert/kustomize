@@ -33,11 +33,11 @@ class RandomKtTest {
     }
 
     @Test
-    fun `should not easily produce the same string`(logger: InMemoryLogger) {
+    fun InMemoryLogger.`should not easily produce the same string`() {
         val calculated = mutableListOf<String>()
         (0 until 1000).onEach {
             calculated += String.random(8).also {
-                logger.logLine { Kaomojis.`(＃￣_￣)o︠・━・・━・━━・━☆`.toString() + " " + it }
+                logLine { Kaomojis.`(＃￣_￣)o︠・━・・━・━━・━☆`.toString() + " " + it }
                 expectThat(calculated).doesNotContain(it)
             }
         }

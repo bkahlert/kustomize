@@ -55,26 +55,26 @@ class GuestfishTest {
 //    }
 
     @FiveMinutesTimeout @DockerRequiring @Test
-    fun `should copy file from osImage, skip non-existing and override one`(osImage: OperatingSystemImage, logger: InMemoryLogger, @Debug debug: Boolean) {
-        val guestfish = Guestfish(osImage, logger, debug = debug).withRandomSuffix()
+    fun InMemoryLogger.`should copy file from osImage, skip non-existing and override one`(osImage: OperatingSystemImage, @Debug debug: Boolean) {
+        val guestfish = Guestfish(osImage, this, debug = debug).withRandomSuffix()
         guestfish.run(copyOutCommands(listOf(Path.of("/boot/cmdline.txt"), Path.of("/non/existing.txt"))))
         val dir = guestfish.guestRootOnHost
 
         dir.resolve("boot/config.txt").writeText("overwrite me")
-        Guestfish(osImage, logger).withRandomSuffix().run(copyOutCommands(listOf(Path.of("/boot/config.txt"))))
+        Guestfish(osImage, this).withRandomSuffix().run(copyOutCommands(listOf(Path.of("/boot/config.txt"))))
 
         expectThat(dir.resolve("boot/cmdline.txt")).hasContent(ImgFixture.Boot.CmdlineTxt.text)
         expectThat(dir.resolve("boot/config.txt")).hasContent(ImgFixture.Boot.ConfigTxt.text).not { hasContent("overwrite") }
     }
 
     @FiveMinutesTimeout @DockerRequiring @TestFactory
-    fun `should copy new file to osImage and overwrite a second one`(osImage: OperatingSystemImage, logger: InMemoryLogger) =
+    fun InMemoryLogger.`should copy new file to osImage and overwrite a second one`(osImage: OperatingSystemImage) =
         listOf(
             "using copy-in" to { guestfish: Guestfish, guestPaths: List<Path> -> guestfish.run(copyInCommands(guestPaths)) },
             "using tar-in" to { guestfish: Guestfish, guestPaths: List<Path> -> guestfish.tarIn() },
         ).map { (name, copyInVariant) ->
             dynamicTest(name) {
-                val guestfish = Guestfish(osImage, logger).withRandomSuffix()
+                val guestfish = Guestfish(osImage, this).withRandomSuffix()
                 val exampleHtml = Path.of("/home/user/example.html")
                 val exampleHtmlOnHost = guestfish.guestRootOnHost.asRootFor(exampleHtml).also { ImgFixture.Home.User.ExampleHtml.copyTo(it) }
                 val configTxt = Path.of("/boot/config.txt")
@@ -92,8 +92,8 @@ class GuestfishTest {
         }
 
     @FiveMinutesTimeout @DockerRequiring @Test
-    fun `should change password`(@OS(DietPi) osImage: OperatingSystemImage, logger: InMemoryLogger) {
-        val guestfish = Guestfish(osImage, logger).withRandomSuffix()
+    fun InMemoryLogger.`should change password`(@OS(DietPi) osImage: OperatingSystemImage) {
+        val guestfish = Guestfish(osImage, this).withRandomSuffix()
         val shadowPath = Path.of("/etc/shadow")
         val hostShadow = guestfish.guestRootOnHost.asRootFor(shadowPath)
 
@@ -102,8 +102,8 @@ class GuestfishTest {
     }
 
     @FiveMinutesTimeout @DockerRequiring @Test
-    fun `should update credentials password`(@OS(DietPi) osImage: OperatingSystemImage, logger: InMemoryLogger) {
-        val guestfish = Guestfish(osImage, logger).withRandomSuffix()
+    fun InMemoryLogger.`should update credentials password`(@OS(DietPi) osImage: OperatingSystemImage) {
+        val guestfish = Guestfish(osImage, this).withRandomSuffix()
         val password = String.random()
 
         guestfish.run(changePasswordCommand("root", password, String.random(32)))

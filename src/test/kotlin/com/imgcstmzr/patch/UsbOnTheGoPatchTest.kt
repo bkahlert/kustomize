@@ -1,5 +1,6 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.util.FixtureResolverExtension
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.containsContent
@@ -18,19 +19,19 @@ class UsbOnTheGoPatchTest {
     @Test
     fun `should not do anything but patch files n+2 times`() {
         val nModules = (1..4).map { index -> "module-$index" }
-        expectThat(UsbOnTheGoPatch(nModules)).matches(fileSystemOperationsAssertion = { hasSize(nModules.size + 2) })
+        expectThat(UsbOnTheGoPatch(RaspberryPiLite, nModules)).matches(fileSystemOperationsAssertion = { hasSize(nModules.size + 2) })
     }
 
     @Test
-    fun `should patch configtxt and cmdlinetxt file`(logger: InMemoryLogger) {
+    fun InMemoryLogger.`should patch configtxt and cmdlinetxt file`() {
         val root = FixtureResolverExtension.prepareSharedDirectory()
             .also {
                 expectThat(it).get { resolve("boot/cmdline.txt") }.not { this.containsContent("g_ether,g_webcam") }
             }
-        val usbOnTheGoPatch = UsbOnTheGoPatch(listOf("foo", "bar"))
+        val usbOnTheGoPatch = UsbOnTheGoPatch(RaspberryPiLite, listOf("foo", "bar"))
 
         usbOnTheGoPatch.fileSystemOperations.onEach { op ->
-            op(root.asRootFor(op.target), logger)
+            op(root.asRootFor(op.target), this)
         }
 
         expectThat(root).get { resolve("boot/config.txt") }.containsContent("dtoverlay=dwc2")
@@ -38,13 +39,13 @@ class UsbOnTheGoPatchTest {
     }
 
     @Test
-    fun `should not patch twice`(logger: InMemoryLogger) {
+    fun InMemoryLogger.`should not patch twice`() {
         val root = FixtureResolverExtension.prepareSharedDirectory()
-        val usbOnTheGoPatch = UsbOnTheGoPatch(listOf("foo", "bar"))
+        val usbOnTheGoPatch = UsbOnTheGoPatch(RaspberryPiLite, listOf("foo", "bar"))
 
         (1..10).onEach { i ->
             usbOnTheGoPatch.fileSystemOperations.onEach { op ->
-                op(root.asRootFor(op.target), logger)
+                op(root.asRootFor(op.target), this)
             }
         }
 

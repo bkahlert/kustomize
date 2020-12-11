@@ -8,6 +8,7 @@ import com.bkahlert.koodies.docker.DockerRunAdaptable
 import com.bkahlert.koodies.docker.DockerRunCommandLine
 import com.bkahlert.koodies.docker.DockerRunCommandLineBuilder.Companion.buildRunCommand
 import com.bkahlert.koodies.nio.exception.noSuchFile
+import com.bkahlert.koodies.string.withRandomSuffix
 import com.imgcstmzr.libguestfs.guestfish.GuestfishOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeOption.DiskOption
 import com.imgcstmzr.util.isReadable
@@ -59,7 +60,7 @@ interface LibguestfsDockerAdaptable : DockerRunAdaptable {
             redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
             options {
                 entrypoint { command }
-                name { "libguestfs-$command" }
+                name { "libguestfs-$command".withRandomSuffix() }
                 autoCleanup { OnOffBuilder.on }
                 mounts {
                     disk.resolveSibling("shared") mountAt "/shared"

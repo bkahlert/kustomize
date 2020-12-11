@@ -24,8 +24,11 @@ object Libguestfs {
     }
 }
 
-fun OperatingSystemImage.resolveOnHost(pathInsideOfImage: Path) = with(SharedPath.Host) { resolve(pathInsideOfImage) }
-fun OperatingSystemImage.resolveOnHost(pathInsideOfImage: String) = with(SharedPath.Host) { resolve(pathInsideOfImage) }
+fun OperatingSystemImage.resolveOnHost(pathInsideOfImage: Path) =
+    with(SharedPath.Host) { resolve(pathInsideOfImage) }
+
+fun OperatingSystemImage.resolveOnHost(pathInsideOfImage: String) =
+    with(SharedPath.Host) { resolve(pathInsideOfImage) }
 
 
 

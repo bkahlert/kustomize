@@ -8,6 +8,7 @@ import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.guestfish.ImageBuilder
+import com.imgcstmzr.guestfish.ImageBuilder.buildFrom
 import com.imgcstmzr.process.Downloader
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
@@ -61,12 +62,14 @@ open class FixtureResolverExtension : ParameterResolver {
     }
 
     companion object {
-        private val downloader = Downloader(ImageBuilder.schema to { uri, logger -> ImageBuilder.buildFrom(uri, logger) })
+        private val downloader = Downloader(ImageBuilder.schema to { uri, logger -> logger.buildFrom(uri) })
 
         private val cache = Cache(Paths.TEST.resolve("test"), maxConcurrentWorkingDirectories = 500)
         private fun OperatingSystem.getCopy(logger: BlockRenderingLogger): OperatingSystemImage = synchronized(this) {
-            this based cache.provideCopy(name, false, logger) {
-                with(downloader) { download(logger) }
+            this based with(cache) {
+                logger.provideCopy(name, reuseLastWorkingCopy = false) {
+                    with(downloader) { download(logger) }
+                }
             }
         }
 

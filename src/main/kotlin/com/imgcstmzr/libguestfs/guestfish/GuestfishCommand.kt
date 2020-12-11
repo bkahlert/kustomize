@@ -1,8 +1,8 @@
 package com.imgcstmzr.libguestfs.guestfish
 
 import com.bkahlert.koodies.nio.file.serialized
+import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.withPrefix
-import com.bkahlert.koodies.string.withoutPrefix
 import java.nio.file.Path
 
 /**
@@ -55,49 +55,105 @@ open class GuestfishCommand(
         return result
     }
 
-    override fun toString(): String = "${this::class.simpleName}(name='$name', arguments=${arguments.joinToString(",")})"
+    override fun toString(): String = "${this::class.simpleName}(${this.joinToString(" ")})"
+}
+
+open class GuestfishCompositeCommand(val guestfishCommands: List<GuestfishCommand>) :
+    GuestfishCommand(guestfishCommands[0].first(), *guestfishCommands.toList()
+        .map { it + LineSeparators.LF }
+        .flatten().drop(1).toTypedArray(), convenience = true) {
+
+    override fun toString(): String = guestfishCommands.joinToString(LineSeparators.LF)
 }
 
 
 /**
  * Copies [localFiles] or directories recursively into the disk image,
- * placing them in the corresponding locations (which must exist).
+ * placing them in the corresponding locations (which must exist depending on [mkDir]).
  *
  * This guestfish meta-command turns into a sequence of [TarInCommand] and other commands as necessary.
  *
  * Multiple local files and directories can be specified. Wildcards cannot be used.
  */
-class CopyInCommand private constructor(val remoteDir: Path, vararg val localFiles: Path) :
-    GuestfishCommand("copy-in",
-        *localFiles.map { it.serialized }.toTypedArray(),
-        remoteDir.serialized,
-        convenience = true) {
-    constructor(remoteDir: Path) : this(remoteDir.parent, Path.of("/shared").resolve(remoteDir.serialized.withoutPrefix("/")))
+class CopyInCommand(val mkDir: Boolean, val remoteDir: Path, vararg val localFiles: Path) :
+    GuestfishCompositeCommand(listOfNotNull(
+        if (mkDir) -GuestfishCommand("mkdir-p", remoteDir.serialized) else null,
+        -GuestfishCommand("copy-in",
+            *localFiles.map { it.serialized }.toTypedArray(),
+            remoteDir.serialized,
+            convenience = true),
+    )) {
 }
 
 /**
  * Copies [remoteFiles] or directories recursively out of the disk image,
- * placing them on the host disk in the shared directory.
+ * placing them on the host disk in the corresponding directory (which must exist depending on [mkDir]) shared directory.
  *
  * This guestfish meta-command turns into a sequence of `download`, [TarOutCommand] and other commands as necessary.
  *
  * Multiple remote files and directories can be specified.
  */
-class CopyOutCommand private constructor(vararg val remoteFiles: Path, val directory: Path) :
-    GuestfishCommand("copy-out", *remoteFiles.map { it.serialized }.toTypedArray(), directory.serialized, convenience = true) {
-    constructor(remoteFile: Path) : this(remoteFile, directory =
-    Path.of("/shared").resolve(remoteFile.serialized.withoutPrefix("/")).parent)
-}
+class CopyOutCommand(vararg val remoteFiles: Path, val mkDir: Boolean, val directory: Path) :
+    GuestfishCompositeCommand(listOfNotNull(
+        if (mkDir) !GuestfishCommand("mkdir", "-p", directory.serialized) else null,
+        -GuestfishCommand("copy-out",
+            *remoteFiles.map { it.serialized }.toTypedArray(),
+            directory.serialized,
+            convenience = true),
+    ))
 
 /**
- * This command uploads the file `archive.tar` next to the disk file and unpacks it into [directory].
+ * This command uploads the [archive] (must be accessible from the guest) and unpacks it into [directory].
  */
-class TarInCommand(val directory: Path = Path.of("/")) : GuestfishCommand("tar-in", "../archive.tar", directory.serialized)
+class TarInCommand(val archive: Path, val directory: Path, val deleteArchiveAfterwards: Boolean) :
+    GuestfishCompositeCommand(listOfNotNull(
+        GuestfishCommand(
+            "tar-in",
+            archive.serialized,
+            directory.serialized
+        ),
+        if (deleteArchiveAfterwards) !RmCommand(archive) else null,
+    ))
 
 /**
- * This command packs the contents of [directory] and downloads it next to the disk file in a file with name `archive.tar`.
+ * This command packs the contents of [directory] and downloads it to the [archive].
  */
-class TarOutCommand(val directory: Path = Path.of("/")) : GuestfishCommand("tar-out", directory.serialized, "../archive.tar")
+class TarOutCommand(val directory: Path = Path.of("/"), val archive: Path) : GuestfishCommand(
+    "tar-out",
+    directory.serialized,
+    archive.serialized,
+    "excludes:${directory.resolve(archive.fileName)}"
+)
+
+
+/**
+ * Touch acts like the [touch(1)](http://man.he.net/man1/touch) command.
+ * It can be used to update the timestamps on a [file], or, if the file does not exist, to create a new zero-length file.
+ *
+ * This command only works on regular files, and will fail on other file types such as directories, symbolic links, block special etc.
+ */
+class TouchCommand(val file: Path) : GuestfishCommand(
+    "touch",
+    file.serialized,
+)
+
+/**
+ * Remove the single [file].
+ *
+ * If [force] is specified and the file doesn't exist, that error is ignored. (Other errors, eg. I/O errors or bad paths, are not ignored)
+ *
+ * This call cannot remove directories. Use [RmDirCommand] to remove an empty directory, or set [recursive] to remove directories recursively.
+ */
+class RmCommand(val file: Path, val force: Boolean = false, val recursive: Boolean = false) : GuestfishCommand("rm" + when (force to recursive) {
+    true to false -> "-f"
+    true to true -> "-rf"
+    else -> ""
+}, file.serialized)
+
+/**
+ * Remove the single [directory].
+ */
+class RmDirCommand(val directory: Path) : GuestfishCommand("rmdir", directory.serialized)
 
 /**
  * This unmounts all mounted filesystems.

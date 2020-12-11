@@ -1,3 +1,4 @@
+com.bkahlert.koodies.test.junit.DockerContainerNameResolver
 com.bkahlert.koodies.test.junit.debug.DebugCondition
 com.bkahlert.koodies.test.junit.debug.DebugParameterResolver
 com.imgcstmzr.util.DockerRequiredCondition

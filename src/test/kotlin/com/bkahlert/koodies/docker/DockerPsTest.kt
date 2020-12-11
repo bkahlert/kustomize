@@ -12,11 +12,13 @@ import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.fail
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD
+import org.junit.jupiter.api.parallel.Isolated
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import kotlin.time.milliseconds
 import kotlin.time.seconds
 
+@Isolated
 @DockerRequiring
 @Execution(SAME_THREAD)
 class DockerPsTest {

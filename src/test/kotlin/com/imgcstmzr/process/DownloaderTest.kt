@@ -31,40 +31,40 @@ class DownloaderTest {
     private val downloader = Downloader("test" to testHandler)
 
     @Slow @Test
-    fun `should download OS`(logger: InMemoryLogger) {
+    fun InMemoryLogger.`should download OS`() {
         val path = with(downloader) {
             OperatingSystemMock(name = "example", downloadUrl = "https://file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg")
-                .download(logger)
+                .download(this@`should download OS`)
         }.deleteOnExit()
         expectThat(path).hasSize(102117.bytes)
     }
 
     @Test
-    fun `should call handler instead of downloading`(logger: InMemoryLogger) {
-        expectThat(downloader.download("test://something", logger).deleteOnExit()).isEqualTo(testImage)
+    fun InMemoryLogger.`should call handler instead of downloading`() {
+        expectThat(downloader.download("test://something", this).deleteOnExit()).isEqualTo(testImage)
     }
 
     @Slow @Test
-    fun `should download file with explicit protocol`(logger: InMemoryLogger) {
-        val path = downloader.download("https://file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg", logger).deleteOnExit()
+    fun InMemoryLogger.`should download file with explicit protocol`() {
+        val path = downloader.download("https://file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg", this).deleteOnExit()
         expectThat(path).hasSize(102117.bytes)
     }
 
     @Slow @Test
-    fun `should download file without explicit protocol`(logger: InMemoryLogger) {
-        val path = downloader.download("file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg", logger).deleteOnExit()
+    fun InMemoryLogger.`should download file without explicit protocol`() {
+        val path = downloader.download("file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg", this).deleteOnExit()
         expectThat(path).hasSize(102117.bytes)
     }
 
     @Slow @Test
-    fun `should use server side provided name without query or hash`(logger: InMemoryLogger) {
-        val path = downloader.download("https://file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg?abc=def#hij", logger).deleteOnExit()
+    fun InMemoryLogger.`should use server side provided name without query or hash`() {
+        val path = downloader.download("https://file-examples-com.github.io/uploads/2017/10/file_example_JPG_100kB.jpg?abc=def#hij", this).deleteOnExit()
         expectThat(path.fileName).isEqualToStringWise("file_example_JPG_100kB.jpg")
     }
 
     @Test
-    fun `should throw on error`(logger: InMemoryLogger) {
-        expectCatching { downloader.download("#+ü protocol--------/uploads/2017/10/file_example_JPG_100kB.jpg", logger) }
+    fun InMemoryLogger.`should throw on error`() {
+        expectCatching { downloader.download("#+ü protocol--------/uploads/2017/10/file_example_JPG_100kB.jpg", this) }
             .isFailure().isA<CompletionException>()
     }
 }

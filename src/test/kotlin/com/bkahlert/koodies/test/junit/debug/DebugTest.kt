@@ -6,6 +6,7 @@ import com.bkahlert.koodies.test.strikt.toStringContains
 import com.imgcstmzr.util.logging.CapturedOutput
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.OutputCaptureExtension
+import com.imgcstmzr.util.logging.getExpectThatLogged
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
@@ -29,19 +30,19 @@ class DebugTest {
     }
 
     @Test
-    fun `should not automatically log to console without @Debug`(output: CapturedOutput, logger: InMemoryLogger) {
-        logger.logStatus { IO.Type.OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
-        logger.logResult { Result.success(Unit) }
+    fun InMemoryLogger.`should not automatically log to console without @Debug`(output: CapturedOutput) {
+        logStatus { IO.Type.OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+        logResult { Result.success(Unit) }
 
-        expectThat(logger.logged).contains("☎Σ⊂⊂(☉ω☉∩)")
+        getExpectThatLogged().contains("☎Σ⊂⊂(☉ω☉∩)")
         expectThat(output.removeEscapeSequences()).not { toStringContains("☎Σ⊂⊂(☉ω☉∩)") }
     }
 
     @Test
-    fun `should not catch exceptions`(output: CapturedOutput, logger: InMemoryLogger) {
-        logger.logStatus { IO.Type.OUT typed "(*｀へ´*)" }
+    fun InMemoryLogger.`should not catch exceptions`(output: CapturedOutput) {
+        logStatus { IO.Type.OUT typed "(*｀へ´*)" }
 
-        expectCatching { logger.logResult<Any> { Result.failure(IllegalStateException("test")) } }
+        expectCatching { logResult<Any> { Result.failure(IllegalStateException("test")) } }
             .isFailure().isA<IllegalStateException>()
     }
 }

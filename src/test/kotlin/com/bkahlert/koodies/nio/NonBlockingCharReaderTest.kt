@@ -6,7 +6,7 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.terminal.ascii.Borders.SpikedOutward
 import com.bkahlert.koodies.terminal.ascii.wrapWithBorder
 import com.bkahlert.koodies.test.junit.Slow
-import com.imgcstmzr.runtime.SlowInputStream
+import com.imgcstmzr.runtime.SlowInputStream.Companion.slowInputStream
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
@@ -25,18 +25,18 @@ import kotlin.time.seconds
 class NonBlockingCharReaderTest {
 
     @Test
-    fun `should read null if empty`(logger: InMemoryLogger) {
+    fun InMemoryLogger.`should read null if empty`() {
         val reader = NonBlockingCharReader("".byteInputStream(), 100.milliseconds)
-        5 times { expectThat(reader.read(CharArray(1), 0, logger)).isLessThanOrEqualTo(0) }
-        10 times { expectThat(reader.read(CharArray(1), 0, logger)).isEqualTo(-1) }
+        5 times { expectThat(reader.read(CharArray(1), 0, this)).isLessThanOrEqualTo(0) }
+        10 times { expectThat(reader.read(CharArray(1), 0, this)).isEqualTo(-1) }
     }
 
     @Test
-    fun `should return null if source is closed`(logger: InMemoryLogger) {
+    fun InMemoryLogger.`should return null if source is closed`() {
         val reader = NonBlockingCharReader("123".byteInputStream(), 100.milliseconds)
         expectThat(reader.readText()).isEqualTo("123")
-        5 times { expectThat(reader.read(CharArray(1), 0, logger)).isLessThanOrEqualTo(0) }
-        10 times { expectThat(reader.read(CharArray(1), 0, logger)).isEqualTo(-1) }
+        5 times { expectThat(reader.read(CharArray(1), 0, this)).isLessThanOrEqualTo(0) }
+        10 times { expectThat(reader.read(CharArray(1), 0, this)).isEqualTo(-1) }
     }
 
     @Test
@@ -47,14 +47,12 @@ class NonBlockingCharReaderTest {
     }
 
     @Slow @Test
-    fun `should read in a non-greedy fashion resp just as much as needed to avoid blocking`(logger: InMemoryLogger) {
-        val inputStream =
-            SlowInputStream(
-                1.seconds to "123",
-                2.seconds to "abc",
-                3.seconds to "!§\"",
-                baseDelayPerInput = 0.seconds,
-                logger = logger)
+    fun InMemoryLogger.`should read in a non-greedy fashion resp just as much as needed to avoid blocking`() {
+        val inputStream = slowInputStream(
+            1.seconds to "123",
+            2.seconds to "abc",
+            3.seconds to "!§\"",
+            baseDelayPerInput = 0.seconds)
         val reader = NonBlockingCharReader(inputStream, 2.seconds)
 
         kotlin.runCatching {

@@ -2,19 +2,18 @@ package com.imgcstmzr.runtime.log
 
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
-import com.imgcstmzr.patch.unformattedLog
 import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.util.logging.getExpectThatLogged
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
-import strikt.api.expectThat
 
 @Execution(CONCURRENT)
 class MicroLoggerTest {
 
     @Test
-    fun `should micro log`(logger: InMemoryLogger) {
-        logger.logging("segment") {
+    fun InMemoryLogger.`should micro log`() {
+        logging("segment") {
             logLine { "something" }
             singleLineLogging("single") {
                 microLogging {
@@ -33,7 +32,7 @@ class MicroLoggerTest {
             logLine { "something" }
         }
 
-        expectThat(logger).unformattedLog.matchesCurlyPattern("""
+        getExpectThatLogged().matchesCurlyPattern("""
             ╭─────╴{}
             │   
             │   

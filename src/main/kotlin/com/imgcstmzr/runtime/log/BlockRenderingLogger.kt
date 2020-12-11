@@ -68,7 +68,7 @@ open class BlockRenderingLogger(
 
     override fun logText(block: () -> CharSequence): Unit = block().let {
         render(false) {
-            it.asAnsiString().wrapLines(totalColumns).prefixLinesWith(ignoreTrailingSeparator = true, prefix = prefix)
+            it.asAnsiString().prefixLinesWith(ignoreTrailingSeparator = true, prefix = prefix)
         }
     }
 

@@ -37,6 +37,15 @@ inline fun <reified T, reified U> (() -> T).build(transform: T.() -> U): U =
 inline fun <reified T, reified U> (() -> T).buildTo(target: MutableCollection<in U>, transform: T.() -> U): U =
     build(transform).also { target.add(it) }
 
+/**
+ * Builds an instance of [T] by invoking `this` initializer,
+ * [transform]s it to multiple instances of [U] and adds all to [target].
+ *
+ * @return the transformed instances
+ */
+inline fun <reified T, reified U> (() -> T).buildMultipleTo(target: MutableCollection<in U>, transform: T.() -> List<U>): List<U> =
+    build(transform).also { target.addAll(it) }
+
 
 /*
  * Build methods for zero-arg builders implementing `(B) -> T` to retrieve the result.
@@ -92,6 +101,18 @@ inline fun <reified B : (B) -> T, reified T, reified U> (B.() -> Unit).build(tra
 inline fun <reified B : (B) -> T, reified T, reified U> (B.() -> Unit).buildTo(target: MutableCollection<in U>, transform: T.() -> U): U =
     build(transform).also { target.add(it) }
 
+/**
+ * Builds an instance of [T] and adds the to list [U] [transform]ed instance to [target] by
+ * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
+ * 2) apply `this` initializer to it
+ * 3) retrieving the result using `(B) -> T`
+ * 4) applying [transform].
+ *
+ * @return the transformed instances
+ */
+inline fun <reified B : (B) -> T, reified T, reified U> (B.() -> Unit).buildMultipleTo(target: MutableCollection<in U>, transform: T.() -> List<U>): List<U> =
+    build(transform).also { target.addAll(it) }
+
 
 interface BuilderAccessor<B, T> {
     operator fun invoke(): B
@@ -113,6 +134,14 @@ inline fun <reified B, reified T, reified U> BuilderAccessor<B, T>.buildTo(init:
 
 inline fun <reified B, reified T, reified U> BuilderAccessor<B, T>.buildTo(init: B.() -> Unit, target: MutableCollection<in U>, transform: T.() -> U): U =
     build(init).run(transform).also { target.add(it) }
+
+inline fun <reified B, reified T, reified U> BuilderAccessor<B, T>.buildMultipleTo(
+    init: B.() -> Unit,
+    target: MutableCollection<in U>,
+    transform: T.() -> List<U>,
+): List<U> =
+    build(init).run(transform).also { target.addAll(it) }
+
 
 //inline fun <reified A, reified B, reified T> build2(accessor: A, init: A.() -> B.() -> Unit): T where
 //    A : () -> B,

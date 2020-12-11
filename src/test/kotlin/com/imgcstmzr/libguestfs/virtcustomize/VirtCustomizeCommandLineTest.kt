@@ -1,4 +1,4 @@
-package com.imgcstmzr.libguestfs
+package com.imgcstmzr.libguestfs.virtcustomize
 
 import com.bkahlert.koodies.nio.file.toPath
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.VirtCustomizeCommandLineBuilder.Companion.build
@@ -50,17 +50,17 @@ class VirtCustomizeCommandLineTest {
             "first boot" \
             --firstBoot \
             scripts \
-            --firstBoot-command \
+            --firstboot-command \
             command \
             arg1 \
             arg2 \
-            --firstBoot-command \
+            --firstboot-command \
             boot-command \
-            --firstBoot-install \
+            --firstboot-install \
             package1 \
-            --firstBoot-install \
+            --firstboot-install \
             package2 \
-            --firstBoot-install \
+            --firstboot-install \
             package3 \
             --hostname \
             new-hostname \
@@ -73,9 +73,9 @@ class VirtCustomizeCommandLineTest {
             --root-password \
             disabled \
             --ssh-inject \
-            "file-user:file:\"file/key\"" \
+            file-user:file:file/key \
             --ssh-inject \
-            "string-user:string:\"string-key\"" \
+            string-user:string:string-key \
             --timezone \
             Europe/Berlin \
             --touch \
@@ -115,8 +115,8 @@ internal fun createVirtCustomizeCommand() = build {
             +"scripts"
         }
         firstBootCommand {
-            +("command" to arrayOf("arg1", "arg2"))
-            +("boot-command" to emptyArray<String>())
+            +"command arg1 arg2"
+            +"boot-command"
         }
         firstBootInstall {
             +listOf("package1", "package2")

@@ -42,11 +42,13 @@ class CacheTest {
     }
 
     @Test
-    fun `should provide a retrieved copy`(logger: InMemoryLogger) {
+    fun InMemoryLogger.`should provide a retrieved copy`() {
         val cache = Cache(tempDir.tempDir())
 
-        val copy = cache.provideCopy("my-copy", logger = logger) {
-            FunnyImgZip.copyToTemp()
+        val copy = with(cache) {
+            provideCopy("my-copy") {
+                FunnyImgZip.copyToTemp()
+            }
         }
 
         expectThat(copy)
@@ -55,13 +57,15 @@ class CacheTest {
     }
 
     @Test
-    fun `should only retrieve copy once`(logger: InMemoryLogger) {
+    fun InMemoryLogger.`should only retrieve copy once`() {
         val cache = Cache(tempDir.tempDir())
         var providerCalls = 0
         val provider by spyable(FunnyImgZip::copyToTemp) { providerCalls++ }
 
         val copies = (0..2).map {
-            cache.provideCopy("my-copy", false, logger, provider)
+            with(cache) {
+                provideCopy("my-copy", false, provider)
+            }
         }
 
         expectThat(providerCalls).isEqualTo(1)

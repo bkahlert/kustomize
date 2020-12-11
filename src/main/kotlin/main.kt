@@ -41,6 +41,7 @@ import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.applyLogging
+import com.imgcstmzr.runtime.log.logging
 import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.listFilesRecursively
@@ -124,13 +125,15 @@ class ImgCommand : CliktCommand(help = "Provides an IMG file containing the spec
 
     override fun run() {
         val cache: Cache = shared[Cache::class] as Cache
-        val logger = BlockRenderingLogger("ImgCommand")
-        shared[Path::class] =
-            cache.provideCopy(name, reuseLastWorkingCopy, logger) {
-                with(downloader) {
-                    os.download(logger).also { TermUi.echo("Download completed.") }
+        logging("ImgCommand") {
+            shared[Path::class] = with(cache) {
+                provideCopy(name, reuseLastWorkingCopy) {
+                    with(downloader) {
+                        os.download(this@logging).also { TermUi.echo("Download completed.") }
+                    }
                 }
             }
+        }
     }
 }
 
@@ -145,18 +148,18 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
 
     private val os by option().enum<OperatingSystems>().default(OperatingSystems.RaspberryPiLite)
     private val size by option().convert { it.toSize() }
-    private val enableSsh by option().convert { SshEnablementPatch() }
+    private val enableSsh by option().convert { SshEnablementPatch(os) }
     private val usernameRename by option(help = "Format: [old-username]:[new-username], whereas both usernames must not be blank")
         .convert { it.split(":").map { it.trim() } }
         .convert { it.first() to it.last() }
-        .convert { (oldUsername, newUsername) -> UsernamePatch(oldUsername, newUsername) }
+        .convert { (oldUsername, newUsername) -> UsernamePatch(os, oldUsername, newUsername) }
     private val passwordChange by option(help = "Format: [username]:[new-password], whereas username and new password must not be blank")
         .convert { it.split(":").map { it.trim() } }
         .convert { it.first() to it.last() }
-        .convert { (username, newPassword) -> PasswordPatch(username, newPassword) }
+        .convert { (username, newPassword) -> PasswordPatch(os, username, newPassword) }
     private val usbOtgProfiles by option()
         .convert { it.split(",").map { it.trim() } }
-        .convert { UsbOnTheGoPatch(it) }
+        .convert { UsbOnTheGoPatch(os, it) }
 
     private val scripts: Map<String, String> by option().associate()
 

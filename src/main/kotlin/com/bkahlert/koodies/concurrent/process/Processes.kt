@@ -3,6 +3,7 @@ package com.bkahlert.koodies.concurrent.process
 import com.bkahlert.koodies.concurrent.cleanUpOldTempFiles
 import com.bkahlert.koodies.concurrent.cleanUpOnShutdown
 import com.bkahlert.koodies.nio.file.Paths
+import com.bkahlert.koodies.nio.file.Paths.Temp
 import com.bkahlert.koodies.nio.file.Paths.WorkingDirectory
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.tempFile
@@ -68,11 +69,17 @@ object Processes {
      * with neither additional comfort nor additional threads overhead.
      */
     fun evalScriptToOutput(
-        workingDirectory: Path = WorkingDirectory,
-        env: Map<String, String> = emptyMap(),
+        workingDirectory: Path = Temp,
         shellScript: ShellScript.() -> Unit,
-    ): String =
-        LightweightProcess(CommandLine(command = shellScript.build().sanitize(workingDirectory).buildTo(tempScriptFile()))).output
+    ): String = shellScript.build().evalToOutput(workingDirectory)
+
+    fun (ShellScript.() -> Unit).evalToOutput(
+        workingDirectory: Path = Temp,
+    ) = evalScriptToOutput(workingDirectory, this)
+
+    fun ShellScript.evalToOutput(
+        workingDirectory: Path = Temp,
+    ) = LightweightProcess(CommandLine(command = sanitize(workingDirectory).buildTo(tempScriptFile()))).output
 
     /**
      * Runs the [shellScriptBuilder] synchronously and returns the [ManagedProcess].

@@ -50,9 +50,9 @@ object ImageBuilder {
      * Dynamically creates a raw image with two partitions containing the files
      * as specified by the [uri].
      */
-    fun buildFrom(uri: URI, logger: BlockRenderingLogger): Path {
+    fun BlockRenderingLogger.buildFrom(uri: URI): Path {
         var path: List<Pair<Path, Path>>? = null
-        logger.singleLineLogging("Initiating raw image creation from $uri") {
+        singleLineLogging("Initiating raw image creation from $uri") {
 
             require(uri.scheme == schema) { "URI $uri is invalid as its scheme differs from ${schema.quoted}" }
             require(uri.host == host) { "URI $uri is invalid as its host differs from ${host.quoted}" }
@@ -71,17 +71,17 @@ object ImageBuilder {
             path = files.map { it.split(">", limit = 2) }.map { relation -> relation.first().toPath() to relation.last().toPath() }
             "${path!!.size} files"
         }
-        return prepareImg(logger, *path!!.toTypedArray())
+        return prepareImg(*path!!.toTypedArray())
     }
 
-    private fun prepareImg(logger: BlockRenderingLogger, vararg paths: Pair<Path, Path>): Path =
+    private fun BlockRenderingLogger.prepareImg(vararg paths: Pair<Path, Path>): Path =
         buildFrom(Paths.TEMP.resolve("imgcstmzr-" + paths.take(5).mapNotNull { it.first.fileName }.joinToString(separator = "-")).mkdirs().run {
-            logger.singleLineLogging("Copying ${paths.size} files to ${toUri()}") {
+            singleLineLogging("Copying ${paths.size} files to ${toUri()}") {
                 paths.forEach { (from, to) -> from.copyToDirectory(resolve(to)) }
             }
             @Suppress("SpellCheckingInspection")
-            logger.singleLineLogging("Gzipping") { archive("tar", overwrite = true) }
-        }, logger, totalSize = 4.Mebi.bytes, bootSize = 2.Mebi.bytes)
+            singleLineLogging("Gzipping") { archive("tar", overwrite = true) }
+        }, totalSize = 4.Mebi.bytes, bootSize = 2.Mebi.bytes)
 
     /**
      * Creates an image consisting of the two partitions `root` and `boot`.
@@ -93,15 +93,14 @@ object ImageBuilder {
      * @param bootSize the size of the boot filesystem
      * @param partitionTableType partition table type
      */
-    fun buildFrom(
+    fun RenderingLogger.buildFrom(
         archive: Path,
-        logger: RenderingLogger,
         bootFileSystem: FileSystemType = FileSystemType.FAT,
         rootFileSystem: FileSystemType = FileSystemType.EXT4,
         totalSize: Size = 1.Gibi.bytes,
         bootSize: Size = 128.Mebi.bytes,
         partitionTableType: PartitionTableType = PartitionTableType.MasterBootRecord,
-    ): Path = logger.logging(
+    ): Path = logging(
         caption = "${Now.emoji} Preparing raw image using the content of ${archive.fileName}. This takes a moment...",
         ansiCode = gray,
         borderedOutput = false,

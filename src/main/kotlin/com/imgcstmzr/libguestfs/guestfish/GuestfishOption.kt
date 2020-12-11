@@ -6,6 +6,8 @@ import java.nio.file.Path
 
 sealed class GuestfishOption(name: String, arguments: List<String>) : Option(name, arguments) {
 
+    class Generic(vararg args: String) : GuestfishOption(args[0], args.drop(1))
+
     /**
      * Add a block device or virtual machine image to the shell.
      *

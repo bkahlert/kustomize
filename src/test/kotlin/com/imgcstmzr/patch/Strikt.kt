@@ -1,8 +1,8 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.docker.Docker
 import com.bkahlert.koodies.docker.DockerContainerName.Companion.toContainerName
 import com.bkahlert.koodies.docker.DockerContainerName.Companion.toUniqueContainerName
-import com.bkahlert.koodies.nio.file.toPath
 import com.imgcstmzr.libguestfs.resolveOnHost
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemProcess
@@ -12,6 +12,7 @@ import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
 import strikt.assertions.isEqualTo
+import java.nio.file.Path
 
 inline fun Assertion.Builder<OperatingSystemImage>.booted(
     logger: BlockRenderingLogger,
@@ -30,12 +31,15 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
             }
         }
 
-        execute(
-            file.toUniqueContainerName().sanitized,
-            logger,
-            true,
-            Program("test", { "testing" }, "testing" to verificationStep),//.logging(),
-        )
+        val containerName = file.toUniqueContainerName().sanitized
+        kotlin.runCatching {
+            execute(
+                containerName,
+                logger,
+                true,
+                Program("test", { "testing" }, "testing" to verificationStep),//.logging(),
+            )
+        }.onFailure { Docker.remove(containerName, forcibly = true) }.getOrThrow()
     }
 
     return this
@@ -44,8 +48,8 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
 /**
  * Assertions on the directory used to share files with the [OperatingSystemImage].
  */
-val Assertion.Builder<OperatingSystemImage>.shared
-    get() = get("shared directory %s") { resolveOnHost(".".toPath()) }
+fun Assertion.Builder<OperatingSystemImage>.getShared(path: Path) =
+    get("shared directory %s") { resolveOnHost(path) }
 
 fun Assertion.Builder<OperatingSystemImage>.booted(
     logger: BlockRenderingLogger,

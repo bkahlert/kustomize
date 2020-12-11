@@ -7,10 +7,12 @@ import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.time.sleep
 import com.bkahlert.koodies.tracing.MiniTracer
 import com.bkahlert.koodies.tracing.trace
+import com.imgcstmzr.runtime.SlowInputStream.Companion.slowInputStream
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.microTrace
 import com.imgcstmzr.runtime.log.miniTrace
 import com.imgcstmzr.util.debug
+import com.imgcstmzr.util.logging.InMemoryLogger
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.apache.commons.io.output.TeeOutputStream
 import java.io.BufferedInputStream
@@ -36,49 +38,49 @@ class ProcessMock(
     }
 
     companion object {
-        fun withSlowInput(
+        fun InMemoryLogger.processMock(
+            outputStream: OutputStream = ByteArrayOutputStream(),
+            inputStream: InputStream = InputStream.nullInputStream(),
+            processExit: ProcessMock.() -> ProcessExitMock,
+        ) = ProcessMock(outputStream, inputStream, processExit, this)
+
+        fun InMemoryLogger.withSlowInput(
             vararg inputs: String,
             baseDelayPerInput: Duration = 1.seconds,
             echoInput: Boolean,
             processExit: ProcessMock.() -> ProcessExitMock,
-            logger: BlockRenderingLogger,
         ): ProcessMock {
             val outputStream = ByteArrayOutputStream()
-            val slowInputStream = SlowInputStream(
+            val slowInputStream = slowInputStream(
                 inputs = inputs,
                 baseDelayPerInput = baseDelayPerInput,
                 byteArrayOutputStream = outputStream,
                 echoInput = echoInput,
-                logger = logger
             )
-            return ProcessMock(
+            return processMock(
                 outputStream = outputStream,
                 inputStream = slowInputStream,
                 processExit = processExit,
-                logger = logger
             )
         }
 
-        fun withIndividuallySlowInput(
+        fun InMemoryLogger.withIndividuallySlowInput(
             vararg inputs: Pair<Duration, String>,
             baseDelayPerInput: Duration = 1.seconds,
             echoInput: Boolean,
             processExit: ProcessMock.() -> ProcessExitMock,
-            logger: BlockRenderingLogger,
         ): ProcessMock {
             val outputStream = ByteArrayOutputStream()
-            val slowInputStream = SlowInputStream(
+            val slowInputStream = slowInputStream(
                 inputs = inputs,
                 baseDelayPerInput = baseDelayPerInput,
                 byteArrayOutputStream = outputStream,
                 echoInput = echoInput,
-                logger = logger
             )
-            return ProcessMock(
+            return processMock(
                 outputStream = outputStream,
                 inputStream = slowInputStream,
                 processExit = processExit,
-                logger = logger
             )
         }
     }
@@ -125,6 +127,23 @@ class SlowInputStream(
         logger: BlockRenderingLogger?,
     ) : this(inputs = inputs.map { Duration.ZERO to it }.toTypedArray(), baseDelayPerInput, byteArrayOutputStream, echoInput, logger)
 
+    companion object {
+        fun prompt(): Pair<Duration, String> = Duration.INFINITE to ""
+        fun InMemoryLogger.slowInputStream(
+            vararg inputs: Pair<Duration, String>,
+            baseDelayPerInput: Duration,
+            byteArrayOutputStream: ByteArrayOutputStream? = null,
+            echoInput: Boolean = false,
+        ) = SlowInputStream(inputs = inputs, baseDelayPerInput, byteArrayOutputStream, echoInput, this)
+
+        fun InMemoryLogger.slowInputStream(
+            vararg inputs: String,
+            baseDelayPerInput: Duration,
+            byteArrayOutputStream: ByteArrayOutputStream? = null,
+            echoInput: Boolean = false,
+        ) = SlowInputStream(inputs = inputs.map { Duration.ZERO to it }.toTypedArray(), baseDelayPerInput, byteArrayOutputStream, echoInput, this)
+    }
+
     val terminated: Boolean get() = unreadCount == 0 || !processAlive
     private var closed = false
     private var processAlive: Boolean = true
@@ -164,10 +183,6 @@ class SlowInputStream(
     }
 
     private fun handleAndReturnBlockingState(): Boolean = logger.miniTrace(::handleAndReturnBlockingState) { processInput(this) }
-
-    companion object {
-        fun prompt(): Pair<Duration, String> = Duration.INFINITE to ""
-    }
 
     override fun available(): Int = logger.miniTrace(::available) {
         if (closed) {

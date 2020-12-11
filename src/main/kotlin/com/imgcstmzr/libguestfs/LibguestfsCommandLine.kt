@@ -25,7 +25,6 @@ abstract class LibguestfsCommandLine(command: String, arguments: List<String>) :
     fun execute(logger: RenderingLogger): Int =
         logger.logging(caption = executionCaption(), ansiCode = ANSI.termColors.brightBlue) {
 
-            logLine { "Preparing shared folder..." }
             val disk: Path = commandLineParts.dropWhile { it != "--add" }.drop(1).take(1).singleOrNull()?.toPath().run {
                 checkNotNull(this) { "No included disk found." }
                 check(exists) { "Disk $this does no exist." }
@@ -75,7 +74,11 @@ open class Option(open val name: String, open val arguments: List<String>) :
         return result
     }
 
-    override fun toString(): String = "${this::class.simpleName}(name='$name', arguments=$arguments)"
+    override fun toString(): String {
+        val simpleName = this::class.simpleName ?: "GuestfishCommand"
+        val cmd = simpleName.replace("Guestfish", "><> ").replace("Command", "")
+        return "$cmd($this)"
+    }
 }
 
 /**

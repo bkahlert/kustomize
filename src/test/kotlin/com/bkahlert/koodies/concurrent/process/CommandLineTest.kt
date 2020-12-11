@@ -3,6 +3,7 @@ package com.bkahlert.koodies.concurrent.process
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.tempPath
 import com.bkahlert.koodies.string.quoted
+import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.bkahlert.koodies.test.strikt.toStringIsEqualTo
 import com.bkahlert.koodies.time.sleep
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
@@ -214,6 +215,18 @@ class CommandLineTest {
                 evaluated.evaluatesTo("'Hello World!'", 0)
             }
         }
+    }
+
+    @Test
+    fun `should provide summary`() {
+        expectThat(CommandLine(
+            "!ls", "-lisa",
+            "!mkdir", "-p", "/shared",
+            "!mkdir", "-p", "/shared/guestfish.shared/boot",
+            "-copy-out", "/boot/cmdline.txt", "/shared/guestfish.shared/boot",
+            "!mkdir", "-p", "/shared/guestfish.shared/non",
+            "-copy-out", "/non/existing.txt", "/shared/guestfish.shared/non",
+        ).summary).matchesCurlyPattern("◀◀ lisa  ◀ mkdir  ◀ …  ◀ mkdir")
     }
 }
 

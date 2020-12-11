@@ -23,21 +23,21 @@ class EnvTest {
     private val tempDir = tempDir().deleteOnExit()
 
     @Test
-    fun `should read env file`(logger: InMemoryLogger) {
+    fun InMemoryLogger.`should read env file`() {
         val path: Path = tempDir.tempFile("personal", ".env").apply { writeText("A=B\n CC= DD \n") }
-        expectThat(Env(logger, path))
+        expectThat(Env(this, path))
             .hasEntry("A", "B")
             .hasEntry("CC", "DD")
     }
 
     @Test
-    fun `should favor environment variables`(logger: InMemoryLogger) {
+    fun InMemoryLogger.`should favor environment variables`() {
         val path: Path = tempDir.tempFile("personal", ".env").apply { writeText("JAVA_HOME=dummy\n") }
-        expectThat(Env(logger, path))["JAVA_HOME"].isNotEqualTo("dummy")
+        expectThat(Env(this, path))["JAVA_HOME"].isNotEqualTo("dummy")
     }
 
     @Test
-    fun `should still provide access to system env missing env file`(logger: InMemoryLogger) {
-        expectThat(Env(logger, Path.of("/nowhere"))).isNotEmpty()
+    fun InMemoryLogger.`should still provide access to system env missing env file`() {
+        expectThat(Env(this, Path.of("/nowhere"))).isNotEmpty()
     }
 }

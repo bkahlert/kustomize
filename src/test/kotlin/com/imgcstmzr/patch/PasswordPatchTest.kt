@@ -6,8 +6,7 @@ import com.bkahlert.koodies.nio.file.toPath
 import com.bkahlert.koodies.string.matchesCurlyPattern
 import com.bkahlert.koodies.test.junit.FifteenMinutesTimeout
 import com.imgcstmzr.E2E
-import com.imgcstmzr.libguestfs.guestfish.CopyOutCommand
-import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.fish
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.fishGuest
 import com.imgcstmzr.libguestfs.resolveOnHost
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
 import com.imgcstmzr.runtime.IncorrectPasswordException
@@ -18,6 +17,7 @@ import com.imgcstmzr.runtime.execute
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.util.logging.getExpectThatLogged
 import com.imgcstmzr.util.matches
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -37,46 +37,47 @@ class PasswordPatchTest {
 
     @Test
     fun `should provide password change command`() {
-        val passwordPatch = PasswordPatch("pi", "po")
+        val passwordPatch = PasswordPatch(RaspberryPiLite, "pi", "po")
         val expected = VirtCustomizeCustomizationOption.PasswordOption.byString("pi", "po")
         expectThat(passwordPatch).matches(customizationOptionsAssertion = { first().isEqualTo(expected) })
     }
 
     @FifteenMinutesTimeout @E2E @Test
-    fun `should update shadow file correctly`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger) {
+    fun InMemoryLogger.`should update shadow file correctly`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val passwordPath = "/etc/shadow"
         val username = RaspberryPiLite.defaultCredentials.username
         val newPassword = "on-a-diet"
-        val passwordPatch = PasswordPatch(username, newPassword)
-        val userPassword = logger.fish(osImage) { copyOut { CopyOutCommand(passwordPath.toPath()) } }
+        val passwordPatch = PasswordPatch(osImage.operatingSystem, username, newPassword)
+        val userPassword = fishGuest(osImage) { copyOut(passwordPath.toPath()) }
             .let { osImage.resolveOnHost(passwordPath).readLines().single { it.startsWith(username) } }
 //        Guestfish(osImage, logger).copyOut(passwordPath).readLines().single { it.startsWith(username) }
         val userPasswordPattern = "$username:{}:{}:0:99999:7:::"
         check(userPassword.matchesCurlyPattern(userPasswordPattern)) { "${userPassword.debug} does not match ${userPasswordPattern.debug}" }
 
-        passwordPatch.patch(osImage, logger)
+        with(passwordPatch) {
+            patch(osImage)
+        }
 
         expectThat(osImage.credentials).isEqualTo(Credentials(username, newPassword))
-        expectThat(osImage).booted(logger) {
+        expectThat(osImage).booted(this) {
             command("echo '👏 🤓 👋'");
             { true }
         }
     }
 
     @FifteenMinutesTimeout @E2E @Test
-    fun `should not be able to use old password`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger) {
-        val passwordPatch = PasswordPatch(RaspberryPiLite.defaultCredentials.username, "po")
-
-        passwordPatch.patch(osImage, logger)
-
+    fun InMemoryLogger.`should not be able to use old password`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+        with(PasswordPatch(osImage.operatingSystem, RaspberryPiLite.defaultCredentials.username, "po")) {
+            patch(osImage)
+        }
         expectCatching {
             osImage.credentials = Credentials("pi", "wrong password")
-            osImage.execute(logger = logger, autoLogin = true)
+            osImage.execute(logger = this, autoLogin = true)
         }.isFailure()
             .isA<CompletionException>()
             .rootCause
             .isA<IncorrectPasswordException>()
             .message.isEqualTo("The entered password \"wrong password\" is incorrect.")
-        expectThat(logger.logged).contains("Login incorrect")
+        getExpectThatLogged().contains("Login incorrect")
     }
 }

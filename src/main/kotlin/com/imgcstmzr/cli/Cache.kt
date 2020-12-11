@@ -9,7 +9,7 @@ import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.unit.Size
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.cli.Cache.Companion.defaultFilter
-import com.imgcstmzr.guestfish.ImageBuilder
+import com.imgcstmzr.guestfish.ImageBuilder.buildFrom
 import com.imgcstmzr.guestfish.ImageExtractor.extractImage
 import com.imgcstmzr.patch.ini.RegexElement
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
@@ -28,8 +28,10 @@ import java.time.temporal.TemporalAccessor
 
 class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: Int = 3) : ManagedDirectory(dir) {
 
-    fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, logger: BlockRenderingLogger, provider: () -> Path): Path =
-        ProjectDirectory(dir, name, reuseLastWorkingCopy, maxConcurrentWorkingDirectories).require(logger, provider)
+    fun BlockRenderingLogger.provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> Path): Path =
+        with(ProjectDirectory(dir, name, reuseLastWorkingCopy, maxConcurrentWorkingDirectories)) {
+            require(provider)
+        }
 
     companion object {
         val DEFAULT: Path = Paths.USER_HOME.resolve(".imgcstmzr")
@@ -83,7 +85,7 @@ private class ProjectDirectory(parentDir: Path, dirName: String, private val reu
             }
     }
 
-    fun require(logger: RenderingLogger, provider: () -> Path): Path {
+    fun RenderingLogger.require(provider: () -> Path): Path {
         deleteOldWorkDirs()
 
         val workDirs = workDirs()
@@ -103,7 +105,7 @@ private class ProjectDirectory(parentDir: Path, dirName: String, private val reu
 
         val img = rawDir.requireSingle {
             val downloadedFile = downloadDir.requireSingle(provider)
-            downloadedFile.extractImage { ImageBuilder.buildFrom(it, logger = logger) }
+            downloadedFile.extractImage { path -> buildFrom(path) }
         }
 
         return WorkDirectory.from(dir, img).getSingle { it.extensionOrNull.equals("img", ignoreCase = true) } ?: throw NoSuchElementException()

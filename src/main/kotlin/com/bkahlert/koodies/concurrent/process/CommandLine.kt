@@ -70,7 +70,8 @@ open class CommandLine(
     // TODO Test
     val summary: String
         get() = arguments
-            .map { line -> line.split("\\b".toRegex()).filter { x -> x.trim().length > 1 } }
+            .map { line -> line.split("\\b".toRegex()).filter { part -> part.trim().run { length > 1 && !startsWith("-") } } }
+            .filter { it.isNotEmpty() }
             .map { words ->
                 when (words.size) {
                     0 -> "❓"
@@ -131,11 +132,18 @@ open class CommandLine(
         environment: Map<String, String> = emptyMap(),
     ): Lazy<java.lang.Process> {
         val scriptFile = if (command.toPath().isTempScriptFile()) commandLine else toScript(workingDirectory).serialized
+
+
+
         return PlexusCommandLine(scriptFile).run {
             addArguments(arguments)
             @Suppress("ExplicitThis")
             this.workingDirectory = workingDirectory.toFile()
             environment.forEach { addEnvironment(it.key, it.value) }
+
+            // TODO TRACE GUESTFISH
+            addEnvironment("LIBGUESTFS_TRACE", "1")
+
             lazy {
                 execute()
             }

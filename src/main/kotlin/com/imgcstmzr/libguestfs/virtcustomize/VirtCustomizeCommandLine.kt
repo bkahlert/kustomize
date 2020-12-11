@@ -210,8 +210,8 @@ class VirtCustomizeCommandLine(val options: List<VirtCustomizeOption>, val custo
         /**
          * Run command (and arguments) inside the guest when the guest first boots up (as root, late in the boot process).
          */
-        fun firstBootCommand(init: ListBuilderInit<Pair<String, Array<String>>>) =
-            init.buildListTo(list) { FirstBootCommandOption(first, *second) }
+        fun firstBootCommand(init: ListBuilderInit<String>) =
+            init.buildListTo(list) { FirstBootCommandOption(this) }
 
         /**
          * Install the named packages (a comma-separated list).

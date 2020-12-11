@@ -19,12 +19,13 @@ import strikt.assertions.isNotEqualTo
 class ImgResizePatchTest {
 
     @FifteenMinutesTimeout @E2E @Test
-    fun `should increase size`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, logger: InMemoryLogger) {
+    fun InMemoryLogger.`should increase size`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val oldSize = osImage.size
         val newSize = osImage.size + 10.Mebi.bytes
-        val patch = ImgResizePatch(newSize)
 
-        patch.patch(osImage, logger)
+        with(ImgResizePatch(osImage, newSize)) {
+            patch(osImage)
+        }
 
         expectThat(osImage.size)
             .isEqualTo(newSize)

@@ -1,7 +1,6 @@
 package com.imgcstmzr.libguestfs.virtcustomize
 
 import com.bkahlert.koodies.nio.file.serialized
-import com.bkahlert.koodies.string.quoted
 import com.imgcstmzr.libguestfs.Option
 import java.nio.file.Path
 import java.util.Collections
@@ -37,19 +36,19 @@ sealed class VirtCustomizeCustomizationOption(override val name: String, overrid
     /**
      * Install SCRIPT inside the guest, so that when the guest first boots up, the script runs (as root, late in the boot process).
      *
-     * The alternative version --firstBoot-command is the same, but it conveniently wraps the command up in a single line script for you.
+     * The alternative version --firstboot-command is the same, but it conveniently wraps the command up in a single line script for you.
      */
-    class FirstBootOption(val script: String) : VirtCustomizeCustomizationOption("--firstBoot", script)
+    class FirstBootOption(val script: String) : VirtCustomizeCustomizationOption("--firstboot", script)
 
     /**
      * Run command (and arguments) inside the guest when the guest first boots up (as root, late in the boot process).
      */
-    class FirstBootCommandOption(val command: String, vararg args: String) : VirtCustomizeCustomizationOption("--firstBoot-command", listOf(command, *args))
+    class FirstBootCommandOption(val command: String) : VirtCustomizeCustomizationOption("--firstboot-command", "$command")
 
     /**
      * Install the named packages (a comma-separated list). These are installed when the guest first boots using the guest’s package manager (eg. apt, yum, etc.) and the guest’s network connection.
      */
-    class FirstBootInstallOption(vararg packages: String) : VirtCustomizeCustomizationOption("--firstBoot-install", packages.joinToString(","))
+    class FirstBootInstallOption(vararg packages: String) : VirtCustomizeCustomizationOption("--firstboot-install", packages.joinToString(","))
     class HostnameOption(val hostname: String) : VirtCustomizeCustomizationOption("--hostname", hostname)
     class MkdirOption(val dir: Path) : VirtCustomizeCustomizationOption("--mkdir", dir.serialized)
     class MoveOption(val source: Path, val dest: Path) : VirtCustomizeCustomizationOption("--move", "${source.serialized}:${dest.serialized}")
@@ -78,11 +77,11 @@ sealed class VirtCustomizeCustomizationOption(override val name: String, overrid
     }
 
     class SshInjectOption private constructor(val value: String) : VirtCustomizeCustomizationOption("--ssh-inject", value) {
-        constructor(user: String, keyFile: Path) : this("$user:file:${keyFile.serialized.quoted}")
-        constructor(user: String, key: String) : this("$user:string:${key.quoted}")
+        constructor(user: String, keyFile: Path) : this("$user:file:${keyFile.serialized}")
+        constructor(user: String, key: String) : this("$user:string:$key")
     }
 
-    class TimezoneOption(val timeZone: TimeZone) : VirtCustomizeCustomizationOption("--timezone", "${timeZone.id}") {
+    class TimezoneOption(val timeZone: TimeZone) : VirtCustomizeCustomizationOption("--timezone", timeZone.id) {
         constructor(timeZoneId: String) : this(TimeZone.getTimeZone(timeZoneId))
     }
 

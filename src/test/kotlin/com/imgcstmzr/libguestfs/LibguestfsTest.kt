@@ -1,16 +1,24 @@
 package com.imgcstmzr.libguestfs
 
 import com.bkahlert.koodies.string.random
+import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
-import com.imgcstmzr.libguestfs.guestfish.CopyInCommand
-import com.imgcstmzr.libguestfs.guestfish.CopyOutCommand
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine
+import com.imgcstmzr.libguestfs.guestfish.mounted
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.Companion.customize
+import com.imgcstmzr.runtime.OperatingSystemImage
+import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
+import com.imgcstmzr.util.DockerRequiring
+import com.imgcstmzr.util.OS
+import com.imgcstmzr.util.hasContent
+import com.imgcstmzr.util.logging.InMemoryLogger
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
+import strikt.assertions.exists
 import java.nio.file.Path
 
 @Execution(CONCURRENT)
@@ -29,9 +37,9 @@ class LibguestfsTest {
 
                 commands {
                     ignoreErrors {
-                        copyIn { CopyInCommand(Path.of("/home/pi/.ssh/known_hosts")) }
+                        copyIn(Path.of("/home/pi/.ssh/known_hosts"))
                     }
-                    copyOut { CopyOutCommand(Path.of("/home/pi/.ssh/known_hosts")) }
+                    copyOut(Path.of("/home/pi/.ssh/known_hosts"))
                 }
             }
 
@@ -41,7 +49,7 @@ class LibguestfsTest {
             --entrypoint \
             guestfish \
             --name \
-            libguestfs-guestfish \
+            libguestfs-guestfish-{} \
             --rm \
             -i \
             --mount \
@@ -54,10 +62,12 @@ class LibguestfsTest {
             --inspector \
             -- \
             <<HERE-{}
-            -mkdir-p /home/pi/.ssh
-            -copy-in /shared/home/pi/.ssh/known_hosts /home/pi/.ssh
-            !mkdir -p /shared/home/pi/.ssh
-            copy-out /home/pi/.ssh/known_hosts /shared/home/pi/.ssh
+            -mkdir-p /home/pi/.ssh 
+             -copy-in /shared/home/pi/.ssh/known_hosts /home/pi/.ssh 
+            
+            !mkdir -p /shared/home/pi/.ssh 
+             -copy-out /home/pi/.ssh/known_hosts /shared/home/pi/.ssh 
+            
             HERE-{}
         """.trimIndent())
         }
@@ -87,7 +97,7 @@ class LibguestfsTest {
             --entrypoint \
             virt-customize \
             --name \
-            libguestfs-virt-customize \
+            libguestfs-virt-customize-{} \
             --rm \
             -i \
             --mount \
@@ -99,8 +109,21 @@ class LibguestfsTest {
             /images/disk.img \
             --colors \
             --ssh-inject \
-            "pi:string:\"$sshKey\""
+            "pi:string:$sshKey"
         """.trimIndent())
+        }
+
+        @FiveMinutesTimeout @DockerRequiring @Test
+        fun InMemoryLogger.`should set hostname`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+            customize(osImage) {
+                hostname { "test-machine" }
+            }
+            expectThat(osImage).mounted(this) {
+                path("/etc/hostname") {
+                    exists()
+                    hasContent("test-machine\n")
+                }
+            }
         }
     }
 }

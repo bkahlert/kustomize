@@ -25,10 +25,10 @@ class InMemoryLoggerResolverDebugTest {
 
         @Debug(includeInReport = false)
         @Test
-        fun `should log to console automatically with @Debug`(output: CapturedOutput, logger: InMemoryLogger) {
-            logger.logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
+        fun InMemoryLogger.`should log to console automatically with @Debug`(output: CapturedOutput) {
+            logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
 
-            expectThat(logger.logged).contains("☎Σ⊂⊂(☉ω☉∩)")
+            getExpectThatLogged().contains("☎Σ⊂⊂(☉ω☉∩)")
             expectThat(output.removeEscapeSequences()).contains("☎Σ⊂⊂(☉ω☉∩)")
         }
     }
@@ -38,13 +38,13 @@ class InMemoryLoggerResolverDebugTest {
 
         @Debug(includeInReport = false)
         @Test
-        fun `should log to console automatically with @Debug`(output: CapturedOutput, logger: InMemoryLogger) {
-            logger.logStatus { OUT typed "(*｀へ´*)" }
+        fun InMemoryLogger.`should log to console automatically with @Debug`(output: CapturedOutput) {
+            logStatus { OUT typed "(*｀へ´*)" }
 
-            expectCatching { logger.logResult { Result.failure<Any>(IllegalStateException("test")) } }
+            expectCatching { logResult { Result.failure<Any>(IllegalStateException("test")) } }
                 .isFailure().isA<IllegalStateException>()
 
-            expectThat(logger.logged).contains("(*｀へ´*)")
+            getExpectThatLogged().contains("(*｀へ´*)")
             expectThat(output.removeEscapeSequences()).contains("(*｀へ´*)")
         }
     }
