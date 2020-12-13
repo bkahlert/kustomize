@@ -2,12 +2,15 @@ package com.imgcstmzr.libguestfs.guestfish
 
 import com.bkahlert.koodies.builder.ListBuilder
 import com.bkahlert.koodies.builder.ListBuilderInit
+import com.bkahlert.koodies.builder.MapBuilder
 import com.bkahlert.koodies.builder.OnOffBuilderInit
 import com.bkahlert.koodies.builder.buildListTo
+import com.bkahlert.koodies.builder.buildMapTo
 import com.bkahlert.koodies.builder.buildTo
 import com.bkahlert.koodies.docker.DockerRunAdaptable
 import com.bkahlert.koodies.io.TarArchiver.tar
 import com.bkahlert.koodies.kaomoji.Kaomojis
+import com.bkahlert.koodies.nio.file.Paths
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.toPath
 import com.bkahlert.koodies.string.withoutPrefix
@@ -32,16 +35,19 @@ annotation class GuestfishDsl
  *
  * It uses [Libguestfs] and exposes all of the functionality of the [guestfs API](https://libguestfs.org/guestfs.3.html).
  */
-class GuestfishCommandLine(val options: List<Option>, val guestfishCommands: List<GuestfishCommand>) :
-    DockerRunAdaptable by GuestfishDockerAdaptable(options, guestfishCommands),
+class GuestfishCommandLine(val env: Map<String, String>, val options: List<Option>, val guestfishCommands: List<GuestfishCommand>) :
+    DockerRunAdaptable by GuestfishDockerAdaptable(env, options, guestfishCommands),
     LibguestfsCommandLine(
-        command = COMMAND,
-        arguments = options.flatten() +
+        env,
+        options.filterIsInstance<GuestfishOption.DiskOption>().map { it.disk }.singleOrNull() ?: Paths.Temp,
+        COMMAND,
+        options.flatten() +
             guestfishCommands.toMutableList().let {
                 if (UmountAllCommand() !in it) it += UmountAllCommand()
                 if (ExitCommand() !in it) it += ExitCommand()
                 it.flatten()
-            }) {
+            }
+    ) {
 
     override fun executionCaption() = "Running ${guestfishCommands.size} guestfish operations... ${Kaomojis.fishing()}"
 
@@ -86,6 +92,7 @@ class GuestfishCommandLine(val options: List<Option>, val guestfishCommands: Lis
 
     @GuestfishDsl
     class GuestfishCommandLineBuilder(
+        private val env: MutableMap<String, String> = mutableMapOf(),
         private val options: MutableList<GuestfishOption> = mutableListOf(),
         private val commands: MutableList<GuestfishCommand> = mutableListOf(),
     ) {
@@ -94,14 +101,28 @@ class GuestfishCommandLine(val options: List<Option>, val guestfishCommands: Lis
              * Using `this` [GuestfishCommandLineBuilder] builds a list of [Option].
              */
             @GuestfishDsl fun (GuestfishCommandLineBuilder.() -> Unit).build(): GuestfishCommandLine =
-                GuestfishCommandLineBuilder().apply(this).let { GuestfishCommandLine(it.options, it.commands) }
+                GuestfishCommandLineBuilder().apply(this).let { GuestfishCommandLine(it.env, it.options, it.commands) }
         }
+
+        @GuestfishDsl
+        fun env(init: GuestfishEnvironmentBuilder.() -> Unit) = init.buildMapTo(env)
 
         @GuestfishDsl
         fun options(init: GuestfishOptionsBuilder.() -> Unit) = init.buildListTo(options)
 
         @GuestfishDsl
         fun commands(init: GuestfishCommandsBuilder.() -> Unit) = init.buildListTo(commands)
+    }
+
+    @GuestfishDsl
+    class GuestfishEnvironmentBuilder : MapBuilder<String, String>() {
+
+        /**
+         * Enables command traces.
+         */
+        @GuestfishDsl
+        fun trace(init: OnOffBuilderInit) =
+            init.buildTo(map) { Pair("LIBGUESTFS_TRACE", "1") }
     }
 
     @GuestfishDsl

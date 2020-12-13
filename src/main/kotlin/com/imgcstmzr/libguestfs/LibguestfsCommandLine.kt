@@ -16,8 +16,13 @@ import com.imgcstmzr.util.isReadable
 import com.imgcstmzr.util.isWritable
 import java.nio.file.Path
 
-abstract class LibguestfsCommandLine(command: String, arguments: List<String>) :
-    CommandLine(redirects = emptyList(), command = command, arguments = arguments),
+abstract class LibguestfsCommandLine(
+    environment: Map<String, String>,
+    workingDirectory: Path,
+    command: String,
+    arguments: List<String>,
+) :
+    CommandLine(emptyList(), environment, workingDirectory, command, arguments),
     DockerRunAdaptable {
 
     protected open fun executionCaption() = "Running $summary..."

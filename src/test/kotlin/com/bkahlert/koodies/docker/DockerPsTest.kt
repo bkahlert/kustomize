@@ -1,7 +1,6 @@
 package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.boolean.asEmoji
-import com.bkahlert.koodies.shell.HereDocBuilder.hereDoc
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.time.poll
 import com.imgcstmzr.util.DockerRequiring
@@ -31,16 +30,11 @@ class DockerPsTest {
             "shared-prefix-boot-and-run",
             "shared-prefix-boot-and-run-program-in-user-session",
         ).mapTo(containers) {
-            DockerProcess(Docker.image { "busybox" }.run {
-                options { name { it } }
-                arguments {
-                    +hereDoc(label = "BE-BUSY") {
-                        +"while true; do"
-                        +"    sleep 1"
-                        +"done"
-                    }
-                }
-            }).also { poll { it.isRunning }.every(100.milliseconds).forAtMost(15.seconds) { fail("Docker containers did not start") } }
+            Docker.busybox(it,
+                "while true; do",
+                "    sleep 1",
+                "done").start()
+                .also { poll { it.alive }.every(100.milliseconds).forAtMost(15.seconds) { fail("Docker containers did not start") } }
         }
     }
 

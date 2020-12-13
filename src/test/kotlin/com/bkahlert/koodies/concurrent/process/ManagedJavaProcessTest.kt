@@ -44,7 +44,7 @@ import kotlin.time.milliseconds
 import kotlin.time.seconds
 
 @Execution(CONCURRENT)
-class ManagedProcessTest {
+class ManagedJavaProcessTest {
 
     @Nested
     inner class Creation {
@@ -71,7 +71,7 @@ class ManagedProcessTest {
         fun `should provide string on direct toString`() {
             val process = createCompletingManagedProcess()
             expectThat(process.toString())
-                .matchesCurlyPattern("ManagedProcess[delegate=Process[pid={}, exitValue={}]; result={}; commandLine={}; expectedExitValue=0; processTerminationCallback={}; destroyOnShutdown={}]")
+                .matchesCurlyPattern("ManagedJavaProcess[delegate=Process[pid={}, exitValue={}]; result={}; commandLine={}; expectedExitValue=0; processTerminationCallback={}; destroyOnShutdown={}]")
         }
 
         @Test
@@ -112,7 +112,7 @@ class ManagedProcessTest {
 
         @Slow @Test
         fun `should provide output processor access to own running process`() {
-            val process: ManagedProcess = startShellScript {
+            val process: ManagedProcess = startShellScript() {
                 !"""
                  while true; do
                     >&1 echo "test out"
@@ -318,15 +318,14 @@ class ManagedProcessTest {
     }
 }
 
-object NoopManagedProcess : ManagedProcess(
-    CommandLine(""), Paths.Temp, emptyMap(), 0, {}, false
-) {
+private object NoopManagedProcess : ManagedProcess
+by ManagedProcess.forCommandLine(CommandLine(emptyMap(), Paths.Temp, ""), 0, {}) {
     init {
         start()
     }
 }
 
-val ManagedProcess.Companion.Noop: NoopManagedProcess get() = NoopManagedProcess
+val ManagedProcess.Companion.Noop: ManagedProcess get() = NoopManagedProcess
 
 fun createLoopingScript() = ShellScript {
     !"""

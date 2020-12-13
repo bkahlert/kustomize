@@ -1,7 +1,6 @@
 package com.bkahlert.koodies.concurrent.process
 
 import com.bkahlert.koodies.concurrent.process.Processes.isTempScriptFile
-import com.bkahlert.koodies.nio.file.Paths
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.toPath
@@ -23,18 +22,24 @@ import org.codehaus.plexus.util.cli.Commandline as PlexusCommandLine
  */
 open class CommandLine(
     val redirects: List<String>,
+    val environment: Map<String, String>,
+    val workingDirectory: Path,
     val command: String,
     val arguments: List<String>,
 ) {
     constructor(
+        environment: Map<String, String>,
+        workingDirectory: Path,
         command: String,
         vararg arguments: String,
-    ) : this(emptyList(), command, arguments.toList())
+    ) : this(emptyList(), environment, workingDirectory, command, arguments.toList())
 
     constructor(
+        environment: Map<String, String>,
+        workingDirectory: Path,
         command: Path,
         vararg arguments: String,
-    ) : this(command.serialized, *arguments)
+    ) : this(environment, workingDirectory, command.serialized, *arguments)
 
     private val formattedRedirects = redirects.takeIf { it.isNotEmpty() }?.joinToString(separator = " ", postfix = " ") ?: ""
 
@@ -67,7 +72,6 @@ open class CommandLine(
         commandLineParts.joinToString(separator = " \\${LineSeparators.LF}") { StringUtils.quoteAndEscape(it.trim(), '\"') }.fixHereDoc()
     }
 
-    // TODO Test
     val summary: String
         get() = arguments
             .map { line -> line.split("\\b".toRegex()).filter { part -> part.trim().run { length > 1 && !startsWith("-") } } }
@@ -83,14 +87,6 @@ open class CommandLine(
             .asStatus()
 
     companion object {
-
-        fun parse(commandLine: String): CommandLine {
-            val plexusCommandLine = PlexusCommandLine(commandLine)
-            val rawCommandline = plexusCommandLine.rawCommandline
-            return rawCommandline.takeIf { it.isNotEmpty() }
-                ?.let { CommandLine(emptyList(), it.first(), it.drop(1)) }
-                ?: CommandLine("")
-        }
 
         val hereDocStartRegex: Regex = Regex("<<(?<name>\\w[-\\w]*)\\s*")
         fun String.fixHereDoc(): String {
@@ -127,26 +123,18 @@ open class CommandLine(
             command(commandLine)
         }.buildTo(Processes.tempScriptFile())
 
-    fun lazyProcess(
-        workingDirectory: Path = Paths.WorkingDirectory,
-        environment: Map<String, String> = emptyMap(),
-    ): Lazy<java.lang.Process> {
+    /**
+     * Prepares a [Process] that starts as soon as the [Lazy.value] is computed.
+     */
+    fun lazyProcess(): Lazy<java.lang.Process> {
         val scriptFile = if (command.toPath().isTempScriptFile()) commandLine else toScript(workingDirectory).serialized
-
-
 
         return PlexusCommandLine(scriptFile).run {
             addArguments(arguments)
             @Suppress("ExplicitThis")
-            this.workingDirectory = workingDirectory.toFile()
+            workingDirectory = this@CommandLine.workingDirectory.toFile()
             environment.forEach { addEnvironment(it.key, it.value) }
-
-            // TODO TRACE GUESTFISH
-            addEnvironment("LIBGUESTFS_TRACE", "1")
-
-            lazy {
-                execute()
-            }
+            lazy { execute() }
         }
     }
 

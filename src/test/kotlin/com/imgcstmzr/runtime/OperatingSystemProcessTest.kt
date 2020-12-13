@@ -1,9 +1,10 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.docker.DockerContainerName
 import com.bkahlert.koodies.exception.rootCause
 import com.bkahlert.koodies.string.containsAny
 import com.bkahlert.koodies.test.junit.FifteenMinutesTimeout
+import com.bkahlert.koodies.test.junit.JUnit
+import com.bkahlert.koodies.test.junit.uniqueId
 import com.imgcstmzr.E2E
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.runtime.OperatingSystems.TinyCore
@@ -27,10 +28,10 @@ import java.util.concurrent.CompletionException
 class OperatingSystemProcessTest {
 
     @FifteenMinutesTimeout @E2E @Test
-    fun InMemoryLogger.`should boot and run program in user session`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, name: DockerContainerName) {
+    fun InMemoryLogger.`should boot and run program in user session`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
 
         val exitValue = osImage.execute(
-            name = name.sanitized,
+            name = JUnit.uniqueId,
             logger = this,
             autoLogin = true,
             osImage.compileScript("ping", "ping -c 1 \"imgcstmzr.com\"", "sleep 1", "echo 'test'")

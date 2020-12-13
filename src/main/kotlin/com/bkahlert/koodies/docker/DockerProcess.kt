@@ -3,7 +3,6 @@ package com.bkahlert.koodies.docker
 import com.bkahlert.koodies.concurrent.process.ManagedProcess
 import com.bkahlert.koodies.concurrent.process.Process
 import com.bkahlert.koodies.string.quoted
-import com.bkahlert.koodies.string.withRandomSuffix
 import com.bkahlert.koodies.time.poll
 import java.util.concurrent.TimeoutException
 import kotlin.time.milliseconds
@@ -14,30 +13,32 @@ import kotlin.time.seconds
  */
 open class DockerProcess private constructor(
     val name: String,
-    commandLine: DockerRunCommandLine,
-) : ManagedProcess(commandLine, processTerminationCallback = {
-    Docker.stop(name)
-    Docker.remove(name, forcibly = true)
-}) {
+    private val managedProcess: ManagedProcess,
+) : ManagedProcess by managedProcess {
+
+    private constructor(name: String, commandLine: DockerRunCommandLine) :
+        this(name, ManagedProcess.forCommandLine(commandLine, processTerminationCallback = {
+            Docker.stop(name)
+            Docker.remove(name, forcibly = true)
+        }))
 
     constructor(commandLine: DockerRunCommandLine) :
-        this(commandLine.options.name?.sanitized?.withRandomSuffix() ?: error("Docker container name missing."), commandLine)
+        this(commandLine.options.name?.sanitized ?: error("Docker container name missing."), commandLine)
 
     constructor(dockerRunAdaptable: DockerRunAdaptable) : this(dockerRunAdaptable.adapt())
 
     init {
-        start()
         metaLog("🐳 docker attach ${name.quoted}") // TODO consume by Processors
     }
 
-    val isRunning: Boolean get() = Docker.isContainerRunning(name)
+    override val alive: Boolean get() = Docker.isContainerRunning(name)
 
-    override fun stop(): Process = also { Docker.stop(name) }.also { pollTermination() }.also { super.stop() }
-    override fun kill(): Process = also { stop() }.also { super.kill() }
+    override fun stop(): Process = also { Docker.stop(name) }.also { pollTermination() }.also { managedProcess.stop() }
+    override fun kill(): Process = also { stop() }.also { managedProcess.kill() }
 
     private fun pollTermination(): DockerProcess {
         poll {
-            !isRunning
+            !alive
         }.every(100.milliseconds).forAtMost(10.seconds) {
             throw TimeoutException("Could not clean up $this within $it.")
         }

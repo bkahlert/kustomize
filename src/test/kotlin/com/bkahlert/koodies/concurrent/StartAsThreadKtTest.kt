@@ -45,7 +45,7 @@ class StartAsThreadKtTest {
                 while (!finished.get()) {
                     1.milliseconds.sleep()
                 }
-            }.let { expectThat(it).isGreaterThan(400.milliseconds).isLessThan(700.milliseconds) }
+            }.let { expectThat(it).isGreaterThan(400.milliseconds).isLessThan(900.milliseconds) }
         }
     }
 }

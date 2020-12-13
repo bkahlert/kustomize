@@ -133,11 +133,11 @@ class ImgCstmzrConfigTest {
         expectThat(CompositePatch(patch)) {
             get { name }.contains("Increasing Disk Space: 4.00 GB").contains("Change Username").contains("Mass storage and Serial")
             get { preFileImgOperations }.hasSize(1)
-            get { customizationOptions }.hasSize(4)
+            get { customizationOptions }.hasSize(8)
             get { guestfishCommands }.hasSize(1)
             get { fileSystemOperations }.hasSize(11)
             get { postFileImgOperations }.hasSize(2)
-            get { programs }.hasSize(5)
+            get { programs }.hasSize(11)
         }
     }
 
@@ -145,9 +145,10 @@ class ImgCstmzrConfigTest {
     fun InMemoryLogger.`should apply patch`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage) {
         val imgCstmztn = loadImgCstmztn()
         val patches = imgCstmztn.createPatch()
+        val mergedPatches = imgCstmztn.clusterPatches(patches)
 
-        patches.forEach { patch ->
-            with(patch) {
+        mergedPatches.forEach { mergedPatch ->
+            with(mergedPatch) {
                 patch(osImage)
             }
         }
@@ -218,10 +219,20 @@ class ImageCustomization(
             }
             +patch
         }
+
         // TODO run patches together
         // TODO optimize (model) scripts
         // TODO run bother-you
     }
+
+    fun clusterPatches(patches: List<Patch>): List<CompositePatch> = with(patches) {
+        listOf(
+            CompositePatch(extract<ImgResizePatch>() + extract<UsernamePatch>() + extract<SshEnablementPatch>() + extract<UsbOnTheGoPatch>()),
+            CompositePatch(extract<PasswordPatch>() + extract<SshAuthorizationPatch>()),
+        )
+    }
+
+    private inline fun <reified T : Patch> List<Patch>.extract(): List<T> = filterIsInstance<T>()
 
     override fun toString(): String =
         "ImageCustomization(name='$name', os=$os, ssh=$ssh, defaultUser=$defaultUser, usbOtg=$usbOtg, setup=$setup, imgSize=$imgSize)"

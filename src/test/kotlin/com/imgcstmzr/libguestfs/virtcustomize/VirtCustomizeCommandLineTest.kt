@@ -46,14 +46,12 @@ class VirtCustomizeCommandLineTest {
             delete/file1 \
             --edit \
             /etc/dnf/dnf.conf:s/gpgcheck=1/gpgcheck=0/ \
-            --firstBoot \
+            --firstboot \
             "first boot" \
-            --firstBoot \
+            --firstboot \
             scripts \
             --firstboot-command \
-            command \
-            arg1 \
-            arg2 \
+            "command arg1 arg2" \
             --firstboot-command \
             boot-command \
             --firstboot-install \

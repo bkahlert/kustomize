@@ -1,14 +1,71 @@
 package com.bkahlert.koodies.builder
 
+
+/**
+ * Builds a map [K], [V] by
+ * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
+ * 2) apply `this` initializer to it
+ * 3) retrieving the result using `(B) -> T`.
+ *
+ * @return the build instance
+ */
+inline fun <reified B : (B) -> Map<K, V>, reified K : Any, reified V> (B.() -> Unit).buildMap(): Map<K, V> {
+    val zeroArgConstructors = B::class.java.declaredConstructors.filter { it.parameterCount == 0 }
+    val builder: B = zeroArgConstructors.singleOrNull()?.newInstance() as? B
+        ?: throw IllegalArgumentException("${B::class.simpleName} has no zero-arg constructor and cannot be used to create a map of ${K::class.simpleName} and ${V::class.simpleName}.")
+    return builder.apply(this).let { it.invoke(it) }
+}
+
+/**
+ * Builds a map of [K], [V] and adds it to [target] by
+ * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
+ * 2) apply `this` initializer to it
+ * 3) retrieving the result using `(B) -> T`.
+ *
+ * @return the build instance
+ */
+inline fun <reified B : (B) -> Map<K, V>, reified K : Any, reified V> (B.() -> Unit).buildMapTo(target: MutableMap<in K, in V>): Map<K, V> =
+    buildMap().also { target.putAll(it) }
+
+/**
+ * Builds a map of [K], [V] and [transform]s it to [U] by
+ * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
+ * 2) apply `this` initializer to it
+ * 3) retrieving the result using `(B) -> T`
+ * 4) applying [transform].
+ *
+ * @return the transformed instance
+ */
+inline fun <reified B : (B) -> Map<K, V>, reified K : Any, reified V, reified U> (B.() -> Unit).buildMap(transform: Map.Entry<K, V>.() -> U): List<U> =
+    buildMap().map(transform)
+
+/**
+ * Builds a map of [K], [V] and adds the to [U] [transform]ed instance to [target] by
+ * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
+ * 2) apply `this` initializer to it
+ * 3) retrieving the result using `(B) -> T`
+ * 4) applying [transform].
+ *
+ * @return the transformed instance
+ */
+inline fun <reified B : (B) -> Map<K, V>, reified K : Any, reified V, reified U> (B.() -> Unit).buildMapTo(
+    target: MutableCollection<in U>,
+    transform: Map.Entry<K, V>.() -> U,
+): List<U> = buildMap(transform).also { target.addAll(it) }
+
+
+
 /**
  * Convenience type to easier use [buildMap] accepts.
  */
 typealias MapBuilderInit<K, V> = MapBuilder<K, V>.() -> Unit
 
-class MapBuilder<K, in V>(private val map: MutableMap<K, V>) {
+open class MapBuilder<K, V> : (MapBuilder<K, V>) -> Map<K, V> by { it.map } {
+
+    protected val map: MutableMap<K, V> = mutableMapOf()
+
     companion object {
-        inline fun <reified K, reified V> build(init: MapBuilderInit<K, V>): Map<K, V> =
-            linkedMapOf<K, V>().also { MapBuilder(it).apply(init) }
+        inline fun <reified B : MapBuilder<K, V>, reified K, reified V> build(init: B.() -> Unit): Map<K, V> = init.build()
     }
 
     infix fun K.to(value: V) {
@@ -23,33 +80,3 @@ class MapBuilder<K, in V>(private val map: MutableMap<K, V>) {
         forEach { (key, value) -> map.remove(key, value) }
     }
 }
-
-/**
- * Using `this` [MapBuilderInit] builds a map of [K] and [V].
- */
-fun <K, V> MapBuilderInit<K, V>.buildMap(): Map<K, V> =
-    linkedMapOf<K, V>().also { MapBuilder(it).this() }
-
-/**
- * Using `this` [MapBuilderInit] builds a map of [K] and [V].
- *
- * As as side effect the result is added to [target].
- */
-fun <K, V> MapBuilderInit<K, V>.buildMapTo(target: MutableMap<in K, in V>): Map<K, V> =
-    buildMap().also { target.putAll(it) }
-
-/**
- * Using `this` [MapBuilderInit] builds a map of [K] and [V]
- * and applies [transform] to the result.
- */
-fun <K, V, T> MapBuilderInit<K, V>.buildMap(transform: Map.Entry<K, V>.() -> T): List<T> =
-    buildMap().entries.map { it.transform() }
-
-/**
- * Using `this` [MapBuilderInit] builds a map of [K] and [V]
- * and applies [transform] to the result.
- *
- * As as side effect the transformed result is added to [target].
- */
-fun <K, V, T> MapBuilderInit<K, V>.buildMapTo(target: MutableCollection<in T>, transform: Map.Entry<K, V>.() -> T): List<T> =
-    buildMap(transform).also { target.addAll(it) }

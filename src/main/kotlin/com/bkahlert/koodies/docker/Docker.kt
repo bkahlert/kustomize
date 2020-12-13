@@ -2,7 +2,6 @@ package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.concurrent.process.Processes.checkIfOutputContains
 import com.bkahlert.koodies.concurrent.process.Processes.evalShellScript
-import com.bkahlert.koodies.concurrent.process.Processes.startShellScriptDetached
 import com.bkahlert.koodies.shell.ShellScript
 import com.bkahlert.koodies.time.sleep
 import java.util.concurrent.TimeUnit
@@ -41,7 +40,7 @@ object Docker {
      * Explicitly stops the Docker container with the given [name] **asynchronously**.
      */
     fun stop(name: String) {
-        startShellScriptDetached { !"docker stop \"$name\"" }
+        evalShellScript { !"docker stop \"$name\"" }.onExit.orTimeout(8, TimeUnit.SECONDS)
         1.seconds.sleep()
     }
 

@@ -2,12 +2,13 @@ package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
-import com.bkahlert.koodies.concurrent.process.Processor
 import com.bkahlert.koodies.concurrent.process.Processors.noopProcessor
 import com.bkahlert.koodies.concurrent.process.UserInput.enter
-import com.bkahlert.koodies.concurrent.process.process
+import com.bkahlert.koodies.concurrent.process.silentlyProcess
 import com.bkahlert.koodies.concurrent.synchronized
+import com.bkahlert.koodies.test.junit.JUnit
 import com.bkahlert.koodies.test.junit.Slow
+import com.bkahlert.koodies.test.junit.uniqueId
 import com.bkahlert.koodies.time.poll
 import com.bkahlert.koodies.time.sleep
 import com.imgcstmzr.runtime.OperatingSystemImage
@@ -25,7 +26,6 @@ import strikt.assertions.isFalse
 import strikt.assertions.isGreaterThan
 import strikt.assertions.isLessThan
 import strikt.assertions.isTrue
-import kotlin.reflect.KFunction
 import kotlin.time.milliseconds
 import kotlin.time.seconds
 
@@ -37,14 +37,11 @@ class DockerProcessTest {
 
         @DockerRequiring @Test
         fun `should start docker and pass arguments`() {
-            val dockerProcess = DockerProcess(busybox(
-                Lifecycle::`should start docker and pass arguments`,
-                "echo", "test",
-            )).process()
+            val dockerProcess = Docker.busybox(JUnit.uniqueId, "echo test").start().silentlyProcess()
 
             kotlin.runCatching {
                 poll { dockerProcess.ioLog.logged.any { it.type == OUT && it.unformatted == "test" } }
-                    .every(100.milliseconds).noLongerThan({ dockerProcess.alive }, 8.seconds) {
+                    .every(100.milliseconds).forAtMost(8.seconds) {
                         if (dockerProcess.alive) fail("Did not log \"test\" output within 8 seconds.")
                         fail("Process terminated without logging: ${dockerProcess.ioLog.dump()}.")
                     }
@@ -53,7 +50,7 @@ class DockerProcessTest {
 
         @DockerRequiring @Test
         fun `should start docker and process input`() {
-            val dockerProcess = DockerProcess(busybox(Lifecycle::`should start docker and process input`)).process()
+            val dockerProcess = Docker.busybox(JUnit.uniqueId).start().silentlyProcess()
 
             kotlin.runCatching {
                 dockerProcess.enter("echo 'test'")
@@ -65,7 +62,7 @@ class DockerProcessTest {
 
         @DockerRequiring @Test
         fun `should start docker and process output`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
-            val dockerProcess = runOsImage(testName(Lifecycle::`should start docker and process output`), osImage).process()
+            val dockerProcess = Docker.pi(JUnit.uniqueId, osImage.file).start().silentlyProcess()
 
             kotlin.runCatching {
                 poll { dockerProcess.ioLog.logged.any { it.type == OUT } }
@@ -76,15 +73,15 @@ class DockerProcessTest {
         @DockerRequiring @Test
         fun `should start docker and process output produced by own input`() {
             val logged = mutableListOf<String>().synchronized()
-            val dockerProcess = DockerProcess(Docker.image { "busybox" }
-                .run { options { testName(Lifecycle::`should start docker and process output produced by own input`) } }).process { io ->
-                logged.add(io.unformatted)
-                if (io.type == OUT) {
-                    if (logged.contains("test 4 6")) stop()
-                    val message = "echo '${io.unformatted} ${io.unformatted.length}'"
-                    enter(message)
+            val dockerProcess =
+                Docker.busybox(JUnit.uniqueId).startAndProcess { io ->
+                    logged.add(io.unformatted)
+                    if (io.type == OUT) {
+                        if (logged.contains("test 4 6")) stop()
+                        val message = "echo '${io.unformatted} ${io.unformatted.length}'"
+                        enter(message)
+                    }
                 }
-            }
 
             kotlin.runCatching {
                 dockerProcess.enter("echo 'test'")
@@ -101,56 +98,57 @@ class DockerProcessTest {
 
             @DockerRequiring @Test
             fun `should return false on not yet started container container`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
-                val dockerProcess = runOsImage(testName(IsRunning::`should return false on not yet started container container`), osImage)
+                val dockerProcess = Docker.pi(JUnit.uniqueId, osImage.file).prepare()
+
                 kotlin.runCatching {
-                    expectThat(dockerProcess.isRunning).isFalse()
+                    expectThat(dockerProcess.alive).isFalse()
                 }.onFailure { dockerProcess.kill() }.getOrThrow()
             }
 
             @DockerRequiring @Test
             fun `should return true on running container`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
-                val dockerProcess = runOsImage(testName(IsRunning()::`should return true on running container`), osImage)
+                val dockerProcess = Docker.pi(JUnit.uniqueId, osImage.file).startAndProcess(processor = noopProcessor())
                 kotlin.runCatching {
-                    poll { dockerProcess.isRunning }
-                        .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not start container within 5 seconds.") }
-                    expectThat(dockerProcess.isRunning).isTrue()
+                    poll { dockerProcess.alive }
+                        .every(100.milliseconds).forAtMost(5.seconds) { fail("${dockerProcess.name} not start container within 5 seconds.") }
+                    expectThat(dockerProcess.alive).isTrue()
                 }.onFailure { dockerProcess.kill() }.getOrThrow()
             }
 
             @DockerRequiring @Test
             fun `should return false on completed container`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
-                val dockerProcess = runOsImage(testName(IsRunning::`should return false on completed container`), osImage)
+                val dockerProcess = Docker.pi(JUnit.uniqueId, osImage.file).startAndProcess(processor = noopProcessor())
                 kotlin.runCatching {
-                    poll { dockerProcess.isRunning }
+                    poll { dockerProcess.alive }
                         .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not start container within 5 seconds.") }
 
                     dockerProcess.stop()
 
-                    poll { !dockerProcess.isRunning }
+                    poll { !dockerProcess.alive }
                         .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not stop container within 5 seconds.") }
-                    expectThat(dockerProcess.isRunning).isFalse()
+                    expectThat(dockerProcess.alive).isFalse()
                 }.onFailure { dockerProcess.kill() }.getOrThrow()
             }
 
             @DockerRequiring @Test
             fun `should stop started container`(@OS(DietPi) osImage: OperatingSystemImage) {
-                val dockerProcess = runOsImage(testName(IsRunning::`should stop started container`), osImage)
+                val dockerProcess = Docker.pi(JUnit.uniqueId, osImage.file).startAndProcess(processor = noopProcessor())
                 kotlin.runCatching {
-                    poll { dockerProcess.isRunning }
+                    poll { dockerProcess.alive }
                         .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not start container within 5 seconds.") }
 
                     dockerProcess.stop()
 
-                    poll { !dockerProcess.isRunning }
+                    poll { !dockerProcess.alive }
                         .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not stop container within 5 seconds.") }
-                    expectThat(dockerProcess.isRunning).isFalse()
+                    expectThat(dockerProcess.alive).isFalse()
                 }.onFailure { dockerProcess.kill() }.getOrThrow()
             }
         }
 
         @Slow @DockerRequiring @Test
         fun `should remove docker container after completion`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
-            val dockerProcess = runOsImage(testName(Lifecycle::`should remove docker container after completion`), osImage)
+            val dockerProcess = Docker.pi(JUnit.uniqueId, osImage.file).startAndProcess(processor = noopProcessor())
             kotlin.runCatching {
                 poll { Docker.exists(dockerProcess.name) }
                     .every(100.milliseconds).forAtMost(5.seconds) { fail("Did not start container within 5 seconds.") }
@@ -168,7 +166,9 @@ class DockerProcessTest {
     @Slow @DockerRequiring @Test
     fun `should not produce incorrect empty lines`(@OS(RiscOsPicoRc5) osImage: OperatingSystemImage) {
         val output = mutableListOf<IO>().synchronized()
-        val dockerProcess = runOsImage(testName(DockerProcessTest::`should not produce incorrect empty lines`), osImage) { output.add(it) }
+        val dockerProcess = Docker.pi(JUnit.uniqueId, osImage.file).startAndProcess {
+            output.add(it)
+        }
         kotlin.runCatching {
             20.seconds.sleep()
             dockerProcess.stop()
@@ -177,27 +177,3 @@ class DockerProcessTest {
         }.onFailure { dockerProcess.kill() }.getOrThrow()
     }
 }
-
-fun testName(test: KFunction<Any>): String = DockerProcessTest::class.simpleName + "-" + test.name
-fun OptionsBuilder.testName(test: KFunction<Any>) = run { com.bkahlert.koodies.docker.testName(test).let { name { it } } }
-
-fun busybox(test: KFunction<Any>, vararg lines: String): DockerRunCommandLine =
-    Docker.image { "busybox" }.run {
-        options { testName(test) }
-        arguments { +lines }
-    }
-
-
-@Suppress("SpellCheckingInspection")
-private fun runOsImage(
-    name: String,
-    osImage: OperatingSystemImage,
-    processor: Processor<DockerProcess> = noopProcessor(),
-): DockerProcess =
-    DockerProcess(Docker.image { "lukechilds" / "dockerpi" tag "vm" }.run {
-        options {
-            name { name }
-            mounts { osImage.file mountAt "/sdcard/filesystem.img" }
-        }
-    }).apply { process(processor) }
-

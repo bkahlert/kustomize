@@ -5,16 +5,39 @@ import com.bkahlert.koodies.exception.dump
 import com.bkahlert.koodies.exception.toSingleLineString
 import com.bkahlert.koodies.io.RedirectingOutputStream
 import com.bkahlert.koodies.isLazyInitialized
-import com.bkahlert.koodies.nio.file.Paths
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import org.apache.commons.io.output.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
-import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import kotlin.concurrent.thread
 import java.lang.Process as JavaProcess
+
+interface ManagedProcess : Process {
+    companion object {
+        fun forCommandLine(
+            commandLine: CommandLine,
+            expectedExitValue: Int = 0,
+            processTerminationCallback: (() -> Unit)? = null,
+        ): ManagedProcess {
+            return ManagedJavaProcess(
+                commandLine = commandLine,
+                expectedExitValue = expectedExitValue,
+                processTerminationCallback = processTerminationCallback)
+        }
+
+    }
+
+    val ioLog: IOLog
+    var externalSync: CompletableFuture<*>
+
+    /**
+     * Explicitly starts this process in case no other stimulus
+     * took place.
+     */
+    fun start()
+}
 
 /**
  * Process that wraps an existing [JavaProcess] and forwards all
@@ -33,23 +56,19 @@ import java.lang.Process as JavaProcess
  *    triggers it. Also this class can delegate itself without changing its
  *    behaviour.
  */
-open class ManagedProcess(
+private open class ManagedJavaProcess(
     protected val commandLine: CommandLine,
-
-    protected val workingDirectory: Path = Paths.WorkingDirectory,
-    protected val environment: Map<String, String> = emptyMap(),
-
     protected val expectedExitValue: Int = 0,
     protected val processTerminationCallback: (() -> Unit)? = {},
     protected val destroyOnShutdown: Boolean = true,
-) : ProcessDelegate() {
+) : ProcessDelegate(), ManagedProcess {
     companion object;
 
     /**
      * Explicitly starts this process in case no other stimulus
      * took place.
      */
-    fun start() {
+    override fun start() {
         javaProcess.pid()
     }
 
@@ -58,7 +77,7 @@ open class ManagedProcess(
      */
     override val javaProcess: JavaProcess by lazy {
         kotlin.runCatching {
-            commandLine.lazyProcess(workingDirectory, environment).value.apply {
+            commandLine.lazyProcess().value.apply {
                 metaLog("Executing ${commandLine.commandLine}")
                 commandLine.formattedIncludesFiles.takeIf { it.isNotBlank() }?.let { metaLog(it) }
 
@@ -88,9 +107,9 @@ open class ManagedProcess(
     final override val inputStream: InputStream get() = capturingInputStream
     final override val errorStream: InputStream get() = capturingErrorStream
 
-    val ioLog: IOLog by lazy { IOLog() }
+    override val ioLog: IOLog by lazy { IOLog() }
 
-    var externalSync: CompletableFuture<*> = CompletableFuture.completedFuture(Unit)
+    override var externalSync: CompletableFuture<*> = CompletableFuture.completedFuture(Unit)
     override var onExit: CompletableFuture<Process>
         get() {
             return externalSync.thenCombine(javaProcess.onExit()) { _, process ->
@@ -109,7 +128,7 @@ open class ManagedProcess(
                     throw ProcessExecutionException(pid, commandLine, exitValue, expectedExitValue, dump.removeEscapeSequences())
                 }
                 metaLog("Process $pid terminated successfully.")
-                this@ManagedProcess
+                this@ManagedJavaProcess
             }
         }
         set(value) {

@@ -1,5 +1,6 @@
 package com.bkahlert.koodies.concurrent.process
 
+import com.bkahlert.koodies.nio.file.Paths
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.tempPath
 import com.bkahlert.koodies.string.quoted
@@ -28,8 +29,8 @@ class CommandLineTest {
     inner class Equality {
         @Test
         fun `should equal based on command and arguments`() {
-            val cmdLine1 = CommandLine("/bin/command", "arg1", "arg 2")
-            val cmdLine2 = CommandLine(Path.of("/bin/command"), "arg1", "arg 2")
+            val cmdLine1 = CommandLine(emptyMap(), Paths.Temp, "/bin/command", "arg1", "arg 2")
+            val cmdLine2 = CommandLine(emptyMap(), Paths.Temp, Path.of("/bin/command"), "arg1", "arg 2")
             expectThat(cmdLine1).isEqualTo(cmdLine2)
         }
     }
@@ -63,7 +64,7 @@ class CommandLineTest {
 
     @Test
     fun `should run`() {
-        val command = CommandLine("echo", "test")
+        val command = CommandLine(emptyMap(), Paths.Temp, "echo", "test")
         expectThat(command) {
             continuationsRemoved.isEqualTo("echo test")
             evaluatesTo("test", 0)
@@ -72,7 +73,7 @@ class CommandLineTest {
 
     @Test
     fun `should run with more arguments`() {
-        val command = CommandLine("echo", "one", "two", "three")
+        val command = CommandLine(emptyMap(), Paths.Temp, "echo", "one", "two", "three")
         expectThat(command) {
             continuationsRemoved.isEqualTo("echo one two three")
             evaluatesTo("one two three", 0)
@@ -84,7 +85,7 @@ class CommandLineTest {
 
         @Test
         fun `should expand`() {
-            val command = CommandLine("echo", "\$HOME")
+            val command = CommandLine(emptyMap(), Paths.Temp, "echo", "\$HOME")
             expectThat(command) {
                 continuationsRemoved.isEqualTo("echo \$HOME")
                 evaluated.output.isEqualTo(System.getProperty("user.home"))
@@ -94,7 +95,7 @@ class CommandLineTest {
 
         @Test
         fun `should not expand`() {
-            val command = CommandLine("echo", "\\\$HOME")
+            val command = CommandLine(emptyMap(), Paths.Temp, "echo", "\\\$HOME")
             expectThat(command) {
                 continuationsRemoved.isEqualTo("echo \\\$HOME")
                 not { evaluated.output.isEqualTo(System.getProperty("user.home")) }
@@ -107,7 +108,7 @@ class CommandLineTest {
     inner class Formatting {
         @Test
         fun `should output formatted`() {
-            expectThat(CommandLine("command", "-a", "--bee", "c", "x y z".quoted)).toStringIsEqualTo("""
+            expectThat(CommandLine(emptyMap(), Paths.Temp, "command", "-a", "--bee", "c", "x y z".quoted)).toStringIsEqualTo("""
             command \
             -a \
             --bee \
@@ -118,7 +119,7 @@ class CommandLineTest {
 
         @Test
         fun `should handle whitespaces correctly command`() {
-            expectThat(CommandLine("command", " - a", "    ", "c c", "x y z".quoted)).toStringIsEqualTo("""
+            expectThat(CommandLine(emptyMap(), Paths.Temp, "command", " - a", "    ", "c c", "x y z".quoted)).toStringIsEqualTo("""
             command \
             "- a" \
              \
@@ -129,11 +130,11 @@ class CommandLineTest {
 
         @Test
         fun `should handle nesting`() {
-            expectThat(CommandLine(
+            expectThat(CommandLine(emptyMap(), Paths.Temp,
                 "command",
                 "-a",
                 "--bee",
-                CommandLine("command", "-a", "--bee", "c", "x y z".quoted).toString(),
+                CommandLine(emptyMap(), Paths.Temp, "command", "-a", "--bee", "c", "x y z".quoted).toString(),
                 "x y z".quoted)
             ).toStringIsEqualTo("""
             command \
@@ -154,7 +155,7 @@ class CommandLineTest {
 
         @Test
         fun `should not quote unnecessarily`() {
-            val command = CommandLine("echo", "Hello")
+            val command = CommandLine(emptyMap(), Paths.Temp, "echo", "Hello")
             expectThat(command) {
                 continuationsRemoved.isEqualTo("echo Hello")
                 evaluatesTo("Hello", 0)
@@ -163,7 +164,7 @@ class CommandLineTest {
 
         @Test
         fun `should quote on whitespaces`() {
-            val command = CommandLine("echo", "Hello World!")
+            val command = CommandLine(emptyMap(), Paths.Temp, "echo", "Hello World!")
             expectThat(command) {
                 continuationsRemoved.isEqualTo("echo \"Hello World!\"")
                 evaluatesTo("Hello World!", 0)
@@ -172,7 +173,7 @@ class CommandLineTest {
 
         @Test
         fun `should support single quotes`() {
-            val command = CommandLine("echo", "'\$HOME'")
+            val command = CommandLine(emptyMap(), Paths.Temp, "echo", "'\$HOME'")
             expectThat(command) {
                 continuationsRemoved.isEqualTo("echo '\$HOME'")
                 evaluatesTo("\$HOME", 0)
@@ -185,8 +186,8 @@ class CommandLineTest {
 
         @Test
         fun `should produce runnable output`() {
-            val nestedCommand = CommandLine("echo", "Hello")
-            val command = CommandLine("echo", nestedCommand.toString())
+            val nestedCommand = CommandLine(emptyMap(), Paths.Temp, "echo", "Hello")
+            val command = CommandLine(emptyMap(), Paths.Temp, "echo", nestedCommand.toString())
             expectThat(command) {
                 continuationsRemoved.isEqualTo("echo \"echo Hello\"")
                 evaluated.output.isEqualTo("echo Hello")
@@ -196,8 +197,8 @@ class CommandLineTest {
 
         @Test
         fun `should produce runnable quoted output`() {
-            val nestedCommand = CommandLine("echo", "Hello World!")
-            val command = CommandLine("echo", nestedCommand.toString())
+            val nestedCommand = CommandLine(emptyMap(), Paths.Temp, "echo", "Hello World!")
+            val command = CommandLine(emptyMap(), Paths.Temp, "echo", nestedCommand.toString())
             expectThat(command) {
                 continuationsRemoved.isEqualTo("echo \"echo \\\"Hello World!\\\"\"")
                 evaluated.output.isEqualTo("echo \"Hello World!\"")
@@ -207,8 +208,8 @@ class CommandLineTest {
 
         @Test
         fun `should produce runnable single quoted output`() {
-            val nestedCommand = CommandLine("echo", "'Hello World!'")
-            val command = CommandLine("echo", nestedCommand.toString())
+            val nestedCommand = CommandLine(emptyMap(), Paths.Temp, "echo", "'Hello World!'")
+            val command = CommandLine(emptyMap(), Paths.Temp, "echo", nestedCommand.toString())
             expectThat(command) {
                 continuationsRemoved.isEqualTo("echo \"echo \\\"'Hello World!'\\\"\"")
                 evaluated.output.isEqualTo("echo \"'Hello World!'\"")
@@ -220,6 +221,7 @@ class CommandLineTest {
     @Test
     fun `should provide summary`() {
         expectThat(CommandLine(
+            emptyMap(), Paths.Temp,
             "!ls", "-lisa",
             "!mkdir", "-p", "/shared",
             "!mkdir", "-p", "/shared/guestfish.shared/boot",
@@ -272,6 +274,6 @@ fun Assertion.Builder<LightweightProcess>.evaluatesTo(expectedOutput: String, ex
 
 fun createLazyFileCreatingProcess(): Pair<ManagedProcess, Path> {
     val nonExistingFile = tempPath(extension = ".txt").deleteOnExit()
-    val fileCreatingCommandLine = CommandLine("touch", nonExistingFile.serialized)
-    return ManagedProcess(fileCreatingCommandLine) to nonExistingFile
+    val fileCreatingCommandLine = CommandLine(emptyMap(), Paths.Temp, "touch", nonExistingFile.serialized)
+    return ManagedProcess.forCommandLine(fileCreatingCommandLine) to nonExistingFile
 }

@@ -1,6 +1,10 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.concurrent.process.IOLog
+import com.bkahlert.koodies.concurrent.process.ManagedProcess
+import com.bkahlert.koodies.concurrent.process.Process
 import com.bkahlert.koodies.string.Grapheme
+import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
 import com.bkahlert.koodies.time.Now
@@ -19,16 +23,18 @@ import java.io.BufferedInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.concurrent.CompletableFuture
 import kotlin.time.Duration
 import kotlin.time.milliseconds
 import kotlin.time.seconds
+import java.lang.Process as JavaProcess
 
-class ProcessMock(
+class JavaProcessMock(
     private var outputStream: OutputStream = ByteArrayOutputStream(),
     private val inputStream: InputStream = InputStream.nullInputStream(),
-    private val processExit: ProcessMock.() -> ProcessExitMock,
+    private val processExit: JavaProcessMock.() -> ProcessExitMock,
     var logger: BlockRenderingLogger,
-) : Process() {
+) : JavaProcess() {
 
     private val completeOutputSequence = ByteArrayOutputStream()
     private val unprocessedOutputSequence = outputStream
@@ -41,15 +47,15 @@ class ProcessMock(
         fun InMemoryLogger.processMock(
             outputStream: OutputStream = ByteArrayOutputStream(),
             inputStream: InputStream = InputStream.nullInputStream(),
-            processExit: ProcessMock.() -> ProcessExitMock,
-        ) = ProcessMock(outputStream, inputStream, processExit, this)
+            processExit: JavaProcessMock.() -> ProcessExitMock,
+        ) = JavaProcessMock(outputStream, inputStream, processExit, this)
 
         fun InMemoryLogger.withSlowInput(
             vararg inputs: String,
             baseDelayPerInput: Duration = 1.seconds,
             echoInput: Boolean,
-            processExit: ProcessMock.() -> ProcessExitMock,
-        ): ProcessMock {
+            processExit: JavaProcessMock.() -> ProcessExitMock,
+        ): JavaProcessMock {
             val outputStream = ByteArrayOutputStream()
             val slowInputStream = slowInputStream(
                 inputs = inputs,
@@ -68,8 +74,8 @@ class ProcessMock(
             vararg inputs: Pair<Duration, String>,
             baseDelayPerInput: Duration = 1.seconds,
             echoInput: Boolean,
-            processExit: ProcessMock.() -> ProcessExitMock,
-        ): ProcessMock {
+            processExit: JavaProcessMock.() -> ProcessExitMock,
+        ): JavaProcessMock {
             val outputStream = ByteArrayOutputStream()
             val slowInputStream = slowInputStream(
                 inputs = inputs,
@@ -88,8 +94,8 @@ class ProcessMock(
     override fun getOutputStream(): OutputStream = outputStream
     override fun getInputStream(): InputStream = inputStream
     override fun getErrorStream(): InputStream = InputStream.nullInputStream()
-    override fun waitFor(): Int = logger.miniTrace(::waitFor) { this@ProcessMock.processExit()() }
-    override fun exitValue(): Int = logger.miniTrace(::exitValue) { this@ProcessMock.processExit()() }
+    override fun waitFor(): Int = logger.miniTrace(::waitFor) { this@JavaProcessMock.processExit()() }
+    override fun exitValue(): Int = logger.miniTrace(::exitValue) { this@JavaProcessMock.processExit()() }
     override fun isAlive(): Boolean {
         return logger.miniTrace(::isAlive) {
             when (inputStream) {
@@ -99,17 +105,39 @@ class ProcessMock(
         }
     }
 
-    fun start(): OperatingSystemProcess {
-        return TODO()
-//        object : OperatingSystemProcess("shutdown-command") {
-//            override val process: Process = this@ProcessMock
-//            override val logger: RenderingLogger = this@ProcessMock.logger
-//        }
+    fun toManagedProcess(): ManagedProcessMock = ManagedProcessMock()
+
+    inner class ManagedProcessMock : ManagedProcess {
+        var logger: BlockRenderingLogger = this@JavaProcessMock.logger
+        override val ioLog: IOLog = IOLog()
+        override var externalSync: CompletableFuture<*>
+            get() = onExit
+            set(value) {}
+
+        override fun start() {}
+        override val metaStream: OutputStream = OutputStream.nullOutputStream()
+        override val outputStream: OutputStream = this@JavaProcessMock.outputStream
+        override val inputStream: InputStream = this@JavaProcessMock.inputStream
+        override val errorStream: InputStream = this@JavaProcessMock.errorStream
+        override val pid: Long = 123L
+        override val alive: Boolean = this@JavaProcessMock.isAlive
+        override val exitValue: Int = exitValue()
+        override val onExit: CompletableFuture<out Process> get() = CompletableFuture.completedFuture(this)
+        override fun stop() = this
+        override fun kill() = this
     }
+
+    fun start(testName: String): OperatingSystemProcessMock =
+        OperatingSystemProcessMock(testName, toManagedProcess())
 
     override fun destroy(): Unit = logger.miniTrace(::destroy) { }
 
     val received: String get() = completeOutputSequence.toString(Charsets.UTF_8)
+}
+
+class OperatingSystemProcessMock(testName: String, mock: JavaProcessMock.ManagedProcessMock) :
+    OperatingSystemProcess(OperatingSystemMock("mock for test ${testName.quoted}"), mock, mock.logger) {
+    val logger: BlockRenderingLogger = mock.logger
 }
 
 class SlowInputStream(

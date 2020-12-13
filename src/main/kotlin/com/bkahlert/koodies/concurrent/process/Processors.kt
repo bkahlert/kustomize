@@ -77,7 +77,7 @@ fun <P : ManagedProcess> P.process(
     nonBlockingReader: Boolean,
     processInputStream: InputStream = InputStream.nullInputStream(),
     processor: Processor<P> = noopProcessor(),
-): ManagedProcess {
+): P {
 
     fun CompletableFuture<*>.exceptionallyThrow(type: String) = exceptionally {
         throw RuntimeException("An error occurred while processing ${type.tag()}.", it)

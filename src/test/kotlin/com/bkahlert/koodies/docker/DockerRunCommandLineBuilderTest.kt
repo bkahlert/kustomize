@@ -23,6 +23,10 @@ class DockerRunCommandLineBuilderTest {
             options {
                 sample.invoke { "kll" }
                 sample { "" }
+                env {
+                    "key1" to "value1"
+                    "KEY2" to "VALUE 2"
+                }
                 name { "container-name" }
                 privileged { true }
                 autoCleanup { true }

@@ -16,10 +16,9 @@ open class LightweightProcess(
 
     val output: String by lazy { inputStream.bufferedReader().use { it.readText() }.trim() }
 
+    override val exitValue: Int
+        get() = javaProcess.waitFor()
+
     override val onExit: CompletableFuture<Process>
         get() = javaProcess.onExit().thenApply { this }
-
-    init {
-        waitForTermination()
-    }
 }

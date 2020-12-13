@@ -7,11 +7,11 @@ import com.bkahlert.koodies.string.joinLinesToString
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
 import com.bkahlert.koodies.test.junit.test
+import com.imgcstmzr.runtime.JavaProcessMock.Companion.processMock
+import com.imgcstmzr.runtime.JavaProcessMock.Companion.withIndividuallySlowInput
+import com.imgcstmzr.runtime.JavaProcessMock.Companion.withSlowInput
 import com.imgcstmzr.runtime.ProcessExitMock.Companion.immediateExit
 import com.imgcstmzr.runtime.ProcessExitMock.Companion.immediateSuccess
-import com.imgcstmzr.runtime.ProcessMock.Companion.processMock
-import com.imgcstmzr.runtime.ProcessMock.Companion.withIndividuallySlowInput
-import com.imgcstmzr.runtime.ProcessMock.Companion.withSlowInput
 import com.imgcstmzr.runtime.SlowInputStream.Companion.prompt
 import com.imgcstmzr.runtime.SlowInputStream.Companion.slowInputStream
 import com.imgcstmzr.runtime.log.subTrace
@@ -41,7 +41,7 @@ import kotlin.time.milliseconds
 import kotlin.time.seconds
 
 @Execution(CONCURRENT)
-class ProcessMockTest {
+class JavaProcessMockTest {
 
     @Nested
     inner class WithSlowInputStream {

@@ -16,6 +16,7 @@ class DockerRunCommandLineTest {
         val DOCKER_RUN_COMMAND = DockerRunCommandLine(
             dockerRedirects = emptyList(),
             options = DockerRunCommandLine.Options(
+                env = mapOf("key1" to "value1", "KEY2" to "VALUE 2"),
                 name = "container-name".toContainerName(),
                 privileged = true,
                 autoCleanup = true,
@@ -37,6 +38,10 @@ class DockerRunCommandLineTest {
         expectThat(DOCKER_RUN_COMMAND).toStringIsEqualTo("""
             docker \
             run \
+            --env \
+            key1=value1 \
+            --env \
+            "KEY2=VALUE 2" \
             --name \
             container-name \
             --privileged \

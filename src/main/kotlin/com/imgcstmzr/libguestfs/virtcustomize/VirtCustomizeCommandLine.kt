@@ -9,6 +9,7 @@ import com.bkahlert.koodies.builder.buildListTo
 import com.bkahlert.koodies.builder.buildMapTo
 import com.bkahlert.koodies.builder.buildTo
 import com.bkahlert.koodies.docker.DockerRunAdaptable
+import com.bkahlert.koodies.nio.file.Paths
 import com.imgcstmzr.libguestfs.LibguestfsCommandLine
 import com.imgcstmzr.libguestfs.docker.VirtCustomizeDockerAdaptable
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.AppendLineOption
@@ -74,7 +75,11 @@ annotation class VirtCustomizeDsl
  */
 class VirtCustomizeCommandLine(val options: List<VirtCustomizeOption>, val customizationOptions: List<VirtCustomizeCustomizationOption>) :
     DockerRunAdaptable by VirtCustomizeDockerAdaptable(options, customizationOptions),
-    LibguestfsCommandLine(command = COMMAND, arguments = options.flatten() + customizationOptions.flatten()) {
+    LibguestfsCommandLine(
+        emptyMap(),
+        options.filterIsInstance<DiskOption>().map { it.disk }.singleOrNull() ?: Paths.Temp,
+        COMMAND,
+        options.flatten() + customizationOptions.flatten()) {
 
     companion object {
         const val COMMAND = "virt-customize"

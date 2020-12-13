@@ -26,6 +26,9 @@ fun <T> OnOffBuilderInit.build(transformOnTrue: () -> T): T? =
 fun <T> OnOffBuilderInit.buildTo(collection: MutableCollection<T>, transformOnTrue: () -> T): T? =
     build(transformOnTrue)?.also { collection.add(it) }
 
+fun <K, V> OnOffBuilderInit.buildTo(map: MutableMap<K, V>, transformOnTrue: () -> Pair<K, V>): Pair<K, V>? =
+    build().let { if (it) transformOnTrue() else null }?.also { map[it.first] = it.second }
+
 /**
  * Type [TrueFalseBuilder.build] accepts.
  */

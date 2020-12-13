@@ -3,17 +3,12 @@ package com.bkahlert.koodies.concurrent.process
 import com.bkahlert.koodies.concurrent.cleanUpOldTempFiles
 import com.bkahlert.koodies.concurrent.cleanUpOnShutdown
 import com.bkahlert.koodies.nio.file.Paths
-import com.bkahlert.koodies.nio.file.Paths.Temp
-import com.bkahlert.koodies.nio.file.Paths.WorkingDirectory
-import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.shell.ShellScript
 import com.bkahlert.koodies.shell.ShellScript.Companion.build
-import org.codehaus.plexus.util.cli.Commandline
 import java.nio.file.Path
 import kotlin.io.path.name
 import kotlin.time.minutes
-import java.lang.Process as JavaProcess
 
 /**
  * Provides methods to start a new [Process] and to access running ones.
@@ -38,30 +33,11 @@ object Processes {
     fun Path.isTempScriptFile(): Boolean = name.startsWith(shellScriptPrefix) && name.endsWith(shellScriptExtension)
 
     /**
-     * Runs the [shellScript] asynchronously and with no helping wrapper.
-     *
-     * Returns the raw [Process].
-     */
-    fun startShellScriptDetached(
-        workingDirectory: Path = WorkingDirectory,
-        env: Map<String, String> = emptyMap(),
-        shellScript: ShellScript.() -> Unit,
-    ): JavaProcess {
-        val command = shellScript.build().sanitize(workingDirectory).buildTo(tempScriptFile()).cleanUpOnShutdown().serialized
-        return Commandline(command).apply {
-            addArguments(arguments)
-            @Suppress("ExplicitThis")
-            this.workingDirectory = workingDirectory.toFile()
-            env.forEach { addEnvironment(it.key, it.value) }
-        }.execute()
-    }
-
-    /**
      * Runs the [command] synchronously in a lightweight fashion and returns if the [substring] is contained in the output.
      */
     fun checkIfOutputContains(command: String, substring: String, caseSensitive: Boolean = false): Boolean = runCatching {
         val flags = if (caseSensitive) "" else "i"
-        check(startShellScriptDetached { line("$command | grep -q$flags '$substring'") }.waitFor() == 0)
+        check(evalShellScript(emptyMap(), Paths.Temp, shellScript = ShellScript { line("$command | grep -q$flags '$substring'") }).waitFor() == 0)
     }.isSuccess
 
     /**
@@ -69,27 +45,36 @@ object Processes {
      * with neither additional comfort nor additional threads overhead.
      */
     fun evalScriptToOutput(
-        workingDirectory: Path = Temp,
+        environment: Map<String, String> = emptyMap(),
+        workingDirectory: Path = Paths.Temp,
         shellScript: ShellScript.() -> Unit,
-    ): String = shellScript.build().evalToOutput(workingDirectory)
-
-    fun (ShellScript.() -> Unit).evalToOutput(
-        workingDirectory: Path = Temp,
-    ) = evalScriptToOutput(workingDirectory, this)
+    ): String = shellScript.build().evalToOutput(environment, workingDirectory)
 
     fun ShellScript.evalToOutput(
-        workingDirectory: Path = Temp,
-    ) = LightweightProcess(CommandLine(command = sanitize(workingDirectory).buildTo(tempScriptFile()))).output
+        environment: Map<String, String> = emptyMap(),
+        workingDirectory: Path = Paths.Temp,
+    ): String = evalShellScript(environment, workingDirectory, this).output
 
     /**
-     * Runs the [shellScriptBuilder] synchronously and returns the [ManagedProcess].
+     * Runs the [shellScriptBuilder] synchronously and returns a [LightweightProcess].
      */
     fun evalShellScript(
-        workingDirectory: Path = WorkingDirectory,
-        env: Map<String, String> = emptyMap(),
+        environment: Map<String, String> = emptyMap(),
+        workingDirectory: Path = Paths.Temp,
         shellScriptBuilder: ShellScript.() -> Unit,
-    ): LightweightProcess =
-        LightweightProcess(CommandLine(command = shellScriptBuilder.build().sanitize(workingDirectory).buildTo(tempScriptFile())))
+    ): LightweightProcess = evalShellScript(environment, workingDirectory, shellScriptBuilder.build())
+
+    /**
+     * Runs the [shellScript] synchronously and returns a [LightweightProcess].
+     */
+    fun evalShellScript(
+        environment: Map<String, String> = emptyMap(),
+        workingDirectory: Path = Paths.Temp,
+        shellScript: ShellScript,
+    ): LightweightProcess {
+        val commandLine = CommandLine(environment, workingDirectory, shellScript.sanitize(workingDirectory).buildTo(tempScriptFile()).cleanUpOnShutdown())
+        return LightweightProcess(commandLine)
+    }
 }
 
 
@@ -103,51 +88,41 @@ fun executeShellScript(
     processTerminationCallback: (() -> Unit)? = null,
     shellScript: ShellScript,
     processor: Processor<ManagedProcess> = Processors.noopProcessor(),
-): ManagedProcess {
-    return ManagedProcess(
-        commandLine = CommandLine(command = shellScript.sanitize(workingDirectory).buildTo(Processes.tempScriptFile())),
-        workingDirectory = workingDirectory,
-        environment = env,
-        expectedExitValue = expectedExitValue,
-        processTerminationCallback = processTerminationCallback).process(processor)
-}
+): ManagedProcess =
+    startShellScript(env, workingDirectory, expectedExitValue, processTerminationCallback, shellScript).process(processor)
 
 /**
  * Executes the [shellScript] without printing to the console and returns the [Process].
  */
 fun executeShellScript(
+    environment: Map<String, String> = emptyMap(),
     workingDirectory: Path = Paths.Temp,
-    env: Map<String, String> = emptyMap(),
     expectedExitValue: Int = 0,
     processTerminationCallback: (() -> Unit)? = null,
     shellScript: ShellScript.() -> Unit,
-): ManagedProcess = executeShellScript(workingDirectory, env, expectedExitValue, processTerminationCallback, shellScript.build())
+): ManagedProcess = executeShellScript(workingDirectory, environment, expectedExitValue, processTerminationCallback, shellScript.build())
 
 /**
  * Starts the [shellScript] and returns the corresponding [Process].
  */
 fun startShellScript(
+    environment: Map<String, String> = emptyMap(),
     workingDirectory: Path = Paths.Temp,
-    env: Map<String, String> = emptyMap(),
     expectedExitValue: Int = 0,
     processTerminationCallback: (() -> Unit)? = null,
     shellScript: ShellScript,
-): ManagedProcess {
-    return ManagedProcess(
-        commandLine = CommandLine(command = shellScript.sanitize(workingDirectory).buildTo(Processes.tempScriptFile())),
-        workingDirectory = workingDirectory,
-        environment = env,
-        expectedExitValue = expectedExitValue,
-        processTerminationCallback = processTerminationCallback)
-}
+): ManagedProcess = ManagedProcess.forCommandLine(
+    commandLine = CommandLine(environment, workingDirectory, shellScript.sanitize(workingDirectory).buildTo(Processes.tempScriptFile())),
+    expectedExitValue = expectedExitValue,
+    processTerminationCallback = processTerminationCallback)
 
 /**
  * Starts the [shellScript] and returns the corresponding [Process].
  */
 fun startShellScript(
+    environment: Map<String, String> = emptyMap(),
     workingDirectory: Path = Paths.Temp,
-    env: Map<String, String> = emptyMap(),
     expectedExitValue: Int = 0,
     processTerminationCallback: (() -> Unit)? = null,
     shellScript: ShellScript.() -> Unit,
-): ManagedProcess = startShellScript(workingDirectory, env, expectedExitValue, processTerminationCallback, shellScript.build())
+): ManagedProcess = startShellScript(environment, workingDirectory, expectedExitValue, processTerminationCallback, shellScript.build())

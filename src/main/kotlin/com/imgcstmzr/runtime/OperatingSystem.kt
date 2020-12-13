@@ -41,7 +41,7 @@ interface OperatingSystem {
     }
 
     companion object {
-        val DEFAULT_LOGIN_PATTERN: Regex = Regex("(?<host>[\\w-_]+)(?<sep>\\s+)(?<const>login):(?<optWhitespace>.*)", IGNORE_CASE)
+        val DEFAULT_LOGIN_PATTERN: Regex = Regex("(?<host>(?!Last\\b)[\\w-_]+)(?<sep>\\s+)(?<const>login):(?<optWhitespace>.*)", IGNORE_CASE)
         val DEFAULT_PASSWORD_PATTERN: Regex = Regex("Password:(?<optWhitespace>\\s*)", IGNORE_CASE)
         val DEFAULT_READY_PATTERN: Regex = Regex("(?<user>[\\w-_]+)@(?<host>[\\w-_]+):(?<path>[^#$]+?)[#$](?<optWhitespace>\\s*)", IGNORE_CASE)
         val DEFAULT_DEAD_END_PATTERN: Regex = Regex(".*in emergency mode.*", IGNORE_CASE)

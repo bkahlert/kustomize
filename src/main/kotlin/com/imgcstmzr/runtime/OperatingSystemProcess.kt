@@ -5,6 +5,7 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
 import com.bkahlert.koodies.concurrent.process.IO.Type.IN
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.ManagedProcess
 import com.bkahlert.koodies.concurrent.process.Process
 import com.bkahlert.koodies.concurrent.process.Processor
 import com.bkahlert.koodies.concurrent.process.UserInput.input
@@ -57,17 +58,22 @@ fun stuckCheckingProcessor(processor: OperatingSystemProcessor): OperatingSystem
  * non-virtually on actual hardware.
  */
 open class OperatingSystemProcess(
-    name: String,
-    val osImage: OperatingSystemImage,
-    val logger: BlockRenderingLogger,
-) : DockerProcess(
-    commandLine = DOCKER_IMAGE.buildRunCommand {
-        options {
-            name { name }
-            mounts { osImage.file mountAt "/sdcard/filesystem.img" }
-        }
-    },
-) {
+    private val os: OperatingSystem,
+    private val process: ManagedProcess,
+    private val logger: BlockRenderingLogger,
+) : ManagedProcess by process {
+
+    constructor(name: String, osImage: OperatingSystemImage, logger: BlockRenderingLogger) : this(
+        os = osImage.operatingSystem,
+        process = DOCKER_IMAGE.buildRunCommand {
+            options {
+                name { name }
+                mounts { osImage.file mountAt "/sdcard/filesystem.img" }
+            }
+        }.start(),
+        logger = logger,
+    )
+
     companion object {
         @Suppress("SpellCheckingInspection")
         private val DOCKER_IMAGE: DockerImage = build { "lukechilds" / "dockerpi" tag "vm" }
@@ -124,11 +130,9 @@ open class OperatingSystemProcess(
     }
 
     fun isStuck(io: IO): Boolean {
-        val stuck = osImage.deadEndPattern?.matches(io.unformatted) == true
+        val stuck = os.deadEndPattern?.matches(io.unformatted) == true
         if (stuck) {
-            startAsThread {
-                negativeFeedback("The VM is stuck. Chances are the VM starts correctly with less load on this machine.")
-            }
+            startAsThread { negativeFeedback("The VM is stuck. Chances are the VM starts correctly with less load on this machine.") }
             stop()
             throw IllegalStateException(io.unformatted)
         }
@@ -139,7 +143,7 @@ open class OperatingSystemProcess(
      * Initiates the systems immediate shutdown.
      */
     fun shutdown() {
-        enter(osImage.shutdownCommand)
+        enter(os.shutdownCommand)
         shuttingDown = true
     }
 

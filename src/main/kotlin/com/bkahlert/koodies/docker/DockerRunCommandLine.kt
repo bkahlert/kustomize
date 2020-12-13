@@ -2,12 +2,20 @@ package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.builder.ListBuilder
 import com.bkahlert.koodies.builder.ListBuilderInit
+import com.bkahlert.koodies.builder.MapBuilderInit
 import com.bkahlert.koodies.builder.build
 import com.bkahlert.koodies.builder.buildListTo
+import com.bkahlert.koodies.builder.buildMap
 import com.bkahlert.koodies.concurrent.process.CommandLine
+import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.Processor
+import com.bkahlert.koodies.concurrent.process.Processors
+import com.bkahlert.koodies.concurrent.process.process
 import com.bkahlert.koodies.docker.DockerRunCommandLine.Options
+import com.bkahlert.koodies.nio.file.Paths
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.toPath
+import java.io.InputStream
 import java.nio.file.Path
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
@@ -18,13 +26,14 @@ data class DockerRunCommandLine(
     val dockerImage: DockerImage,
     val dockerCommand: String? = null,
     val dockerArguments: List<String> = emptyList(),
-) : CommandLine(dockerRedirects, "docker", mutableListOf("run").apply {
+) : CommandLine(dockerRedirects, options.env, Paths.Temp, "docker", mutableListOf("run").apply {
     addAll(options)
     add(dockerImage.formatted)
     dockerCommand?.also { add(it) }
     addAll(dockerArguments)
 }) {
     data class Options(
+        val env: Map<String, String> = emptyMap(),
         val entryPoint: String? = null,
         val name: DockerContainerName? = null,
         val privileged: Boolean = false,
@@ -33,6 +42,10 @@ data class DockerRunCommandLine(
         val pseudoTerminal: Boolean = false,
         val mounts: List<MountOption> = emptyList(),
     ) : List<String> by (ListBuilder.build {
+        env.forEach {
+            +"--env"
+            +"${it.key}=${it.value}"
+        }
         entryPoint?.also { +"--entrypoint" + entryPoint }
         name?.also { +"--name" + name.sanitized }
         privileged.takeIf { it }?.also { +"--privileged" }
@@ -41,6 +54,27 @@ data class DockerRunCommandLine(
         pseudoTerminal.takeIf { it }?.also { +"-t" }
         mounts.forEach { +it }
     })
+
+    /**
+     * Prepares a new [DockerProcess] based on this command line.
+     *
+     * @see [CommandLine.lazyProcess]
+     */
+    fun prepare() = DockerProcess(this)
+
+    /**
+     * Starts a new [DockerProcess] based on this command line.
+     */
+    fun start() = prepare().apply { start() }
+
+    /**
+     * Starts a new [DockerProcess] based on this command line and has [processor] its [IO] processed.
+     */
+    fun startAndProcess(
+        nonBlockingReader: Boolean = false,
+        inputStream: InputStream = InputStream.nullInputStream(),
+        processor: Processor<DockerProcess> = Processors.printingProcessor(),
+    ): DockerProcess = start().process(nonBlockingReader, inputStream, processor)
 
     override fun toString(): String = super.toString()
 }
@@ -110,6 +144,7 @@ abstract class OptionsBuilder {
 
     val sample by OptionBuilder()
 
+    fun env(init: MapBuilderInit<String, String>) = init.buildMap().also { options.copy(env = options.env + it).run { options = this } }
     fun entrypoint(entryPoint: () -> String?) = options.copy(entryPoint = entryPoint()).run { options = this }
     fun name(name: () -> String?) = options.copy(name = name()?.let { DockerContainerName(it) }).run { options = this }
     fun containerName(name: () -> DockerContainerName?) = options.copy(name = name()).run { options = this }

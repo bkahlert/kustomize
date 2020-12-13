@@ -9,13 +9,14 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightMagenta
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
+import com.bkahlert.koodies.test.junit.test
 import com.bkahlert.koodies.time.sleep
 import com.bkahlert.koodies.tracing.trace
 import com.bkahlert.koodies.unit.Kibi
 import com.bkahlert.koodies.unit.Size.Companion.bytes
+import com.imgcstmzr.runtime.JavaProcessMock.Companion.withIndividuallySlowInput
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.empty
-import com.imgcstmzr.runtime.ProcessMock.Companion.withIndividuallySlowInput
 import com.imgcstmzr.runtime.SlowInputStream.Companion.prompt
 import com.imgcstmzr.runtime.log.miniTrace
 import com.imgcstmzr.util.debug
@@ -62,6 +63,7 @@ class OperatingSystemTest {
             "   ",
             "anything",
             "anything else:",
+            "Last login: Sat Dec 12 12:39:17 GMT 2020 on ttyAMA0",
         )
     ).flatMap { (expected, values) ->
         values.map {
@@ -82,6 +84,7 @@ class OperatingSystemTest {
             "root@raspberrypi:/var/local# ",
             "someone@somewhere:/etc$ ",
             "SomeOne@SomewWere:/some/Dir$ ",
+            "FiFi@raspberrypi:~\$",
         ),
         false to listOf(
             "SomeOne@SomewWere:/some/Dir$: user input",
@@ -100,7 +103,6 @@ class OperatingSystemTest {
             }
         }
     }
-
 
     @TestFactory
     fun `should detect dead end line`() = mapOf(
@@ -127,47 +129,45 @@ class OperatingSystemTest {
     @Slow
     @TestFactory
     fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory): List<DynamicTest> = listOf(
-        LoginSimulation(2.0, "\n"),
-        LoginSimulation(0.5, "\n"),
+//        LoginSimulation(2.0, "\n"),
+//        LoginSimulation(0.5, "\n"),
         LoginSimulation(2.0, null),
-        LoginSimulation(0.5, null),
-    ).map { loginSimulation ->
-        dynamicTest("$loginSimulation") {
-            val processMock = loginSimulation.buildProcess(loggerFactory)
-            val runningOS = processMock.start()
+//        LoginSimulation(0.5, null),
+    ).test("{}") { loginSimulation ->
+        val processMock = loginSimulation.buildProcess(loggerFactory)
+        val runningOS = processMock.start(loginSimulation.toString())
 
-            val reader = NonBlockingReader(processMock.inputStream, timeout = loginSimulation.readerTimeout, logger = processMock.logger)
+        val reader = NonBlockingReader(processMock.inputStream, timeout = loginSimulation.readerTimeout, logger = processMock.logger)
 
-            val workflow = os.loginProgram(Credentials("john", "passwd123"))//.logging()
-            kotlin.runCatching {
-                assertTimeoutPreemptively(45.seconds, {
-                    var finished = false
-                    reader.forEachLine { line ->
-                        runningOS.logger.miniTrace("read<<") {
+        val workflow = os.loginProgram(Credentials("john", "passwd123"))//.logging()
+        kotlin.runCatching {
+            assertTimeoutPreemptively(45.seconds, {
+                var finished = false
+                reader.forEachLine { line ->
+                    runningOS.logger.miniTrace("read<<") {
+                        if (finished) {
+                            trace(line.debug.magenta())
+                        } else {
+                            trace(line.debug.brightMagenta())
+                            trace("... processing")
+                            500.milliseconds.sleep()
+                            finished = !workflow.compute(runningOS, OUT typed line)
                             if (finished) {
-                                trace(line.debug.magenta())
+                                trace("FINISHED")
                             } else {
-                                trace(line.debug.brightMagenta())
-                                trace("... processing")
-                                500.milliseconds.sleep()
-                                finished = !workflow.compute(runningOS, OUT typed line)
-                                if (finished) {
-                                    trace("FINISHED")
-                                } else {
-                                    trace("Ongoing")
-                                }
+                                trace("Ongoing")
                             }
                         }
                     }
-                }) {
-                    runningOS.logger.logResult<Any> { Result.failure(IllegalStateException("Deadlock")) }
-                    META.format("Unprocessed output: ${runningOS.inputStream}")
                 }
-            }.onFailure { dump("Test failed.") { (processMock.logger as InMemoryLogger).logged } }
+            }) {
+                runningOS.logger.logResult<Any> { Result.failure(IllegalStateException("Deadlock")) }
+                META.format("Unprocessed output: ${runningOS.inputStream}")
+            }
+        }.onFailure { dump("Test failed.") { (processMock.logger as InMemoryLogger).logged } }
 
-            expectThat(workflow).get("Halted") { halted }.isTrue()
-            expectThat(processMock.received).contains("john").contains("passwd123").not { contains("stuff") }
-        }
+        expectThat(workflow).get("Halted") { halted }.isTrue()
+        expectThat(processMock.received).contains("john").contains("passwd123").not { contains("stuff") }
     }
 }
 
@@ -189,7 +189,7 @@ data class LoginSimulation(val readerTimeout: Duration, val ioDelay: Duration, v
         0.seconds to "juergen@raspberrypi:~$ \n",
     )
 
-    fun buildProcess(loggerFactory: InMemoryLoggerFactory): ProcessMock =
+    fun buildProcess(loggerFactory: InMemoryLoggerFactory): JavaProcessMock =
         with(loggerFactory.createLogger(toString())) {
             withIndividuallySlowInput(
                 inputs = generateProcessOutput(promptTerminator),
