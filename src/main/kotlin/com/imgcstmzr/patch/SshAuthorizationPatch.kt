@@ -9,6 +9,6 @@ class SshAuthorizationPatch(
 ) : Patch by buildPatch(os, "Add ${authorizedKeys.size} authorized SSH keys to $username", {
 
     customize {
-        authorizedKeys.forEach { sshInject { username to it } }
+        authorizedKeys.forEach { password -> sshInject(username, password) }
     }
 })

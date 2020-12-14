@@ -12,6 +12,9 @@ package com.bkahlert.koodies.builder
 inline fun <reified T> (() -> T).build(): T =
     invoke()
 
+inline fun <reified T, reified X1> ((X1) -> T).build(x1: X1): T =
+    invoke(x1)
+
 /**
  * Builds an instance of [T] and adds it to [target] by invoking `this` initializer.
  *
@@ -20,6 +23,9 @@ inline fun <reified T> (() -> T).build(): T =
 inline fun <reified T> (() -> T).buildTo(target: MutableCollection<in T>): T =
     build().also { target.add(it) }
 
+inline fun <reified T, reified X1> ((X1) -> T).buildTo(x1: X1, target: MutableCollection<in T>): T =
+    build(x1).also { target.add(it) }
+
 /**
  * Builds an instance of [T] by invoking `this` initializer and [transform]s it to [U].
  *
@@ -27,6 +33,9 @@ inline fun <reified T> (() -> T).buildTo(target: MutableCollection<in T>): T =
  */
 inline fun <reified T, reified U> (() -> T).build(transform: T.() -> U): U =
     build().run(transform)
+
+inline fun <reified T, reified U, reified X1> ((X1) -> T).build(x1: X1, transform: T.() -> U): U =
+    build(x1).run(transform)
 
 /**
  * Builds an instance of [T] by invoking `this` initializer,
@@ -37,6 +46,9 @@ inline fun <reified T, reified U> (() -> T).build(transform: T.() -> U): U =
 inline fun <reified T, reified U> (() -> T).buildTo(target: MutableCollection<in U>, transform: T.() -> U): U =
     build(transform).also { target.add(it) }
 
+inline fun <reified T, reified U, reified X1> ((X1) -> T).buildTo(x1: X1, target: MutableCollection<in U>, transform: T.() -> U): U =
+    build(x1, transform).also { target.add(it) }
+
 /**
  * Builds an instance of [T] by invoking `this` initializer,
  * [transform]s it to multiple instances of [U] and adds all to [target].
@@ -45,6 +57,9 @@ inline fun <reified T, reified U> (() -> T).buildTo(target: MutableCollection<in
  */
 inline fun <reified T, reified U> (() -> T).buildMultipleTo(target: MutableCollection<in U>, transform: T.() -> List<U>): List<U> =
     build(transform).also { target.addAll(it) }
+
+inline fun <reified T, reified U, reified X1> ((X1) -> T).buildMultipleTo(x1: X1, target: MutableCollection<in U>, transform: T.() -> List<U>): List<U> =
+    build(x1, transform).also { target.addAll(it) }
 
 
 /*
@@ -66,6 +81,14 @@ inline fun <reified B : (B) -> T, reified T> (B.() -> Unit).build(): T {
     return builder.apply(this).let { it.invoke(it) }
 }
 
+inline fun <reified B : (B) -> T, reified T, reified X1> (B.(X1) -> Unit).build(x1: X1): T {
+    val zeroArgConstructors = B::class.java.declaredConstructors.filter { it.parameterCount == 0 }
+    val builder: B = zeroArgConstructors.singleOrNull()?.newInstance() as? B
+        ?: throw IllegalArgumentException("${B::class.simpleName} has no zero-arg constructor and cannot be used to create an instance of ${T::class.simpleName}.")
+    this(builder, x1)
+    return builder(builder)
+}
+
 /**
  * Builds an instance of [T] and adds it to [target] by
  * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
@@ -76,6 +99,9 @@ inline fun <reified B : (B) -> T, reified T> (B.() -> Unit).build(): T {
  */
 inline fun <reified B : (B) -> T, reified T> (B.() -> Unit).buildTo(target: MutableCollection<in T>): T =
     build().also { target.add(it) }
+
+inline fun <reified B : (B) -> T, reified T, reified X1> (B.(X1) -> Unit).buildTo(x1: X1, target: MutableCollection<in T>): T =
+    build(x1).also { target.add(it) }
 
 /**
  * Builds an instance of [T] and [transform]s it to [U] by
@@ -89,6 +115,9 @@ inline fun <reified B : (B) -> T, reified T> (B.() -> Unit).buildTo(target: Muta
 inline fun <reified B : (B) -> T, reified T, reified U> (B.() -> Unit).build(transform: T.() -> U): U =
     build().run(transform)
 
+inline fun <reified B : (B) -> T, reified T, reified U, reified X1> (B.(X1) -> Unit).build(x1: X1, transform: T.() -> U): U =
+    build(x1).run(transform)
+
 /**
  * Builds an instance of [T] and adds the to [U] [transform]ed instance to [target] by
  * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
@@ -101,6 +130,9 @@ inline fun <reified B : (B) -> T, reified T, reified U> (B.() -> Unit).build(tra
 inline fun <reified B : (B) -> T, reified T, reified U> (B.() -> Unit).buildTo(target: MutableCollection<in U>, transform: T.() -> U): U =
     build(transform).also { target.add(it) }
 
+inline fun <reified B : (B) -> T, reified T, reified U, reified X1> (B.(X1) -> Unit).buildTo(x1: X1, target: MutableCollection<in U>, transform: T.() -> U): U =
+    build(x1, transform).also { target.add(it) }
+
 /**
  * Builds an instance of [T] and adds the to list [U] [transform]ed instance to [target] by
  * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
@@ -112,6 +144,13 @@ inline fun <reified B : (B) -> T, reified T, reified U> (B.() -> Unit).buildTo(t
  */
 inline fun <reified B : (B) -> T, reified T, reified U> (B.() -> Unit).buildMultipleTo(target: MutableCollection<in U>, transform: T.() -> List<U>): List<U> =
     build(transform).also { target.addAll(it) }
+
+inline fun <reified B : (B) -> T, reified T, reified U, reified X1> (B.(X1) -> Unit).buildMultipleTo(
+    x1: X1,
+    target: MutableCollection<in U>,
+    transform: T.() -> List<U>,
+): List<U> =
+    build(x1, transform).also { target.addAll(it) }
 
 
 interface BuilderAccessor<B, T> {

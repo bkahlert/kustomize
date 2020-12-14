@@ -21,7 +21,7 @@ class InMemoryLoggerResolverNoDebugTest {
     fun InMemoryLogger.`should not automatically log to console without @Debug`(output: CapturedOutput) {
         logStatus { OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
 
-        getExpectThatLogged().contains("☎Σ⊂⊂(☉ω☉∩)")
+        expectThatLogged().contains("☎Σ⊂⊂(☉ω☉∩)")
         expectThat(output.removeEscapeSequences()).not { toStringContains("☎Σ⊂⊂(☉ω☉∩)") }
     }
 

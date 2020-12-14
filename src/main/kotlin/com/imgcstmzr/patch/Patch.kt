@@ -9,9 +9,10 @@ import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.imgcstmzr.guestfish.Guestfish
 import com.imgcstmzr.libguestfs.SharedPath
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
-import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.fishGuest
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.runGuestfishOn
+import com.imgcstmzr.libguestfs.resolveOnDisk
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.Companion.customize
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.Companion.virtCustomize
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
 import com.imgcstmzr.patch.Operation.Status.Failure
 import com.imgcstmzr.patch.Operation.Status.Finished
@@ -51,13 +52,13 @@ interface Patch {
      * Options to be applied on the img file
      * using the [VirtCustomizeCommandLine].
      */
-    val customizationOptions: List<VirtCustomizeCustomizationOption>
+    val customizationOptions: List<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>
 
     /**
      * Operations to be applied on the mounted file system
      * using the [Guestfish] tool.
      */
-    val guestfishCommands: List<GuestfishCommand>
+    val guestfishCommands: List<(OperatingSystemImage) -> GuestfishCommand>
 
     /**
      * Operations on files of the externally, not immediately
@@ -102,7 +103,7 @@ interface Patch {
             logLine { META typed "Customization Options: —" }
         } else {
             logging("Customization Options (${customizationOptions.size})", null, borderedOutput = false) {
-                customize(osImage) {
+                virtCustomize(osImage) {
                     +customizationOptions
                 }
             }
@@ -113,7 +114,7 @@ interface Patch {
             logLine { META typed "Guestfish Commands: —" }
         } else {
             logging("Guestfish Commands (${guestfishCommands.size})", null, borderedOutput = false) {
-                fishGuest(osImage) {
+                runGuestfishOn(osImage) {
                     +guestfishCommands
                 }
             }
@@ -130,12 +131,12 @@ interface Patch {
 
                 val guestPaths: List<Path> = fileSystemOperations.map { it.target }
                 if (guestPaths.isNotEmpty()) {
-                    fishGuest(osImage) {
+                    runGuestfishOn(osImage) {
                         guestPaths.forEach { sourcePath ->
                             val sanitizedSourcePath = Path.of("/").asRootFor(sourcePath)
-                            copyOut(sanitizedSourcePath)
+                            copyOut { it.resolveOnDisk(sanitizedSourcePath) }
                         }
-                        guestfishCommands.forEach { +it }
+                        +guestfishCommands
                     }
                 } else {
                     logLine { META typed "No files to extract." }
@@ -157,9 +158,7 @@ interface Patch {
                 val changedFiles = root.listFilesRecursively({ it.isFile }).map { root.relativize(it) }.toList()
                 if (changedFiles.isNotEmpty()) {
                     logging("Syncing changes back") {
-                        fishGuest(osImage) {
-                            tarIn(osImage)
-                        }
+                        runGuestfishOn(osImage) { tarIn() }
                     }
                 } else {
                     logLine { META typed "No changed files to copy back." }

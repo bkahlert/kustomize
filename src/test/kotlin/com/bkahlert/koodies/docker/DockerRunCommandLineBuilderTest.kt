@@ -9,6 +9,7 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.isEqualTo
+import strikt.assertions.propertiesAreEqualTo
 import java.nio.file.Path
 
 @Execution(CONCURRENT)
@@ -19,6 +20,7 @@ class DockerRunCommandLineBuilderTest {
     @Test
     fun `should build valid docker run`() {
         val dockerRunCommand = dockerImage.buildRunCommand {
+            workingDirectory(Path.of("/some/where"))
             redirects {}
             options {
                 sample.invoke { "kll" }
@@ -47,7 +49,7 @@ class DockerRunCommandLineBuilderTest {
                 }
             }
         }
-        expectThat(dockerRunCommand).isEqualTo(DOCKER_RUN_COMMAND)
+        expectThat(dockerRunCommand).propertiesAreEqualTo(DOCKER_RUN_COMMAND)
     }
 
     @Test

@@ -4,6 +4,9 @@ import com.bkahlert.koodies.builder.ListBuilder.Companion.build
 import com.bkahlert.koodies.concurrent.process.Processes.evalToOutput
 import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.shell.ShellScript
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightMagenta
+import com.bkahlert.koodies.terminal.ascii.Boxes
+import com.bkahlert.koodies.terminal.ascii.Boxes.Companion.wrapWithBox
 import com.bkahlert.koodies.test.junit.ThirtyMinutesTimeout
 import com.bkahlert.koodies.test.junit.systemproperties.SystemProperties
 import com.bkahlert.koodies.test.junit.systemproperties.SystemProperty
@@ -15,17 +18,16 @@ import com.imgcstmzr.patch.CompositePatch
 import com.imgcstmzr.patch.ImgResizePatch
 import com.imgcstmzr.patch.PasswordPatch
 import com.imgcstmzr.patch.Patch
+import com.imgcstmzr.patch.ShellScriptPatch
 import com.imgcstmzr.patch.SshAuthorizationPatch
 import com.imgcstmzr.patch.SshEnablementPatch
 import com.imgcstmzr.patch.UsbOnTheGoPatch
 import com.imgcstmzr.patch.UsernamePatch
 import com.imgcstmzr.patch.booted
-import com.imgcstmzr.patch.buildPatch
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.empty
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.withPassword
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems
-import com.imgcstmzr.runtime.Program
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.typesafe.config.ConfigFactory
@@ -39,6 +41,7 @@ import strikt.assertions.contains
 import strikt.assertions.containsExactly
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.hasSize
+import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isTrue
 import java.nio.file.Path
@@ -135,9 +138,24 @@ class ImgCstmzrConfigTest {
             get { preFileImgOperations }.hasSize(1)
             get { customizationOptions }.hasSize(8)
             get { guestfishCommands }.hasSize(1)
-            get { fileSystemOperations }.hasSize(11)
+            get { fileSystemOperations }.hasSize(5)
             get { postFileImgOperations }.hasSize(2)
-            get { programs }.hasSize(11)
+            get { programs }.hasSize(6)
+        }
+    }
+
+    @Test
+    fun InMemoryLogger.`should optimize patches`() {
+        val imgCstmztn = loadImgCstmztn()
+        val patches = imgCstmztn.createPatch()
+        val optimizedPatches = imgCstmztn.optimizePatches(patches)
+        expectThat(optimizedPatches) {
+            hasSize(4)
+            get { get(0) }.isA<CompositePatch>().get { patches.map { it::class } }
+                .contains(ImgResizePatch::class, UsernamePatch::class, SshEnablementPatch::class, UsbOnTheGoPatch::class)
+            get { get(1) }.isA<CompositePatch>().get { patches.map { it::class } }.contains(PasswordPatch::class, SshAuthorizationPatch::class)
+            get { get(2) }.isA<ShellScriptPatch>()
+            get { get(3) }.isA<ShellScriptPatch>()
         }
     }
 
@@ -145,10 +163,11 @@ class ImgCstmzrConfigTest {
     fun InMemoryLogger.`should apply patch`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage) {
         val imgCstmztn = loadImgCstmztn()
         val patches = imgCstmztn.createPatch()
-        val mergedPatches = imgCstmztn.clusterPatches(patches)
+        val optimizedPatches = imgCstmztn.optimizePatches(patches)
 
-        mergedPatches.forEach { mergedPatch ->
-            with(mergedPatch) {
+        optimizedPatches.forEach { optimizedPatch ->
+            with(optimizedPatch) {
+                logLine { optimizedPatch.name.wrapWithBox(Boxes.PILLARS).brightMagenta() }
                 patch(osImage)
             }
         }
@@ -161,6 +180,7 @@ class ImgCstmzrConfigTest {
                     { true }
                 }
             }
+            that(logged).contains("__〆(￣ー￣ )")
         }
     }
 }
@@ -208,16 +228,17 @@ class ImageCustomization(
         }
 
         setup.forEach {
-            val x: String = it.map { ": ${it.name}\n" + it.build() }.joinToString("\n\n")
-            val programs: List<Program> = os.compileSetupScript(it.name, x).toList()
-            val patch = buildPatch(os, it.name) {
-                booted {
-                    programs.forEach {
-                        run(it)
-                    }
-                }
-            }
-            +patch
+            +ShellScriptPatch(os, *it.toTypedArray())
+//            val x: String = it.map { ": ${it.name}\n" + it.build() }.joinToString("\n\n")
+//            val programs: List<Program> = os.compileSetupScript(it.name, x).toList()
+//            val patch = buildPatch(os, it.name) {
+//                booted {
+//                    programs.forEach {
+//                        run(it)
+//                    }
+//                }
+//            }
+//            +patch
         }
 
         // TODO run patches together
@@ -225,14 +246,15 @@ class ImageCustomization(
         // TODO run bother-you
     }
 
-    fun clusterPatches(patches: List<Patch>): List<CompositePatch> = with(patches) {
+    fun optimizePatches(patches: List<Patch>): List<Patch> = with(patches.toMutableList()) {
         listOf(
             CompositePatch(extract<ImgResizePatch>() + extract<UsernamePatch>() + extract<SshEnablementPatch>() + extract<UsbOnTheGoPatch>()),
             CompositePatch(extract<PasswordPatch>() + extract<SshAuthorizationPatch>()),
+            *toTypedArray()
         )
     }
 
-    private inline fun <reified T : Patch> List<Patch>.extract(): List<T> = filterIsInstance<T>()
+    private inline fun <reified T : Patch> MutableList<Patch>.extract(): List<T> = filterIsInstance<T>().also { this.removeAll(it) }
 
     override fun toString(): String =
         "ImageCustomization(name='$name', os=$os, ssh=$ssh, defaultUser=$defaultUser, usbOtg=$usbOtg, setup=$setup, imgSize=$imgSize)"

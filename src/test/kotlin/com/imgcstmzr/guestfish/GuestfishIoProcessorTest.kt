@@ -8,7 +8,7 @@ import com.bkahlert.koodies.string.LineSeparators.lines
 import com.bkahlert.koodies.test.junit.test
 import com.imgcstmzr.util.MiscFixture
 import com.imgcstmzr.util.logging.InMemoryLogger
-import com.imgcstmzr.util.logging.getExpectThatLogged
+import com.imgcstmzr.util.logging.expectThatLogged
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
@@ -51,7 +51,7 @@ class GuestfishIoProcessorTest {
         fun InMemoryLogger.`should only log errors on inactive verbose option`() {
             val guestfishIoProcessor = GuestfishIoProcessor(this, verbose = false)
             IO.Type.values().map { type -> type typed "$type" }.sendTo(guestfishIoProcessor)
-            getExpectThatLogged()
+            expectThatLogged()
                 .contains("ERR").and {
                     not {
                         contains("META")

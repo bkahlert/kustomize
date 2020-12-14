@@ -15,7 +15,7 @@ class PairBuilderTest {
         { "three" to 4 },
         { "three" and 4 },
     ).test { init ->
-        expectThat(init.build()).isEqualTo("three" to 4)
+        expectThat(init.buildPair()).isEqualTo("three" to 4)
     }
 
     @Test

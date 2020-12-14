@@ -8,7 +8,7 @@ import com.imgcstmzr.libguestfs.guestfish.GuestfishOption
 import java.nio.file.Path
 
 class GuestfishDockerAdaptable(
-    val env: Map<String, String>,
+    override val env: Map<String, String>,
     val options: List<Option>,
     val guestfishCommands: List<GuestfishCommand>,
 ) : LibguestfsDockerAdaptable {
@@ -16,7 +16,7 @@ class GuestfishDockerAdaptable(
     override val command: String get() = GuestfishCommandLine.COMMAND
 
     override val arguments: List<String> =
-        env.flatMap { listOf("--env", it.key, it.value) } + options.filter { it !is GuestfishOption.DiskOption }.flatten() + "--" + commands
+        options.filter { it !is GuestfishOption.DiskOption }.flatten() + "--" + commands
 
     private val commands
         get() = hereDoc {

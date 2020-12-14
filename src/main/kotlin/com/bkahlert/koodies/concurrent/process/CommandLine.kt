@@ -23,7 +23,7 @@ import org.codehaus.plexus.util.cli.Commandline as PlexusCommandLine
 open class CommandLine(
     val redirects: List<String>,
     val environment: Map<String, String>,
-    val workingDirectory: Path,
+    open val workingDirectory: Path,
     val command: String,
     val arguments: List<String>,
 ) {

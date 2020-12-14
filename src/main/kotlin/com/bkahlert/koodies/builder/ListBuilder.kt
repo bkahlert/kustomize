@@ -16,6 +16,14 @@ inline fun <reified B : (B) -> List<E>, reified E : Any> (B.() -> Unit).buildLis
     return builder.apply(this).let { it.invoke(it) }
 }
 
+inline fun <reified B : (B) -> List<E>, reified E : Any, reified X1> (B.(X1) -> Unit).buildList(x1: X1): List<E> {
+    val zeroArgConstructors = B::class.java.declaredConstructors.filter { it.parameterCount == 0 }
+    val builder: B = zeroArgConstructors.singleOrNull()?.newInstance() as? B
+        ?: throw IllegalArgumentException("${B::class.simpleName} has no zero-arg constructor and cannot be used to create a list of ${E::class.simpleName}.")
+    builder.this(x1)
+    return builder(builder)
+}
+
 /**
  * Builds a list of [E] and adds it to [target] by
  * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
@@ -26,6 +34,9 @@ inline fun <reified B : (B) -> List<E>, reified E : Any> (B.() -> Unit).buildLis
  */
 inline fun <reified B : (B) -> List<E>, reified E : Any> (B.() -> Unit).buildListTo(target: MutableCollection<in E>): List<E> =
     buildList().also { target.addAll(it) }
+
+inline fun <reified B : (B) -> List<E>, reified E : Any, reified X1> (B.(X1) -> Unit).buildListTo(x1: X1, target: MutableCollection<in E>): List<E> =
+    buildList(x1).also { target.addAll(it) }
 
 /**
  * Builds a list of [E] and [transform]s it to [U] by
@@ -39,6 +50,9 @@ inline fun <reified B : (B) -> List<E>, reified E : Any> (B.() -> Unit).buildLis
 inline fun <reified B : (B) -> List<E>, reified E : Any, reified U> (B.() -> Unit).buildList(transform: E.() -> U): List<U> =
     buildList().map(transform)
 
+inline fun <reified B : (B) -> List<E>, reified E : Any, reified U, reified X1> (B.(X1) -> Unit).buildList(x1: X1, transform: E.() -> U): List<U> =
+    buildList(x1).map(transform)
+
 /**
  * Builds a list of [E] and adds the to [U] [transform]ed instance to [target] by
  * 1) instantiating an instance of its receiver [B] *(using [B]'s **required zero-arg constructor**)*
@@ -50,6 +64,13 @@ inline fun <reified B : (B) -> List<E>, reified E : Any, reified U> (B.() -> Uni
  */
 inline fun <reified B : (B) -> List<E>, reified E : Any, reified U> (B.() -> Unit).buildListTo(target: MutableCollection<in U>, transform: E.() -> U): List<U> =
     buildList(transform).also { target.addAll(it) }
+
+inline fun <reified B : (B) -> List<E>, reified E : Any, reified U, reified X1> (B.(X1) -> Unit).buildListTo(
+    x1: X1,
+    target: MutableCollection<in U>,
+    transform: E.() -> U,
+): List<U> =
+    buildList(x1, transform).also { target.addAll(it) }
 
 
 

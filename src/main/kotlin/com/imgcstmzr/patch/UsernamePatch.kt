@@ -1,7 +1,6 @@
 package com.imgcstmzr.patch
 
-import com.bkahlert.koodies.nio.file.toPath
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.AppendLineOption
+import com.imgcstmzr.libguestfs.SharedPath
 import com.imgcstmzr.runtime.OperatingSystem
 
 class UsernamePatch(
@@ -13,18 +12,16 @@ class UsernamePatch(
     @Suppress("SpellCheckingInspection")
     customize {
         appendLine {
-            AppendLineOption("/etc/sudoers.d/privacy".toPath(),
-                "Defaults        lecture = never")
+            val privacyFile = SharedPath.Disk.resolveRoot(it).resolve("/etc/sudoers.d/privacy")
+            privacyFile to "Defaults        lecture = never"
         }
         appendLine {
-            AppendLineOption("/etc/sudoers".toPath(),
-                "$newUsername ALL=(ALL) NOPASSWD:ALL")
+            val sudoersFile = SharedPath.Disk.resolveRoot(it).resolve("/etc/sudoers")
+            sudoersFile to "$newUsername ALL=(ALL) NOPASSWD:ALL"
         }
-        firstBootCommand {
-            +"sudo usermod -l $newUsername $oldUsername"
-            +"sudo groupmod -n $newUsername $oldUsername"
-            +"sudo usermod -d /home/$newUsername -m $newUsername"
-        }
+        firstBootCommand { "sudo usermod -l $newUsername $oldUsername" }
+        firstBootCommand { "sudo groupmod -n $newUsername $oldUsername" }
+        firstBootCommand { "sudo usermod -d /home/$newUsername -m $newUsername" }
     }
 
     postFile {

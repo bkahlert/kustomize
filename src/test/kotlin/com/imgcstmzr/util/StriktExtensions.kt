@@ -23,6 +23,7 @@ import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
 import com.imgcstmzr.patch.ImgOperation
 import com.imgcstmzr.patch.Patch
 import com.imgcstmzr.patch.PathOperation
+import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.Program
 import strikt.api.Assertion
 import strikt.api.expectThat
@@ -206,8 +207,8 @@ fun <T : Path> Assertion.Builder<T>.lastModified(duration: Duration) =
 
 fun <T : Patch> Assertion.Builder<T>.matches(
     imgOperationsAssertion: Assertion.Builder<List<ImgOperation>>.() -> Unit = { hasSize(0) },
-    customizationOptionsAssertion: Assertion.Builder<List<VirtCustomizeCustomizationOption>>.() -> Unit = { hasSize(0) },
-    guestfishCommandsAssertion: Assertion.Builder<List<GuestfishCommand>>.() -> Unit = { hasSize(0) },
+    customizationOptionsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>>.() -> Unit = { hasSize(0) },
+    guestfishCommandsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> GuestfishCommand>>.() -> Unit = { hasSize(0) },
     fileSystemOperationsAssertion: Assertion.Builder<List<PathOperation>>.() -> Unit = { hasSize(0) },
     programsAssertion: Assertion.Builder<List<Program>>.() -> Unit = { hasSize(0) },
 ) = compose("matches") { patch ->

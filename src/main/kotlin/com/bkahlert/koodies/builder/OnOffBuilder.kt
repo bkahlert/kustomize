@@ -14,20 +14,20 @@ object OnOffBuilder {
     val off get() = false
 }
 
-fun OnOffBuilderInit.build(): Boolean =
+fun OnOffBuilderInit.buildIf(): Boolean =
     OnOffBuilder.this()
 
-fun OnOffBuilderInit.build(collection: MutableCollection<Boolean>): Boolean =
-    build().also { collection.add(it) }
+fun OnOffBuilderInit.buildIf(collection: MutableCollection<Boolean>): Boolean =
+    buildIf().also { collection.add(it) }
 
-fun <T> OnOffBuilderInit.build(transformOnTrue: () -> T): T? =
-    build().let { if (it) transformOnTrue() else null }
+fun <T> OnOffBuilderInit.buildIf(transformOnTrue: () -> T): T? =
+    buildIf().let { if (it) transformOnTrue() else null }
 
-fun <T> OnOffBuilderInit.buildTo(collection: MutableCollection<T>, transformOnTrue: () -> T): T? =
-    build(transformOnTrue)?.also { collection.add(it) }
+fun <T> OnOffBuilderInit.buildIfTo(collection: MutableCollection<T>, transformOnTrue: () -> T): T? =
+    buildIf(transformOnTrue)?.also { collection.add(it) }
 
-fun <K, V> OnOffBuilderInit.buildTo(map: MutableMap<K, V>, transformOnTrue: () -> Pair<K, V>): Pair<K, V>? =
-    build().let { if (it) transformOnTrue() else null }?.also { map[it.first] = it.second }
+fun <K, V> OnOffBuilderInit.buildIfTo(map: MutableMap<K, V>, transformOnTrue: () -> Pair<K, V>): Pair<K, V>? =
+    buildIf().let { if (it) transformOnTrue() else null }?.also { map[it.first] = it.second }
 
 /**
  * Type [TrueFalseBuilder.build] accepts.

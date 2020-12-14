@@ -2,11 +2,11 @@ package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.exception.rootCause
 import com.bkahlert.koodies.nio.file.readLines
-import com.bkahlert.koodies.nio.file.toPath
 import com.bkahlert.koodies.string.matchesCurlyPattern
 import com.bkahlert.koodies.test.junit.FifteenMinutesTimeout
 import com.imgcstmzr.E2E
-import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.fishGuest
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.runGuestfishOn
+import com.imgcstmzr.libguestfs.resolveOnDisk
 import com.imgcstmzr.libguestfs.resolveOnHost
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
 import com.imgcstmzr.runtime.IncorrectPasswordException
@@ -17,7 +17,7 @@ import com.imgcstmzr.runtime.execute
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.logging.InMemoryLogger
-import com.imgcstmzr.util.logging.getExpectThatLogged
+import com.imgcstmzr.util.logging.expectThatLogged
 import com.imgcstmzr.util.matches
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -36,10 +36,10 @@ import java.util.concurrent.CompletionException
 class PasswordPatchTest {
 
     @Test
-    fun `should provide password change command`() {
+    fun `should provide password change command`(osImage: OperatingSystemImage) {
         val passwordPatch = PasswordPatch(RaspberryPiLite, "pi", "po")
         val expected = VirtCustomizeCustomizationOption.PasswordOption.byString("pi", "po")
-        expectThat(passwordPatch).matches(customizationOptionsAssertion = { first().isEqualTo(expected) })
+        expectThat(passwordPatch).matches(customizationOptionsAssertion = { first().get { invoke(osImage) }.isEqualTo(expected) })
     }
 
     @FifteenMinutesTimeout @E2E @Test
@@ -48,7 +48,7 @@ class PasswordPatchTest {
         val username = RaspberryPiLite.defaultCredentials.username
         val newPassword = "on-a-diet"
         val passwordPatch = PasswordPatch(osImage.operatingSystem, username, newPassword)
-        val userPassword = fishGuest(osImage) { copyOut(passwordPath.toPath()) }
+        val userPassword = runGuestfishOn(osImage) { copyOut { it.resolveOnDisk(passwordPath) } }
             .let { osImage.resolveOnHost(passwordPath).readLines().single { it.startsWith(username) } }
 //        Guestfish(osImage, logger).copyOut(passwordPath).readLines().single { it.startsWith(username) }
         val userPasswordPattern = "$username:{}:{}:0:99999:7:::"
@@ -78,6 +78,6 @@ class PasswordPatchTest {
             .rootCause
             .isA<IncorrectPasswordException>()
             .message.isEqualTo("The entered password \"wrong password\" is incorrect.")
-        getExpectThatLogged().contains("Login incorrect")
+        expectThatLogged().contains("Login incorrect")
     }
 }

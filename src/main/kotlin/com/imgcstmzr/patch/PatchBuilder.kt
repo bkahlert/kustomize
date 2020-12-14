@@ -21,8 +21,8 @@ import java.nio.file.Path
 data class SimplePatch(
     override val name: String,
     override val preFileImgOperations: List<ImgOperation>,
-    override val customizationOptions: List<VirtCustomizeCustomizationOption>,
-    override val guestfishCommands: List<GuestfishCommand>,
+    override val customizationOptions: List<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>,
+    override val guestfishCommands: List<(OperatingSystemImage) -> GuestfishCommand>,
     override val fileSystemOperations: List<PathOperation>,
     override val postFileImgOperations: List<ImgOperation>,
     override val programs: List<Program>,
@@ -31,8 +31,8 @@ data class SimplePatch(
 fun buildPatch(os: OperatingSystem, name: String, init: PatchBuilder.() -> Unit): Patch {
 
     val preFileImgOperations = mutableListOf<ImgOperation>()
-    val customizationOptions = mutableListOf<VirtCustomizeCustomizationOption>()
-    val guestfishCommands = mutableListOf<GuestfishCommand>()
+    val customizationOptions = mutableListOf<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>()
+    val guestfishCommands = mutableListOf<(OperatingSystemImage) -> GuestfishCommand>()
     val fileSystemOperations = mutableListOf<PathOperation>()
     val postFileImgOperations = mutableListOf<ImgOperation>()
     val programs = mutableListOf<Program>()
@@ -50,8 +50,8 @@ annotation class PatchDsl
 class PatchBuilder(
     private val os: OperatingSystem,
     private val preFileImgOperations: MutableList<ImgOperation>,
-    private val virtCustomizeCustomizationOptions: MutableList<VirtCustomizeCustomizationOption>,
-    private val guestfishCommands: MutableList<GuestfishCommand>,
+    private val virtCustomizeCustomizationOptions: MutableList<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>,
+    private val guestfishCommands: MutableList<(OperatingSystemImage) -> GuestfishCommand>,
     private val fileSystemOperations: MutableList<PathOperation>,
     private val postFileImgOperations: MutableList<ImgOperation>,
     private val programs: MutableList<Program>,

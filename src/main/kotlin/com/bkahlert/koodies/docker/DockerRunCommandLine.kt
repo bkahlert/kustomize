@@ -21,12 +21,13 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
 data class DockerRunCommandLine(
+    override val workingDirectory: Path,
     val dockerRedirects: List<String> = emptyList(),
     val options: Options = Options(),
     val dockerImage: DockerImage,
     val dockerCommand: String? = null,
     val dockerArguments: List<String> = emptyList(),
-) : CommandLine(dockerRedirects, options.env, Paths.Temp, "docker", mutableListOf("run").apply {
+) : CommandLine(dockerRedirects, options.env, workingDirectory, "docker", mutableListOf("run").apply {
     addAll(options)
     add(dockerImage.formatted)
     dockerCommand?.also { add(it) }
@@ -82,6 +83,7 @@ data class DockerRunCommandLine(
 
 @DockerCommandDsl
 class DockerRunCommandLineBuilder(
+    private var workingDirectory: Path = Paths.Temp,
     private val redirects: MutableList<String> = mutableListOf(),
     private var dockerOptions: Options = Options(),
     private var dockerCommand: String? = null,
@@ -101,6 +103,7 @@ class DockerRunCommandLineBuilder(
         fun build(dockerImage: DockerImage, init: DockerRunCommandLineBuilder.() -> Unit): DockerRunCommandLine =
             DockerRunCommandLineBuilder().apply(init).run {
                 DockerRunCommandLine(
+                    workingDirectory = workingDirectory ?: error("Missing working directory"),
                     dockerRedirects = redirects,
                     options = dockerOptions,
                     dockerImage = dockerImage,
@@ -110,6 +113,7 @@ class DockerRunCommandLineBuilder(
             }
     }
 
+    fun workingDirectory(workingDirectory: Path) = workingDirectory.also { this.workingDirectory = it }
     fun redirects(init: ListBuilderInit<String>) = init.buildListTo(redirects)
     fun options(init: OptionsBuilder.() -> Unit) = OptionsBuilder.build(init).run { dockerOptions = this }
     fun command(init: () -> String?) = init.build()?.run { dockerCommand = this }

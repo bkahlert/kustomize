@@ -38,7 +38,7 @@ sealed class VirtCustomizeCustomizationOption(override val name: String, overrid
      *
      * The alternative version --firstboot-command is the same, but it conveniently wraps the command up in a single line script for you.
      */
-    class FirstBootOption(val script: String) : VirtCustomizeCustomizationOption("--firstboot", script)
+    class FirstBootOption(val path: Path) : VirtCustomizeCustomizationOption("--firstboot", path.serialized)
 
     /**
      * Run command (and arguments) inside the guest when the guest first boots up (as root, late in the boot process).
@@ -48,7 +48,7 @@ sealed class VirtCustomizeCustomizationOption(override val name: String, overrid
     /**
      * Install the named packages (a comma-separated list). These are installed when the guest first boots using the guest’s package manager (eg. apt, yum, etc.) and the guest’s network connection.
      */
-    class FirstBootInstallOption(vararg packages: String) : VirtCustomizeCustomizationOption("--firstboot-install", packages.joinToString(","))
+    class FirstBootInstallOption(packages: List<String>) : VirtCustomizeCustomizationOption("--firstboot-install", packages.joinToString(","))
     class HostnameOption(val hostname: String) : VirtCustomizeCustomizationOption("--hostname", hostname)
     class MkdirOption(val dir: Path) : VirtCustomizeCustomizationOption("--mkdir", dir.serialized)
     class MoveOption(val source: Path, val dest: Path) : VirtCustomizeCustomizationOption("--move", "${source.serialized}:${dest.serialized}")

@@ -3,7 +3,7 @@ package com.imgcstmzr.runtime.log
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.imgcstmzr.util.logging.InMemoryLogger
-import com.imgcstmzr.util.logging.getExpectThatLogged
+import com.imgcstmzr.util.logging.expectThatLogged
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -32,7 +32,7 @@ class MicroLoggerTest {
             logLine { "something" }
         }
 
-        getExpectThatLogged().matchesCurlyPattern("""
+        expectThatLogged().matchesCurlyPattern("""
             ╭─────╴{}
             │   
             │   

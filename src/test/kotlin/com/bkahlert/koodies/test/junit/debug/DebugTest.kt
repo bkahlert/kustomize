@@ -6,7 +6,7 @@ import com.bkahlert.koodies.test.strikt.toStringContains
 import com.imgcstmzr.util.logging.CapturedOutput
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.OutputCaptureExtension
-import com.imgcstmzr.util.logging.getExpectThatLogged
+import com.imgcstmzr.util.logging.expectThatLogged
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
@@ -34,7 +34,7 @@ class DebugTest {
         logStatus { IO.Type.OUT typed "☎Σ⊂⊂(☉ω☉∩)" }
         logResult { Result.success(Unit) }
 
-        getExpectThatLogged().contains("☎Σ⊂⊂(☉ω☉∩)")
+        expectThatLogged().contains("☎Σ⊂⊂(☉ω☉∩)")
         expectThat(output.removeEscapeSequences()).not { toStringContains("☎Σ⊂⊂(☉ω☉∩)") }
     }
 

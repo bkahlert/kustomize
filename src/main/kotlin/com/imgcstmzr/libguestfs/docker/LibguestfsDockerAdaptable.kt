@@ -34,6 +34,7 @@ interface LibguestfsDockerAdaptable : DockerRunAdaptable {
             DockerImageBuilder.build { "bkahlert" / "libguestfs" digest "sha256:f466595294e58c1c18efeb2bb56edb5a28a942b5ba82d3c3af70b80a50b4828a" }
     }
 
+    val env: Map<String, String>
     val command: String
     val arguments: List<String>
     val disks: List<Path>
@@ -57,8 +58,10 @@ interface LibguestfsDockerAdaptable : DockerRunAdaptable {
         val disk = checkDisks()
 
         return IMAGE.buildRunCommand {
+            workingDirectory(disk.parent)
             redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
             options {
+                env.forEach { env { it.key to it.value } }
                 entrypoint { command }
                 name { "libguestfs-$command".withRandomSuffix() }
                 autoCleanup { OnOffBuilder.on }

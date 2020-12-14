@@ -54,9 +54,9 @@ class InMemoryLoggerTest {
 
 
 fun <T : InMemoryLogger> T.logged(vararg texts: String): Assertion.Builder<String> =
-    getExpectThatLogged().compose("contains text %s") { completeLog ->
+    expectThatLogged().compose("contains text %s") { completeLog ->
         texts.forEach { text -> contains(text) }
     }.then { if (allPassed) pass() else fail() }
 
-fun <T : InMemoryLogger> T.getExpectThatLogged() =
+fun <T : InMemoryLogger> T.expectThatLogged() =
     expectThat(logged)

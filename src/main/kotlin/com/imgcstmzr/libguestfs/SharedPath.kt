@@ -16,5 +16,5 @@ enum class SharedPath(val resolveRoot: (osImage: OperatingSystemImage) -> Path) 
     });
 
     fun OperatingSystemImage.resolve(imagePath: Path): Path = resolve(imagePath.serialized)
-    fun OperatingSystemImage.resolve(imagePath: String): Path = resolveRoot(this).resolve(imagePath.removePrefix("/"))
+    fun OperatingSystemImage.resolve(imagePath: String): Path = resolveRoot(this).resolve(imagePath.removePrefix("/").removePrefix("$DIRNAME/"))
 }

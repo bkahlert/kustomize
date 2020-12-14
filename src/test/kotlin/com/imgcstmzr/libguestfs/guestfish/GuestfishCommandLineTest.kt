@@ -6,7 +6,9 @@ import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.toPath
 import com.bkahlert.koodies.nio.file.writeText
 import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
-import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.fishGuest
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.runGuestfishOn
+import com.imgcstmzr.libguestfs.resolveOnDisk
+import com.imgcstmzr.libguestfs.resolveOnDocker
 import com.imgcstmzr.libguestfs.resolveOnHost
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems
@@ -40,11 +42,12 @@ class GuestfishCommandLineTest {
     }
 
     @Test
-    fun `should break even arguments by default`(osImage: OperatingSystemImage) {
-        expectThat(createGuestfishCommand(osImage).toString()).isEqualTo("""
+    fun `should build proper command line even arguments by default`(osImage: OperatingSystemImage) {
+        val commandLine = createGuestfishCommand(osImage)
+        expectThat(commandLine.toString()).isEqualTo("""
             guestfish \
             --add \
-            my/disk.img \
+            ${osImage.file.serialized} \
             --inspector \
             !mkdir \
             -p \
@@ -80,7 +83,7 @@ class GuestfishCommandLineTest {
             /rm/force \
             rm-rf \
             /rm/force-recursive \
-            rm-rf \
+            rm \
             /rm/invalid-only-recursive \
             rmdir \
             /rm/dir \
@@ -91,17 +94,17 @@ class GuestfishCommandLineTest {
 
     @FiveMinutesTimeout @DockerRequiring @Test
     fun InMemoryLogger.`should copy file from osImage, skip non-existing and override one`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage) {
-        fishGuest(osImage) {
-            copyOut(f("/boot/cmdline.txt"))
-            copyOut(f("/non/existing.txt"))
+        runGuestfishOn(osImage) {
+            copyOut { it.resolveOnDisk("/boot/cmdline.txt") }
+            copyOut { it.resolveOnDisk("/non/existing.txt") }
         }
 
         val dir = osImage.resolveOnHost("").apply {
             resolve("boot/config.txt").writeText("overwrite me")
         }
 
-        fishGuest(osImage) {
-            copyOut(f("/boot/config.txt"))
+        runGuestfishOn(osImage) {
+            copyOut { it.resolveOnDisk("/boot/config.txt") }
         }
 
         expectThat(dir) {
@@ -117,14 +120,12 @@ class GuestfishCommandLineTest {
         val configTxt = f("/boot/config.txt")
         val configTxtOnHost = osImage.resolveOnHost(configTxt).apply { parent.mkdirs() }.writeText("overwrite guest")
 
-        fishGuest(osImage) {
-            tarIn(osImage)
-        }
+        runGuestfishOn(osImage) { tarIn() }
         exampleHtmlOnHost.delete(false)
 
-        fishGuest(osImage) {
-            copyOut(exampleHtml)
-            copyOut(configTxt)
+        runGuestfishOn(osImage) {
+            copyOut { it.resolveOnDisk(exampleHtml) }
+            copyOut { it.resolveOnDisk(configTxt) }
         }
 
         expect {
@@ -136,9 +137,9 @@ class GuestfishCommandLineTest {
 
 private fun f(path: String): Path = Path.of(path)
 
-internal fun createGuestfishCommand(osImage: OperatingSystemImage) = GuestfishCommandLine.Companion.build {
+internal fun createGuestfishCommand(osImage: OperatingSystemImage) = GuestfishCommandLine.build(osImage) {
     options {
-        disks { +Path.of("my/disk.img") }
+        disk { it.file }
         inspector { on }
     }
 
@@ -148,17 +149,17 @@ internal fun createGuestfishCommand(osImage: OperatingSystemImage) = GuestfishCo
         }
 
         ignoreErrors {
-            copyIn(f("/home/pi/.ssh/known_hosts"))
+            copyIn { it.resolveOnDocker("/home/pi/.ssh/known_hosts") }
         }
-        copyOut(f("/home/pi/.ssh/known_hosts"))
+        copyOut { it.resolveOnDisk("/home/pi/.ssh/known_hosts") }
 
-        tarIn(osImage)
-        tarOut(osImage)
-        rm(f("/rm"))
-        rm(f("/rm/force"), force = true)
-        rm(f("/rm/force-recursive"), force = true, recursive = true)
-        rm(f("/rm/invalid-only-recursive"), force = true, recursive = true)
-        rmDir(f("/rm/dir"))
+        tarIn()
+        tarOut()
+        rm { it.resolveOnDisk("/rm") }
+        rm(force = true) { it.resolveOnDisk("/rm/force") }
+        rm(force = true, recursive = true) { it.resolveOnDisk("/rm/force-recursive") }
+        rm(force = false, recursive = true) { it.resolveOnDisk("/rm/invalid-only-recursive") }
+        rmDir { it.resolveOnDisk("/rm/dir") }
         umountAll()
         exit()
     }
@@ -178,15 +179,15 @@ fun Assertion.Builder<OperatingSystemImage>.mounted(logger: BlockRenderingLogger
 
         // Copying out of VM
         logger.logging("copying ${paths.size} files out of $fileName for assertions") {
-            GuestfishCommandLine.build {
+            GuestfishCommandLine.build(this@get) {
                 options {
-                    disks { +GuestfishOption.DiskOption(file) }
+                    disk { it.file }
                     inspector { on }
                 }
-                paths.forEach {
+                paths.forEach { path ->
                     commands {
                         ignoreErrors {
-                            copyOut(it)
+                            copyOut { it.resolveOnDisk(path) }
                         }
                     }
                 }

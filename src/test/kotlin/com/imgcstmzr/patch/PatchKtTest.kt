@@ -12,6 +12,7 @@ import com.bkahlert.koodies.time.parseableInstant
 import com.bkahlert.koodies.unit.Giga
 import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.E2E
+import com.imgcstmzr.libguestfs.resolveOnDisk
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.runtime.Program
@@ -23,7 +24,7 @@ import com.imgcstmzr.util.hasContent
 import com.imgcstmzr.util.logging.CapturedOutput
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.OutputCaptureExtension
-import com.imgcstmzr.util.logging.getExpectThatLogged
+import com.imgcstmzr.util.logging.expectThatLogged
 import com.imgcstmzr.util.touch
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -84,7 +85,7 @@ class PatchKtTest {
             with(buildPatch(osImage.operatingSystem, "No-Op Patch") {}) {
                 patch(osImage)
             }
-            getExpectThatLogged().isNotEmpty()
+            expectThatLogged().isNotEmpty()
             expectThat(capturedOutput.out.removeEscapeSequences()).isEmpty()
         }
     }
@@ -95,7 +96,7 @@ class PatchKtTest {
             with(buildPatch(osImage.operatingSystem, "No-Op Patch") {}) {
                 patch(osImage)
             }
-            getExpectThatLogged().matchesCurlyPattern("""
+            expectThatLogged().matchesCurlyPattern("""
         Started: not-bordered
          Started: NO-OP PATCH
           IMG Operations: —
@@ -120,7 +121,7 @@ class PatchKtTest {
                 hostname { "test-machine" }
             }
             guestfish {
-                copyOut("/etc/hostname".toPath())
+                copyOut { it.resolveOnDisk("/etc/hostname") }
             }
             files {
                 edit("/root/.imgcstmzr.created", { path ->

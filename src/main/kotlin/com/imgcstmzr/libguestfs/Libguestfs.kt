@@ -30,5 +30,20 @@ fun OperatingSystemImage.resolveOnHost(pathInsideOfImage: Path) =
 fun OperatingSystemImage.resolveOnHost(pathInsideOfImage: String) =
     with(SharedPath.Host) { resolve(pathInsideOfImage) }
 
+fun OperatingSystemImage.resolveOnDocker(pathInsideOfImage: Path) =
+    with(SharedPath.Docker) { resolve(pathInsideOfImage) }
+
+fun OperatingSystemImage.resolveOnDocker(pathInsideOfImage: String) =
+    with(SharedPath.Docker) { resolve(pathInsideOfImage) }
+
+fun OperatingSystemImage.resolveOnDisk(pathInsideOfImage: Path) =
+    with(SharedPath.Disk) { resolve(pathInsideOfImage) }
+
+fun OperatingSystemImage.resolveOnDisk(pathInsideOfImage: String) =
+    with(SharedPath.Disk) { resolve(pathInsideOfImage) }
+
+
+
+
 
 

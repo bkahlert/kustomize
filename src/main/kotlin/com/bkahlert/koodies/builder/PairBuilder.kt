@@ -17,7 +17,7 @@ object PairBuilder {
 /**
  * Using `this` [PairBuilderInit] builds a pair of [A] and [B].
  */
-inline fun <reified A, reified B> PairBuilderInit<A, B>.build(): Pair<A, B> =
+inline fun <reified A, reified B> PairBuilderInit<A, B>.buildPair(): Pair<A, B> =
     PairBuilder.this()
 
 /**
@@ -25,15 +25,15 @@ inline fun <reified A, reified B> PairBuilderInit<A, B>.build(): Pair<A, B> =
  *
  * As as side effect the result is added to [target].
  */
-inline fun <reified A, reified B> PairBuilderInit<A, B>.buildTo(target: MutableCollection<Pair<A, B>>): Pair<A, B> =
-    build().also { target.add(it) }
+inline fun <reified A, reified B> PairBuilderInit<A, B>.buildPairTo(target: MutableCollection<Pair<A, B>>): Pair<A, B> =
+    buildPair().also { target.add(it) }
 
 /**
  * Using `this` [PairBuilderInit] builds a pair of [A] and [B]
  * and applies [transform] to the result.
  */
-inline fun <reified A, reified B, reified T> PairBuilderInit<A, B>.build(transform: Pair<A, B>.() -> T): T =
-    build().run(transform)
+inline fun <reified A, reified B, reified T> PairBuilderInit<A, B>.buildPair(transform: Pair<A, B>.() -> T): T =
+    buildPair().run(transform)
 
 /**
  * Using `this` [PairBuilderInit] builds a pair of [A] and [B]
@@ -41,8 +41,8 @@ inline fun <reified A, reified B, reified T> PairBuilderInit<A, B>.build(transfo
  *
  * As as side effect the transformed result is added to [target].
  */
-inline fun <reified A, reified B, reified T> PairBuilderInit<A, B>.buildTo(target: MutableCollection<in T>, transform: Pair<A, B>.() -> T): T =
-    build(transform).also { target.add(it) }
+inline fun <reified A, reified B, reified T> PairBuilderInit<A, B>.buildPairTo(target: MutableCollection<in T>, transform: Pair<A, B>.() -> T): T =
+    buildPair(transform).also { target.add(it) }
 
 /**
  * Convenience type to easier use [buildMap] accepts.
@@ -61,7 +61,7 @@ private object PairBuilderSamples {
     fun indirectUse() {
 
         fun builderAcceptingFunction(init: PairBuilderInit<String, Int>) {
-            val pair = init.build()
+            val pair = init.buildPair()
             println("Et voilà, $pair")
         }
 
@@ -72,7 +72,7 @@ private object PairBuilderSamples {
     fun transformUse() {
 
         fun builderAcceptingFunction(init: PairBuilderInit<String, Int>) {
-            val transformed = init.build { first.length + second }
+            val transformed = init.buildPair { first.length + second }
             println("Et voilà, $transformed")
         }
 
