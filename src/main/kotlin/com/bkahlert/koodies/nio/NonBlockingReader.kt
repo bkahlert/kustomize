@@ -61,7 +61,7 @@ class NonBlockingReader(
      */
     override fun readLine(): String? = if (reader == null) null else
         logger.logging(NonBlockingReader::class.simpleName + "." + ::readLine.name + "()", ansiCode = ANSI.termColors.cyan) {
-            val maxTimeMillis = currentTimeMillis() + timeout.toLongMilliseconds()
+            var latestReadMoment = calculateLatestReadMoment()
             logStatus { META typed "Starting to read line for at most $timeout" }
             while (true) {
                 val read: Int = reader?.read(charArray, 0, this@logging)!!
@@ -80,7 +80,7 @@ class NonBlockingReader(
                         lastReadLine!!.withoutTrailingLineSeparator
                     }
                 }
-                logStatus { META typed "${Now.emoji} ${(maxTimeMillis - currentTimeMillis()).milliseconds}; 📋 ${unfinishedLine.debug}; 🆕 ${justRead.debug}" }
+                logStatus { META typed "${Now.emoji} ${(latestReadMoment - currentTimeMillis()).milliseconds}; 📋 ${unfinishedLine.debug}; 🆕 ${justRead.debug}" }
                 if (read == 1) {
 //                    println(this@NonBlockingReader)
                     val lineAlreadyRead = lastReadLineDueTimeout == true && lastReadLine?.hasTrailingLineSeparator == true && !justReadCRLF
@@ -97,9 +97,11 @@ class NonBlockingReader(
                     }
                     if (!lineAlreadyRead) {
                         unfinishedLine.append(charArray)
+                        latestReadMoment = calculateLatestReadMoment()
                     }
                 }
-                if (currentTimeMillis() >= maxTimeMillis && !(blockOnEmptyLine && unfinishedLine.isEmpty())) {
+
+                if (currentTimeMillis() >= latestReadMoment && !(blockOnEmptyLine && unfinishedLine.isEmpty())) {
                     logStatus { META typed "${Now.emoji} Timed out. Returning ${unfinishedLine.quoted}" }
                     // TODO evaluate if better to call a callback and continue working (without returning half-read lines)
                     lastReadLineDueTimeout = true
@@ -110,6 +112,8 @@ class NonBlockingReader(
             @Suppress("UNREACHABLE_CODE")
             error("return statement missing")
         }
+
+    private fun calculateLatestReadMoment() = currentTimeMillis() + timeout.toLongMilliseconds()
 
     /**
      * Reads all lines from the [InputStream].

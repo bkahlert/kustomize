@@ -6,7 +6,6 @@ import com.bkahlert.koodies.string.withRandomSuffix
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
-import com.imgcstmzr.guestfish.Guestfish
 import com.imgcstmzr.libguestfs.SharedPath
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.runGuestfishOn

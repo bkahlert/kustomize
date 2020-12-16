@@ -229,21 +229,7 @@ class ImageCustomization(
 
         setup.forEach {
             +ShellScriptPatch(os, *it.toTypedArray())
-//            val x: String = it.map { ": ${it.name}\n" + it.build() }.joinToString("\n\n")
-//            val programs: List<Program> = os.compileSetupScript(it.name, x).toList()
-//            val patch = buildPatch(os, it.name) {
-//                booted {
-//                    programs.forEach {
-//                        run(it)
-//                    }
-//                }
-//            }
-//            +patch
         }
-
-        // TODO run patches together
-        // TODO optimize (model) scripts
-        // TODO run bother-you
     }
 
     fun optimizePatches(patches: List<Patch>): List<Patch> = with(patches.toMutableList()) {

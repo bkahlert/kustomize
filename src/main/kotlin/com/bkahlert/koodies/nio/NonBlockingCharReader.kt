@@ -14,6 +14,7 @@ import java.io.Reader
 import java.nio.charset.Charset
 import kotlin.time.Duration
 import kotlin.time.seconds
+import org.jline.utils.NonBlockingReader as JLineNonBlockingReader
 
 /**
  * Reads a [ByteArrayOutputStream] line-wise using a special rule:
@@ -31,7 +32,7 @@ class NonBlockingCharReader(
     val timeoutMillis = timeout.toLongMilliseconds()
     inline val inlineTimeoutMillis get() = timeoutMillis
 
-    var reader: org.jline.utils.NonBlockingReader? = NonBlocking.nonBlocking(name, inputStream, charset)
+    var reader: JLineNonBlockingReader? = NonBlocking.nonBlocking(name, inputStream, charset)
 
     fun read(buffer: CharArray, off: Int, logger: BlockRenderingLogger): Int = if (reader == null) -1 else
         logger.singleLineLogging(NonBlockingCharReader::class.simpleName + ".read(CharArray, Int, Int, Logger)") {

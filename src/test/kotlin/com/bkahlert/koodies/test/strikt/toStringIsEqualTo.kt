@@ -6,7 +6,6 @@ import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.unit.BinaryPrefix
 import com.bkahlert.koodies.unit.Size
-import com.imgcstmzr.guestfish.GuestfishOperation
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
 
@@ -50,7 +49,6 @@ fun Assertion.Builder<*>.asString(trim: Boolean = true): DescribeableBuilder<Str
             is CodePoint -> this.string
             is Grapheme -> this.asString
             is Size -> this.toString(BinaryPrefix::class)
-            is GuestfishOperation -> this.asHereDoc().toString()
             else -> this.toString()
         }
         string.takeUnless { trim } ?: string.trim()

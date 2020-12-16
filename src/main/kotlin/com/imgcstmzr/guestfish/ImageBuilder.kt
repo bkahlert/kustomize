@@ -1,5 +1,8 @@
 package com.imgcstmzr.guestfish
 
+import com.bkahlert.koodies.concurrent.cleanUpOnShutdown
+import com.bkahlert.koodies.concurrent.process.waitForTermination
+import com.bkahlert.koodies.docker.DockerRunCommandLineBuilder
 import com.bkahlert.koodies.io.Archiver.archive
 import com.bkahlert.koodies.io.GzCompressor.gunzip
 import com.bkahlert.koodies.nio.file.copyToDirectory
@@ -8,6 +11,7 @@ import com.bkahlert.koodies.nio.file.hasExtension
 import com.bkahlert.koodies.nio.file.mkdirs
 import com.bkahlert.koodies.nio.file.removeExtension
 import com.bkahlert.koodies.nio.file.toPath
+import com.bkahlert.koodies.shell.HereDocBuilder.hereDoc
 import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.colors.gray
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightYellow
@@ -19,7 +23,8 @@ import com.bkahlert.koodies.unit.Gibi
 import com.bkahlert.koodies.unit.Mebi
 import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.Size.Companion.bytes
-import com.imgcstmzr.guestfish.Guestfish.Companion.DOCKER_MOUNT_ROOT
+import com.imgcstmzr.libguestfs.Libguestfs
+import com.imgcstmzr.libguestfs.docker.LibguestfsDockerAdaptable
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.logging
@@ -105,15 +110,13 @@ object ImageBuilder {
         ansiCode = gray,
         borderedOutput = false,
     ) {
-        val tarball = if (archive.hasExtension("gz")) archive.gunzip(overwrite = true) else archive
+        val tarball = if (archive.hasExtension("gz")) archive.gunzip(overwrite = true).cleanUpOnShutdown() else archive
         require(tarball.hasExtension("tar")) { "Currently only \"tar\" and \"tar.gz\" files are supported." }
 
-        val hostDirectory = tarball.parent
-        val addFilesCommand = "-tar-in ${DOCKER_MOUNT_ROOT.resolve(tarball.fileName)} /" +
-            (if (tarball.hasExtension(".tar")) "" else " compress:gzip")
+        val archiveDirectory = tarball.parent
 
         val imgName = "${tarball.fileName.removeExtension("tar")}.img".also {
-            hostDirectory.resolve(it).delete(false)
+            archiveDirectory.resolve(it).delete(false)
         }
         logLine {
             val formattedTotalSize = totalSize.round().toString(BinaryPrefix::class)
@@ -123,21 +126,27 @@ object ImageBuilder {
         }
 
         @Suppress("SpellCheckingInspection")
-        Guestfish.execute(
-            containerName = Guestfish::class.simpleName + "-image-preparation---" + imgName,
-            volumes = mapOf(hostDirectory to "/shared"),
-            options = listOf("-N",
-                "/shared/$imgName=bootroot:$bootFileSystem:$rootFileSystem:${totalSize.format()}:${bootSize.format()}:$partitionTableType"),
-            commands = GuestfishOperation(listOf(
-                "mount /dev/sda2 /",
-                "mkdir /boot",
-                "mount /dev/sda1 /boot",
-                addFilesCommand,
-            )),
-            logger = this,
-        )
+        DockerRunCommandLineBuilder.build(LibguestfsDockerAdaptable.IMAGE) {
+            redirects { +"2>&1" }
+            workingDirectory(archiveDirectory.parent)
+            options {
+                env { "LIBGUESTFS_TRACE" to "1" }
+                name { Libguestfs.Guestfish::class.simpleName + "-image-preparation---" + imgName }
+                mounts { archiveDirectory mountAt "/shared" }
+            }
+            arguments {
+                +"-N" + "/shared/$imgName=bootroot:$bootFileSystem:$rootFileSystem:${totalSize.format()}:${bootSize.format()}:$partitionTableType"
+                +hereDoc {
+                    +"mount /dev/sda2 /"
+                    +"mkdir /boot"
+                    +"mount /dev/sda1 /boot"
+                    +"-tar-in /shared/${tarball.fileName} /" +
+                        (if (tarball.hasExtension(".tar")) "" else " compress:gzip")
+                }
+            }
+        }.start().waitForTermination()
         logLine { "Finished test img creation." }
-        hostDirectory.resolve(imgName)
+        archiveDirectory.resolve(imgName)
     }
 
     @Suppress("unused")

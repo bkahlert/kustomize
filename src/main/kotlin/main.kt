@@ -1,4 +1,3 @@
-import com.bkahlert.koodies.docker.DockerContainerName
 import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
@@ -30,8 +29,6 @@ import com.imgcstmzr.cli.Config4kValueSource
 import com.imgcstmzr.cli.EmptyValueSource
 import com.imgcstmzr.cli.Env
 import com.imgcstmzr.cli.Options.os
-import com.imgcstmzr.guestfish.Guestfish
-import com.imgcstmzr.guestfish.Guestfish.Companion.copyOutCommands
 import com.imgcstmzr.patch.PasswordPatch
 import com.imgcstmzr.patch.SshEnablementPatch
 import com.imgcstmzr.patch.UsbOnTheGoPatch
@@ -182,15 +179,6 @@ class CstmzrCommand : CliktCommand(help = "Customizes the given IMG") {
 
 //            patch.patch(img)
 //            patcher(this, listOfNotNull(enableSsh, usernameRename, passwordChange, usbOtgProfiles))
-
-            exitProcess(0)
-
-            val logger = BlockRenderingLogger("Project: $fullName")
-
-            val guestfish = Guestfish(this, logger, DockerContainerName("$fullName-guestfish"))
-            guestfish.run(copyOutCommands(listOf("/etc/hostname", "/boot/cmdline.txt", "/boot/config.txt").map(Path::of)))
-            guestfish.guestRootOnHost
-                .also { echo("Success $it") }
 
             exitProcess(0)
 //            val runtime = Runtime(name)

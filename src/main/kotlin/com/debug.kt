@@ -13,7 +13,7 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
 import com.imgcstmzr.cli.Options.os
-import com.imgcstmzr.guestfish.Guestfish
+import com.imgcstmzr.libguestfs.docker.LibguestfsDockerAdaptable
 import com.imgcstmzr.process.Downloader
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
@@ -58,7 +58,7 @@ class DebugCommand : NoOpCliktCommand(
 
             logLine { script }
 
-            val z = Guestfish.IMAGE.buildRunCommand {
+            val z = LibguestfsDockerAdaptable.IMAGE.buildRunCommand {
                 redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
                 options {
                     name { "guestfish" }
