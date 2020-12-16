@@ -4,9 +4,8 @@ import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
 import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
-import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine
+import com.imgcstmzr.libguestfs.Libguestfs.Companion.libguestfs
 import com.imgcstmzr.libguestfs.guestfish.mounted
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.Companion.virtCustomize
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
@@ -14,6 +13,7 @@ import com.imgcstmzr.util.DockerRequiring
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.hasContent
 import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.util.logging.expectThatLogged
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -33,7 +33,7 @@ class LibguestfsTest {
 
         @Test
         fun `should build proper docker command`(osImage: OperatingSystemImage) {
-            val commandLine = GuestfishCommandLine.build(osImage) {
+            val commandLine = osImage.libguestfs().guestfish {
                 env {
                     trace { on }
                     debug { on }
@@ -56,12 +56,11 @@ class LibguestfsTest {
                     }
                     copyOut { it.resolveOnDisk("/home/pi/.ssh/known_hosts") }
                 }
-            }
+            }.adapt()
 
-            val dockerRunCommandLine = commandLine.adapt()
             expect {
-                that(dockerRunCommandLine.workingDirectory).isEqualTo(osImage.file.parent)
-                that(dockerRunCommandLine.toString()).matchesCurlyPattern("""
+                that(commandLine.workingDirectory).isEqualTo(osImage.file.parent)
+                that(commandLine.toString()).matchesCurlyPattern("""
                     docker \
                     run \
                     --env \
@@ -104,8 +103,8 @@ class LibguestfsTest {
         }
 
         @Test
-        fun `should log`(osImage: OperatingSystemImage, logger: InMemoryLogger) {
-            val commandLine = GuestfishCommandLine.build(osImage) {
+        fun InMemoryLogger.`should log`(osImage: OperatingSystemImage) {
+            val commandLine = osImage.libguestfs().guestfish {
                 env {
                     trace { on }
                     debug { off }
@@ -114,9 +113,9 @@ class LibguestfsTest {
                 options { disk { it.file } }
             }
 
-            commandLine.execute(logger)
+            with(commandLine) { executeLogging() }
 
-            expectThat(logger.logged).contains("libguestfs: trace: set_verbose")
+            expectThatLogged().contains("libguestfs: trace: set_verbose")
         }
     }
 
@@ -127,7 +126,7 @@ class LibguestfsTest {
         fun `should build proper docker command`(osImage: OperatingSystemImage) {
             val sshKey = "ssh-rsa ${String.random(20)}== '${String.random(8)}'"
 
-            val commandLine = VirtCustomizeCommandLine.build(osImage) {
+            val commandLine = osImage.libguestfs().virtCustomize {
                 options {
                     colors { on }
                     disk { it.file }
@@ -136,12 +135,11 @@ class LibguestfsTest {
                 customizationOptions {
                     sshInject("pi", sshKey)
                 }
-            }
+            }.adapt()
 
-            val dockerRunCommandLine = commandLine.adapt()
             expect {
-                that(dockerRunCommandLine.workingDirectory).isEqualTo(osImage.file.parent)
-                that(dockerRunCommandLine.toString()).matchesCurlyPattern("""
+                that(commandLine.workingDirectory).isEqualTo(osImage.file.parent)
+                that(commandLine.toString()).matchesCurlyPattern("""
                     docker \
                     run \
                     --entrypoint \

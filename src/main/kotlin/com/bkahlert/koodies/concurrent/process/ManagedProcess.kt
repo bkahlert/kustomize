@@ -1,10 +1,13 @@
 package com.bkahlert.koodies.concurrent.process
 
 import com.bkahlert.koodies.boolean.asEmoji
+import com.bkahlert.koodies.concurrent.process.Processes.isTempScriptFile
 import com.bkahlert.koodies.exception.dump
 import com.bkahlert.koodies.exception.toSingleLineString
 import com.bkahlert.koodies.io.RedirectingOutputStream
 import com.bkahlert.koodies.isLazyInitialized
+import com.bkahlert.koodies.nio.file.serialized
+import com.bkahlert.koodies.nio.file.toPath
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import org.apache.commons.io.output.ByteArrayOutputStream
 import java.io.InputStream
@@ -12,21 +15,19 @@ import java.io.OutputStream
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import kotlin.concurrent.thread
+import org.codehaus.plexus.util.cli.Commandline as PlexusCommandLine
 import java.lang.Process as JavaProcess
 
 interface ManagedProcess : Process {
     companion object {
-        fun forCommandLine(
+        fun from(
             commandLine: CommandLine,
             expectedExitValue: Int = 0,
             processTerminationCallback: (() -> Unit)? = null,
-        ): ManagedProcess {
-            return ManagedJavaProcess(
-                commandLine = commandLine,
-                expectedExitValue = expectedExitValue,
-                processTerminationCallback = processTerminationCallback)
-        }
-
+        ): ManagedProcess = ManagedJavaProcess(
+            commandLine = commandLine,
+            expectedExitValue = expectedExitValue,
+            processTerminationCallback = processTerminationCallback)
     }
 
     val ioLog: IOLog
@@ -37,6 +38,21 @@ interface ManagedProcess : Process {
      * took place.
      */
     fun start()
+}
+
+fun CommandLine.toManagedProcess(
+    expectedExitValue: Int = 0,
+    processTerminationCallback: (() -> Unit)? = null,
+): ManagedProcess = ManagedProcess.from(this, expectedExitValue, processTerminationCallback)
+
+private fun CommandLine.toJavaProcess(): JavaProcess {
+    val scriptFile: String = if (command.toPath().isTempScriptFile()) command else toShellScript().serialized
+
+    return PlexusCommandLine(scriptFile).let {
+        it.workingDirectory = workingDirectory.toFile()
+        environment.forEach { env -> it.addEnvironment(env.key, env.value) }
+        it.execute()
+    }
 }
 
 /**
@@ -77,7 +93,7 @@ private open class ManagedJavaProcess(
      */
     override val javaProcess: JavaProcess by lazy {
         kotlin.runCatching {
-            commandLine.lazyProcess().value.apply {
+            commandLine.toJavaProcess().apply {
                 metaLog("Executing ${commandLine.commandLine}")
                 commandLine.formattedIncludesFiles.takeIf { it.isNotBlank() }?.let { metaLog(it) }
 

@@ -136,11 +136,11 @@ class ImgCstmzrConfigTest {
         expectThat(CompositePatch(patch)) {
             get { name }.contains("Increasing Disk Space: 4.00 GB").contains("Change Username").contains("Mass storage and Serial")
             get { preFileImgOperations }.hasSize(1)
-            get { customizationOptions }.hasSize(8)
+            get { customizationOptions }.hasSize(13)
             get { guestfishCommands }.hasSize(1)
             get { fileSystemOperations }.hasSize(5)
             get { postFileImgOperations }.hasSize(2)
-            get { programs }.hasSize(6)
+            get { programs }.hasSize(1)
         }
     }
 

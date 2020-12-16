@@ -1,4 +1,4 @@
-package com.imgcstmzr.guestfish
+package com.imgcstmzr.libguestfs.guestfish
 
 import com.bkahlert.koodies.io.TarArchiveGzCompressor.tarGzip
 import com.bkahlert.koodies.nio.file.addExtension
@@ -11,8 +11,8 @@ import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
 import com.bkahlert.koodies.unit.Gibi
 import com.bkahlert.koodies.unit.Mebi
 import com.bkahlert.koodies.unit.Size.Companion.bytes
-import com.imgcstmzr.guestfish.ImageBuilder.buildFrom
-import com.imgcstmzr.guestfish.ImageBuilder.format
+import com.imgcstmzr.libguestfs.docker.ImageBuilder.buildFrom
+import com.imgcstmzr.libguestfs.docker.ImageBuilder.format
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.util.DockerRequiring
 import com.imgcstmzr.util.FixtureLog.deleteOnExit

@@ -1,6 +1,6 @@
 package com.imgcstmzr.util.logging
 
-import com.imgcstmzr.util.slf4jFormat
+import com.imgcstmzr.runtime.log.SLF4J.format
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -17,21 +17,21 @@ class CapturedOutputAssertions {
         @Test
         fun `should fill placeholders in SLF4J style format`() {
             val slf4jStyleFormat = "A {} C {} E"
-            val actual = slf4jFormat(slf4jStyleFormat, "B", "D")
+            val actual = format(slf4jStyleFormat, "B", "D")
             expectThat(actual).isEqualTo("A B C D E")
         }
 
         @Test
         fun `should fill placeholders in SLF4J style format if too many args`() {
             val slf4jStyleFormat = "A {} C {} E"
-            val actual = slf4jFormat(slf4jStyleFormat, "B", "D", "Z")
+            val actual = format(slf4jStyleFormat, "B", "D", "Z")
             expectThat(actual).isEqualTo("A B C D E")
         }
 
         @Test
         fun `should fill placeholders in SLF4J style format if too few args`() {
             val slf4jStyleFormat = "A {} C {} E"
-            val actual = slf4jFormat(slf4jStyleFormat, "B")
+            val actual = format(slf4jStyleFormat, "B")
             expectThat(actual).isEqualTo("A B C {1} E")
         }
     }

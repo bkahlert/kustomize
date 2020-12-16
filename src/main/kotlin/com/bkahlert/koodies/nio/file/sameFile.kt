@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.nio.file
 
-import com.imgcstmzr.util.Paths
+import com.bkahlert.koodies.nio.file.Paths.Temp
 import java.nio.file.Path
 
 /**
@@ -11,4 +11,4 @@ import java.nio.file.Path
  * at the same place with as few assumptions about the OS
  * as possible.
  */
-fun sameFile(name: String): Path = Paths.TEMP.resolve(name)
+fun sameFile(name: String): Path = Temp.resolve(name)

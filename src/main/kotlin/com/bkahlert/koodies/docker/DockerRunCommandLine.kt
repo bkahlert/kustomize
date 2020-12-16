@@ -7,15 +7,10 @@ import com.bkahlert.koodies.builder.build
 import com.bkahlert.koodies.builder.buildListTo
 import com.bkahlert.koodies.builder.buildMap
 import com.bkahlert.koodies.concurrent.process.CommandLine
-import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.concurrent.process.Processor
-import com.bkahlert.koodies.concurrent.process.Processors
-import com.bkahlert.koodies.concurrent.process.process
 import com.bkahlert.koodies.docker.DockerRunCommandLine.Options
 import com.bkahlert.koodies.nio.file.Paths
 import com.bkahlert.koodies.nio.file.serialized
 import com.bkahlert.koodies.nio.file.toPath
-import java.io.InputStream
 import java.nio.file.Path
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
@@ -56,26 +51,11 @@ data class DockerRunCommandLine(
         mounts.forEach { +it }
     })
 
-    /**
-     * Prepares a new [DockerProcess] based on this command line.
-     *
-     * @see [CommandLine.lazyProcess]
-     */
-    fun prepare() = DockerProcess(this)
+    override fun prepare(expectedExitValue: Int): DockerProcess =
+        DockerProcess.from(this, expectedExitValue)
 
-    /**
-     * Starts a new [DockerProcess] based on this command line.
-     */
-    fun start() = prepare().apply { start() }
-
-    /**
-     * Starts a new [DockerProcess] based on this command line and has [processor] its [IO] processed.
-     */
-    fun startAndProcess(
-        nonBlockingReader: Boolean = false,
-        inputStream: InputStream = InputStream.nullInputStream(),
-        processor: Processor<DockerProcess> = Processors.printingProcessor(),
-    ): DockerProcess = start().process(nonBlockingReader, inputStream, processor)
+    override fun execute(expectedExitValue: Int): DockerProcess =
+        prepare(expectedExitValue).also { it.start() }
 
     override fun toString(): String = super.toString()
 }

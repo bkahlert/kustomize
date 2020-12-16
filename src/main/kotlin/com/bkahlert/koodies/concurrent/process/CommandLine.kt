@@ -1,21 +1,23 @@
 package com.bkahlert.koodies.concurrent.process
 
-import com.bkahlert.koodies.concurrent.process.Processes.isTempScriptFile
 import com.bkahlert.koodies.nio.file.exists
 import com.bkahlert.koodies.nio.file.serialized
-import com.bkahlert.koodies.nio.file.toPath
+import com.bkahlert.koodies.regex.get
 import com.bkahlert.koodies.shell.ShellScript
 import com.bkahlert.koodies.shell.shebang
 import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.unquoted
+import com.bkahlert.koodies.terminal.ANSI
+import com.github.ajalt.mordant.AnsiColorCode
 import com.imgcstmzr.runtime.HasStatus.Companion.asStatus
-import com.imgcstmzr.util.get
+import com.imgcstmzr.runtime.log.RenderingLogger
+import com.imgcstmzr.runtime.log.logging
 import org.codehaus.plexus.util.StringUtils
 import org.codehaus.plexus.util.cli.CommandLineUtils
+import java.io.InputStream
 import java.nio.file.Path
 import kotlin.text.RegexOption.DOT_MATCHES_ALL
 import kotlin.text.RegexOption.MULTILINE
-import org.codehaus.plexus.util.cli.Commandline as PlexusCommandLine
 
 /**
  * A command as it can be run in a shell.
@@ -86,6 +88,20 @@ open class CommandLine(
             }
             .asStatus()
 
+    /**
+     * Contains all accessible files contained in this command line.
+     */
+    val includedFiles get() = commandLineParts.map { Path.of(it.unquoted) }.filter { it.exists }
+
+    /**
+     * Contains a formatted list of files contained in this command line.
+     */
+    val formattedIncludesFiles get() = includedFiles.joinToString("\n") { "📄 ${it.toUri()}" }
+
+    override fun toString(): String = multiLineCommandLine
+
+    val lines: List<String> get() = toString().lines()
+
     companion object {
 
         val hereDocStartRegex: Regex = Regex("<<(?<name>\\w[-\\w]*)\\s*")
@@ -108,35 +124,45 @@ open class CommandLine(
         }
     }
 
-    override fun toString(): String = multiLineCommandLine
-
-    val lines: List<String> get() = toString().lines()
-
     /**
-     * Builds a proper script that runs at [workingDirectory] and saves it as a
-     * temporary file (to be deleted once in a while).
+     * Builds a proper script that runs this command line.
+     *
+     * @return temporary `.sh` file
      */
-    fun toScript(workingDirectory: Path?): Path =
+    fun toShellScript(): Path =
         ShellScript().apply {
             shebang
-            workingDirectory?.also { changeDirectoryOrExit(directory = it) }
+            changeDirectoryOrExit(directory = workingDirectory)
             command(commandLine)
         }.buildTo(Processes.tempScriptFile())
 
     /**
-     * Prepares a [Process] that starts as soon as the [Lazy.value] is computed.
+     * Prepares a new [ManagedProcess] that runs this command line as soon as it's triggered.
+     *
+     * @see execute
      */
-    fun lazyProcess(): Lazy<java.lang.Process> {
-        val scriptFile = if (command.toPath().isTempScriptFile()) commandLine else toScript(workingDirectory).serialized
+    open fun prepare(expectedExitValue: Int = 0): ManagedProcess = toManagedProcess(expectedExitValue, null)
 
-        return PlexusCommandLine(scriptFile).run {
-            addArguments(arguments)
-            @Suppress("ExplicitThis")
-            workingDirectory = this@CommandLine.workingDirectory.toFile()
-            environment.forEach { addEnvironment(it.key, it.value) }
-            lazy { execute() }
-        }
-    }
+    /**
+     * Starts a new [ManagedProcess] that runs this command line.
+     */
+    open fun execute(expectedExitValue: Int = 0): ManagedProcess = prepare(expectedExitValue).also { it.start() }
+
+    /**
+     * Starts a new [ManagedProcess] that runs this command line
+     * and has it fully processed using `this` [RenderingLogger].
+     */
+    open fun RenderingLogger.executeLogging(
+        caption: String,
+        ansiCode: AnsiColorCode = ANSI.termColors.brightBlue,
+        nonBlockingReader: Boolean = false,
+        expectedExitValue: Int = 0,
+    ): Int = logging(caption = caption, ansiCode = ansiCode) {
+        execute(expectedExitValue).process(
+            nonBlockingReader = nonBlockingReader,
+            processInputStream = InputStream.nullInputStream(),
+            processor = Processors.loggingProcessor(this))
+    }.waitForTermination()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -150,15 +176,4 @@ open class CommandLine(
     }
 
     override fun hashCode(): Int = commandLineParts.contentHashCode()
-
-
-    /**
-     * Contains all accessible files contained in this command line.
-     */
-    val includedFiles get() = commandLineParts.map { Path.of(it.unquoted) }.filter { it.exists }
-
-    /**
-     * Contains a formatted list of files contained in this command line.
-     */
-    val formattedIncludesFiles get() = includedFiles.joinToString("\n") { "📄 ${it.toUri()}" }
 }

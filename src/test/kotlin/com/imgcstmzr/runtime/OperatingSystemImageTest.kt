@@ -1,5 +1,6 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.nio.file.Paths.WorkingDirectory
 import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.isDuplicateOf
 import com.bkahlert.koodies.nio.file.readLines
@@ -9,7 +10,6 @@ import com.bkahlert.koodies.nio.file.tempFile
 import com.bkahlert.koodies.nio.file.writeLine
 import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.isWritable
 import com.imgcstmzr.util.touch
 import org.junit.jupiter.api.Nested
@@ -40,7 +40,7 @@ class OperatingSystemImageTest {
     @Test
     fun `should have full name`() {
         expectThat((OperatingSystemMock("full-name-test") based Path.of("foo/bar")).fullName)
-            .isEqualTo("ImgCstmzr Test OS at file://${Paths.WORKING_DIRECTORY}/foo/bar")
+            .isEqualTo("ImgCstmzr Test OS at file://${WorkingDirectory}/foo/bar")
     }
 
     @Test

@@ -1,10 +1,11 @@
-package com.imgcstmzr.guestfish
+package com.imgcstmzr.libguestfs.docker
 
 import com.bkahlert.koodies.concurrent.cleanUpOnShutdown
 import com.bkahlert.koodies.concurrent.process.waitForTermination
 import com.bkahlert.koodies.docker.DockerRunCommandLineBuilder
 import com.bkahlert.koodies.io.Archiver.archive
 import com.bkahlert.koodies.io.GzCompressor.gunzip
+import com.bkahlert.koodies.nio.file.Paths.Temp
 import com.bkahlert.koodies.nio.file.copyToDirectory
 import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.hasExtension
@@ -24,12 +25,10 @@ import com.bkahlert.koodies.unit.Mebi
 import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.libguestfs.Libguestfs
-import com.imgcstmzr.libguestfs.docker.LibguestfsDockerAdaptable
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.logging
 import com.imgcstmzr.runtime.log.singleLineLogging
-import com.imgcstmzr.util.Paths
 import java.net.URI
 import java.nio.file.Path
 import kotlin.math.ceil
@@ -80,7 +79,7 @@ object ImageBuilder {
     }
 
     private fun BlockRenderingLogger.prepareImg(vararg paths: Pair<Path, Path>): Path =
-        buildFrom(Paths.TEMP.resolve("imgcstmzr-" + paths.take(5).mapNotNull { it.first.fileName }.joinToString(separator = "-")).mkdirs().run {
+        buildFrom(Temp.resolve("imgcstmzr-" + paths.take(5).mapNotNull { it.first.fileName }.joinToString(separator = "-")).mkdirs().run {
             singleLineLogging("Copying ${paths.size} files to ${toUri()}") {
                 paths.forEach { (from, to) -> from.copyToDirectory(resolve(to)) }
             }
@@ -131,7 +130,7 @@ object ImageBuilder {
             workingDirectory(archiveDirectory.parent)
             options {
                 env { "LIBGUESTFS_TRACE" to "1" }
-                name { Libguestfs.Guestfish::class.simpleName + "-image-preparation---" + imgName }
+                name { Libguestfs::class.simpleName + "-image-preparation---" + imgName }
                 mounts { archiveDirectory mountAt "/shared" }
             }
             arguments {
@@ -144,7 +143,7 @@ object ImageBuilder {
                         (if (tarball.hasExtension(".tar")) "" else " compress:gzip")
                 }
             }
-        }.start().waitForTermination()
+        }.execute().waitForTermination()
         logLine { "Finished test img creation." }
         archiveDirectory.resolve(imgName)
     }

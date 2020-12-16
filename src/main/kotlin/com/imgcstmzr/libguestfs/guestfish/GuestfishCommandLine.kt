@@ -10,6 +10,7 @@ import com.bkahlert.koodies.docker.DockerRunAdaptable
 import com.bkahlert.koodies.io.TarArchiver.tar
 import com.bkahlert.koodies.kaomoji.Kaomojis
 import com.bkahlert.koodies.nio.file.Paths
+import com.bkahlert.koodies.terminal.ANSI
 import com.imgcstmzr.libguestfs.Libguestfs
 import com.imgcstmzr.libguestfs.LibguestfsCommandLine
 import com.imgcstmzr.libguestfs.Option
@@ -47,7 +48,11 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
             }
     ) {
 
-    override fun executionCaption() = "Running ${guestfishCommands.size} guestfish operations... ${Kaomojis.fishing()}"
+    fun RenderingLogger.executeLogging(): Int =
+        executeLogging(caption = "Running ${guestfishCommands.size} guestfish operations... ${Kaomojis.fishing()}",
+            ansiCode = ANSI.randomColor,
+            nonBlockingReader = false,
+            expectedExitValue = 0)
 
     companion object {
         const val COMMAND = "guestfish"
@@ -71,7 +76,7 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
                     mount { Path.of("/dev/sda1") to Path.of("/boot") }
                 }
                 commands(init)
-            }.execute(this)
+            }.run { executeLogging() }
 
         fun OperatingSystemImage.copyOut(path: String): Path {
             logging("copying out $path") {

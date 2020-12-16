@@ -9,8 +9,8 @@ import com.bkahlert.koodies.string.random
 import com.bkahlert.koodies.unit.Size
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.cli.Cache.Companion.defaultFilter
-import com.imgcstmzr.guestfish.ImageBuilder.buildFrom
-import com.imgcstmzr.guestfish.ImageExtractor.extractImage
+import com.imgcstmzr.libguestfs.docker.ImageBuilder.buildFrom
+import com.imgcstmzr.libguestfs.docker.ImageExtractor.extractImage
 import com.imgcstmzr.patch.ini.RegexElement
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.RenderingLogger
@@ -34,7 +34,7 @@ class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: In
         }
 
     companion object {
-        val DEFAULT: Path = Paths.USER_HOME.resolve(".imgcstmzr")
+        val DEFAULT: Path = Paths.CACHE
         fun defaultFilter(currentPath: Path): (Path) -> Boolean = { path: Path -> !path.fileName.startsWith(".") && path != currentPath }
     }
 }

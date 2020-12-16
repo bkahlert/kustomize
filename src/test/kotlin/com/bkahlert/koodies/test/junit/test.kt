@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.test.junit
 
-import com.imgcstmzr.util.slf4jFormat
+import com.imgcstmzr.runtime.log.SLF4J.format
 import org.junit.jupiter.api.DynamicTest
 import kotlin.reflect.KFunction
 import kotlin.reflect.KProperty
@@ -13,7 +13,7 @@ inline fun <reified T> Iterable<T>.test(testNamePattern: String? = null, crossin
         is Pair<*, *> -> "for: {} to {}" to arrayOf(input.first, input.second)
         else -> "for: {}" to arrayOf(input)
     }
-    DynamicTest.dynamicTest(slf4jFormat(testNamePattern ?: fallbackPattern, *args)) { executable(input) }
+    DynamicTest.dynamicTest(format(testNamePattern ?: fallbackPattern, *args)) { executable(input) }
 }
 
 

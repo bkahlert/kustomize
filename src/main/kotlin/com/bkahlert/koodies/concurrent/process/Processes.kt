@@ -73,7 +73,7 @@ object Processes {
         shellScript: ShellScript,
     ): LightweightProcess {
         val commandLine = CommandLine(environment, workingDirectory, shellScript.sanitize(workingDirectory).buildTo(tempScriptFile()).cleanUpOnShutdown())
-        return LightweightProcess(commandLine)
+        return commandLine.toLightweightProcess()
     }
 }
 
@@ -111,10 +111,9 @@ fun startShellScript(
     expectedExitValue: Int = 0,
     processTerminationCallback: (() -> Unit)? = null,
     shellScript: ShellScript,
-): ManagedProcess = ManagedProcess.forCommandLine(
-    commandLine = CommandLine(environment, workingDirectory, shellScript.sanitize(workingDirectory).buildTo(Processes.tempScriptFile())),
-    expectedExitValue = expectedExitValue,
-    processTerminationCallback = processTerminationCallback)
+): ManagedProcess =
+    CommandLine(environment, workingDirectory, shellScript.sanitize(workingDirectory).buildTo(Processes.tempScriptFile()))
+        .toManagedProcess(expectedExitValue, processTerminationCallback)
 
 /**
  * Starts the [shellScript] and returns the corresponding [Process].

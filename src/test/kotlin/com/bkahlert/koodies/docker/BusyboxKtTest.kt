@@ -1,6 +1,7 @@
 package com.bkahlert.koodies.docker
 
 import com.bkahlert.koodies.concurrent.process.IO
+import com.bkahlert.koodies.concurrent.process.process
 import com.bkahlert.koodies.test.junit.JUnit
 import com.bkahlert.koodies.test.junit.uniqueId
 import com.imgcstmzr.util.DockerRequiring
@@ -18,7 +19,7 @@ class BusyboxKtTest {
     @DockerRequiring @Test
     fun `should start busybox`() {
         val processed = mutableListOf<IO>()
-        val dockerProcess: DockerProcess = Docker.busybox(JUnit.uniqueId, "echo busybox").startAndProcess { io ->
+        val dockerProcess: DockerProcess = Docker.busybox(JUnit.uniqueId, "echo busybox").execute().process { io ->
             processed.add(io)
         }
 

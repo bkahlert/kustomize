@@ -5,6 +5,7 @@ import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
 import com.bkahlert.koodies.exception.dump
 import com.bkahlert.koodies.nio.NonBlockingReader
+import com.bkahlert.koodies.regex.matchEntire
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightMagenta
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
 import com.bkahlert.koodies.test.junit.Slow
@@ -22,7 +23,6 @@ import com.imgcstmzr.runtime.log.miniTrace
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.InMemoryLoggerFactory
-import com.imgcstmzr.util.matchEntire
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -129,10 +129,10 @@ class OperatingSystemTest {
     @Slow
     @TestFactory
     fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory): List<DynamicTest> = listOf(
-//        LoginSimulation(2.0, "\n"),
-//        LoginSimulation(0.5, "\n"),
+        LoginSimulation(2.0, "\n"),
+        LoginSimulation(0.5, "\n"),
         LoginSimulation(2.0, null),
-//        LoginSimulation(0.5, null),
+        LoginSimulation(0.5, null),
     ).test("{}") { loginSimulation ->
         val processMock = loginSimulation.buildProcess(loggerFactory)
         val runningOS = processMock.start(loginSimulation.toString())

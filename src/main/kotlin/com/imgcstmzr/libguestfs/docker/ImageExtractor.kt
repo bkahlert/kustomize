@@ -1,4 +1,4 @@
-package com.imgcstmzr.guestfish
+package com.imgcstmzr.libguestfs.docker
 
 import com.bkahlert.koodies.io.Archiver.listArchive
 import com.bkahlert.koodies.io.Archiver.unarchive

@@ -1,5 +1,9 @@
 package com.bkahlert.koodies.string
 
+import com.bkahlert.koodies.regex.group
+import com.bkahlert.koodies.regex.groupValues
+import com.bkahlert.koodies.regex.matchEntire
+import com.bkahlert.koodies.regex.value
 import com.bkahlert.koodies.string.LineSeparators.CR
 import com.bkahlert.koodies.string.LineSeparators.CRLF
 import com.bkahlert.koodies.string.LineSeparators.INTERMEDIARY_LINE_PATTERN
@@ -16,10 +20,6 @@ import com.bkahlert.koodies.string.LineSeparators.lines
 import com.bkahlert.koodies.string.LineSeparators.trailingLineSeparator
 import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
 import com.imgcstmzr.util.debug
-import com.imgcstmzr.util.group
-import com.imgcstmzr.util.groupValues
-import com.imgcstmzr.util.matchEntire
-import com.imgcstmzr.util.value
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested

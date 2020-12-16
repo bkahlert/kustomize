@@ -2,7 +2,7 @@
 
 package com.bkahlert.koodies.string
 
-import com.imgcstmzr.util.group
+import com.bkahlert.koodies.regex.group
 
 /**
  * Matches SLF4J / Logback style [curlyPattern] with this char sequence and returns a map of matches.

@@ -33,7 +33,7 @@ class DockerPsTest {
             Docker.busybox(it,
                 "while true; do",
                 "    sleep 1",
-                "done").start()
+                "done").execute()
                 .also { poll { it.alive }.every(100.milliseconds).forAtMost(15.seconds) { fail("Docker containers did not start") } }
         }
     }

@@ -10,6 +10,7 @@ import com.bkahlert.koodies.docker.DockerRunAdaptable
 import com.bkahlert.koodies.nio.file.Paths
 import com.bkahlert.koodies.shell.ShellScript
 import com.bkahlert.koodies.string.withRandomSuffix
+import com.bkahlert.koodies.terminal.ANSI
 import com.imgcstmzr.libguestfs.LibguestfsCommandLine
 import com.imgcstmzr.libguestfs.SharedPath
 import com.imgcstmzr.libguestfs.docker.VirtCustomizeDockerAdaptable
@@ -86,6 +87,9 @@ class VirtCustomizeCommandLine(
         COMMAND,
         options.flatten() + customizationOptions.flatten()) {
 
+    fun RenderingLogger.executeLogging(): Int =
+        executeLogging(caption = "Running $summary...", ansiCode = ANSI.termColors.brightBlue, nonBlockingReader = false, expectedExitValue = 0)
+
     companion object {
         const val COMMAND = "virt-customize"
 
@@ -101,7 +105,7 @@ class VirtCustomizeCommandLine(
                     disk { it.file }
                 }
                 customizationOptions(init)
-            }.execute(this)
+            }.run { executeLogging() }
     }
 
     @VirtCustomizeDsl
@@ -110,6 +114,7 @@ class VirtCustomizeCommandLine(
         private val customizationOptions: MutableList<(OperatingSystemImage) -> VirtCustomizeCustomizationOption> = mutableListOf(),
     ) {
         companion object {
+            @VirtCustomizeDsl
             fun (VirtCustomizeCommandLineBuilder.() -> Unit).build(osImage: OperatingSystemImage): VirtCustomizeCommandLine =
                 VirtCustomizeCommandLineBuilder().apply(this).let { builder ->
                     val options = builder.options.map { it(osImage) }

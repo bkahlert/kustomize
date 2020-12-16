@@ -10,14 +10,6 @@ import com.imgcstmzr.util.cleanUp
 import java.net.URI
 import java.nio.file.Path
 
-//class X(caption: String, borderedOutput: Boolean = false) :
-//    BlockRenderingLogger(caption = caption, borderedOutput = borderedOutput),
-//        (RunningProcess, IO) -> Unit {
-//    override fun invoke(runningProcess: RunningProcess, io: IO) {
-//        logLine { io.formatted }
-//    }
-//}
-
 /**
  * Utility to retrieve [OperatingSystem] images by downloading them using
  * the corresponding [OperatingSystem.downloadUrl].

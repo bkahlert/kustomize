@@ -70,7 +70,7 @@ open class OperatingSystemProcess(
                 name { name }
                 mounts { osImage.file mountAt "/sdcard/filesystem.img" }
             }
-        }.start(),
+        }.execute(),
         logger = logger,
     )
 

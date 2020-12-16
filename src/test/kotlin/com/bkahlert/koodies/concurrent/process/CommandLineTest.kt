@@ -237,7 +237,7 @@ val Assertion.Builder<CommandLine>.continuationsRemoved
 
 val Assertion.Builder<CommandLine>.evaluated: Assertion.Builder<LightweightProcess>
     get() = get("evaluated %s") {
-        LightweightProcess(this).also { it.output }
+        toLightweightProcess().also { it.output }
     }
 
 val Assertion.Builder<LightweightProcess>.output
@@ -275,5 +275,5 @@ fun Assertion.Builder<LightweightProcess>.evaluatesTo(expectedOutput: String, ex
 fun createLazyFileCreatingProcess(): Pair<ManagedProcess, Path> {
     val nonExistingFile = tempPath(extension = ".txt").deleteOnExit()
     val fileCreatingCommandLine = CommandLine(emptyMap(), Paths.Temp, "touch", nonExistingFile.serialized)
-    return ManagedProcess.forCommandLine(fileCreatingCommandLine) to nonExistingFile
+    return fileCreatingCommandLine.toManagedProcess() to nonExistingFile
 }

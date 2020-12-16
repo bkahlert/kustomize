@@ -1,3 +1,5 @@
+import com.bkahlert.koodies.nio.file.Paths.HomeDirectory
+import com.bkahlert.koodies.nio.file.Paths.WorkingDirectory
 import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
@@ -39,7 +41,6 @@ import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.applyLogging
 import com.imgcstmzr.runtime.log.logging
-import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.listFilesRecursively
 import java.io.File
@@ -76,7 +77,7 @@ class CliCommand : NoOpCliktCommand(
         context {
             autoEnvvarPrefix = "IMGCSTMZR"
             helpFormatter = ColorHelpFormatter()
-            Paths.WORKING_DIRECTORY.listFilesRecursively()
+            WorkingDirectory.listFilesRecursively()
             valueSource = ChainedValueSource(valueSources)
         }
     }
@@ -85,7 +86,7 @@ class CliCommand : NoOpCliktCommand(
         .path(mustExist = true, canBeDir = false, mustBeReadable = true)
 
     private val envFile: Path by option("--env", "--env-file", help = ".env file that can be used to pass credentials like a new user password")
-        .path(mustExist = false, canBeDir = false, mustBeReadable = false).default(Paths.USER_HOME.resolve(".env.imgcstmzr"))
+        .path(mustExist = false, canBeDir = false, mustBeReadable = false).default(HomeDirectory.resolve(".env.imgcstmzr"))
 
     private val name: String? by option(help = "name of the generated appliance").default("my-img")
 

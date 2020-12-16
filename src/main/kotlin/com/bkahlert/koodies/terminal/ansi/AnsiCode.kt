@@ -1,9 +1,9 @@
 package com.bkahlert.koodies.terminal.ansi
 
+import com.bkahlert.koodies.regex.namedGroups
 import com.bkahlert.koodies.string.Unicode
 import com.bkahlert.koodies.terminal.IDE
 import com.github.ajalt.mordant.TermColors
-import com.imgcstmzr.util.namedGroups
 import com.github.ajalt.mordant.AnsiCode as MordantAnsiCode
 
 /**

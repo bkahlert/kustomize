@@ -319,7 +319,7 @@ class ManagedJavaProcessTest {
 }
 
 private object NoopManagedProcess : ManagedProcess
-by ManagedProcess.forCommandLine(CommandLine(emptyMap(), Paths.Temp, ""), 0, {}) {
+by CommandLine(emptyMap(), Paths.Temp, "").toManagedProcess() {
     init {
         start()
     }

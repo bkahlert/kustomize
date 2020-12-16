@@ -1,5 +1,4 @@
-package com.imgcstmzr.util
-
+package com.imgcstmzr.runtime.log//import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -8,7 +7,7 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 
 @Execution(CONCURRENT)
-class Slf4jExtensionsKtTest {
+class SLF4JTest {
 
     @Nested
     inner class Replacement {
@@ -16,22 +15,23 @@ class Slf4jExtensionsKtTest {
         @Test
         fun `should fill placeholders in SLF4J style format`() {
             val slf4jStyleFormat = "A {} C {} E"
-            val actual = slf4jFormat(slf4jStyleFormat, "B", "D")
+            val actual = SLF4J.format(slf4jStyleFormat, "B", "D")
             expectThat(actual).isEqualTo("A B C D E")
         }
 
         @Test
         fun `should fill placeholders in SLF4J style format if too many args`() {
             val slf4jStyleFormat = "A {} C {} E"
-            val actual = slf4jFormat(slf4jStyleFormat, "B", "D", "Z")
+            val actual = SLF4J.format(slf4jStyleFormat, "B", "D", "Z")
             expectThat(actual).isEqualTo("A B C D E")
         }
 
         @Test
         fun `should fill placeholders in SLF4J style format if too few args`() {
             val slf4jStyleFormat = "A {} C {} E"
-            val actual = slf4jFormat(slf4jStyleFormat, "B")
+            val actual = SLF4J.format(slf4jStyleFormat, "B")
             expectThat(actual).isEqualTo("A B C {1} E")
         }
     }
 }
+

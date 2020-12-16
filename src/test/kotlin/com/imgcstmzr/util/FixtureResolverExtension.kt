@@ -1,14 +1,15 @@
 package com.imgcstmzr.util
 
 import com.bkahlert.koodies.concurrent.cleanUpOnShutDown
+import com.bkahlert.koodies.nio.file.Paths.Temp
 import com.bkahlert.koodies.nio.file.age
 import com.bkahlert.koodies.nio.file.isEmpty
 import com.bkahlert.koodies.nio.file.list
 import com.bkahlert.koodies.nio.file.tempDir
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
 import com.imgcstmzr.cli.Cache
-import com.imgcstmzr.guestfish.ImageBuilder
-import com.imgcstmzr.guestfish.ImageBuilder.buildFrom
+import com.imgcstmzr.libguestfs.docker.ImageBuilder
+import com.imgcstmzr.libguestfs.docker.ImageBuilder.buildFrom
 import com.imgcstmzr.process.Downloader
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
@@ -38,7 +39,7 @@ open class FixtureResolverExtension : ParameterResolver {
     init {
         // provokes instantiation of FixtureLog to have it clean up first
         FixtureLog.location
-        cleanUpOnShutDown { Paths.TEMP.list().filter { it.isDirectory && it.isEmpty && it.age > 1.days } }
+        cleanUpOnShutDown { Temp.list().filter { it.isDirectory && it.isEmpty && it.age > 1.days } }
     }
 
     override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =

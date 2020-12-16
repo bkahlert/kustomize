@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.nio.file
 
+import com.bkahlert.koodies.nio.file.Paths.Temp
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.Paths
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -21,7 +21,7 @@ class TempPathKtTest {
         expectThat(tempPath("base", ".test").deleteOnExit()) {
             not { exists() }
             get { fileName.serialized }.startsWith("base").endsWith(".test")
-            get { parent }.isEqualTo(Paths.TEMP)
+            get { parent }.isEqualTo(Temp)
         }
     }
 

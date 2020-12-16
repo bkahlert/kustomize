@@ -2,12 +2,12 @@ package com.bkahlert.koodies.concurrent
 
 import com.bkahlert.koodies.docker.Docker
 import com.bkahlert.koodies.docker.DockerProcess
+import com.bkahlert.koodies.nio.file.Paths.Temp
 import com.bkahlert.koodies.nio.file.age
 import com.bkahlert.koodies.nio.file.appendText
 import com.bkahlert.koodies.nio.file.delete
 import com.bkahlert.koodies.nio.file.list
 import com.bkahlert.koodies.nio.file.sameFile
-import com.imgcstmzr.util.Paths
 import com.imgcstmzr.util.isFile
 import java.nio.file.Path
 import kotlin.io.path.listDirectoryEntries
@@ -74,7 +74,7 @@ class CleanUpBuilder(private val jobs: MutableList<() -> Unit>) {
      * which deletes all files that pass the specified [filter].
      */
     fun tempFiles(filter: Path.() -> Boolean) {
-        jobs.add { Paths.TEMP.list().filter { it.isFile }.filter(filter).forEach { it.delete() } }
+        jobs.add { Temp.list().filter { it.isFile }.filter(filter).forEach { it.delete() } }
     }
 
     /**
@@ -83,7 +83,7 @@ class CleanUpBuilder(private val jobs: MutableList<() -> Unit>) {
      */
     fun allTempFiles(filter: (List<Path>) -> List<Path>) {
         jobs.add {
-            filter(Paths.TEMP.listDirectoryEntries()).forEach {
+            filter(Temp.listDirectoryEntries()).forEach {
                 it.delete()
             }
         }

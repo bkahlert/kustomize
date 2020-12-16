@@ -5,7 +5,7 @@ import com.bkahlert.koodies.concurrent.process.Processors.noopProcessor
 import com.bkahlert.koodies.concurrent.startAsCompletableFuture
 import com.bkahlert.koodies.nio.NonBlockingReader
 import com.bkahlert.koodies.terminal.ansi.AnsiStyles.tag
-import com.github.ajalt.clikt.output.TermUi
+import com.imgcstmzr.runtime.log.RenderingLogger
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.Reader
@@ -30,8 +30,14 @@ object Processors {
     /**
      * A [Processor] that prints the encountered [IO] to the console.
      */
-    fun <P : Process> printingProcessor(): Processor<P> =
-        { line -> TermUi.echo(line) }
+    fun <P : Process> loggingProcessor(logger: RenderingLogger): Processor<P> = { io ->
+        when (io.type) {
+            IO.Type.META -> logger.logLine { io }
+            IO.Type.IN -> logger.logLine { io }
+            IO.Type.OUT -> logger.logLine { io }
+            IO.Type.ERR -> logger.logLine { "Unfortunately an error occurred: ${io.formatted}" }
+        }
+    }
 
     /**
      * A [Processor] that does nothing with the [IO].
@@ -60,9 +66,8 @@ inline fun <reified P : ManagedProcess> P.silentlyProcess(): ManagedProcess =
  *
  * TOOD try out NIO processing; or just readLines with keepDelimiters respectively EOF as additional line separator
  */
-fun <P : ManagedProcess> P.process(
-    processor: Processor<P> = Processors.printingProcessor(),
-): ManagedProcess = process(true, InputStream.nullInputStream(), processor)
+fun <P : ManagedProcess> P.process(processor: Processor<P>): P =
+    process(true, InputStream.nullInputStream(), processor)
 
 /**
  * Attaches to the [Process.outputStream] and [Process.errorStream]

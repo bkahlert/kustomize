@@ -2,9 +2,10 @@
 
 package com.imgcstmzr.libguestfs
 
-import com.bkahlert.koodies.builder.buildList
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.GuestfishCommandLineBuilder.Companion.build
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.VirtCustomizeCommandLineBuilder.Companion.build
 import com.imgcstmzr.runtime.OperatingSystemImage
 import java.nio.file.Path
 
@@ -13,14 +14,20 @@ import java.nio.file.Path
  *
  * @see <a href="https://libguestfs.org/">libguestfs—tools for accessing and modifying virtual machine disk images</a>
  */
-object Libguestfs {
+class Libguestfs(private val osImage: OperatingSystemImage) {
 
-    object Guestfish {
-        fun commands(init: GuestfishCommandLine.GuestfishCommandsBuilder.() -> Unit) = init.buildList()
-    }
+    fun guestfish(init: GuestfishCommandLine.GuestfishCommandLineBuilder.() -> Unit): GuestfishCommandLine =
+        init.build(osImage)
 
-    object VirtCustomize {
-        fun customizations(init: VirtCustomizeCommandLine.VirtCustomizeCustomizationOptionsBuilder.() -> Unit) = init.buildList()
+    fun virtCustomize(init: VirtCustomizeCommandLine.VirtCustomizeCommandLineBuilder.() -> Unit): VirtCustomizeCommandLine =
+        init.build(osImage)
+
+    companion object {
+        fun of(osImage: OperatingSystemImage): Libguestfs =
+            Libguestfs(osImage)
+
+        fun OperatingSystemImage.libguestfs(): Libguestfs =
+            Libguestfs(this)
     }
 }
 

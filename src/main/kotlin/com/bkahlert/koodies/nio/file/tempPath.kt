@@ -1,7 +1,7 @@
 package com.bkahlert.koodies.nio.file
 
+import com.bkahlert.koodies.nio.file.Paths.Temp
 import com.bkahlert.koodies.nio.file.Paths.fileNameFrom
-import com.imgcstmzr.util.Paths
 import java.nio.file.Path
 
 /**
@@ -13,7 +13,7 @@ import java.nio.file.Path
  * @see tempFile
  */
 fun tempPath(base: String = "", extension: String = ""): Path =
-    Paths.TEMP.tempPath(base, extension).requireTempContained()
+    Temp.tempPath(base, extension).requireTempContained()
 
 /**
  * Creates a path to a file or directory that [notExists] yet in this directory.

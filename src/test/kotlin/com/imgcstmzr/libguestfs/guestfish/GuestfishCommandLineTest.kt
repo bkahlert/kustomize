@@ -191,7 +191,7 @@ fun Assertion.Builder<OperatingSystemImage>.mounted(logger: BlockRenderingLogger
                         }
                     }
                 }
-            }.execute(this)
+            }.run { execute() }
         }
 
         // Assert

@@ -16,16 +16,18 @@ open class DockerProcess private constructor(
     private val managedProcess: ManagedProcess,
 ) : ManagedProcess by managedProcess {
 
-    private constructor(name: String, commandLine: DockerRunCommandLine) :
-        this(name, ManagedProcess.forCommandLine(commandLine, processTerminationCallback = {
-            Docker.stop(name)
-            Docker.remove(name, forcibly = true)
-        }))
-
-    constructor(commandLine: DockerRunCommandLine) :
-        this(commandLine.options.name?.sanitized ?: error("Docker container name missing."), commandLine)
-
-    constructor(dockerRunAdaptable: DockerRunAdaptable) : this(dockerRunAdaptable.adapt())
+    companion object {
+        fun from(commandLine: DockerRunCommandLine, expectedExitValue: Int): DockerProcess {
+            val name = commandLine.options.name?.sanitized ?: error("Docker container name missing.")
+            val managedProcess = ManagedProcess.from(commandLine,
+                expectedExitValue = expectedExitValue,
+                processTerminationCallback = {
+                    Docker.stop(name)
+                    Docker.remove(name, forcibly = true)
+                })
+            return DockerProcess(name, managedProcess)
+        }
+    }
 
     init {
         metaLog("🐳 docker attach ${name.quoted}") // TODO consume by Processors
