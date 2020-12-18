@@ -10,12 +10,12 @@ object ANSI {
 val TermColors.rainbow
     get() = listOf(
         black to gray,
-        red to brightRed,
+        cyan to brightCyan,
+        blue to brightBlue,
         green to brightGreen,
         yellow to brightYellow,
-        blue to brightBlue,
         magenta to brightMagenta,
-        cyan to brightCyan,
+        red to brightRed,
     )
 val TermColors.prefix get() = rainbow.joinToString("") { (normal, bright) -> (normal.bg + bright)("░") }
 val TermColors.grayPrefix get() = rainbow.joinToString("") { (normal, _) -> (red.bg + normal)("░") }

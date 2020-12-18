@@ -54,9 +54,7 @@ class PasswordPatchTest {
         val userPasswordPattern = "$username:{}:{}:0:99999:7:::"
         check(userPassword.matchesCurlyPattern(userPasswordPattern)) { "${userPassword.debug} does not match ${userPasswordPattern.debug}" }
 
-        with(passwordPatch) {
-            patch(osImage)
-        }
+        patch(osImage, passwordPatch)
 
         expectThat(osImage.credentials).isEqualTo(Credentials(username, newPassword))
         expectThat(osImage).booted(this) {
@@ -67,9 +65,8 @@ class PasswordPatchTest {
 
     @FifteenMinutesTimeout @E2E @Test
     fun InMemoryLogger.`should not be able to use old password`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-        with(PasswordPatch(osImage.operatingSystem, RaspberryPiLite.defaultCredentials.username, "po")) {
-            patch(osImage)
-        }
+        patch(osImage, PasswordPatch(osImage.operatingSystem, RaspberryPiLite.defaultCredentials.username, "po"))
+
         expectCatching {
             osImage.credentials = Credentials("pi", "wrong password")
             osImage.execute(logger = this, autoLogin = true)

@@ -118,9 +118,9 @@ object ImageBuilder {
             archiveDirectory.resolve(it).delete(false)
         }
         logLine {
-            val formattedTotalSize = totalSize.round().toString(BinaryPrefix::class)
-            val formattedRootSize = (totalSize.round() - bootSize.round()).toString(BinaryPrefix::class)
-            val formattedBootSize = bootSize.round().toString(BinaryPrefix::class)
+            val formattedTotalSize = totalSize.round().toString<BinaryPrefix>()
+            val formattedRootSize = (totalSize.round() - bootSize.round()).toString<BinaryPrefix>()
+            val formattedBootSize = bootSize.round().toString<BinaryPrefix>()
             "Size: ${formattedTotalSize.yellow()} — ${"/".cyan()} ${formattedRootSize.brightYellow()} — ${"boot".cyan()} ${formattedBootSize.brightYellow()}"
         }
 

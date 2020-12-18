@@ -1,7 +1,9 @@
 package com.imgcstmzr.runtime
 
+import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.unit.Size
+import com.imgcstmzr.runtime.log.RenderingLogger
 import kotlin.text.RegexOption.IGNORE_CASE
 import kotlin.time.milliseconds
 import kotlin.time.seconds
@@ -210,17 +212,40 @@ interface OperatingSystem {
      * Creates a program to shutdown immediately.
      */
     fun shutdownProgram(): Program {
+        class IOWatchDog(private val logger: RenderingLogger, timedOut: RenderingLogger.() -> Any) : Watchdog(
+            timeout = 5.seconds,
+            timedOut = timedOut,
+            logger = logger,
+        ) {
+            var lastIO: String? = null
+            fun reset(io: String) {
+                if (lastIO != io) {
+                    super.reset()
+                    lastIO = io
+                } else logger.logLine { IO.Type.META typed "Watchdog reset attempt ignored. Timing out in $remaining." }
+            }
+        }
+
+        var deadMansSwitch: IOWatchDog? = null
+
         var shutdownLastEntered = 0L
         fun OperatingSystemProcess.enterShutdown() {
             if (Now.passedSince(shutdownLastEntered) > 10.seconds) {
+                deadMansSwitch?.stop()
+                deadMansSwitch = null
                 enter(shutdownCommand)
                 shutdownLastEntered = Now.millis
             }
         }
 
         return Program(
-            "shutdown", { "shutting down" },
+            "shutdown",
+            {
+                deadMansSwitch = IOWatchDog(logger) { enterShutdown() }
+                "shutting down"
+            },
             "shutting down" to { output ->
+                deadMansSwitch?.reset(output)
                 when {
                     output.matches(readyPattern) -> {
                         enterShutdown()

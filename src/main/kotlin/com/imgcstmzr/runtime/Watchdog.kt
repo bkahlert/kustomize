@@ -3,6 +3,7 @@ package com.imgcstmzr.runtime
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.concurrent.startAsThread
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
+import com.bkahlert.koodies.time.Now
 import com.imgcstmzr.runtime.Watchdog.Command.RESET
 import com.imgcstmzr.runtime.Watchdog.Command.STOP
 import com.imgcstmzr.runtime.log.RenderingLogger
@@ -29,29 +30,36 @@ open class Watchdog(
     /**
      * Logger that can be accessed in [timedOut].
      */
-    private val renderingLogger: RenderingLogger = DEFAULT,
+    private val logger: RenderingLogger? = DEFAULT,
     /**
      * Gets called after more time has passed between the start of this watchdog and/or two consecutive [reset] calls.
      */
     val timedOut: RenderingLogger.() -> Any,
 ) {
+    private var timeoutStart: Long = -1L
     private val blockingQueue = LinkedBlockingQueue<Command>()
     private val thread = startAsThread {
         var lastEvent: Command? = RESET
         while (true) {
             try {
-                when (blockingQueue.poll(timeout.toLongMilliseconds(), TimeUnit.MILLISECONDS)) {
+                when (blockingQueue.poll(timeout.toLongMilliseconds().also {
+                    timeoutStart = System.currentTimeMillis()
+                    logger?.logLine { IO.Type.META typed "Watchdog started. Timing out in $remaining." }
+                }, TimeUnit.MILLISECONDS)) {
                     RESET -> {
-                        // start another poll
+                        logger?.logLine { IO.Type.META typed "Watchdog reset. Timing out in $timeout." }
                         lastEvent = RESET
                     }
                     STOP -> {
-                        renderingLogger.logLine { IO.Type.META typed "Watchdog stopped." }
+                        logger?.logLine { IO.Type.META typed "Watchdog stopped." }
                         lastEvent = STOP
                         break
                     }
                     null -> {
-                        if (lastEvent != null) renderingLogger.timedOut()
+                        if (lastEvent != null) {
+                            logger?.logLine { IO.Type.META typed "Watchdog timed out. Invoking $timedOut." }
+                            logger?.timedOut()
+                        }
                         lastEvent = null
                         if (!repeating) break
                     }
@@ -63,12 +71,14 @@ open class Watchdog(
         }
     }
 
+    val remaining: kotlin.time.Duration get() = timeout - Now.passedSince(timeoutStart)
+
     /**
      * A call to [reset] resets the timer that ticks against [timeout].
      * E.g. if [timeout] was 15s and the watchdog is running since 10s the [timedOut] would be called in 5s.
      * After having called [reset] the time it takes until [timedOut] is called, is again 15s.
      */
-    fun reset() {
+    open fun reset() {
         if (thread.isAlive) {
             blockingQueue.put(RESET)
         }

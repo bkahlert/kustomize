@@ -2,12 +2,16 @@ package com.imgcstmzr.patch
 
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.nio.file.listRecursively
+import com.bkahlert.koodies.string.LineSeparators
 import com.bkahlert.koodies.string.withRandomSuffix
 import com.bkahlert.koodies.terminal.ANSI
+import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightMagenta
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.imgcstmzr.libguestfs.SharedPath
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.runGuestfishOn
 import com.imgcstmzr.libguestfs.resolveOnDisk
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine
@@ -27,7 +31,6 @@ import com.imgcstmzr.runtime.log.logging
 import com.imgcstmzr.runtime.log.singleLineLogging
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.isFile
-import com.imgcstmzr.util.listFilesRecursively
 import java.nio.file.Path
 
 /**
@@ -35,6 +38,9 @@ import java.nio.file.Path
  * by applying a range of operations on it.
  */
 interface Patch {
+
+    var trace: Boolean
+
     /**
      * Name of the patch.
      */
@@ -44,156 +50,155 @@ interface Patch {
      * Operations to be applied on the actual raw `.img` file
      * before operations "inside" the `.img` file take place.
      */
-    @Deprecated("replace with virtcustomize")
-    val preFileImgOperations: List<ImgOperation>
+    val diskPreparations: List<DiskOperation>
 
     /**
      * Options to be applied on the img file
      * using the [VirtCustomizeCommandLine].
      */
-    val customizationOptions: List<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>
+    val diskCustomizations: List<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>
 
     /**
      * Operations to be applied on the mounted file system
-     * using the [Guestfish] tool.
+     * using the [GuestfishCommandLine] tool.
      */
-    val guestfishCommands: List<(OperatingSystemImage) -> GuestfishCommand>
+    val diskOperations: List<(OperatingSystemImage) -> GuestfishCommand>
 
     /**
      * Operations on files of the externally, not immediately
      * accessible file system.
      */
-    val fileSystemOperations: List<PathOperation>
+    val fileOperations: List<FileOperation>
 
     /**
      * Operations to be applied on the actual raw `.img` file
      * after operations "inside" the `.img` file take place.
      */
-    val postFileImgOperations: List<ImgOperation>
+    val osPreparations: List<DiskOperation>
 
     /**
-     * Operations (in the form of [programs]) to be applied
+     * Operations (in the form of [osOperations]) to be applied
      * on the booted operating system.
      */
-    val programs: List<Program>
+    val osOperations: List<(OperatingSystemImage) -> Program>
 
-    fun RenderingLogger?.patch(osImage: OperatingSystemImage) =
-        logging(name.toUpperCase(), null, borderedOutput = false) {
-            applyPreFileImgOperations(osImage)
-            applyCustomizationOptions(osImage)
-            applyGuestfishCommandsAndFileSystemOperations(osImage)
-            applyPostFileImgOperations(osImage)
-            applyPrograms(osImage)
+    fun patch(osImage: OperatingSystemImage, logger: RenderingLogger?, trace: Boolean = false): List<Throwable> {
+        this.trace = trace
+        return logger.logging(name.brightMagenta(), null, (logger as? BlockRenderingLogger)?.borderedOutput ?: true) {
+            applyDiskPreparations(osImage) +
+                applyDiskCustomizations(osImage) +
+                applyDiskAndFileOperations(osImage) +
+                applyOsPreparations(osImage) +
+                applyOsOperations(osImage)
+        }
+    }
+
+    fun <T, R : Any, L : RenderingLogger> L.runCollecting(
+        operations: List<T>,
+        transform: (index: Int, operation: T, logger: L) -> R?,
+    ): List<Throwable> =
+        operations.mapIndexedNotNull { index, operation: T ->
+            runCatching {
+                transform(index, operation, this)
+            }.exceptionOrNull()
         }
 
-    fun RenderingLogger.applyPreFileImgOperations(osImage: OperatingSystemImage): Any =
-        if (preFileImgOperations.isEmpty()) {
-            logLine { META typed "IMG Operations: —" }
+    fun <R : Any, L : RenderingLogger> L.runCollecting(
+        transform: (logger: L) -> R?,
+    ): List<Throwable> = runCatching {
+        transform(this)
+    }.exceptionOrNull()?.let { listOf(it) } ?: emptyList()
+
+    fun RenderingLogger.applyDiskPreparations(osImage: OperatingSystemImage): List<Throwable> =
+        if (diskPreparations.isEmpty()) emptyList<Throwable>().also { logLine { META typed "Disk Preparation: —" } }
+        else logging("Disk Preparation (${diskPreparations.size})", null, borderedOutput = false) {
+            runCollecting(diskPreparations) { _, preparation, logger -> preparation(osImage, logger) }
+        }
+
+    fun RenderingLogger.applyDiskCustomizations(osImage: OperatingSystemImage): List<Throwable> =
+        if (diskCustomizations.isEmpty()) {
+            logLine { META typed "Disk Customization: —" }
+            emptyList()
         } else {
-            logging("IMG Operations (${preFileImgOperations.size})", null, borderedOutput = false) {
-                preFileImgOperations.onEachIndexed { _, op ->
-                    op(osImage, this)
+            runCollecting {
+                logging("Disk Customization (${diskCustomizations.size})", null, borderedOutput = false) {
+                    virtCustomize(osImage, trace = trace) {
+                        +diskCustomizations
+                    }
                 }
             }
         }
 
-    fun RenderingLogger.applyCustomizationOptions(osImage: OperatingSystemImage): Any =
-        if (customizationOptions.isEmpty()) {
-            logLine { META typed "Customization Options: —" }
+    fun RenderingLogger.applyDiskAndFileOperations(osImage: OperatingSystemImage): List<Throwable> =
+        if (diskOperations.isEmpty() && fileOperations.isEmpty()) {
+            logLine { META typed "Disk Operations: —" }
+            logLine { META typed "File Operations: —" }
+            emptyList()
         } else {
-            logging("Customization Options (${customizationOptions.size})", null, borderedOutput = false) {
-                virtCustomize(osImage) {
-                    +customizationOptions
-                }
-            }
-        }
+            val exceptions = mutableListOf<Throwable>()
 
-    fun RenderingLogger.applyGuestfishCommands(osImage: OperatingSystemImage): Any =
-        if (guestfishCommands.isEmpty()) {
-            logLine { META typed "Guestfish Commands: —" }
-        } else {
-            logging("Guestfish Commands (${guestfishCommands.size})", null, borderedOutput = false) {
-                runGuestfishOn(osImage) {
-                    +guestfishCommands
-                }
-            }
-        }
-
-    fun RenderingLogger.applyGuestfishCommandsAndFileSystemOperations(osImage: OperatingSystemImage): Any =
-        if (guestfishCommands.isEmpty() && fileSystemOperations.isEmpty()) {
-            logLine { META typed "File System Operations: —" }
-        } else {
-            logging("File System Operations (${guestfishCommands.size + fileSystemOperations.size})", null) {
-                logLine { META typed "Starting Guestfish VM..." }
-
-                applyGuestfishCommands(osImage)
-
-                val guestPaths: List<Path> = fileSystemOperations.map { it.target }
-                if (guestPaths.isNotEmpty()) {
-                    runGuestfishOn(osImage) {
-                        guestPaths.forEach { sourcePath ->
+            runCollecting {
+                logging("Disk Operations (${diskOperations.size})", null) {
+                    runGuestfishOn(osImage, trace = trace, { "Applying ${diskOperations.size} and fishing for ${fileOperations.size} files" }) {
+                        fileOperations.map { it.target }.forEach { sourcePath ->
                             val sanitizedSourcePath = Path.of("/").asRootFor(sourcePath)
                             copyOut { it.resolveOnDisk(sanitizedSourcePath) }
                         }
-                        +guestfishCommands
+                        +diskOperations
                     }
-                } else {
-                    logLine { META typed "No files to extract." }
                 }
+            }.also { exceptions.addAll(it) }
 
+            logging("File Operations (${fileOperations.size})", null) {
                 val root = SharedPath.Host.resolveRoot(osImage)
-                val filesToPatch = fileSystemOperations.toMutableList()
+                val filesToPatch = fileOperations.toMutableList()
                 if (filesToPatch.isNotEmpty()) {
-                    val unprocessedActions: MutableList<PathOperation> = filesToPatch
-                    while (unprocessedActions.isNotEmpty()) {
-                        val action = unprocessedActions.removeFirst()
-                        val path = action.target
-                        action.invoke(root.asRootFor(path), this)
-                    }
+                    runCollecting(filesToPatch) { _, fileOperation, logger ->
+                        val path = fileOperation.target
+                        fileOperation.invoke(root.asRootFor(path), logger)
+                    }.forEach { exceptions.add(it) }
                 } else {
                     logLine { META typed "No files to patch." }
                 }
 
-                val changedFiles = root.listFilesRecursively({ it.isFile }).map { root.relativize(it) }.toList()
-                if (changedFiles.isNotEmpty()) {
-                    logging("Syncing changes back") {
-                        runGuestfishOn(osImage) { tarIn() }
-                    }
+                val changedFiles = root.listRecursively().filter { it.isFile }.count()
+                if (changedFiles > 0) {
+                    runCollecting {
+                        runGuestfishOn(osImage, trace = trace, { "Throwing $changedFiles files back into water" }) { tarIn() }
+                    }.also { exceptions.addAll(it) }
                 } else {
                     logLine { META typed "No changed files to copy back." }
                 }
             }
+
+            exceptions
         }
 
-    fun RenderingLogger.applyPostFileImgOperations(osImage: OperatingSystemImage): Any =
-        if (postFileImgOperations.isEmpty()) {
-            logLine { META typed "IMG Operations II: —" }
-            false
-        } else {
-            logging("IMG Operations II (${postFileImgOperations.size})", null, borderedOutput = false) {
-                postFileImgOperations.onEachIndexed { index, op ->
-                    op(osImage, this)
-                }
-            }
-            true
+    fun RenderingLogger.applyOsPreparations(osImage: OperatingSystemImage): List<Throwable> =
+        if (osPreparations.isEmpty()) emptyList<Throwable>().also { logLine { META typed "OS Preparation: —" } }
+        else logging("OS Preparation (${osPreparations.size})", null, borderedOutput = false) {
+            runCollecting(osPreparations) { _, preparation, logger -> preparation(osImage, logger) }
         }
 
-    fun RenderingLogger.applyPrograms(osImage: OperatingSystemImage): Any =
-        if (programs.isEmpty()) {
-            logLine { META typed "Scripts: —" }
-        } else {
-            logging("Scripts (${programs.size})", null) {
-                programs.onEach { program ->
-                    osImage.execute(
-                        name = program.name.withRandomSuffix(),
-                        logger = this,
-                        autoLogin = true,
-                        program
-                    )
-                }
-            }
+    fun RenderingLogger.applyOsOperations(osImage: OperatingSystemImage): List<Throwable> =
+        if (osOperations.isEmpty()) emptyList<Throwable>().also { logLine { META typed "OS Operations: —" } }
+        else runCollecting {
+            osImage.execute(
+                name = name.withRandomSuffix(),
+                logger = this@applyOsOperations,
+                autoLogin = true,
+                *osOperations.map { it(osImage) }.toTypedArray()
+            )
         }
 }
+
+fun List<Patch>.patch(osImage: OperatingSystemImage): List<Throwable> =
+    logging("Applying $size patches to ${osImage.shortName}") {
+        flatMap { patch(osImage, it) }
+    }
+
+fun RenderingLogger?.patch(osImage: OperatingSystemImage, patch: Patch): List<Throwable> =
+    patch.patch(osImage, this)
 
 /**
  * A patch that combines the specified [patches].
@@ -202,15 +207,16 @@ interface Patch {
  * as less reboots are necessary.
  */
 class CompositePatch(
-    private val patches: Collection<Patch>,
+    val patches: Collection<Patch>,
 ) : Patch by SimplePatch(
-    patches.joinToString(" + ") { it.name },
-    patches.flatMap { it.preFileImgOperations }.toList(),
-    patches.flatMap { it.customizationOptions }.toList(),
-    patches.flatMap { it.guestfishCommands }.toList(),
-    patches.flatMap { it.fileSystemOperations }.toList(),
-    patches.flatMap { it.postFileImgOperations }.toList(),
-    patches.flatMap { it.programs }.toList(),
+    patches.any { it.trace },
+    patches.joinToString(LineSeparators.LF) { it.name },
+    patches.flatMap { it.diskPreparations }.toList(),
+    patches.flatMap { it.diskCustomizations }.toList(),
+    patches.flatMap { it.diskOperations }.toList(),
+    patches.flatMap { it.fileOperations }.toList(),
+    patches.flatMap { it.osPreparations }.toList(),
+    patches.flatMap { it.osOperations }.toList(),
 )
 
 interface Operation<TARGET> : HasStatus {
@@ -220,24 +226,24 @@ interface Operation<TARGET> : HasStatus {
         Ready({ label -> ANSI.termColors.bold(label) }),
         Running({ label -> ANSI.termColors.bold(label) }),
         Finished({ label -> ANSI.termColors.strikethrough(label) }),
-        Failure({ label -> ANSI.termColors.red(label + "XXTODO") });
+        Failure({ label -> ANSI.termColors.red(label) });
 
         operator fun invoke(label: String): String = formatter(label)
     }
 
-    operator fun invoke(target: TARGET, log: BlockRenderingLogger)
+    operator fun invoke(target: TARGET, logger: BlockRenderingLogger)
 
     val target: TARGET
 
     override fun status(): String
 }
 
-class PathOperation(override val target: Path, val verifier: (Path) -> Any, val handler: (Path) -> Any) : Operation<Path> {
+class FileOperation(override val target: Path, val verifier: (Path) -> Any, val handler: (Path) -> Any) : Operation<Path> {
 
     override var currentStatus: Operation.Status = Ready
 
-    override operator fun invoke(target: Path, log: BlockRenderingLogger) {
-        log.singleLineLogging(target.fileName.toString()) {
+    override operator fun invoke(target: Path, logger: BlockRenderingLogger) {
+        logger.singleLineLogging(target.fileName.toString()) {
             logLine { OUT typed ANSI.termColors.yellow("Action needed? ...") }
             val result = runCatching { verifier.invoke(target) }
             if (result.isFailure) {
@@ -252,7 +258,6 @@ class PathOperation(override val target: Path, val verifier: (Path) -> Any, val 
                 }
             }
             currentStatus = Finished
-            currentStatus
         }
     }
 

@@ -10,7 +10,6 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.libguestfs.docker.ImageBuilder
 import com.imgcstmzr.libguestfs.docker.ImageBuilder.buildFrom
-import com.imgcstmzr.process.Downloader
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
@@ -18,6 +17,7 @@ import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.MutedRenderingLogger
 import com.imgcstmzr.runtime.log.runLogging
+import com.imgcstmzr.tools.Downloader
 import com.imgcstmzr.util.FixtureLog.deleteOnExit
 import com.imgcstmzr.util.logging.OutputCaptureExtension.Companion.isCapturingOutput
 import org.junit.jupiter.api.extension.ExtensionContext

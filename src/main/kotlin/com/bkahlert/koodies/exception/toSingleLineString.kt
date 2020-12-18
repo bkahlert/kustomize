@@ -5,7 +5,7 @@ import com.bkahlert.koodies.string.LineSeparators.lines
 import java.nio.file.Path
 
 fun Any?.toSingleLineString(): String {
-    if (this == null || this == Unit) return ""
+    if (this == null || this == Unit || (this is Collection<*> && this.isEmpty())) return ""
     if (this is Path) return "${toUri()}"
     if (this is Process) return also { waitFor() }.exitValue.toString()
     if (this is java.lang.Process) return also { waitFor() }.exitValue().toString()

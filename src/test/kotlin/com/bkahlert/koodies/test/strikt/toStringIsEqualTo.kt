@@ -48,7 +48,7 @@ fun Assertion.Builder<*>.asString(trim: Boolean = true): DescribeableBuilder<Str
         val string = when (this) {
             is CodePoint -> this.string
             is Grapheme -> this.asString
-            is Size -> this.toString(BinaryPrefix::class)
+            is Size -> this.toString<BinaryPrefix>()
             else -> this.toString()
         }
         string.takeUnless { trim } ?: string.trim()

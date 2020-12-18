@@ -1,6 +1,6 @@
 package com.bkahlert.koodies.docker
 
-import com.bkahlert.koodies.builder.ListBuilder
+import com.bkahlert.koodies.builder.ListBuilder.Companion.buildList
 import com.bkahlert.koodies.builder.ListBuilderInit
 import com.bkahlert.koodies.builder.MapBuilderInit
 import com.bkahlert.koodies.builder.build
@@ -37,7 +37,7 @@ data class DockerRunCommandLine(
         val interactive: Boolean = true,
         val pseudoTerminal: Boolean = false,
         val mounts: List<MountOption> = emptyList(),
-    ) : List<String> by (ListBuilder.build {
+    ) : List<String> by (buildList {
         env.forEach {
             +"--env"
             +"${it.key}=${it.value}"
@@ -83,7 +83,7 @@ class DockerRunCommandLineBuilder(
         fun build(dockerImage: DockerImage, init: DockerRunCommandLineBuilder.() -> Unit): DockerRunCommandLine =
             DockerRunCommandLineBuilder().apply(init).run {
                 DockerRunCommandLine(
-                    workingDirectory = workingDirectory ?: error("Missing working directory"),
+                    workingDirectory = workingDirectory,
                     dockerRedirects = redirects,
                     options = dockerOptions,
                     dockerImage = dockerImage,

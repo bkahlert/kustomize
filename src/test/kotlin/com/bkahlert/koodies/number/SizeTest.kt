@@ -91,8 +91,8 @@ class SizeTest {
             42.Kibi.bytes to "42.0 KiB",
             42.bytes to "42 B",
         ).map { (size: Size, expected: String) ->
-            val actual = size.toString(BinaryPrefix::class)
-            val actualNegative = (-size).toString(BinaryPrefix::class)
+            val actual = size.toString<BinaryPrefix>()
+            val actualNegative = (-size).toString<BinaryPrefix>()
             dynamicTest("$expected == $actual ← ${size.bytes}") {
                 expectThat(actual).isEqualTo(expected)
             } to dynamicTest("-$expected == $actualNegative ← ${(-size).bytes}") {
@@ -117,8 +117,8 @@ class SizeTest {
             .042.Gibi.bytes to "43.0 MiB",
             .0042.Gibi.bytes to "4.30 MiB",
         ).map { (size: Size, expected: String) ->
-            val actual = size.toString(BinaryPrefix::class)
-            val actualNegative = (-size).toString(BinaryPrefix::class)
+            val actual = size.toString<BinaryPrefix>()
+            val actualNegative = (-size).toString<BinaryPrefix>()
             dynamicTest("$expected == $actual ← ${size.bytes}") {
                 expectThat(actual).isEqualTo(expected)
             } to dynamicTest("-$expected == $actualNegative ← ${(-size).bytes}") {
@@ -138,7 +138,7 @@ class SizeTest {
             0.Kibi.bytes to "0 B",
             0.bytes to "0 B",
         ).map { (size: Size, expected: String) ->
-            val actual = size.toString(BinaryPrefix::class)
+            val actual = size.toString<BinaryPrefix>()
             dynamicTest("$expected == $actual ← ${size.bytes}") {
                 expectThat(actual).isEqualTo(expected)
             }
@@ -200,8 +200,8 @@ class SizeTest {
             42.kilo.bytes to "42.0 KB",
             42.bytes to "42 B",
         ).map { (size: Size, expected: String) ->
-            val actual = size.toString(DecimalPrefix::class)
-            val actualNegative = (-size).toString(DecimalPrefix::class)
+            val actual = size.toString<DecimalPrefix>()
+            val actualNegative = (-size).toString<DecimalPrefix>()
             dynamicTest("$expected == $actual ← ${size.bytes}") {
                 expectThat(actual).isEqualTo(expected)
             } to dynamicTest("-$expected == $actualNegative ← ${(-size).bytes}") {
@@ -226,8 +226,8 @@ class SizeTest {
             .042.Giga.bytes to "42.0 MB",
             .0042.Giga.bytes to "4.20 MB",
         ).map { (size: Size, expected: String) ->
-            val actual = size.toString(DecimalPrefix::class)
-            val actualNegative = (-size).toString(DecimalPrefix::class)
+            val actual = size.toString<DecimalPrefix>()
+            val actualNegative = (-size).toString<DecimalPrefix>()
             dynamicTest("$expected == $actual ← ${size.bytes}") {
                 expectThat(actual).isEqualTo(expected)
             } to dynamicTest("-$expected == $actualNegative ← ${(-size).bytes}") {
@@ -304,12 +304,12 @@ class SizeTest {
 
         @Test
         fun `should format size human-readable (10^x)`() {
-            expectThat(tempFile.size.toString(DecimalPrefix::class)).isEqualTo("25.0 KB")
+            expectThat(tempFile.size.toString<DecimalPrefix>()).isEqualTo("25.0 KB")
         }
 
         @Test
         fun `should format size human-readable (2^y)`() {
-            expectThat(tempFile.size.toString(BinaryPrefix::class)).isEqualTo("24.4 KiB")
+            expectThat(tempFile.size.toString<BinaryPrefix>()).isEqualTo("24.4 KiB")
         }
     }
 

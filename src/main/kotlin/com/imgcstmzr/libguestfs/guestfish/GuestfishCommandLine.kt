@@ -48,23 +48,29 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
             }
     ) {
 
-    fun RenderingLogger.executeLogging(): Int =
-        executeLogging(caption = "Running ${guestfishCommands.size} guestfish operations... ${Kaomojis.fishing()}",
-            ansiCode = ANSI.randomColor,
+    fun RenderingLogger.executeLogging(caption: List<GuestfishCommand>.() -> String = DEFAULT_CAPTION): Int =
+        executeLogging(caption = caption(guestfishCommands),
+            ansiCode = ANSI.termColors.blue,
             nonBlockingReader = false,
             expectedExitValue = 0)
 
     companion object {
         const val COMMAND = "guestfish"
+        val DEFAULT_CAPTION: List<GuestfishCommand>.() -> String = { "Running $size guestfish operations... ${Kaomojis.fishing()}" }
 
         @GuestfishDsl
         fun build(osImage: OperatingSystemImage, init: GuestfishCommandLineBuilder.() -> Unit) = init.build(osImage)
 
         @GuestfishDsl
-        fun RenderingLogger.runGuestfishOn(osImage: OperatingSystemImage, init: GuestfishCommandsBuilder.() -> Unit): Int =
+        fun RenderingLogger.runGuestfishOn(
+            osImage: OperatingSystemImage,
+            trace: Boolean = false,
+            caption: List<GuestfishCommand>.() -> String = DEFAULT_CAPTION,
+            init: GuestfishCommandsBuilder.() -> Unit,
+        ): Int =
             build(osImage) {
                 env {
-                    trace { on }
+                    if (trace) trace { on }
                     debug { off }
                 }
 
@@ -76,11 +82,11 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
                     mount { Path.of("/dev/sda1") to Path.of("/boot") }
                 }
                 commands(init)
-            }.run { executeLogging() }
+            }.run { executeLogging(caption(guestfishCommands)) }
 
-        fun OperatingSystemImage.copyOut(path: String): Path {
+        fun OperatingSystemImage.copyOut(path: String, trace: Boolean = false): Path {
             logging("copying out $path") {
-                runGuestfishOn(this@copyOut) {
+                runGuestfishOn(this@copyOut, trace = trace) {
                     copyOut { it.resolveOnDisk(path) }
                 }
             }

@@ -5,9 +5,10 @@ import com.bkahlert.koodies.kaomoji.Kaomojis.thinking
 import com.bkahlert.koodies.string.codePointSequence
 import com.bkahlert.koodies.terminal.IDE
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.hidden
-import org.junit.jupiter.api.DynamicContainer.dynamicContainer
-import org.junit.jupiter.api.DynamicTest.dynamicTest
+import com.bkahlert.koodies.test.junit.test
+import com.bkahlert.koodies.test.strikt.toStringIsEqualTo
 import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
@@ -21,38 +22,29 @@ import strikt.assertions.startsWith
 @Execution(CONCURRENT)
 class KaomojisTest {
 
-    @TestFactory
-    fun `should create random Kaomoji`() = (0 until 10).map { i ->
+    @RepeatedTest(10)
+    fun `should create random Kaomoji`() {
         val kaomoji = Kaomojis.random()
-        dynamicTest(kaomoji) {
+        expectThat(kaomoji).get { codePointSequence().count() }.isGreaterThanOrEqualTo(3)
+    }
+
+    @TestFactory
+    fun `should create random Kaomoji from`() =
+        Kaomojis.Generator.values().test("{}") { category ->
+            val kaomoji = category.random()
             expectThat(kaomoji).get { codePointSequence().count() }.isGreaterThanOrEqualTo(3)
         }
-    }
 
-    @TestFactory
-    fun `should create random Kaomoji from`() = Kaomojis.Generator.values().map { category ->
-        dynamicContainer(category.name, (0 until 10).map { i ->
-            val kaomoji = category.random()
-            dynamicTest(kaomoji) {
-                expectThat(kaomoji).get { codePointSequence().count() }.isGreaterThanOrEqualTo(3)
-            }
-        })
-    }
-
-    @TestFactory
+    @RepeatedTest(10)
     fun `should create random dogs`() = (0 until 10).map { i ->
         val kaomoji = Kaomojis.Dogs.random()
-        dynamicTest(kaomoji) {
-            expectThat(kaomoji).get { length }.isGreaterThanOrEqualTo(5)
-        }
+        expectThat(kaomoji).get { length }.isGreaterThanOrEqualTo(5)
     }
 
-    @TestFactory
+    @RepeatedTest(10)
     fun `should create random wizards`() = (0 until 10).map { i ->
         val kaomoji = Kaomojis.`(＃￣_￣)o︠・━・・━・━━・━☆`.random()
-        dynamicTest(kaomoji) {
-            expectThat(kaomoji).get { length }.isGreaterThanOrEqualTo(5)
-        }
+        expectThat(kaomoji).get { length }.isGreaterThanOrEqualTo(5)
     }
 
     @Nested
@@ -71,12 +63,39 @@ class KaomojisTest {
     inner class RandomFishingKaomoji {
         @Test
         fun `should be created with random fisher and specified fish`() {
-            expectThat(fishing("❮°«⠶＞˝")).endsWith("o/￣￣￣❮°«⠶＞˝")
+            expectThat(fishing(Kaomojis.Fish.`❮°«⠶＞˝`)).endsWith("o/￣￣￣❮°«⠶＞˝")
         }
 
         @Test
         fun `should be created with specified fisher and random fish`() {
             expectThat(Kaomojis.Shrug[0].fishing()).startsWith("┐(´д｀)o/￣￣￣")
+        }
+    }
+
+    @Nested
+    inner class Categories {
+        @Test
+        fun `should use manually specified form`() {
+            val kaomoji = Kaomojis.Angry.`(`A´)`
+            expectThat(kaomoji).toStringIsEqualTo("(`A´)")
+        }
+
+        @Test
+        fun `should parse automatically`() {
+            val kaomoji = Kaomojis.Angry.`(`A´)`
+            expectThat(kaomoji) {
+                get("left arm") { leftArm }.isEqualTo("(")
+                get("right arm") { rightArm }.isEqualTo(")")
+                get("left eye") { leftEye }.isEqualTo("`")
+                get("right eye") { rightEye }.isEqualTo("´")
+                get("mouth") { mouth }.isEqualTo("A")
+            }
+        }
+
+        @Test
+        fun `should be enumerable`() {
+            expectThat(Kaomojis.Angry.subList(2, 5).joinToString { "$it" })
+                .isEqualTo("눈_눈, ಠ⌣ಠ, ಠ▃ಠ")
         }
     }
 }

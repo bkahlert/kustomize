@@ -1,37 +1,27 @@
 package com.imgcstmzr
 
-import com.bkahlert.koodies.builder.ListBuilder.Companion.build
-import com.bkahlert.koodies.concurrent.process.Processes.evalToOutput
-import com.bkahlert.koodies.nio.file.readText
 import com.bkahlert.koodies.shell.ShellScript
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightMagenta
-import com.bkahlert.koodies.terminal.ascii.Boxes
-import com.bkahlert.koodies.terminal.ascii.Boxes.Companion.wrapWithBox
 import com.bkahlert.koodies.test.junit.ThirtyMinutesTimeout
 import com.bkahlert.koodies.test.junit.systemproperties.SystemProperties
 import com.bkahlert.koodies.test.junit.systemproperties.SystemProperty
 import com.bkahlert.koodies.unit.Giga
-import com.bkahlert.koodies.unit.Size
 import com.bkahlert.koodies.unit.Size.Companion.bytes
-import com.bkahlert.koodies.unit.Size.Companion.toSize
 import com.imgcstmzr.patch.CompositePatch
 import com.imgcstmzr.patch.ImgResizePatch
 import com.imgcstmzr.patch.PasswordPatch
-import com.imgcstmzr.patch.Patch
 import com.imgcstmzr.patch.ShellScriptPatch
 import com.imgcstmzr.patch.SshAuthorizationPatch
 import com.imgcstmzr.patch.SshEnablementPatch
 import com.imgcstmzr.patch.UsbOnTheGoPatch
 import com.imgcstmzr.patch.UsernamePatch
 import com.imgcstmzr.patch.booted
-import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.empty
+import com.imgcstmzr.patch.patch
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.withPassword
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.util.OS
 import com.imgcstmzr.util.logging.InMemoryLogger
 import com.typesafe.config.ConfigFactory
-import io.github.config4k.extract
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -44,7 +34,6 @@ import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isTrue
-import java.nio.file.Path
 
 @SystemProperties(
     SystemProperty("IMG_CSTMZR_USERNAME", "FiFi"),
@@ -53,21 +42,15 @@ import java.nio.file.Path
 @Execution(CONCURRENT)
 class ImgCstmzrConfigTest {
 
-    private fun loadImgCstmztn(): ImageCustomization {
-        val config = ConfigFactory.systemProperties()
-            .withFallback(ConfigFactory.parseResources("sample.conf"))
-            .withFallback(ConfigFactory.parseString(Path.of(".env").readText()))
-            .resolve()
-
-        val imgCstmztn = config.extract<ImageCustomization>("img-cstmztn")
-        return imgCstmztn
-    }
+    private fun loadImgCstmztn(): ImgCstmzrConfig =
+        ImgCstmzrConfig.load(ConfigFactory.parseResources("sample.conf"))
 
     @Test
     fun `should deserialize`() {
         val imgCstmztn = loadImgCstmztn()
 
         expectThat(imgCstmztn).compose("has equal properties") {
+            get { trace }.isTrue()
             get { name }.isEqualTo("Sample Project")
             get { os }.isEqualTo(OperatingSystems.RaspberryPiLite)
             get { imgSize }.isEqualTo(4.Giga.bytes)
@@ -75,7 +58,7 @@ class ImgCstmzrConfigTest {
             @Suppress("SpellCheckingInspection")
             get { ssh.authorizedKeys }.contains(
                 listOf("""ssh-rsa MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAKbic/EEoiSu09lYR1y5001NA1K63M/Jd+IV1b2YpoXJxWDrkzQ/3v/SE84/cSayWAy4LVEXUodrt1WkPZ/NjE8CAwEAAQ== "John Doe 2020-12-10 btw, Corona sucks""""))
-            get { defaultUser }.isEqualTo(ImageCustomization.DefaultUser(null, "FiFi", "TRIXIbelle1234"))
+            get { defaultUser }.isEqualTo(ImgCstmzrConfig.DefaultUser(null, "FiFi", "TRIXIbelle1234"))
             get { usbOtg.profiles }.containsExactlyInAnyOrder("g_acm_ms", "g_ether", "g_webcam")
             get { setup[0].name }.isEqualTo("the basics")
             get { setup[0] }.containsExactly(
@@ -132,50 +115,46 @@ class ImgCstmzrConfigTest {
     @Test
     fun `should create patch`() {
         val imgCstmztn = loadImgCstmztn()
-        val patch = imgCstmztn.createPatch()
+        val patch = imgCstmztn.toPatches()
         expectThat(CompositePatch(patch)) {
             get { name }.contains("Increasing Disk Space: 4.00 GB").contains("Change Username").contains("Mass storage and Serial")
-            get { preFileImgOperations }.hasSize(1)
-            get { customizationOptions }.hasSize(13)
-            get { guestfishCommands }.hasSize(1)
-            get { fileSystemOperations }.hasSize(5)
-            get { postFileImgOperations }.hasSize(2)
-            get { programs }.hasSize(1)
+            get { diskPreparations }.hasSize(1)
+            get { diskCustomizations }.hasSize(13)
+            get { diskOperations }.hasSize(1)
+            get { fileOperations }.hasSize(5)
+            get { osPreparations }.hasSize(2)
+            get { osOperations }.hasSize(4)
         }
     }
 
     @Test
-    fun InMemoryLogger.`should optimize patches`() {
+    fun `should optimize patches`() {
         val imgCstmztn = loadImgCstmztn()
-        val patches = imgCstmztn.createPatch()
-        val optimizedPatches = imgCstmztn.optimizePatches(patches)
-        expectThat(optimizedPatches) {
+        val patches = imgCstmztn.toOptimizedPatches()
+        expectThat(patches) {
             hasSize(4)
-            get { get(0) }.isA<CompositePatch>().get { patches.map { it::class } }
+            get { get(0) }.isA<CompositePatch>().get { this.patches.map { it::class } }
                 .contains(ImgResizePatch::class, UsernamePatch::class, SshEnablementPatch::class, UsbOnTheGoPatch::class)
-            get { get(1) }.isA<CompositePatch>().get { patches.map { it::class } }.contains(PasswordPatch::class, SshAuthorizationPatch::class)
+            get { get(1) }.isA<CompositePatch>().get { this.patches.map { it::class } }
+                .contains(PasswordPatch::class, SshAuthorizationPatch::class)
             get { get(2) }.isA<ShellScriptPatch>()
             get { get(3) }.isA<ShellScriptPatch>()
         }
     }
 
     @ThirtyMinutesTimeout @E2E @Test
-    fun InMemoryLogger.`should apply patch`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage) {
+    fun InMemoryLogger.`should apply patches`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage) {
         val imgCstmztn = loadImgCstmztn()
-        val patches = imgCstmztn.createPatch()
-        val optimizedPatches = imgCstmztn.optimizePatches(patches)
+        val patches = imgCstmztn.toOptimizedPatches()
 
-        optimizedPatches.forEach { optimizedPatch ->
-            with(optimizedPatch) {
-                logLine { optimizedPatch.name.wrapWithBox(Boxes.PILLARS).brightMagenta() }
-                patch(osImage)
-            }
+        patches.forEach { patch ->
+            patch(osImage, patch)
         }
 
         expect {
             that(osImage) {
                 get { credentials }.isEqualTo("FiFi" withPassword "TRIXIbelle1234")
-                booted(this@`should apply patch`) {
+                booted(this@`should apply patches`) {
                     command("echo '👏 🤓 👋'");
                     { true }
                 }
@@ -184,65 +163,3 @@ class ImgCstmzrConfigTest {
         }
     }
 }
-
-class ImageCustomization(
-    val name: String,
-    val os: OperatingSystems,
-    size: String?,
-    val ssh: Ssh,
-    val defaultUser: DefaultUser?,
-    val usbOtg: UsbOtgCstmztn,
-    val setup: List<SetupScript>,
-) {
-    val imgSize: Size? = size?.takeUnless { it.isBlank() }?.toSize()
-
-    class Ssh(val enabled: Boolean, authorizedKeys: AuthorizedKeys) {
-        val authorizedKeys: List<String> = authorizedKeys.files.mapNotNull { file ->
-            ShellScript { !"cat $file" }.evalToOutput().takeIf { it.trim().startsWith("ssh-") }
-        } + authorizedKeys.keys.map { it.trim() }
-    }
-
-    data class AuthorizedKeys(val files: List<String>, val keys: List<String>)
-
-    data class DefaultUser(val username: String?, val newUsername: String?, val newPassword: String?)
-    data class PasswordCstmztn(val username: String, val new: String)
-    data class UsbOtgCstmztn(val profiles: List<String>)
-    class SetupScript(val name: String, scripts: List<ShellScript>) : List<ShellScript> by scripts
-
-    fun createPatch(): List<Patch> = build {
-        if (imgSize != null) +ImgResizePatch(os, imgSize)
-        if (defaultUser != null) {
-            val username = defaultUser.username ?: os.defaultCredentials.username
-            if (defaultUser.newUsername != null) +UsernamePatch(os, username, defaultUser.newUsername)
-            if (defaultUser.newPassword != null) +PasswordPatch(os, defaultUser.newUsername ?: username, defaultUser.newPassword)
-        }
-
-        if (ssh.enabled) +SshEnablementPatch(os)
-        if (ssh.authorizedKeys.isNotEmpty()) {
-            val sshKeyUser = defaultUser?.newUsername ?: os.defaultCredentials.takeUnless { it == empty }?.username ?: "root"
-            +SshAuthorizationPatch(os, sshKeyUser, ssh.authorizedKeys)
-        }
-
-        if (usbOtg.profiles.isNotEmpty()) {
-            +UsbOnTheGoPatch(os, usbOtg.profiles)
-        }
-
-        setup.forEach {
-            +ShellScriptPatch(os, *it.toTypedArray())
-        }
-    }
-
-    fun optimizePatches(patches: List<Patch>): List<Patch> = with(patches.toMutableList()) {
-        listOf(
-            CompositePatch(extract<ImgResizePatch>() + extract<UsernamePatch>() + extract<SshEnablementPatch>() + extract<UsbOnTheGoPatch>()),
-            CompositePatch(extract<PasswordPatch>() + extract<SshAuthorizationPatch>()),
-            *toTypedArray()
-        )
-    }
-
-    private inline fun <reified T : Patch> MutableList<Patch>.extract(): List<T> = filterIsInstance<T>().also { this.removeAll(it) }
-
-    override fun toString(): String =
-        "ImageCustomization(name='$name', os=$os, ssh=$ssh, defaultUser=$defaultUser, usbOtg=$usbOtg, setup=$setup, imgSize=$imgSize)"
-}
-

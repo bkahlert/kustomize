@@ -3,6 +3,7 @@ package com.imgcstmzr.runtime
 import com.bkahlert.koodies.concurrent.process.IOLog
 import com.bkahlert.koodies.concurrent.process.ManagedProcess
 import com.bkahlert.koodies.concurrent.process.Process
+import com.bkahlert.koodies.concurrent.process.TeeOutputStream
 import com.bkahlert.koodies.string.Grapheme
 import com.bkahlert.koodies.string.quoted
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
@@ -18,7 +19,6 @@ import com.imgcstmzr.runtime.log.miniTrace
 import com.imgcstmzr.util.debug
 import com.imgcstmzr.util.logging.InMemoryLogger
 import org.apache.commons.io.output.ByteArrayOutputStream
-import org.apache.commons.io.output.TeeOutputStream
 import java.io.BufferedInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -40,7 +40,9 @@ class JavaProcessMock(
     private val unprocessedOutputSequence = outputStream
 
     init {
-        outputStream = TeeOutputStream(completeOutputSequence, unprocessedOutputSequence)
+        outputStream = object : TeeOutputStream(completeOutputSequence, unprocessedOutputSequence) {
+            override fun toString(): String = completeOutputSequence.toString(Charsets.UTF_8)
+        }
     }
 
     companion object {
@@ -94,8 +96,14 @@ class JavaProcessMock(
     override fun getOutputStream(): OutputStream = outputStream
     override fun getInputStream(): InputStream = inputStream
     override fun getErrorStream(): InputStream = InputStream.nullInputStream()
-    override fun waitFor(): Int = logger.miniTrace(::waitFor) { this@JavaProcessMock.processExit()() }
-    override fun exitValue(): Int = logger.miniTrace(::exitValue) { this@JavaProcessMock.processExit()() }
+    override fun waitFor(): Int = logger.miniTrace(::waitFor) {
+        this@JavaProcessMock.processExit()()
+    }
+
+    override fun exitValue(): Int = logger.miniTrace(::exitValue) {
+        this@JavaProcessMock.processExit()()
+    }
+
     override fun isAlive(): Boolean {
         return logger.miniTrace(::isAlive) {
             when (inputStream) {
@@ -115,13 +123,13 @@ class JavaProcessMock(
             set(value) {}
 
         override fun start() {}
-        override val metaStream: OutputStream = OutputStream.nullOutputStream()
-        override val outputStream: OutputStream = this@JavaProcessMock.outputStream
-        override val inputStream: InputStream = this@JavaProcessMock.inputStream
-        override val errorStream: InputStream = this@JavaProcessMock.errorStream
-        override val pid: Long = 123L
-        override val alive: Boolean = this@JavaProcessMock.isAlive
-        override val exitValue: Int = exitValue()
+        override val metaStream: OutputStream get() = OutputStream.nullOutputStream()
+        override val outputStream: OutputStream get() = this@JavaProcessMock.outputStream
+        override val inputStream: InputStream get() = this@JavaProcessMock.inputStream
+        override val errorStream: InputStream get() = this@JavaProcessMock.errorStream
+        override val pid: Long get() = 123L
+        override val alive: Boolean get() = this@JavaProcessMock.isAlive
+        override val exitValue: Int get() = exitValue()
         override val onExit: CompletableFuture<out Process> get() = CompletableFuture.completedFuture(this)
         override fun stop() = this
         override fun kill() = this
@@ -137,7 +145,7 @@ class JavaProcessMock(
 
 class OperatingSystemProcessMock(testName: String, mock: JavaProcessMock.ManagedProcessMock) :
     OperatingSystemProcess(OperatingSystemMock("mock for test ${testName.quoted}"), mock, mock.logger) {
-    val logger: BlockRenderingLogger = mock.logger
+    override val logger: BlockRenderingLogger = mock.logger
 }
 
 class SlowInputStream(
@@ -153,7 +161,13 @@ class SlowInputStream(
         byteArrayOutputStream: ByteArrayOutputStream? = null,
         echoInput: Boolean = false,
         logger: BlockRenderingLogger?,
-    ) : this(inputs = inputs.map { Duration.ZERO to it }.toTypedArray(), baseDelayPerInput, byteArrayOutputStream, echoInput, logger)
+    ) : this(
+        baseDelayPerInput = baseDelayPerInput,
+        byteArrayOutputStream = byteArrayOutputStream,
+        echoInput = echoInput,
+        logger = logger,
+        inputs = inputs.map { Duration.ZERO to it }.toTypedArray(),
+    )
 
     companion object {
         fun prompt(): Pair<Duration, String> = Duration.INFINITE to ""

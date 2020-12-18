@@ -95,6 +95,14 @@ class ToSingleLineStringKtTest {
                     isSingleLine()
                 }
             }
+
+            @Test
+            fun `should format empty collection as empty string`() {
+                expectThat(Result.success(emptyList<Any>()).toSingleLineString()) {
+                    get { removeEscapeSequences() }.isEqualTo("")
+                    isSingleLine()
+                }
+            }
         }
     }
 }

@@ -48,6 +48,16 @@ inline class Size(val bytes: BigDecimal) : Comparable<Size> {
         )
         const val SYMBOL = "B"
 
+        fun precision(value: BigDecimal, unit: UnitPrefix?): Int = when (unit) {
+            null -> 0
+            else -> when {
+                value < BigDecimal.ONE -> 3
+                value < BigDecimal.TEN -> 2
+                value < BigDecimalConstants.HUNDRED -> 1
+                else -> 0
+            }
+        }
+
         fun CharSequence.toSize(): Size {
             val trimmed = trim()
             val unitString = trimmed.takeLastWhile { it.isLetter() }
@@ -92,7 +102,7 @@ inline class Size(val bytes: BigDecimal) : Comparable<Size> {
      *
      * @return the value of size in the automatically determined [UnitPrefix], e.g. 42.2 MB.
      */
-    override fun toString(): String = toString(DecimalPrefix::class)
+    override fun toString(): String = toString<DecimalPrefix>()
 
     /**
      * Returns a string representation of this size value expressed in the unit
@@ -106,7 +116,7 @@ inline class Size(val bytes: BigDecimal) : Comparable<Size> {
      *
      * @return the value of size in the automatically determined [UnitPrefix], e.g. 42.2 MB.
      */
-    fun toString(prefixType: KClass<out UnitPrefix>): String {
+    inline fun <reified T : UnitPrefix> toString(prefixType: KClass<out UnitPrefix> = T::class, decimals: Int? = null): String {
         val prefixes: List<UnitPrefix>? = supportedPrefixes[prefixType]
         require(prefixes != null) { "$prefixType is not supported. Valid options are: " + supportedPrefixes.keys }
         return when (bytes) {
@@ -122,7 +132,7 @@ inline class Size(val bytes: BigDecimal) : Comparable<Size> {
                 val formattedValue = when {
                     scientific -> value.scientificFormat
                     else -> {
-                        val decimals = precision(value.abs(), prefix)
+                        val decimals = decimals ?: precision(value.abs(), prefix)
                         value.formatToExactDecimals(decimals)
                     }
                 }
@@ -149,24 +159,6 @@ inline class Size(val bytes: BigDecimal) : Comparable<Size> {
         } + " " + unitPrefix.getSymbol<Size>() + SYMBOL
     }
 
-    /*
-      if (unit == null) return 0
-        for (i in 0 until unit.baseExponent) {
-            val pow = unit.basis.pow(i)
-            if (value < pow) return unit.baseExponent - i
-        }
-        return 0
-     */
-    private fun precision(value: BigDecimal, unit: UnitPrefix?): Int = when (unit) {
-        null -> 0
-        else -> when {
-            value < BigDecimal.ONE -> 3
-            value < BigDecimal.TEN -> 2
-            value < BigDecimalConstants.HUNDRED -> 1
-            else -> 0
-        }
-    }
-
     override fun compareTo(other: Size): Int = this.bytes.compareTo(other.bytes)
     operator fun plus(other: Size): Size = Size(bytes + other.bytes)
     operator fun plus(otherBytes: Long): Size = Size(bytes + BigDecimal.valueOf(otherBytes))
@@ -175,6 +167,8 @@ inline class Size(val bytes: BigDecimal) : Comparable<Size> {
     operator fun minus(otherBytes: Long): Size = Size(bytes - BigDecimal.valueOf(otherBytes))
     operator fun minus(otherBytes: Int): Size = Size(bytes - BigDecimal.valueOf(otherBytes.toLong()))
     operator fun unaryMinus(): Size = ZERO - this
+    operator fun div(other: Size): Double = (bytes.div(other.bytes)).toDouble()
     operator fun times(factor: Number): Size = (factor.toBigDecimal() * bytes).bytes
     fun toZeroFilledByteArray(): ByteArray = ByteArray(bytes.toInt())
+
 }

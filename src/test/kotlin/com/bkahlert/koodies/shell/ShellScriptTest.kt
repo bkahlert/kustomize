@@ -25,7 +25,7 @@ class ShellScriptTest {
 
     private val tempDir = tempDir().deleteOnExit()
 
-    private fun shellScript() = ShellScript().apply {
+    private fun shellScript() = ShellScript("Test").apply {
         shebang
         changeDirectoryOrExit(Path.of("/some/where"))
         !"""
@@ -39,6 +39,7 @@ class ShellScriptTest {
     fun `should build valid script`() {
         expectThat(shellScript().build()).isEqualTo("""
             #!/bin/sh
+            echo "[40;90m░[49;39m[46;96m░[49;39m[44;94m░[49;39m[42;92m░[49;39m[43;93m░[49;39m[45;95m░[49;39m[41;91m░[49;39m [96mTEST[39m"
             cd "/some/where" || exit -1
             echo "Hello World!"
             echo "Bye!"
@@ -53,6 +54,7 @@ class ShellScriptTest {
         shellScript().buildTo(file)
         expectThat(file).hasContent("""
             #!/bin/sh
+            echo "[40;90m░[49;39m[46;96m░[49;39m[44;94m░[49;39m[42;92m░[49;39m[43;93m░[49;39m[45;95m░[49;39m[41;91m░[49;39m [96mTEST[39m"
             cd "/some/where" || exit -1
             echo "Hello World!"
             echo "Bye!"
@@ -63,7 +65,7 @@ class ShellScriptTest {
 
     @Test
     fun `should sanitize script`() {
-        val sanitized = ShellScript(content = """
+        val sanitized = ShellScript(name = "Custom Name", content = """
               
               
             cd "/some/where" 
@@ -76,6 +78,7 @@ class ShellScriptTest {
 
         expectThat(sanitized.build()).matchesCurlyPattern("""
             #!/bin/sh
+            echo "░░░░░░░ CUSTOM NAME"
             cd "{}" || exit -1
             echo "Hello World!"
             
@@ -171,7 +174,17 @@ class ShellScriptTest {
     @Test
     fun `should have an optional name`() {
         val sh = ShellScript("test") { !"exit 0" }
-        expectThat(sh).toStringIsEqualTo("Script(name=test;content=exit 0})")
+        expectThat(sh).toStringIsEqualTo("Script(name=test;content=echo \"\u001B[40;90m░\u001B[49;39m\u001B[46;96m░\u001B[49;39m\u001B[44;94m░\u001B[49;39m\u001B[42;92m░\u001B[49;39m\u001B[43;93m░\u001B[49;39m\u001B[45;95m░\u001B[49;39m\u001B[41;91m░\u001B[49;39m \u001B[96mTEST\u001B[39m\";exit 0})")
+    }
+
+    @Test
+    fun `should echo name`() {
+        val sh = ShellScript("test") { !"exit 0" }
+        expectThat(sh.build()).isEqualTo("""
+            echo "[40;90m░[49;39m[46;96m░[49;39m[44;94m░[49;39m[42;92m░[49;39m[43;93m░[49;39m[45;95m░[49;39m[41;91m░[49;39m [96mTEST[39m"
+            exit 0
+            
+        """.trimIndent())
     }
 
     @Test

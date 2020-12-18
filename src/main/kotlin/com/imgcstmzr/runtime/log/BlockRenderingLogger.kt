@@ -1,16 +1,18 @@
 package com.imgcstmzr.runtime.log
 
+import com.bkahlert.koodies.builder.ListBuilder.Companion.buildList
 import com.bkahlert.koodies.concurrent.process.IO
 import com.bkahlert.koodies.exception.toSingleLineString
 import com.bkahlert.koodies.string.LineSeparators.LF
 import com.bkahlert.koodies.string.TruncationStrategy.MIDDLE
 import com.bkahlert.koodies.string.addColumn
+import com.bkahlert.koodies.string.firstLine
 import com.bkahlert.koodies.string.mapLines
+import com.bkahlert.koodies.string.otherLines
 import com.bkahlert.koodies.string.prefixLinesWith
 import com.bkahlert.koodies.string.repeat
 import com.bkahlert.koodies.string.truncate
 import com.bkahlert.koodies.string.wrapLines
-import com.bkahlert.koodies.terminal.ANSI
 import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
 import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.bkahlert.koodies.terminal.ansi.AnsiString.Companion.asAnsiString
@@ -47,8 +49,23 @@ open class BlockRenderingLogger(
     private fun getStatusPadding(text: String): String =
         " ".repeat((statusInformationColumn - text.removeEscapeSequences().length).coerceAtLeast(10))
 
-    private val blockStart
-        get() = if (borderedOutput) "\n╭─────╴" + ANSI.termColors.bold("$caption") + "\n$prefix" else ANSI.termColors.bold("Started: $caption")
+    private val blockStart: String
+        get() = buildList<String> {
+            if (borderedOutput) {
+                +""
+                +"╭─────╴${caption.firstLine.bold()}"
+                caption.otherLines.forEach {
+                    +"$prefix   ${it.bold()}"
+                }
+                +prefix
+            } else {
+                +"Started: ${caption.firstLine.bold()}"
+                caption.otherLines.forEach {
+                    +"$prefix        ${it.bold()}"
+                }
+            }
+        }.joinToString(LF)
+
     val prefix: String get() = if (borderedOutput) "│   " else " "
     fun <R> getBlockEnd(result: Result<R>): CharSequence {
         val message: String =

@@ -1,16 +1,14 @@
 package com.imgcstmzr.patch
 
 import com.imgcstmzr.libguestfs.SharedPath
-import com.imgcstmzr.runtime.OperatingSystem
 
 class UsernamePatch(
-    os: OperatingSystem,
     oldUsername: String,
     private val newUsername: String,
-) : Patch by buildPatch(os, "Change Username $oldUsername to $newUsername", {
+) : Patch by buildPatch("Change Username $oldUsername to $newUsername", {
 
     @Suppress("SpellCheckingInspection")
-    customize {
+    customizeDisk {
         appendLine {
             val privacyFile = SharedPath.Disk.resolveRoot(it).resolve("/etc/sudoers.d/privacy")
             privacyFile to "Defaults        lecture = never"
@@ -24,11 +22,11 @@ class UsernamePatch(
         firstBootCommand { "sudo usermod -d /home/$newUsername -m $newUsername" }
     }
 
-    postFile {
-        updateUsername(newUsername)
+    osPrepare {
+        updateUsername(oldUsername, newUsername)
     }
 
-    booted {
+    os {
         script("finish rename", "ls /home", "id $oldUsername", "id $newUsername")
     }
 })

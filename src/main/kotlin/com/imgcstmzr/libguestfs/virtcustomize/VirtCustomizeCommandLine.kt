@@ -97,11 +97,15 @@ class VirtCustomizeCommandLine(
         fun build(osImage: OperatingSystemImage, init: VirtCustomizeCommandLineBuilder.() -> Unit) = init.build(osImage)
 
         @VirtCustomizeDsl
-        fun RenderingLogger.virtCustomize(osImage: OperatingSystemImage, init: VirtCustomizeCustomizationOptionsBuilder.() -> Unit): Int =
+        fun RenderingLogger.virtCustomize(
+            osImage: OperatingSystemImage,
+            trace: Boolean = false,
+            init: VirtCustomizeCustomizationOptionsBuilder.() -> Unit,
+        ): Int =
             build(osImage) {
                 options {
                     colors { on }
-                    trace { on }
+                    if (trace) trace { on }
                     disk { it.file }
                 }
                 customizationOptions(init)

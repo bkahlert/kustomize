@@ -8,12 +8,12 @@ class PasswordPatch(
     os: OperatingSystem,
     private val username: String,
     private val password: String,
-) : Patch by buildPatch(os, "Change Password of $username", {
-    customize {
+) : Patch by buildPatch("Change Password of $username", {
+    customizeDisk {
         password { VirtCustomizeCustomizationOption.PasswordOption.byString(username, password) }
     }
 
-    postFile {
+    osPrepare {
         updatePassword(username, password)
     }
 })

@@ -104,9 +104,8 @@ inline class Grapheme(val codePoints: List<CodePoint>) {
     }
 
     private class Result(val type: Type, val stringOffset: Int, val stringLength: Int) {
-        override fun hashCode(): Int {
-            return Objects.hash(type, stringOffset, stringLength)
-        }
+        override fun hashCode(): Int =
+            Objects.hash(type, stringOffset, stringLength)
 
         override fun equals(other: Any?): Boolean {
             if (other !is Result) {

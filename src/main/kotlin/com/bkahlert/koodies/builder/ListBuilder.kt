@@ -84,8 +84,7 @@ open class ListBuilder<E> : (ListBuilder<E>) -> List<E> by { it.list } {
     protected val list: MutableList<E> = mutableListOf()
 
     companion object {
-        //        inline fun <reified E> build(noinline init: ListBuilder<E>.() -> Unit): List<E> = init.build()
-        inline fun <reified B : ListBuilder<E>, reified E> build(init: B.() -> Unit): List<E> = init.build()
+        inline fun <reified E> buildList(init: ListBuilder<E>.() -> Unit): List<E> = init.build()
     }
 
     operator fun E.unaryPlus() {

@@ -3,14 +3,18 @@ package com.imgcstmzr.runtime
 import com.bkahlert.koodies.boolean.asEmoji
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
+import com.bkahlert.koodies.concurrent.process.process
+import com.bkahlert.koodies.concurrent.process.waitForTermination
 import com.bkahlert.koodies.exception.dump
 import com.bkahlert.koodies.nio.NonBlockingReader
 import com.bkahlert.koodies.regex.matchEntire
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightMagenta
 import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
+import com.bkahlert.koodies.test.junit.JUnit
 import com.bkahlert.koodies.test.junit.Slow
 import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
 import com.bkahlert.koodies.test.junit.test
+import com.bkahlert.koodies.test.junit.uniqueId
 import com.bkahlert.koodies.time.sleep
 import com.bkahlert.koodies.tracing.trace
 import com.bkahlert.koodies.unit.Kibi
@@ -25,11 +29,13 @@ import com.imgcstmzr.util.logging.InMemoryLogger
 import com.imgcstmzr.util.logging.InMemoryLoggerFactory
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.contains
+import strikt.assertions.isEqualTo
 import strikt.assertions.isTrue
 import kotlin.time.Duration
 import kotlin.time.milliseconds
@@ -139,7 +145,7 @@ class OperatingSystemTest {
 
         val reader = NonBlockingReader(processMock.inputStream, timeout = loginSimulation.readerTimeout, logger = processMock.logger)
 
-        val workflow = os.loginProgram(Credentials("john", "passwd123"))//.logging()
+        val program = os.loginProgram(Credentials("john", "passwd123"))//.logging()
         kotlin.runCatching {
             assertTimeoutPreemptively(45.seconds, {
                 var finished = false
@@ -151,7 +157,7 @@ class OperatingSystemTest {
                             trace(line.debug.brightMagenta())
                             trace("... processing")
                             500.milliseconds.sleep()
-                            finished = !workflow.compute(runningOS, OUT typed line)
+                            finished = !program.compute(runningOS, OUT typed line)
                             if (finished) {
                                 trace("FINISHED")
                             } else {
@@ -166,8 +172,38 @@ class OperatingSystemTest {
             }
         }.onFailure { dump("Test failed.") { (processMock.logger as InMemoryLogger).logged } }
 
-        expectThat(workflow).get("Halted") { halted }.isTrue()
+        expectThat(program).get("Halted") { halted }.isTrue()
         expectThat(processMock.received).contains("john").contains("passwd123").not { contains("stuff") }
+    }
+
+    @Test
+    fun InMemoryLogger.`should invoke shutdown even if not ready`() {
+        val process = withIndividuallySlowInput(
+            0.milliseconds to "[  OK  ] Started Update UTMP about System Runlevel Changes.\n",
+            prompt(),
+            100.milliseconds to "Shutting down",
+            baseDelayPerInput = 100.milliseconds,
+            processExit = {
+                object : ProcessExitMock(0, Duration.ZERO) {
+                    override fun invoke(): Int {
+                        while (!outputStream.toString().contains(os.shutdownCommand)) {
+                            100.milliseconds.sleep()
+                        }
+                        return 0
+                    }
+                }
+            },
+            echoInput = true)
+
+        val runningOS = process.start(JUnit.uniqueId)
+        val shutdownProgram = os.shutdownProgram()
+        val exitValue = runningOS.process(nonBlockingReader = false) { io ->
+            shutdownProgram.compute(runningOS, io)
+        }.waitForTermination()
+
+        expectThat(exitValue) {
+            isEqualTo(0)
+        }
     }
 }
 

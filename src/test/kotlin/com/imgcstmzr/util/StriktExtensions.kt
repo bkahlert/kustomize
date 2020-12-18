@@ -20,9 +20,9 @@ import com.bkahlert.koodies.time.Now
 import com.bkahlert.koodies.time.minus
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
-import com.imgcstmzr.patch.ImgOperation
+import com.imgcstmzr.patch.DiskOperation
+import com.imgcstmzr.patch.FileOperation
 import com.imgcstmzr.patch.Patch
-import com.imgcstmzr.patch.PathOperation
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.Program
 import strikt.api.Assertion
@@ -206,15 +206,15 @@ fun <T : Path> Assertion.Builder<T>.lastModified(duration: Duration) =
     }
 
 fun <T : Patch> Assertion.Builder<T>.matches(
-    imgOperationsAssertion: Assertion.Builder<List<ImgOperation>>.() -> Unit = { hasSize(0) },
+    diskOperationsAssertion: Assertion.Builder<List<DiskOperation>>.() -> Unit = { hasSize(0) },
     customizationOptionsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>>.() -> Unit = { hasSize(0) },
     guestfishCommandsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> GuestfishCommand>>.() -> Unit = { hasSize(0) },
-    fileSystemOperationsAssertion: Assertion.Builder<List<PathOperation>>.() -> Unit = { hasSize(0) },
-    programsAssertion: Assertion.Builder<List<Program>>.() -> Unit = { hasSize(0) },
+    fileSystemOperationsAssertion: Assertion.Builder<List<FileOperation>>.() -> Unit = { hasSize(0) },
+    programsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Program>>.() -> Unit = { hasSize(0) },
 ) = compose("matches") { patch ->
-    imgOperationsAssertion(get { preFileImgOperations })
-    customizationOptionsAssertion(get { customizationOptions })
-    guestfishCommandsAssertion(get { guestfishCommands })
-    fileSystemOperationsAssertion(get { fileSystemOperations })
-    programsAssertion(get { programs })
+    diskOperationsAssertion(get { diskPreparations })
+    customizationOptionsAssertion(get { diskCustomizations })
+    guestfishCommandsAssertion(get { diskOperations })
+    fileSystemOperationsAssertion(get { fileOperations })
+    programsAssertion(get { osOperations })
 }.then { if (allPassed) pass() else fail() }

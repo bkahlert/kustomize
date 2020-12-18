@@ -23,9 +23,7 @@ class ImgResizePatchTest {
         val oldSize = osImage.size
         val newSize = osImage.size + 10.Mebi.bytes
 
-        with(ImgResizePatch(osImage, newSize)) {
-            patch(osImage)
-        }
+        patch(osImage, ImgResizePatch(newSize))
 
         expectThat(osImage.size)
             .isEqualTo(newSize)

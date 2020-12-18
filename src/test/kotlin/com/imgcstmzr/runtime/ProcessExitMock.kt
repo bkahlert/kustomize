@@ -4,13 +4,13 @@ import com.bkahlert.koodies.time.busyWait
 import kotlin.time.Duration
 import kotlin.time.milliseconds
 
-data class ProcessExitMock(val exitValue: Int, val delay: Duration) {
-    operator fun invoke(): Int {
+open class ProcessExitMock(val exitValue: Int, val delay: Duration) {
+    open operator fun invoke(): Int {
         delay.busyWait()
         return exitValue
     }
 
-    operator fun invoke(timeout: Duration): Boolean {
+    open operator fun invoke(timeout: Duration): Boolean {
         delay.busyWait()
         return timeout > delay
     }

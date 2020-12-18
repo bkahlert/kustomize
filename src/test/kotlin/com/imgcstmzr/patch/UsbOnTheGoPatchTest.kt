@@ -1,6 +1,5 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.util.FixtureResolverExtension
 import com.imgcstmzr.util.asRootFor
 import com.imgcstmzr.util.containsContent
@@ -19,7 +18,7 @@ class UsbOnTheGoPatchTest {
     @Test
     fun `should not do anything but patch files n+2 times`() {
         val nModules = (1..4).map { index -> "module-$index" }
-        expectThat(UsbOnTheGoPatch(RaspberryPiLite, nModules)).matches(fileSystemOperationsAssertion = { hasSize(nModules.size + 2) })
+        expectThat(UsbOnTheGoPatch(nModules)).matches(fileSystemOperationsAssertion = { hasSize(nModules.size + 2) })
     }
 
     @Test
@@ -28,9 +27,9 @@ class UsbOnTheGoPatchTest {
             .also {
                 expectThat(it).get { resolve("boot/cmdline.txt") }.not { this.containsContent("g_ether,g_webcam") }
             }
-        val usbOnTheGoPatch = UsbOnTheGoPatch(RaspberryPiLite, listOf("foo", "bar"))
+        val usbOnTheGoPatch = UsbOnTheGoPatch(listOf("foo", "bar"))
 
-        usbOnTheGoPatch.fileSystemOperations.onEach { op ->
+        usbOnTheGoPatch.fileOperations.onEach { op ->
             op(root.asRootFor(op.target), this)
         }
 
@@ -41,10 +40,10 @@ class UsbOnTheGoPatchTest {
     @Test
     fun InMemoryLogger.`should not patch twice`() {
         val root = FixtureResolverExtension.prepareSharedDirectory()
-        val usbOnTheGoPatch = UsbOnTheGoPatch(RaspberryPiLite, listOf("foo", "bar"))
+        val usbOnTheGoPatch = UsbOnTheGoPatch(listOf("foo", "bar"))
 
         (1..10).onEach { i ->
-            usbOnTheGoPatch.fileSystemOperations.onEach { op ->
+            usbOnTheGoPatch.fileOperations.onEach { op ->
                 op(root.asRootFor(op.target), this)
             }
         }

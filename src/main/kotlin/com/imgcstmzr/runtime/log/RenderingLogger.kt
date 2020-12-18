@@ -107,10 +107,10 @@ interface RenderingLogger {
         fun RenderingLogger.formatResult(result: Result<*>): CharSequence =
             if (result.isSuccess) formatReturnValue(result.toSingleLineString()) else formatException(" ", result.toSingleLineString())
 
-        fun RenderingLogger.formatReturnValue(oneLiner: CharSequence): CharSequence {
+        fun RenderingLogger.formatReturnValue(formattedResult: CharSequence): CharSequence {
             val format = if (recoveredLoggers.contains(this)) ANSI.termColors.green else ANSI.termColors.green
             val symbol = if (recoveredLoggers.contains(this)) heavyBallotX else heavyCheckMark
-            return if (oneLiner.isEmpty()) format("$symbol") else format("$symbol") + " returned".italic() + " $oneLiner"
+            return if (formattedResult.isEmpty()) format("$symbol") else format("$symbol") + " returned".italic() + " $formattedResult"
         }
 
         fun RenderingLogger.formatException(prefix: CharSequence, oneLiner: CharSequence?): CharSequence {
@@ -123,9 +123,10 @@ interface RenderingLogger {
     }
 }
 
-inline fun <reified R, reified L : RenderingLogger> L.applyLogging(crossinline block: L.() -> R) {
+inline fun <reified R, reified L : RenderingLogger> L.applyLogging(crossinline block: L.() -> R): L {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     logResult { runCatching { block() } }
+    return this
 }
 
 inline fun <reified R, reified L : RenderingLogger> L.runLogging(crossinline block: L.() -> R): R {

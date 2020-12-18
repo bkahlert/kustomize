@@ -1,5 +1,6 @@
 package com.imgcstmzr.patch
 
+import com.bkahlert.koodies.builder.ListBuilder
 import com.bkahlert.koodies.builder.buildListTo
 import com.bkahlert.koodies.concurrent.process.IO.Type.META
 import com.bkahlert.koodies.string.quoted
@@ -11,7 +12,6 @@ import com.imgcstmzr.libguestfs.guestfish.GuestfishDsl
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.VirtCustomizeCustomizationOptionsBuilder
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeDsl
-import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemProcess
 import com.imgcstmzr.runtime.Program
@@ -19,26 +19,27 @@ import com.imgcstmzr.runtime.log.RenderingLogger
 import java.nio.file.Path
 
 data class SimplePatch(
+    override var trace: Boolean,
     override val name: String,
-    override val preFileImgOperations: List<ImgOperation>,
-    override val customizationOptions: List<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>,
-    override val guestfishCommands: List<(OperatingSystemImage) -> GuestfishCommand>,
-    override val fileSystemOperations: List<PathOperation>,
-    override val postFileImgOperations: List<ImgOperation>,
-    override val programs: List<Program>,
+    override val diskPreparations: List<DiskOperation>,
+    override val diskCustomizations: List<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>,
+    override val diskOperations: List<(OperatingSystemImage) -> GuestfishCommand>,
+    override val fileOperations: List<FileOperation>,
+    override val osPreparations: List<DiskOperation>,
+    override val osOperations: List<(OperatingSystemImage) -> Program>,
 ) : Patch
 
-fun buildPatch(os: OperatingSystem, name: String, init: PatchBuilder.() -> Unit): Patch {
+fun buildPatch(name: String, init: PatchBuilder.() -> Unit): Patch {
 
-    val preFileImgOperations = mutableListOf<ImgOperation>()
+    val preFileImgOperations = mutableListOf<DiskOperation>()
     val customizationOptions = mutableListOf<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>()
     val guestfishCommands = mutableListOf<(OperatingSystemImage) -> GuestfishCommand>()
-    val fileSystemOperations = mutableListOf<PathOperation>()
-    val postFileImgOperations = mutableListOf<ImgOperation>()
-    val programs = mutableListOf<Program>()
+    val fileSystemOperations = mutableListOf<FileOperation>()
+    val postFileImgOperations = mutableListOf<DiskOperation>()
+    val programs = mutableListOf<(OperatingSystemImage) -> Program>()
 
-    PatchBuilder(os, preFileImgOperations, customizationOptions, guestfishCommands, fileSystemOperations, postFileImgOperations, programs).apply(init)
-    return SimplePatch(name, preFileImgOperations, customizationOptions, guestfishCommands, fileSystemOperations, postFileImgOperations, programs)
+    PatchBuilder(preFileImgOperations, customizationOptions, guestfishCommands, fileSystemOperations, postFileImgOperations, programs).apply(init)
+    return SimplePatch(false, name, preFileImgOperations, customizationOptions, guestfishCommands, fileSystemOperations, postFileImgOperations, programs)
 }
 
 @DslMarker
@@ -48,48 +49,47 @@ annotation class PatchDsl
 @VirtCustomizeDsl
 @GuestfishDsl
 class PatchBuilder(
-    private val os: OperatingSystem,
-    private val preFileImgOperations: MutableList<ImgOperation>,
-    private val virtCustomizeCustomizationOptions: MutableList<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>,
-    private val guestfishCommands: MutableList<(OperatingSystemImage) -> GuestfishCommand>,
-    private val fileSystemOperations: MutableList<PathOperation>,
-    private val postFileImgOperations: MutableList<ImgOperation>,
-    private val programs: MutableList<Program>,
+    private val diskPreparations: MutableList<DiskOperation>,
+    private val diskCustomizations: MutableList<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>,
+    private val diskOperations: MutableList<(OperatingSystemImage) -> GuestfishCommand>,
+    private val fileOperations: MutableList<FileOperation>,
+    private val osPreparations: MutableList<DiskOperation>,
+    private val osOperations: MutableList<(OperatingSystemImage) -> Program>,
 ) {
-    fun preFile(init: ImgOperationsCollector.() -> Unit) = ImgOperationsCollector(preFileImgOperations).apply(init)
+    fun prepareDisk(init: ImgOperationsCollector.() -> Unit) = ImgOperationsCollector(diskPreparations).apply(init)
 
     @VirtCustomizeDsl
-    fun customize(init: VirtCustomizeCustomizationOptionsBuilder.() -> Unit) = init.buildListTo(virtCustomizeCustomizationOptions)
+    fun customizeDisk(init: VirtCustomizeCustomizationOptionsBuilder.() -> Unit) = init.buildListTo(diskCustomizations)
 
     @GuestfishDsl
-    fun guestfish(init: GuestfishCommandLine.GuestfishCommandsBuilder.() -> Unit) = init.buildListTo(guestfishCommands)
-    fun files(init: FileSystemOperationsCollector.() -> Unit) = FileSystemOperationsCollector(fileSystemOperations).apply(init)
-    fun postFile(init: ImgOperationsCollector.() -> Unit) = ImgOperationsCollector(postFileImgOperations).apply(init)
-    fun booted(init: ProgramsBuilder.() -> Unit) = ProgramsBuilder(os, programs).apply(init)
+    fun guestfish(init: GuestfishCommandLine.GuestfishCommandsBuilder.() -> Unit) = init.buildListTo(diskOperations)
+    fun files(init: FileSystemOperationsCollector.() -> Unit) = FileSystemOperationsCollector(fileOperations).apply(init)
+    fun osPrepare(init: ImgOperationsCollector.() -> Unit) = ImgOperationsCollector(osPreparations).apply(init)
+    fun os(init: ProgramsBuilder.() -> Unit) = init.buildListTo(osOperations)
 }
 
-typealias ImgOperation = (osImage: OperatingSystemImage, logger: RenderingLogger) -> Unit
+typealias DiskOperation = (osImage: OperatingSystemImage, logger: RenderingLogger) -> Unit
 
 @PatchDsl
-class ImgOperationsCollector(private val imgOperations: MutableList<ImgOperation>) {
+class ImgOperationsCollector(private val diskOperations: MutableList<DiskOperation>) {
     fun resize(size: Size) {
-        imgOperations += { osImage: OperatingSystemImage, logger: RenderingLogger ->
+        diskOperations += { osImage: OperatingSystemImage, logger: RenderingLogger ->
             osImage.increaseDiskSpace(logger, size)
         }
     }
 
-    fun updateUsername(username: String) {
-        imgOperations += { osImage: OperatingSystemImage, logger: RenderingLogger ->
-            osImage.credentials = osImage.credentials.copy(username = username)
-            logger.logLine { META.format("Username of user ${username.quoted} updated.") }
+    fun updateUsername(oldUsername: String, newUsername: String) {
+        diskOperations += { osImage: OperatingSystemImage, logger: RenderingLogger ->
+            osImage.credentials = osImage.credentials.copy(username = newUsername)
+            logger.logLine { META.format("Username of user ${oldUsername.quoted} updated to ${newUsername.quoted}.") }
         }
     }
 
     fun updatePassword(username: String, password: String) {
-        imgOperations += { osImage: OperatingSystemImage, logger: RenderingLogger ->
+        diskOperations += { osImage: OperatingSystemImage, logger: RenderingLogger ->
             if (osImage.credentials.username == username) {
                 osImage.credentials = osImage.credentials.copy(password = password)
-                logger.logLine { META.format("Password of user ${password.quoted} updated.") }
+                logger.logLine { META.format("Password of user ${username.quoted} updated.") }
             } else {
                 logger.logLine { META.format("Password of user ${password.quoted} updated${"*".magenta()}.") }
                 logger.logLine { META.format("ImgCstmzr will to continue to use user ${osImage.credentials.username.quoted}.") }
@@ -99,35 +99,24 @@ class ImgOperationsCollector(private val imgOperations: MutableList<ImgOperation
 }
 
 @PatchDsl
-class FileSystemOperationsCollector(private val pathOperations: MutableList<PathOperation>) {
+class FileSystemOperationsCollector(private val fileOperations: MutableList<FileOperation>) {
     fun edit(path: String, validator: (Path) -> Unit, operations: (Path) -> Unit) =
-        pathOperations.add(PathOperation(Path.of(path), validator, operations))
+        fileOperations.add(FileOperation(Path.of(path), validator, operations))
 
     fun create(validator: (Path) -> Unit, operations: (Path) -> Unit) =
-        pathOperations.add(PathOperation(Path.of("/"), validator, operations))
+        fileOperations.add(FileOperation(Path.of("/"), validator, operations))
 }
 
-
 @PatchDsl
-class ProgramsBuilder(private val os: OperatingSystem, private val programs: MutableList<Program>) {
-
-    fun run(program: Program) {
-        programs += program
-    }
+class ProgramsBuilder : ListBuilder<(OperatingSystemImage) -> Program>() {
 
     fun program(
         purpose: String,
         initialState: OperatingSystemProcess.() -> String?,
         vararg states: Pair<String, OperatingSystemProcess.(String) -> String?>,
-    ) {
-        programs += Program(purpose, initialState, *states)
-    }
+    ) = list.add { Program(purpose, initialState, *states) }
 
-    fun setupScript(name: String, commandBlocks: String) {
-        programs += os.compileSetupScript(name, commandBlocks)
-    }
-
-    fun script(name: String, vararg commandLines: String) {
-        programs += os.compileScript(name, *commandLines)
-    }
+    fun script(name: String, vararg commandLines: String) =
+        list.add { it.compileScript(name, *commandLines) }
 }
+

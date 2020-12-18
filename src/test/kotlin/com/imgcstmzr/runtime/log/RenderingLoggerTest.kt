@@ -422,4 +422,41 @@ class RenderingLoggerTest {
             """.trimIndent())
         }
     }
+
+    @Execution(SAME_THREAD)
+    @TestFactory
+    fun `should render multi-line caption`() = listOf(
+        true to """
+            ╭─────╴{}
+            │   
+            │   
+            │   ╭─────╴line #1
+            │   │      line #2
+            │   │   
+            │   │   logged line
+            │   │
+            │   ╰─────╴✔
+            │   
+            │
+            ╰─────╴✔{}
+        """.trimIndent(),
+        false to """
+            ╭─────╴{}
+            │   
+            │   Started: line #1
+            │            line #2
+            │    logged line
+            │   Completed: ✔
+            │
+            ╰─────╴✔{}
+        """.trimIndent(),
+    ).test("bordered={}") { (borderedOutput, expectation) ->
+        val logger: InMemoryLogger = InMemoryLogger().applyLogging {
+            logging(caption = "line #1\nline #2", borderedOutput = borderedOutput) {
+                logLine { "logged line" }
+            }
+        }
+
+        expectThat(logger.logged).matchesCurlyPattern(expectation)
+    }
 }

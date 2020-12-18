@@ -2,9 +2,11 @@ package com.bkahlert.koodies.shell
 
 import com.bkahlert.koodies.concurrent.process.CommandLine
 import com.bkahlert.koodies.nio.file.writeText
-import com.bkahlert.koodies.string.LineSeparators
+import com.bkahlert.koodies.string.LineSeparators.LF
 import com.bkahlert.koodies.string.LineSeparators.lines
 import com.bkahlert.koodies.string.prefixLinesWith
+import com.bkahlert.koodies.string.quoted
+import com.imgcstmzr.cli.Banner.banner
 import com.imgcstmzr.util.makeExecutable
 import java.nio.file.Path
 
@@ -81,14 +83,28 @@ class ShellScript(val name: String? = null, content: String? = null) {
     fun sanitize(workingDirectory: Path? = null): ShellScript {
         var linesKept = lines.dropWhile { it.isShebang() || it.isBlank() }
         if (workingDirectory != null && linesKept.firstOrNull()?.startsWith("cd ") == true) linesKept = linesKept.drop(1)
-        return ShellScript().apply {
+        return ShellScript(name = name).apply {
             shebang
             workingDirectory?.let { changeDirectoryOrExit(it) }
             linesKept.filter { !it.isShebang() }.forEach { lines += it }
         }
     }
 
-    fun build(): String = lines.joinToString(LineSeparators.LF, postfix = LineSeparators.LF)
+    val echoNameCommand: String get() = name?.let { "echo ${banner(name).quoted}" } ?: ""
+    fun build(): String {
+        var echoNameCommandAdded = false
+        val script = lines.map { line ->
+            if (!echoNameCommandAdded && echoNameCommand.isNotBlank() && line.isShebang()) {
+                echoNameCommandAdded = true
+                line + LF + echoNameCommand
+            } else {
+                line
+            }
+        }.joinToString(LF, postfix = LF)
+        return if (echoNameCommandAdded || echoNameCommand.isBlank()) script
+        else echoNameCommand + LF + script
+    }
+
     fun buildTo(path: Path): Path = path.apply {
         writeText(build())
         makeExecutable()

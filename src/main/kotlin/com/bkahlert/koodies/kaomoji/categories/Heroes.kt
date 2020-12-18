@@ -16,4 +16,5 @@ import com.bkahlert.koodies.kaomoji.Category
 
 object Heroes : Category() {
     val `─=≡Σ((［ ⊐•̀⌂•́］⊐` by auto("─=≡Σ(([ ⊐•̀⌂•́]⊐")
+    val `‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o` by auto()
 }

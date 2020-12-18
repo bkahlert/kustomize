@@ -16,4 +16,4 @@ inline fun <reified T> Iterable<T>.test(testNamePattern: String? = null, crossin
     DynamicTest.dynamicTest(format(testNamePattern ?: fallbackPattern, *args)) { executable(input) }
 }
 
-
+inline fun <reified T> Array<T>.test(testNamePattern: String? = null, crossinline executable: (T) -> Unit) = toList().test(testNamePattern, executable)

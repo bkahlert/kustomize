@@ -1,7 +1,6 @@
 package com.imgcstmzr.runtime
 
 import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.docker.DockerContainerName.Companion.toUniqueContainerName
 import com.bkahlert.koodies.nio.file.appendBytes
 import com.bkahlert.koodies.nio.file.baseName
 import com.bkahlert.koodies.nio.file.duplicate
@@ -84,11 +83,7 @@ class OperatingSystemImage(
                         path.size
                     }
 
-                    logLine { "Image Disk Space Successfully increased to " + path.size.toString() + ". Booting OS to finalize..." }
-
-                    @Suppress("SpellCheckingInspection")
-                    val compileScript = OperatingSystems.RaspberryPiLite.compileScript("expand-root", "sudo raspi-config --expand-rootfs")
-                    execute(path.toUniqueContainerName().sanitized, this, true, compileScript)
+                    logLine { "Image Disk Space Successfully increased to " + path.size.toString() + "." }
                 }
             }
         }

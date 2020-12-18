@@ -6,11 +6,9 @@ import com.imgcstmzr.cli.KeyValueDocument
 import com.imgcstmzr.patch.Requirements.requireContainingContent
 import com.imgcstmzr.patch.Requirements.requireContainingKeyValue
 import com.imgcstmzr.patch.ini.IniDocument
-import com.imgcstmzr.runtime.OperatingSystem
 
 // TOOD vcgencmd get_config <config>: this displays a specific config value, e.g. vcgencmd get_config arm_freq
 class UsbOnTheGoPatch(
-    os: OperatingSystem,
     modules: List<String>,
     dict: Dictionary<String, String> = dictOf(
         "g_serial" to "Serial",
@@ -26,7 +24,7 @@ class UsbOnTheGoPatch(
         "g_printer" to "Printer",
         "g_zero" to "Gadget tester",
     ) { profile -> "Unknown ($profile)" },
-) : Patch by buildPatch(os, "Activate USB On-The-Go for Profiles ${modules.map { dict[it] }}", {
+) : Patch by buildPatch("Activate USB On-The-Go for Profiles ${modules.map { dict[it] }}", {
     if (modules.isEmpty()) return@buildPatch
 
     files {

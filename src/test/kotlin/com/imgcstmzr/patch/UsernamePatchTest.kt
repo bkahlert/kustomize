@@ -23,12 +23,10 @@ class UsernamePatchTest {
     fun InMemoryLogger.`should log in with updated username`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val newUsername = "ella".also { check(it != osImage.defaultCredentials.username) { "$it is already the default username." } }
 
-        with(UsernamePatch(osImage.operatingSystem, osImage.defaultCredentials.username, newUsername)) {
-            patch(osImage)
-        }
+        patch(osImage, UsernamePatch(osImage.defaultCredentials.username, newUsername))
 
         expectThat(osImage.credentials).isEqualTo(OperatingSystem.Credentials(newUsername, osImage.defaultCredentials.password))
-        expectThat(osImage.copyOut("/home")) {
+        expectThat(with(osImage) { copyOut("/home") }) {
             resolve(newUsername).exists()
             resolve(osImage.defaultCredentials.username).not { exists() }
         }

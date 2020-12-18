@@ -27,6 +27,7 @@ import com.bkahlert.koodies.terminal.ansi.AnsiColors.green
 import com.imgcstmzr.runtime.Program.Companion.compute
 import com.imgcstmzr.runtime.Program.Companion.format
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
+import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.log.logging
 import kotlin.properties.Delegates
 import kotlin.time.Duration
@@ -60,7 +61,7 @@ fun stuckCheckingProcessor(processor: OperatingSystemProcessor): OperatingSystem
 open class OperatingSystemProcess(
     private val os: OperatingSystem,
     private val process: ManagedProcess,
-    private val logger: BlockRenderingLogger,
+    internal open val logger: BlockRenderingLogger,
 ) : ManagedProcess by process {
 
     constructor(name: String, osImage: OperatingSystemImage, logger: BlockRenderingLogger) : this(
@@ -164,7 +165,7 @@ open class OperatingSystemProcess(
  */
 fun OperatingSystemImage.execute(
     name: String = file.toUniqueContainerName().sanitized,
-    logger: BlockRenderingLogger,
+    logger: RenderingLogger,
     autoLogin: Boolean = true,
     vararg programs: Program,
 ): Int = logger.logging("Running $shortName with ${programs.format()}", ansiCode = ANSI.termColors.cyan) {

@@ -1,4 +1,4 @@
-package com.imgcstmzr.process
+package com.imgcstmzr.tools
 
 import com.bkahlert.koodies.concurrent.process.executeShellScript
 import com.bkahlert.koodies.nio.file.list

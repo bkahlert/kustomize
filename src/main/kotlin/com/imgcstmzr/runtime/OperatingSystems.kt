@@ -21,6 +21,17 @@ enum class OperatingSystems(
 ) : OperatingSystem {
 
     /**
+     * [belanaOS—Run Docker containers on embedded devices](https://www.balena.io/os/)
+     */
+    @Suppress("SpellCheckingInspection")
+    BalenaOS(
+        fullName = "balenaOS for Raspberry Pi (v1 and Zero)",
+        downloadUrl = "https://api.balena-cloud.com/download?deviceType=raspberry-pi&version=2.54.2+rev1.dev&fileType=.zip",
+        approximateImageSize = 950.Mega.bytes,
+        defaultCredentials = empty,
+    ),
+
+    /**
      * [Raspberry Pi OS Lite](https://www.raspberrypi.org/downloads/raspberry-pi-os/)
      */
     RaspberryPiLite(

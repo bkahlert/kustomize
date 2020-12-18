@@ -14,10 +14,10 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
 import com.imgcstmzr.cli.Options.os
 import com.imgcstmzr.libguestfs.docker.LibguestfsDockerAdaptable
-import com.imgcstmzr.process.Downloader
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.runtime.log.BlockRenderingLogger
 import com.imgcstmzr.runtime.log.applyLogging
+import com.imgcstmzr.tools.Downloader
 import java.nio.file.Path
 import kotlin.io.path.moveTo
 import kotlin.reflect.KClass

@@ -22,9 +22,7 @@ class SshAuthorizationPatchTest {
     fun InMemoryLogger.`should add ssh key`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val sshkey = "123"
 
-        with(SshAuthorizationPatch(osImage.operatingSystem, "pi", listOf(sshkey))) {
-            patch(osImage)
-        }
+        patch(osImage, SshAuthorizationPatch("pi", listOf(sshkey)))
 
         expect {
             logged(

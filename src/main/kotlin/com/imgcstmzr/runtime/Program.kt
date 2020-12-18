@@ -63,10 +63,17 @@ class Program(
         return stateMachine[state] ?: throw IllegalStateException("Unknown state $state. Available: ${stateMachine.keys}. History: $stateHistory")
     }
 
-    fun compute(operatingSystemProcess: OperatingSystemProcess, IO: IO): Boolean {
+    /**
+     * Triggers one computation using the provided [operatingSystemProcess]
+     * and the [io] to handle.
+     *
+     * @return whether the computation did not result in a final state, that is `true` if this program needs more computation,
+     * `false` if this program finished.
+     */
+    fun compute(operatingSystemProcess: OperatingSystemProcess, io: IO): Boolean {
         val oldState = state
-        state = handler(operatingSystemProcess).invoke(operatingSystemProcess, IO.unformatted)
-        val historyElement = HistoryElement(oldState, IO, state)
+        state = handler(operatingSystemProcess).invoke(operatingSystemProcess, io.unformatted)
+        val historyElement = HistoryElement(oldState, io, state)
         if (logging) TermUi.debug("$name execution step #${stateHistory.size}: $historyElement")
         stateHistory.add(historyElement)
         return state != null

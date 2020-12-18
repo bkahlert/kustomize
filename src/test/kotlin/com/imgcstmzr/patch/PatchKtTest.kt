@@ -34,7 +34,6 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import org.junit.jupiter.api.parallel.Isolated
 import strikt.api.expect
 import strikt.api.expectThat
-import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
 import java.time.Instant
@@ -49,10 +48,8 @@ class PatchKtTest {
         @Test
         fun `should only log to console by default`(osImage: OperatingSystemImage, capturedOutput: CapturedOutput) {
             val logger: RenderingLogger? = null
-            with(logger) {
-                with(buildPatch(osImage.operatingSystem, "No-Op Patch") {}) {
-                    patch(osImage)
-                }
+            with(buildPatch("No-Op Patch") {}) {
+                patch(osImage, logger)
             }
             expectThat(capturedOutput.out.removeEscapeSequences()).isNotEmpty()
         }
@@ -60,51 +57,39 @@ class PatchKtTest {
         @Test
         fun `should log bordered by default`(osImage: OperatingSystemImage, capturedOutput: CapturedOutput) {
             val logger: RenderingLogger? = null
-            with(logger) {
-                with(buildPatch(osImage.operatingSystem, "No-Op Patch") {}) {
-                    patch(osImage)
-                }
+            with(buildPatch("No-Op Patch") {}) {
+                patch(osImage, logger)
             }
             expectThat(capturedOutput.out.trim().removeEscapeSequences()).matchesCurlyPattern("""
-            Started: NO-OP PATCH
-             IMG Operations: —
-             Customization Options: —
-             File System Operations: —
-             IMG Operations II: —
-             Scripts: —
-            Completed: ✔
+            ╭─────╴No-Op Patch
+            │   
+            │   Disk Preparation: —
+            │   Disk Customization: —
+            │   Disk Operations: —
+            │   File Operations: —
+            │   OS Preparation: —
+            │   OS Operations: —
+            │
+            ╰─────╴✔
         """.trimIndent())
-        }
-    }
-
-    @Nested
-    @Isolated("flaky OutputCapture")
-    inner class NoSystemOut {
-        @Test
-        fun InMemoryLogger.`should only log using specified logger`(osImage: OperatingSystemImage, capturedOutput: CapturedOutput) {
-            with(buildPatch(osImage.operatingSystem, "No-Op Patch") {}) {
-                patch(osImage)
-            }
-            expectThatLogged().isNotEmpty()
-            expectThat(capturedOutput.out.removeEscapeSequences()).isEmpty()
         }
     }
 
     @Test
     fun `should log not bordered if specified`(osImage: OperatingSystemImage, capturedOutput: CapturedOutput) {
         with(InMemoryLogger("not-bordered", borderedOutput = false, statusInformationColumn = -1, outputStreams = emptyList())) {
-            with(buildPatch(osImage.operatingSystem, "No-Op Patch") {}) {
-                patch(osImage)
-            }
+            patch(osImage, buildPatch("No-Op Patch") {})
+
             expectThatLogged().matchesCurlyPattern("""
-        Started: not-bordered
-         Started: NO-OP PATCH
-          IMG Operations: —
-          Customization Options: —
-          File System Operations: —
-          IMG Operations II: —
-          Scripts: —
-         Completed: ✔
+                Started: not-bordered
+                 Started: No-Op Patch
+                  Disk Preparation: —
+                  Disk Customization: —
+                  Disk Operations: —
+                  File Operations: —
+                  OS Preparation: —
+                  OS Operations: —
+                 Completed: ✔
         """.trimIndent())
         }
     }
@@ -113,11 +98,11 @@ class PatchKtTest {
     fun InMemoryLogger.`should run each op type executing patch successfully`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val timestamp = Instant.now()
 
-        with(buildPatch(osImage.operatingSystem, "Try Everything Patch") {
-            preFile {
+        patch(osImage, buildPatch("Try Everything Patch") {
+            prepareDisk {
                 resize(2.Giga.bytes)
             }
-            customize {
+            customizeDisk {
                 hostname { "test-machine" }
             }
             guestfish {
@@ -136,10 +121,10 @@ class PatchKtTest {
                     MiscFixture.AnsiDocument.copyTo(it)
                 }
             }
-            booted {
-                run(osImage.compileScript("demo", "sudo cat /root/.imgcstmzr.created", "cat /home/pi/demo.ansi"))
+            os {
+                script("demo", "sudo cat /root/.imgcstmzr.created", "cat /home/pi/demo.ansi")
             }
-        }) { patch(osImage) }
+        })
 
         expect {
             that(osImage) {
