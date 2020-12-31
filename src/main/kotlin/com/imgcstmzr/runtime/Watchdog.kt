@@ -1,13 +1,13 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.concurrent.startAsThread
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
-import com.bkahlert.koodies.time.Now
 import com.imgcstmzr.runtime.Watchdog.Command.RESET
 import com.imgcstmzr.runtime.Watchdog.Command.STOP
-import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger.Companion.DEFAULT
+import koodies.concurrent.process.IO
+import koodies.concurrent.thread
+import koodies.logging.RenderingLogger
+import koodies.logging.RenderingLogger.Companion.DEFAULT
+import koodies.terminal.AnsiColors.red
+import koodies.time.Now
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -38,7 +38,7 @@ open class Watchdog(
 ) {
     private var timeoutStart: Long = -1L
     private val blockingQueue = LinkedBlockingQueue<Command>()
-    private val thread = startAsThread {
+    private val thread = thread {
         var lastEvent: Command? = RESET
         while (true) {
             try {

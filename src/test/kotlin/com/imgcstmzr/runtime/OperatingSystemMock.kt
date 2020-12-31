@@ -1,6 +1,6 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.unit.Size
+import koodies.unit.Size
 
 class OperatingSystemMock(
     override val name: String,

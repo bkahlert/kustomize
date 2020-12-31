@@ -1,19 +1,18 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.concurrent.process.IO.Type.META
-import com.bkahlert.koodies.string.TruncationStrategy.MIDDLE
-import com.bkahlert.koodies.string.quoted
-import com.bkahlert.koodies.string.replaceNonPrintableCharacters
-import com.bkahlert.koodies.string.truncate
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.gray
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.red
-import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
-import com.github.ajalt.clikt.output.TermUi
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.runtime.HasStatus.Companion.asStatus
-import com.imgcstmzr.util.debug
+import koodies.concurrent.process.IO
+import koodies.concurrent.process.IO.Type.META
+import koodies.debug.replaceNonPrintableCharacters
+import koodies.logging.HasStatus
+import koodies.logging.asStatus
+import koodies.terminal.AnsiColors.cyan
+import koodies.terminal.AnsiColors.gray
+import koodies.terminal.AnsiColors.red
+import koodies.terminal.AnsiFormats.bold
+import koodies.text.TruncationStrategy.MIDDLE
+import koodies.text.quoted
+import koodies.text.truncate
 
 /**
  * Instances of this class can interact with a process based on a state machine for the given [name].
@@ -74,7 +73,7 @@ class Program(
         val oldState = state
         state = handler(operatingSystemProcess).invoke(operatingSystemProcess, io.unformatted)
         val historyElement = HistoryElement(oldState, io, state)
-        if (logging) TermUi.debug("$name execution step #${stateHistory.size}: $historyElement")
+        if (logging) echo("$name execution step #${stateHistory.size}: $historyElement")
         stateHistory.add(historyElement)
         return state != null
     }
@@ -100,12 +99,12 @@ class Program(
         return this
     }
 
-    override fun toString(): String = status()
+    override fun toString(): String = renderStatus()
 
     /**
      * Renders the status of this [Program].
      */
-    override fun status(): String = when (state) {
+    override fun renderStatus(): String = when (state) {
         null -> name.gray()
         else -> when (stateCount) {
             0 -> name.bold()

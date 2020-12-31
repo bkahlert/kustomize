@@ -1,10 +1,9 @@
 package com.imgcstmzr.cli
 
-import com.bkahlert.koodies.nio.file.readText
-import com.bkahlert.koodies.nio.file.writeText
-import com.github.ajalt.clikt.output.TermUi
-import com.imgcstmzr.util.debug
+import com.github.ajalt.clikt.output.TermUi.echo
 import java.nio.file.Path
+import kotlin.io.path.readText
+import kotlin.io.path.writeText
 
 
 class KeyValueDocument(private val properties: MutableList<Pair<String, MutableList<String>>>) {
@@ -31,7 +30,7 @@ class KeyValueDocument(private val properties: MutableList<Pair<String, MutableL
                 val second: MutableList<String> = foundProperties.second
                 second.add(value)
             } else {
-                TermUi.debug("$foundProperties already contains $value")
+                echo("$foundProperties already contains $value")
             }
         }
     }

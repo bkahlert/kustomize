@@ -1,10 +1,10 @@
 package com.imgcstmzr.patch.ini
 
-import com.bkahlert.koodies.regex.namedGroup
-import com.bkahlert.koodies.regex.values
-import com.bkahlert.koodies.string.quoted
 import com.imgcstmzr.patch.ini.ParsedElement.Companion.toParsedElement
 import com.imgcstmzr.patch.ini.ParsedElements.Companion.toParsedElements
+import koodies.regex.namedGroup
+import koodies.regex.values
+import koodies.text.quoted
 
 open class RegexParser(groups: Iterable<Pair<String, String>>, matchCompleteLine: Boolean = false) {
     constructor(vararg groups: Pair<String, String>, matchCompleteLine: Boolean = false) : this(groups.asIterable(), matchCompleteLine)

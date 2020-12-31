@@ -1,22 +1,23 @@
 package com.imgcstmzr.libguestfs.guestfish
 
-import com.bkahlert.koodies.io.TarArchiveGzCompressor.tarGzip
-import com.bkahlert.koodies.nio.file.addExtension
-import com.bkahlert.koodies.nio.file.mkdirs
-import com.bkahlert.koodies.nio.file.removeExtension
-import com.bkahlert.koodies.nio.file.tempDir
-import com.bkahlert.koodies.nio.file.writeText
-import com.bkahlert.koodies.number.hasSize
-import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
-import com.bkahlert.koodies.unit.Gibi
-import com.bkahlert.koodies.unit.Mebi
-import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.libguestfs.docker.ImageBuilder.buildFrom
 import com.imgcstmzr.libguestfs.docker.ImageBuilder.format
 import com.imgcstmzr.runtime.OperatingSystems
-import com.imgcstmzr.util.DockerRequiring
-import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.test.DockerRequiring
+import com.imgcstmzr.test.FiveMinutesTimeout
+import com.imgcstmzr.test.UniqueId
+import com.imgcstmzr.test.hasSize
+import com.imgcstmzr.withTempDir
+import koodies.io.compress.TarArchiveGzCompressor.tarGzip
+import koodies.io.path.addExtensions
+import koodies.io.path.randomDirectory
+import koodies.io.path.removeExtensions
+import koodies.io.path.writeText
+import koodies.logging.InMemoryLogger
+import koodies.runtime.deleteOnExit
+import koodies.unit.Gibi
+import koodies.unit.Mebi
+import koodies.unit.bytes
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -31,11 +32,10 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import java.net.URI
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
 
 @Execution(CONCURRENT)
 class ImageBuilderTest {
-
-    private val tempDir = tempDir().deleteOnExit()
 
     @Nested
     inner class Format {
@@ -63,16 +63,16 @@ class ImageBuilderTest {
         @Nested
         inner class ArchiveBasedImageBuild {
             @FiveMinutesTimeout @DockerRequiring @Test
-            fun InMemoryLogger.`should build img from archive`() {
-                val archive = tempDir.tempDir().apply {
-                    resolve("boot").mkdirs()
+            fun InMemoryLogger.`should build img from archive`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+                val archive = randomDirectory().apply {
+                    resolve("boot").createDirectories()
                     resolve("boot/cmdline.txt").apply { writeText("console=serial0,115200 console=tty1 ...") }
                     resolve("boot/important.file").apply { writeText("important content") }
                 }.tarGzip()
 
                 val img = buildFrom(archive, totalSize = 6.Mebi.bytes, bootSize = 3.Mebi.bytes).deleteOnExit()
 
-                expectThat(img).endsWith(archive.removeExtension("tar.gz").addExtension("img")).hasSize(6_291_456.bytes)
+                expectThat(img).endsWith(archive.removeExtensions("tar", "gz").addExtensions("img")).hasSize(6_291_456.bytes)
             }
         }
 

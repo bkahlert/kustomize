@@ -1,13 +1,13 @@
 package com.imgcstmzr.cli
 
-import com.bkahlert.koodies.nio.file.isInside
-import com.bkahlert.koodies.nio.file.isWritable
-import com.bkahlert.koodies.nio.file.tempDir
-import com.bkahlert.koodies.spyable
-import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.MiscFixture.FunnyImgZip
-import com.imgcstmzr.util.hasContent
-import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.test.MiscClassPathFixture.FunnyImgZip
+import com.imgcstmzr.test.UniqueId
+import com.imgcstmzr.test.hasContent
+import com.imgcstmzr.withTempDir
+import koodies.io.path.isInside
+import koodies.io.path.randomDirectory
+import koodies.logging.InMemoryLogger
+import koodies.test.Fixtures.copyToDirectory
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -15,11 +15,10 @@ import strikt.api.expectThat
 import strikt.assertions.exists
 import strikt.assertions.isDirectory
 import strikt.assertions.isEqualTo
+import strikt.assertions.isTrue
 
 @Execution(CONCURRENT)
 class CacheTest {
-
-    private val tempDir = tempDir().deleteOnExit()
 
     @Test
     fun `should instantiate in user home by default`() {
@@ -29,12 +28,11 @@ class CacheTest {
             .get { dir }
             .exists()
             .isDirectory()
-            .isWritable()
     }
 
     @Test
-    fun `should instantiate in provided directory`() {
-        val tempDir = tempDir.tempDir()
+    fun `should instantiate in provided directory`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+        val tempDir = randomDirectory()
 
         val cache = Cache(tempDir)
 
@@ -42,25 +40,28 @@ class CacheTest {
     }
 
     @Test
-    fun InMemoryLogger.`should provide a retrieved copy`() {
-        val cache = Cache(tempDir.tempDir())
+    fun InMemoryLogger.`should provide a retrieved copy`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+        val cache = Cache(randomDirectory())
 
         val copy = with(cache) {
             provideCopy("my-copy") {
-                FunnyImgZip.copyToTemp()
+                FunnyImgZip.copyToDirectory(this@withTempDir)
             }
         }
 
         expectThat(copy)
             .hasContent("funny content")
-            .isInside(cache.dir)
+            .get { isInside(cache.dir) }.isTrue()
     }
 
     @Test
-    fun InMemoryLogger.`should only retrieve copy once`() {
-        val cache = Cache(tempDir.tempDir())
+    fun InMemoryLogger.`should only retrieve copy once`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+        val cache = Cache(randomDirectory())
         var providerCalls = 0
-        val provider by spyable(FunnyImgZip::copyToTemp) { providerCalls++ }
+        val provider = {
+            providerCalls++
+            FunnyImgZip.copyToDirectory(this)
+        }
 
         val copies = (0..2).map {
             with(cache) {
@@ -72,7 +73,7 @@ class CacheTest {
         copies.forEach { copy ->
             expectThat(copy)
                 .hasContent("funny content")
-                .isInside(cache.dir)
+                .get { isInside(cache.dir) }.isTrue()
         }
     }
 }

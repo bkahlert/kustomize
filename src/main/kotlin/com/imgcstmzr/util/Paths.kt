@@ -1,11 +1,9 @@
 package com.imgcstmzr.util
 
+import koodies.io.path.Locations
 import java.nio.file.Path
-import com.bkahlert.koodies.nio.file.Paths as KoodiesPaths
 
 object Paths {
-
-    val CACHE: Path by lazy { KoodiesPaths.HomeDirectory.resolve(".imgcstmzr") }
-    val TEST: Path by lazy { KoodiesPaths.HomeDirectory.resolve(".imgcstmzr.test") }
-
+    val CACHE: Path by lazy { Locations.HomeDirectory.resolve(".imgcstmzr") }
+    val TEST: Path by lazy { Locations.HomeDirectory.resolve(".imgcstmzr.test") }
 }

@@ -1,42 +1,47 @@
 package com.imgcstmzr.patch
 
-import com.bkahlert.koodies.nio.file.exists
-import com.bkahlert.koodies.nio.file.readText
-import com.bkahlert.koodies.nio.file.toPath
-import com.bkahlert.koodies.nio.file.writeLine
-import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.removeEscapeSequences
-import com.bkahlert.koodies.test.junit.ThirtyMinutesTimeout
-import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
-import com.bkahlert.koodies.time.format
-import com.bkahlert.koodies.time.parseableInstant
-import com.bkahlert.koodies.unit.Giga
-import com.bkahlert.koodies.unit.Size.Companion.bytes
-import com.imgcstmzr.E2E
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
 import com.imgcstmzr.libguestfs.resolveOnDisk
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.runtime.Program
-import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.runtime.size
-import com.imgcstmzr.util.MiscFixture
-import com.imgcstmzr.util.OS
-import com.imgcstmzr.util.hasContent
-import com.imgcstmzr.util.logging.CapturedOutput
-import com.imgcstmzr.util.logging.InMemoryLogger
-import com.imgcstmzr.util.logging.OutputCaptureExtension
-import com.imgcstmzr.util.logging.expectThatLogged
-import com.imgcstmzr.util.touch
+import com.imgcstmzr.test.E2E
+import com.imgcstmzr.test.MiscClassPathFixture
+import com.imgcstmzr.test.OS
+import com.imgcstmzr.test.ThirtyMinutesTimeout
+import com.imgcstmzr.test.hasContent
+import com.imgcstmzr.test.logging.CapturedOutput
+import com.imgcstmzr.test.logging.OutputCaptureExtension
+import com.imgcstmzr.test.logging.expectThatLogged
+import com.imgcstmzr.test.matchesCurlyPattern
+import koodies.io.path.toPath
+import koodies.io.path.touch
+import koodies.io.path.writeLine
+import koodies.logging.InMemoryLogger
+import koodies.logging.RenderingLogger
+import koodies.terminal.AnsiCode.Companion.removeEscapeSequences
+import koodies.test.copyTo
+import koodies.time.format
+import koodies.time.parseableInstant
+import koodies.unit.Giga
+import koodies.unit.bytes
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import org.junit.jupiter.api.parallel.Isolated
+import strikt.api.Assertion
 import strikt.api.expect
 import strikt.api.expectThat
+import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
 import java.time.Instant
+import kotlin.io.path.exists
+import kotlin.io.path.readText
 
 @Execution(CONCURRENT)
 @ExtendWith(OutputCaptureExtension::class)
@@ -60,7 +65,8 @@ class PatchKtTest {
             with(buildPatch("No-Op Patch") {}) {
                 patch(osImage, logger)
             }
-            expectThat(capturedOutput.out.trim().removeEscapeSequences()).matchesCurlyPattern("""
+            expectThat(capturedOutput.out.trim().removeEscapeSequences()).matchesCurlyPattern(
+                """
             ╭─────╴No-Op Patch
             │   
             │   Disk Preparation: —
@@ -71,30 +77,42 @@ class PatchKtTest {
             │   OS Operations: —
             │
             ╰─────╴✔
-        """.trimIndent())
+        """.trimIndent()
+            )
         }
     }
 
     @Test
     fun `should log not bordered if specified`(osImage: OperatingSystemImage, capturedOutput: CapturedOutput) {
-        with(InMemoryLogger("not-bordered", borderedOutput = false, statusInformationColumn = -1, outputStreams = emptyList())) {
+        with(
+            InMemoryLogger(
+                "not-bordered",
+                bordered = false,
+                statusInformationColumn = -1,
+                outputStreams = emptyList()
+            )
+        ) {
             patch(osImage, buildPatch("No-Op Patch") {})
 
-            expectThatLogged().matchesCurlyPattern("""
-                Started: not-bordered
-                 Started: No-Op Patch
+            expectThatLogged().matchesCurlyPattern(
+                """
+                ▶ not-bordered
+                 ▶ No-Op Patch
                   Disk Preparation: —
                   Disk Customization: —
                   Disk Operations: —
                   File Operations: —
                   OS Preparation: —
                   OS Operations: —
-                 Completed: ✔
-        """.trimIndent())
+                 ✔
+        """.trimIndent()
+            )
         }
     }
 
-    @ThirtyMinutesTimeout @E2E @Test
+    @ThirtyMinutesTimeout
+    @E2E
+    @Test
     fun InMemoryLogger.`should run each op type executing patch successfully`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val timestamp = Instant.now()
 
@@ -116,9 +134,9 @@ class PatchKtTest {
                 }
 
                 edit("/home/pi/demo.ansi", { path ->
-                    require(path.exists)
+                    require(path.exists())
                 }) {
-                    MiscFixture.AnsiDocument.copyTo(it)
+                    MiscClassPathFixture.AnsiDocument.copyTo(it)
                 }
             }
             os {
@@ -147,3 +165,25 @@ class PatchKtTest {
     }
 }
 
+
+fun <T : Patch> Assertion.Builder<T>.matches(
+    diskOperationsAssertion: Assertion.Builder<List<DiskOperation>>.() -> Unit = { hasSize(0) },
+    customizationOptionsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>>.() -> Unit = {
+        hasSize(
+            0
+        )
+    },
+    guestfishCommandsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> GuestfishCommand>>.() -> Unit = {
+        hasSize(
+            0
+        )
+    },
+    fileSystemOperationsAssertion: Assertion.Builder<List<FileOperation>>.() -> Unit = { hasSize(0) },
+    programsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Program>>.() -> Unit = { hasSize(0) },
+) = compose("matches") { patch ->
+    diskOperationsAssertion(get { diskPreparations })
+    customizationOptionsAssertion(get { diskCustomizations })
+    guestfishCommandsAssertion(get { diskOperations })
+    fileSystemOperationsAssertion(get { fileOperations })
+    programsAssertion(get { osOperations })
+}.then { if (allPassed) pass() else fail() }

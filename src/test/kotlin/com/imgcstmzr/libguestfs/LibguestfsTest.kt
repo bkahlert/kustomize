@@ -1,19 +1,19 @@
 package com.imgcstmzr.libguestfs
 
-import com.bkahlert.koodies.nio.file.serialized
-import com.bkahlert.koodies.string.random
-import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
-import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.imgcstmzr.libguestfs.Libguestfs.Companion.libguestfs
 import com.imgcstmzr.libguestfs.guestfish.mounted
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.Companion.virtCustomize
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.util.DockerRequiring
-import com.imgcstmzr.util.OS
-import com.imgcstmzr.util.hasContent
-import com.imgcstmzr.util.logging.InMemoryLogger
-import com.imgcstmzr.util.logging.expectThatLogged
+import com.imgcstmzr.test.DockerRequiring
+import com.imgcstmzr.test.FiveMinutesTimeout
+import com.imgcstmzr.test.OS
+import com.imgcstmzr.test.hasContent
+import com.imgcstmzr.test.logging.expectThatLogged
+import com.imgcstmzr.test.matchesCurlyPattern
+import koodies.io.path.asString
+import koodies.logging.InMemoryLogger
+import koodies.text.randomString
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -76,7 +76,7 @@ class LibguestfsTest {
                     --mount \
                     type=bind,source=${osImage.directory.resolve("shared")},target=/shared \
                     --mount \
-                    type=bind,source=${osImage.file.serialized},target=/images/disk.img \
+                    type=bind,source=${osImage.file.asString()},target=/images/disk.img \
                     bkahlert/libguestfs@sha256{} \
                     --add \
                     /images/disk.img \
@@ -124,7 +124,7 @@ class LibguestfsTest {
 
         @Test
         fun `should build proper docker command`(osImage: OperatingSystemImage) {
-            val sshKey = "ssh-rsa ${String.random(20)}== '${String.random(8)}'"
+            val sshKey = "ssh-rsa ${randomString(20)}== '${randomString(8)}'"
 
             val commandLine = osImage.libguestfs().virtCustomize {
                 options {
@@ -151,7 +151,7 @@ class LibguestfsTest {
                     --mount \
                     type=bind,source=${osImage.directory.resolve("shared")},target=/shared \
                     --mount \
-                    type=bind,source=${osImage.file.serialized},target=/images/disk.img \
+                    type=bind,source=${osImage.file.asString()},target=/images/disk.img \
                     bkahlert/libguestfs@sha256{} \
                     --add \
                     /images/disk.img \

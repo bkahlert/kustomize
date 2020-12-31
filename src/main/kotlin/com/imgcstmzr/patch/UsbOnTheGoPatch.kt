@@ -1,15 +1,15 @@
 package com.imgcstmzr.patch
 
-import com.bkahlert.koodies.collections.Dictionary
-import com.bkahlert.koodies.collections.dictOf
 import com.imgcstmzr.cli.KeyValueDocument
 import com.imgcstmzr.patch.Requirements.requireContainingContent
 import com.imgcstmzr.patch.Requirements.requireContainingKeyValue
 import com.imgcstmzr.patch.ini.IniDocument
+import koodies.collections.Dictionary
+import koodies.collections.dictOf
 
 // TOOD vcgencmd get_config <config>: this displays a specific config value, e.g. vcgencmd get_config arm_freq
 class UsbOnTheGoPatch(
-    modules: List<String>,
+    module: String,
     dict: Dictionary<String, String> = dictOf(
         "g_serial" to "Serial",
         "g_ether" to "Ethernet",
@@ -24,9 +24,8 @@ class UsbOnTheGoPatch(
         "g_printer" to "Printer",
         "g_zero" to "Gadget tester",
     ) { profile -> "Unknown ($profile)" },
-) : Patch by buildPatch("Activate USB On-The-Go for Profiles ${modules.map { dict[it] }}", {
-    if (modules.isEmpty()) return@buildPatch
-
+) : Patch by buildPatch("Activate USB On-The-Go for Profile ${dict[module]}", {
+    
     files {
         //_prompt "Activate USB--on-the-go?" "Y n" "dwc2"
         edit("/boot/config.txt", requireContainingContent("dtoverlay=dwc2")) { path ->
@@ -43,13 +42,11 @@ class UsbOnTheGoPatch(
             }
         }
 
-        modules.onEach { module ->
-            //_prompt "Activate ...?" "Y n" "..."
-            edit("/boot/cmdline.txt", requireContainingKeyValue("modules-load", "dwc2", module)) { path ->
-                with(KeyValueDocument(path)) {
-                    addValue("modules-load", module)
-                    save(path)
-                }
+        //_prompt "Activate ...?" "Y n" "..."
+        edit("/boot/cmdline.txt", requireContainingKeyValue("modules-load", "dwc2", module)) { path ->
+            with(KeyValueDocument(path)) {
+                addValue("modules-load", module)
+                save(path)
             }
         }
     }

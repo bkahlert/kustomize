@@ -1,21 +1,20 @@
 package com.imgcstmzr.patch
 
-import com.bkahlert.koodies.shell.ShellScript
-import com.bkahlert.koodies.shell.ShellScript.Companion.build
+import koodies.shell.ShellScript
+import koodies.shell.ShellScript.Companion.build
 
 class ShellScriptPatch(
     shellScripts: List<ShellScript>,
 ) : Patch by buildPatch("${shellScripts.size} shell script(s) with ${shellScripts.sumBy { it.lines.size }} lines altogether", {
     customizeDisk {
-        shellScripts.forEach {
-            firstBoot(it)
+        firstBoot("Fist Boot") { osImage ->
+            shellScripts.forEach { embed(it) }
+            !osImage.shutdownCommand
         }
     }
 
-    os {
-        script("firstboot scripts", "echo 'Done'")
-    }
+    boot()
 }) {
     constructor(vararg shellScripts: ShellScript) : this(shellScripts.toList())
-    constructor(init: ShellScript.() -> Unit) : this(init.build())
+    constructor(name: String? = null, init: ShellScript.() -> Unit) : this(init.build(name))
 }

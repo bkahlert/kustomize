@@ -1,22 +1,22 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.nio.file.appendBytes
-import com.bkahlert.koodies.nio.file.baseName
-import com.bkahlert.koodies.nio.file.duplicate
-import com.bkahlert.koodies.nio.file.serialized
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
-import com.bkahlert.koodies.unit.Mega
-import com.bkahlert.koodies.unit.Size
-import com.bkahlert.koodies.unit.Size.Companion.bytes
-import com.bkahlert.koodies.unit.Size.Companion.size
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
-import com.imgcstmzr.runtime.log.BlockRenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.logging
-import com.imgcstmzr.runtime.log.singleLineLogging
-import com.imgcstmzr.util.isReadable
+import koodies.concurrent.process.IO
+import koodies.io.path.asString
+import koodies.io.path.baseName
+import koodies.io.path.duplicate
+import koodies.logging.BlockRenderingLogger
+import koodies.logging.RenderingLogger
+import koodies.logging.compactLogging
+import koodies.logging.logging
+import koodies.terminal.AnsiColors.magenta
+import koodies.unit.Mega
+import koodies.unit.Size
+import koodies.unit.bytes
+import koodies.unit.size
 import java.nio.file.Path
+import kotlin.io.path.appendBytes
+import kotlin.io.path.isReadable
 import kotlin.io.path.listDirectoryEntries
 
 /**
@@ -39,8 +39,8 @@ class OperatingSystemImage(
 
     override val fullName: String get() = "${operatingSystem.fullName}${if (updatedCredentials) "*".magenta() else ""} at ${path.toUri()}"
     val shortName: String get() = "${operatingSystem.fullName}${if (updatedCredentials) "*".magenta() else ""} at ${path.fileName}"
-    val fileName: String = path.fileName.serialized
-    val readable: Boolean get() = path.isReadable
+    val fileName: String = path.fileName.asString()
+    val readable: Boolean get() = path.isReadable()
     val directory: Path get() = path.parent
     val file: Path get() = path
     val size: Size get() = path.size
@@ -72,7 +72,7 @@ class OperatingSystemImage(
                     logStatus { IO.Type.OUT typed "${path.fileName} is has already ${path.size}" }
                 }
                 else -> {
-                    singleLineLogging("Progress:") {
+                    compactLogging("Progress:") {
                         logStatus { IO.Type.OUT typed path.size.toString() }
                         while (missing > 0.bytes) {
                             val write = if (missing < bytesPerStep) missing.toZeroFilledByteArray() else oneHundredMegaBytes

@@ -1,13 +1,13 @@
 package com.imgcstmzr.patch
 
-import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
-import com.imgcstmzr.E2E
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.copyOut
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.util.OS
-import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.test.E2E
+import com.imgcstmzr.test.FiveMinutesTimeout
+import com.imgcstmzr.test.OS
+import koodies.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT

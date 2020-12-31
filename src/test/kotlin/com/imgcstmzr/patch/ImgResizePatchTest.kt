@@ -1,13 +1,13 @@
 package com.imgcstmzr.patch
 
-import com.bkahlert.koodies.test.junit.FifteenMinutesTimeout
-import com.bkahlert.koodies.unit.Mebi
-import com.bkahlert.koodies.unit.Size.Companion.bytes
-import com.imgcstmzr.E2E
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.util.OS
-import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.test.E2E
+import com.imgcstmzr.test.FifteenMinutesTimeout
+import com.imgcstmzr.test.OS
+import koodies.logging.InMemoryLogger
+import koodies.unit.Mebi
+import koodies.unit.bytes
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT

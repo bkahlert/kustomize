@@ -1,14 +1,14 @@
 package com.imgcstmzr.libguestfs
 
-import com.bkahlert.koodies.concurrent.process.CommandLine
-import com.bkahlert.koodies.concurrent.process.ManagedProcess
-import com.bkahlert.koodies.docker.DockerRunAdaptable
-import com.bkahlert.koodies.nio.file.exists
-import com.bkahlert.koodies.nio.file.mkdirs
-import com.bkahlert.koodies.nio.file.toPath
-import com.imgcstmzr.util.isReadable
-import com.imgcstmzr.util.isWritable
+import koodies.concurrent.process.CommandLine
+import koodies.concurrent.process.ManagedProcess
+import koodies.docker.DockerRunAdaptable
+import koodies.io.path.toPath
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
+import kotlin.io.path.isReadable
+import kotlin.io.path.isWritable
 
 abstract class LibguestfsCommandLine(
     environment: Map<String, String>,
@@ -20,14 +20,14 @@ abstract class LibguestfsCommandLine(
     override fun execute(expectedExitValue: Int): ManagedProcess {
         val disk: Path = commandLineParts.dropWhile { it != "--add" }.drop(1).take(1).singleOrNull()?.toPath().run {
             checkNotNull(this) { "No included disk found." }
-            check(exists) { "Disk $this does no exist." }
-            check(isReadable) { "Disk $this is not readable." }
-            check(isWritable) { "Disk $this is not writable." }
+            check(exists()) { "Disk $this does no exist." }
+            check(isReadable()) { "Disk $this is not readable." }
+            check(isWritable()) { "Disk $this is not writable." }
             this
         }
 
         val sharedDir = disk.resolveSibling("shared")
-        sharedDir.mkdirs()
+        sharedDir.createDirectories()
         return adapt().execute(expectedExitValue)
     }
 }
@@ -56,7 +56,7 @@ open class Option(open val name: String, open val arguments: List<String>) :
     override fun toString(): String {
         val simpleName = this::class.simpleName ?: "GuestfishCommand"
         val cmd = simpleName.replace("Guestfish", "><> ").replace("Command", "")
-        return "$cmd($this)"
+        return "$cmd(${joinToString("; ")})"
     }
 }
 

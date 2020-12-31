@@ -1,9 +1,8 @@
 package com.imgcstmzr.patch
 
-import com.bkahlert.koodies.nio.file.toPath
 import com.imgcstmzr.libguestfs.guestfish.TouchCommand
 import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.util.matches
+import koodies.io.path.toPath
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT

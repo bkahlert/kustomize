@@ -1,6 +1,5 @@
-com.bkahlert.koodies.test.junit.ExtensionContextResolver
-com.bkahlert.koodies.test.junit.debug.DebugCondition
-com.bkahlert.koodies.test.junit.debug.DebugParameterResolver
-com.imgcstmzr.util.DockerRequiredCondition
-com.imgcstmzr.util.logging.InMemoryLoggerResolver
-com.imgcstmzr.util.FixtureResolverExtension
+com.imgcstmzr.test.FixtureResolverExtension
+com.imgcstmzr.test.UniqueIdResolver
+com.imgcstmzr.test.logging.InMemoryLoggerResolver
+com.imgcstmzr.test.debug.DebugCondition
+com.imgcstmzr.test.debug.DebugParameterResolver

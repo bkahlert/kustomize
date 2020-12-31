@@ -15,11 +15,15 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     jcenter()
+    maven("https://dl.bintray.com/bkahlert/koodies")
+    mavenLocal()
 }
 
 dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.1")
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.10")
+
+    implementation("com.bkahlert.koodies:koodies:1.2.0-SNAPSHOT")
 
 //    docker('bkahlert:libguestfs:0.1.2') //
 

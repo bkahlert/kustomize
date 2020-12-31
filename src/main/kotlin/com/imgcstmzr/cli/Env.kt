@@ -1,17 +1,17 @@
 package com.imgcstmzr.cli
 
-import com.bkahlert.koodies.nio.file.exists
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
-import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.runtime.log.RenderingLogger
 import com.typesafe.config.ConfigFactory
+import koodies.logging.RenderingLogger
+import koodies.terminal.AnsiColors.cyan
+import koodies.terminal.AnsiColors.yellow
+import koodies.terminal.AnsiFormats.bold
 import java.nio.file.Path
+import kotlin.io.path.exists
 
 class Env private constructor(vararg maps: Map<String, String?>) : Map<String, String?> by maps.flatMap({ it.toList() }).toMap() {
     constructor(logger: RenderingLogger, path: Path) : this(
-        if (path.exists) {
+        if (path.exists()) {
             ConfigFactory.parseFile(path.toFile()) // TODO remove toFile()
                 .root()
                 .toMap()

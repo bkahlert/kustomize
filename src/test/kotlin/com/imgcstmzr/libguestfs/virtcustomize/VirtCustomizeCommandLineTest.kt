@@ -1,22 +1,22 @@
 package com.imgcstmzr.libguestfs.virtcustomize
 
-import com.bkahlert.koodies.nio.file.serialized
-import com.bkahlert.koodies.shell.ShellScript
-import com.bkahlert.koodies.test.strikt.matchesCurlyPattern
 import com.imgcstmzr.libguestfs.SharedPath
 import com.imgcstmzr.libguestfs.resolveOnDisk
 import com.imgcstmzr.libguestfs.resolveOnDocker
 import com.imgcstmzr.libguestfs.resolveOnHost
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.FirstBootOption
 import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.util.hasContent
-import com.imgcstmzr.util.single
+import com.imgcstmzr.test.hasContent
+import com.imgcstmzr.test.matchesCurlyPattern
+import koodies.io.path.asString
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expect
 import strikt.api.expectCatching
+import strikt.assertions.all
 import strikt.assertions.filterIsInstance
+import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
 import java.nio.file.Path
@@ -34,7 +34,7 @@ class VirtCustomizeCommandLineTest {
         val commandLine = createVirtCustomizeCommandLine(osImage)
         expect {
             that(commandLine.workingDirectory).isEqualTo(osImage.file.parent)
-            that(commandLine.customizationOptions).filterIsInstance<FirstBootOption>().single {
+            that(commandLine.customizationOptions).filterIsInstance<FirstBootOption>().hasSize(1).all {
                 get { osImage.resolveOnHost(path) }.hasContent("""
                     sed -i 's/^\#Port 22${'$'}/Port 3421/g' /etc/ssh/sshd_config
                     systemctl enable getty@ttyGS0.service
@@ -45,7 +45,7 @@ class VirtCustomizeCommandLineTest {
                 matchesCurlyPattern("""
                     virt-customize \
                     --add \
-                    ${osImage.file.serialized} \
+                    ${osImage.file.asString()} \
                     --verbose \
                     -x \
                     --append-line \
@@ -62,12 +62,16 @@ class VirtCustomizeCommandLineTest {
                     /source:/copy \
                     --copy-in \
                     /shared/from/host:/to/guest \
+                    --copy-in \
+                    /shared/some/file:/some \
                     --delete \
                     /delete/file1 \
                     --delete \
                     /delete/dir/2 \
                     --edit \
                     /etc/dnf/dnf.conf:s/gpgcheck=1/gpgcheck=0/ \
+                    --hostname \
+                    the-machine \
                     --firstboot \
                     /shared/script-{}.sh \
                     --firstboot-command \
@@ -122,13 +126,15 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage) = Vir
         commandsFromFiles { osImage -> osImage.resolveOnDisk("/commands/from/files-2") }
         copy { it.resolveOnDisk("source") to it.resolveOnDisk("copy") }
         copyIn { it.resolveOnDocker("from/host") to it.resolveOnDisk("to/guest") }
+        copyIn("/some/file")
         delete { it.resolveOnDisk("delete/file1") }
         delete { it.resolveOnDisk("/delete/dir/2") }
         edit { it.resolveOnDisk("/etc/dnf/dnf.conf") to "s/gpgcheck=1/gpgcheck=0/" }
-        firstBoot(ShellScript {
+        hostname { "the-machine" }
+        firstBoot {
             !"""sed -i 's/^\#Port 22${'$'}/Port 3421/g' /etc/ssh/sshd_config"""
             !"""systemctl enable getty@ttyGS0.service"""
-        })
+        }
         firstBootCommand { "command arg1 arg2" }
         firstBootCommand { "boot-command" }
         firstBootInstall {

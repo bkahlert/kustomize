@@ -1,26 +1,26 @@
 package com.imgcstmzr.libguestfs.guestfish
 
-import com.bkahlert.koodies.nio.file.delete
-import com.bkahlert.koodies.nio.file.mkdirs
-import com.bkahlert.koodies.nio.file.serialized
-import com.bkahlert.koodies.nio.file.toPath
-import com.bkahlert.koodies.nio.file.writeText
-import com.bkahlert.koodies.test.junit.FiveMinutesTimeout
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.runGuestfishOn
 import com.imgcstmzr.libguestfs.resolveOnDisk
 import com.imgcstmzr.libguestfs.resolveOnDocker
 import com.imgcstmzr.libguestfs.resolveOnHost
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems
-import com.imgcstmzr.runtime.log.BlockRenderingLogger
-import com.imgcstmzr.runtime.log.logging
-import com.imgcstmzr.util.DockerRequiring
-import com.imgcstmzr.util.ImgFixture
-import com.imgcstmzr.util.ImgFixture.Home.User.ExampleHtml
-import com.imgcstmzr.util.OS
-import com.imgcstmzr.util.containsContent
-import com.imgcstmzr.util.hasContent
-import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.test.DockerRequiring
+import com.imgcstmzr.test.FiveMinutesTimeout
+import com.imgcstmzr.test.ImgClassPathFixture
+import com.imgcstmzr.test.ImgClassPathFixture.Home.User.ExampleHtml
+import com.imgcstmzr.test.OS
+import com.imgcstmzr.test.containsContent
+import com.imgcstmzr.test.hasContent
+import koodies.io.path.asString
+import koodies.io.path.delete
+import koodies.io.path.toPath
+import koodies.io.path.writeText
+import koodies.logging.BlockRenderingLogger
+import koodies.logging.InMemoryLogger
+import koodies.logging.logging
+import koodies.test.copyTo
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -32,6 +32,7 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
 import strikt.assertions.resolve
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
 
 @Execution(CONCURRENT)
 class GuestfishCommandLineTest {
@@ -47,7 +48,7 @@ class GuestfishCommandLineTest {
         expectThat(commandLine.toString()).isEqualTo("""
             guestfish \
             --add \
-            ${osImage.file.serialized} \
+            ${osImage.file.asString()} \
             --inspector \
             !mkdir \
             -p \
@@ -108,20 +109,20 @@ class GuestfishCommandLineTest {
         }
 
         expectThat(dir) {
-            resolve("boot/cmdline.txt").hasContent(ImgFixture.Boot.CmdlineTxt.text)
+            resolve("boot/cmdline.txt").hasContent(ImgClassPathFixture.Boot.CmdlineTxt.text)
             resolve("boot/config.txt").containsContent("# http://rpf.io/configtxt").containsContent("dtoverlay").not { containsContent("overwrite me") }
         }
     }
 
     @FiveMinutesTimeout @DockerRequiring @Test
     fun InMemoryLogger.`should copy new file to osImage and overwrite a second one`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage) {
-        val exampleHtml = f("/home/user/example.html")
+        val exampleHtml = "/home/user/example.html".toPath()
         val exampleHtmlOnHost = osImage.resolveOnHost(exampleHtml).also { ExampleHtml.copyTo(it) }
-        val configTxt = f("/boot/config.txt")
-        val configTxtOnHost = osImage.resolveOnHost(configTxt).apply { parent.mkdirs() }.writeText("overwrite guest")
+        val configTxt = "/boot/config.txt".toPath()
+        val configTxtOnHost = osImage.resolveOnHost(configTxt).apply { parent.createDirectories() }.apply { writeText("overwrite guest") }
 
         runGuestfishOn(osImage) { tarIn() }
-        exampleHtmlOnHost.delete(false)
+        exampleHtmlOnHost.delete()
 
         runGuestfishOn(osImage) {
             copyOut { it.resolveOnDisk(exampleHtml) }
@@ -130,12 +131,10 @@ class GuestfishCommandLineTest {
 
         expect {
             that(exampleHtmlOnHost).hasContent(ExampleHtml.text)
-            that(configTxtOnHost).hasContent("overwrite guest").not { hasContent(ImgFixture.Boot.ConfigTxt.text) }
+            that(configTxtOnHost).hasContent("overwrite guest").not { hasContent(ImgClassPathFixture.Boot.ConfigTxt.text) }
         }
     }
 }
-
-private fun f(path: String): Path = Path.of(path)
 
 internal fun createGuestfishCommand(osImage: OperatingSystemImage) = GuestfishCommandLine.build(osImage) {
     options {
@@ -197,7 +196,7 @@ fun Assertion.Builder<OperatingSystemImage>.mounted(logger: BlockRenderingLogger
         // Assert
         compose("with files $paths") {
             assertions.forEach { (path, assertion) ->
-                get(path.serialized) { resolveOnHost(path) }.assertion()
+                get(path.asString()) { resolveOnHost(path) }.assertion()
             }
         }.then { if (allPassed) pass() else fail() }
     }

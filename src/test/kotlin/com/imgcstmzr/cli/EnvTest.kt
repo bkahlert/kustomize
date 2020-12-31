@@ -1,10 +1,10 @@
 package com.imgcstmzr.cli
 
-import com.bkahlert.koodies.nio.file.tempDir
-import com.bkahlert.koodies.nio.file.tempFile
-import com.bkahlert.koodies.nio.file.writeText
-import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.test.UniqueId
+import com.imgcstmzr.withTempDir
+import koodies.io.path.randomFile
+import koodies.io.path.writeText
+import koodies.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -20,20 +20,18 @@ import java.nio.file.Path
 @Isolated("flaky OutputCapture")
 class EnvTest {
 
-    private val tempDir = tempDir().deleteOnExit()
-
     @Test
-    fun InMemoryLogger.`should read env file`() {
-        val path: Path = tempDir.tempFile("personal", ".env").apply { writeText("A=B\n CC= DD \n") }
-        expectThat(Env(this, path))
+    fun InMemoryLogger.`should read env file`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+        val path: Path = randomFile("personal", ".env").apply { writeText("A=B\n CC= DD \n") }
+        expectThat(Env(this@`should read env file`, path))
             .hasEntry("A", "B")
             .hasEntry("CC", "DD")
     }
 
     @Test
-    fun InMemoryLogger.`should favor environment variables`() {
-        val path: Path = tempDir.tempFile("personal", ".env").apply { writeText("JAVA_HOME=dummy\n") }
-        expectThat(Env(this, path))["JAVA_HOME"].isNotEqualTo("dummy")
+    fun InMemoryLogger.`should favor environment variables`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+        val path: Path = randomFile("personal", ".env").apply { writeText("JAVA_HOME=dummy\n") }
+        expectThat(Env(this@`should favor environment variables`, path))["JAVA_HOME"].isNotEqualTo("dummy")
     }
 
     @Test

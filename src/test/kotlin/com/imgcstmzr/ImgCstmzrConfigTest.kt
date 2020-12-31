@@ -1,43 +1,27 @@
 package com.imgcstmzr
 
-import com.bkahlert.koodies.shell.ShellScript
-import com.bkahlert.koodies.test.junit.ThirtyMinutesTimeout
-import com.bkahlert.koodies.test.junit.systemproperties.SystemProperties
-import com.bkahlert.koodies.test.junit.systemproperties.SystemProperty
-import com.bkahlert.koodies.unit.Giga
-import com.bkahlert.koodies.unit.Size.Companion.bytes
-import com.imgcstmzr.patch.CompositePatch
-import com.imgcstmzr.patch.ImgResizePatch
-import com.imgcstmzr.patch.PasswordPatch
-import com.imgcstmzr.patch.ShellScriptPatch
-import com.imgcstmzr.patch.SshAuthorizationPatch
-import com.imgcstmzr.patch.SshEnablementPatch
-import com.imgcstmzr.patch.UsbOnTheGoPatch
-import com.imgcstmzr.patch.UsernamePatch
-import com.imgcstmzr.patch.booted
-import com.imgcstmzr.patch.patch
+import com.imgcstmzr.patch.*
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.withPassword
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems
-import com.imgcstmzr.util.OS
-import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.test.*
 import com.typesafe.config.ConfigFactory
+import koodies.logging.InMemoryLogger
+import koodies.shell.ShellScript
+import koodies.unit.Giga
+import koodies.unit.bytes
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expect
 import strikt.api.expectThat
-import strikt.assertions.contains
-import strikt.assertions.containsExactly
-import strikt.assertions.containsExactlyInAnyOrder
-import strikt.assertions.hasSize
-import strikt.assertions.isA
-import strikt.assertions.isEqualTo
-import strikt.assertions.isTrue
+import strikt.assertions.*
 
 @SystemProperties(
     SystemProperty("IMG_CSTMZR_USERNAME", "FiFi"),
-    SystemProperty("IMG_CSTMZR_PASSWORD", "TRIXIbelle1234")
+    SystemProperty("IMG_CSTMZR_PASSWORD", "TRIXIbelle1234"),
+    SystemProperty("IMG_CSTMZR_WPA_SUPPLICANT", "entry1\nentry2"),
+    SystemProperty("INDIVIDUAL_KEY", "B{1:Βϊ𝌁\uD834\uDF57"),
 )
 @Execution(CONCURRENT)
 class ImgCstmzrConfigTest {
@@ -53,15 +37,20 @@ class ImgCstmzrConfigTest {
             get { trace }.isTrue()
             get { name }.isEqualTo("Sample Project")
             get { os }.isEqualTo(OperatingSystems.RaspberryPiLite)
+            get { hostname }.isEqualTo(ImgCstmzrConfig.Hostname("demo", true))
+            get { wpaSupplicant }.isEqualTo("entry1\nentry2")
             get { imgSize }.isEqualTo(4.Giga.bytes)
             get { ssh.enabled }.isTrue()
             @Suppress("SpellCheckingInspection")
             get { ssh.authorizedKeys }.contains(
-                listOf("""ssh-rsa MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAKbic/EEoiSu09lYR1y5001NA1K63M/Jd+IV1b2YpoXJxWDrkzQ/3v/SE84/cSayWAy4LVEXUodrt1WkPZ/NjE8CAwEAAQ== "John Doe 2020-12-10 btw, Corona sucks""""))
+                listOf("""ssh-rsa MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAKbic/EEoiSu09lYR1y5001NA1K63M/Jd+IV1b2YpoXJxWDrkzQ/3v/SE84/cSayWAy4LVEXUodrt1WkPZ/NjE8CAwEAAQ== "John Doe 2020-12-10 btw, Corona sucks"""")
+            )
             get { defaultUser }.isEqualTo(ImgCstmzrConfig.DefaultUser(null, "FiFi", "TRIXIbelle1234"))
-            get { usbOtg.profiles }.containsExactlyInAnyOrder("g_acm_ms", "g_ether", "g_webcam")
-            get { setup[0].name }.isEqualTo("the basics")
-            get { setup[0] }.containsExactly(
+            get { samba?.sanitizedHomeShare }.isEqualTo(true)
+            get { samba?.sanitizedRootShare }.isEqualTo(RootShare.`read-write`)
+            get { usbOtg }.isNotNull().isEqualTo("g_ether")
+            get { setup!![0].name }.isEqualTo("the basics")
+            get { setup!![0] }.containsExactly(
                 ShellScript(
                     name = "Configuring SSH port",
                     content = """sed -i 's/^\#Port 22${'$'}/Port 1234/g' /etc/ssh/sshd_config"""
@@ -79,8 +68,8 @@ class ImgCstmzrConfigTest {
                     content = """echo ''"""
                 )
             )
-            get { setup[1].name }.isEqualTo("leisure")
-            get { setup[1] }.containsExactly(
+            get { setup!![1].name }.isEqualTo("leisure")
+            get { setup!![1] }.containsExactly(
                 ShellScript(
                     name = "The Title",
                     content = """
@@ -109,6 +98,7 @@ class ImgCstmzrConfigTest {
                             """.trimIndent()
                 ),
             )
+            get { flashDisk }.isEqualTo("auto")
         }.then { if (allPassed) pass() else fail() }
     }
 
@@ -117,13 +107,13 @@ class ImgCstmzrConfigTest {
         val imgCstmztn = loadImgCstmztn()
         val patch = imgCstmztn.toPatches()
         expectThat(CompositePatch(patch)) {
-            get { name }.contains("Increasing Disk Space: 4.00 GB").contains("Change Username").contains("Mass storage and Serial")
-            get { diskPreparations }.hasSize(1)
-            get { diskCustomizations }.hasSize(13)
-            get { diskOperations }.hasSize(1)
-            get { fileOperations }.hasSize(5)
-            get { osPreparations }.hasSize(2)
-            get { osOperations }.hasSize(4)
+            get { name }.contains("Increasing Disk Space: 4.00 GB").contains("Change Username")
+            get { diskPreparations }.isNotEmpty()
+            get { diskCustomizations }.isNotEmpty()
+            get { diskOperations }.isNotEmpty()
+            get { fileOperations }.isNotEmpty()
+            get { osPreparations }.isNotEmpty()
+            get { osOperations }.isNotEmpty()
         }
     }
 
@@ -134,15 +124,24 @@ class ImgCstmzrConfigTest {
         expectThat(patches) {
             hasSize(4)
             get { get(0) }.isA<CompositePatch>().get { this.patches.map { it::class } }
-                .contains(ImgResizePatch::class, UsernamePatch::class, SshEnablementPatch::class, UsbOnTheGoPatch::class)
+                .contains(
+                    HostnamePatch::class,
+                    ImgResizePatch::class,
+                    UsernamePatch::class,
+                    SshEnablementPatch::class,
+                    WpaSupplicantPatch::class,
+                    SambaPatch::class,
+                )
             get { get(1) }.isA<CompositePatch>().get { this.patches.map { it::class } }
-                .contains(PasswordPatch::class, SshAuthorizationPatch::class)
+                .contains(PasswordPatch::class, SshAuthorizationPatch::class, UsbOnTheGoPatch::class)
             get { get(2) }.isA<ShellScriptPatch>()
             get { get(3) }.isA<ShellScriptPatch>()
         }
     }
 
-    @ThirtyMinutesTimeout @E2E @Test
+    @ThirtyMinutesTimeout
+    @E2E
+    @Test
     fun InMemoryLogger.`should apply patches`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage) {
         val imgCstmztn = loadImgCstmztn()
         val patches = imgCstmztn.toOptimizedPatches()

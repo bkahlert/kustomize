@@ -1,34 +1,35 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.concurrent.process.IO.Type.ERR
-import com.bkahlert.koodies.concurrent.process.IO.Type.IN
-import com.bkahlert.koodies.concurrent.process.IO.Type.META
-import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
-import com.bkahlert.koodies.concurrent.process.ManagedProcess
-import com.bkahlert.koodies.concurrent.process.Process
-import com.bkahlert.koodies.concurrent.process.Processor
-import com.bkahlert.koodies.concurrent.process.UserInput.input
-import com.bkahlert.koodies.concurrent.process.process
-import com.bkahlert.koodies.concurrent.process.waitForTermination
-import com.bkahlert.koodies.concurrent.startAsThread
-import com.bkahlert.koodies.docker.DockerContainerName.Companion.toUniqueContainerName
-import com.bkahlert.koodies.docker.DockerImage
-import com.bkahlert.koodies.docker.DockerImageBuilder.Companion.build
-import com.bkahlert.koodies.docker.DockerProcess
-import com.bkahlert.koodies.docker.DockerRunCommandLineBuilder.Companion.buildRunCommand
-import com.bkahlert.koodies.kaomoji.Kaomojis
-import com.bkahlert.koodies.kaomoji.Kaomojis.thinking
-import com.bkahlert.koodies.string.LineSeparators
-import com.bkahlert.koodies.string.LineSeparators.withoutTrailingLineSeparator
-import com.bkahlert.koodies.string.quoted
-import com.bkahlert.koodies.terminal.ANSI
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.green
 import com.imgcstmzr.runtime.Program.Companion.compute
 import com.imgcstmzr.runtime.Program.Companion.format
-import com.imgcstmzr.runtime.log.BlockRenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.logging
+import koodies.builder.ListBuilder.Companion.buildList
+import koodies.concurrent.process.IO
+import koodies.concurrent.process.IO.Type.ERR
+import koodies.concurrent.process.IO.Type.IN
+import koodies.concurrent.process.IO.Type.META
+import koodies.concurrent.process.IO.Type.OUT
+import koodies.concurrent.process.ManagedProcess
+import koodies.concurrent.process.Process
+import koodies.concurrent.process.Processor
+import koodies.concurrent.process.UserInput.input
+import koodies.concurrent.process.process
+import koodies.concurrent.thread
+import koodies.docker.DockerContainerName.Companion.toUniqueContainerName
+import koodies.docker.DockerImage
+import koodies.docker.DockerImageBuilder.Companion.build
+import koodies.docker.DockerProcess
+import koodies.docker.DockerRunCommandLineBuilder.Companion.buildRunCommand
+import koodies.kaomoji.Kaomojis
+import koodies.kaomoji.Kaomojis.thinking
+import koodies.logging.BlockRenderingLogger
+import koodies.logging.HasStatus
+import koodies.logging.RenderingLogger
+import koodies.logging.logging
+import koodies.terminal.ANSI
+import koodies.terminal.AnsiColors.green
+import koodies.text.LineSeparators
+import koodies.text.LineSeparators.withoutTrailingLineSeparator
+import koodies.text.quoted
 import kotlin.properties.Delegates
 import kotlin.time.Duration
 import kotlin.time.milliseconds
@@ -116,7 +117,7 @@ open class OperatingSystemProcess(
 
 
     val shuttingDownStatus: List<HasStatus> = listOf(object : HasStatus {
-        override fun status(): String = "shutting down"
+        override fun renderStatus(): String = "shutting down"
     })
 
     /**
@@ -133,7 +134,7 @@ open class OperatingSystemProcess(
     fun isStuck(io: IO): Boolean {
         val stuck = os.deadEndPattern?.matches(io.unformatted) == true
         if (stuck) {
-            startAsThread { negativeFeedback("The VM is stuck. Chances are the VM starts correctly with less load on this machine.") }
+            thread { negativeFeedback("The VM is stuck. Chances are the VM starts correctly with less load on this machine.") }
             stop()
             throw IllegalStateException(io.unformatted)
         }
@@ -157,9 +158,9 @@ open class OperatingSystemProcess(
  * Starts a [DockerProcess] with [name] that boots the [this@run] and
  * runs all provided [programs].
  *
- * Before the [programs] the [this@run] will be booted and an [autoLogin] takes place.
+ * Before the [programs] the [this@run] will be booted an [autoLogin] takes place.
  * After the execution of all [programs] finishes the [this@run] will
- * be shutdown.
+ * be [autoShutdown].
  *
  * @return exit code `0` if no errors occurred.
  */
@@ -167,13 +168,14 @@ fun OperatingSystemImage.execute(
     name: String = file.toUniqueContainerName().sanitized,
     logger: RenderingLogger,
     autoLogin: Boolean = true,
+    autoShutdown: Boolean = true,
     vararg programs: Program,
 ): Int = logger.logging("Running $shortName with ${programs.format()}", ansiCode = ANSI.termColors.cyan) {
-    val unfinished: MutableList<Program> = mutableListOf(
-        *(if (autoLogin) arrayOf(loginProgram(credentials)/*.logging()*/) else emptyArray()),
-        *programs,
-        shutdownProgram(),/*.logging()*/
-    )
+    val unfinished: MutableList<Program> = buildList<Program> {
+        if (autoLogin) +loginProgram(credentials)/*.logging()*/
+        +programs
+        if (autoShutdown) +shutdownProgram()/*.logging()*/
+    }.toMutableList()
 
     val operatingSystemProcess = OperatingSystemProcess(name, this@execute, this@logging)
     operatingSystemProcess.process(stuckCheckingProcessor { io ->
@@ -183,6 +185,14 @@ fun OperatingSystemImage.execute(
             OUT -> logStatus(items = unfinished) { io }
             ERR -> feedback("Unfortunately an error occurred: ${io.formatted}")
         }
-        if (!unfinished.compute(this, io)) unfinished.takeIf { it.isNotEmpty() }?.removeAt(0)
+        if (!unfinished.compute(this, io)) {
+            if (unfinished.isNotEmpty()) unfinished.removeFirst()
+
+            // if the OS was ready and the previous program "just" waited to confirm successful execution
+            // pass this IO also to the next program. Otherwise the execution might get stuck should more
+            // IO be emitted, like `bkahlert@bother-you-apYr:~$ [  OK  ] Started User Manager for UID 1000`
+            //                                 ready till here ↑ now, no more
+            if (unfinished.isNotEmpty()) unfinished.compute(this, io)
+        }
     }).waitForTermination()
 }

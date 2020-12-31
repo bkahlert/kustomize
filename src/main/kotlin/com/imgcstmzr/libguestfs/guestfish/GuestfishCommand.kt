@@ -1,8 +1,8 @@
 package com.imgcstmzr.libguestfs.guestfish
 
-import com.bkahlert.koodies.nio.file.serialized
-import com.bkahlert.koodies.string.LineSeparators
-import com.bkahlert.koodies.string.withPrefix
+import koodies.io.path.asString
+import koodies.text.LineSeparators
+import koodies.text.withPrefix
 import java.nio.file.Path
 
 /**
@@ -77,10 +77,10 @@ open class GuestfishCompositeCommand(val guestfishCommands: List<GuestfishComman
  */
 class CopyInCommand(val mkDir: Boolean, val remoteDir: Path, vararg val localFiles: Path) :
     GuestfishCompositeCommand(listOfNotNull(
-        if (mkDir) -GuestfishCommand("mkdir-p", remoteDir.serialized) else null,
+        if (mkDir) -GuestfishCommand("mkdir-p", remoteDir.asString()) else null,
         -GuestfishCommand("copy-in",
-            *localFiles.map { it.serialized }.toTypedArray(),
-            remoteDir.serialized,
+            *localFiles.map { it.asString() }.toTypedArray(),
+            remoteDir.asString(),
             convenience = true),
     )) {
 }
@@ -95,10 +95,10 @@ class CopyInCommand(val mkDir: Boolean, val remoteDir: Path, vararg val localFil
  */
 class CopyOutCommand(vararg val remoteFiles: Path, val mkDir: Boolean, val directory: Path) :
     GuestfishCompositeCommand(listOfNotNull(
-        if (mkDir) !GuestfishCommand("mkdir", "-p", directory.serialized) else null,
+        if (mkDir) !GuestfishCommand("mkdir", "-p", directory.asString()) else null,
         -GuestfishCommand("copy-out",
-            *remoteFiles.map { it.serialized }.toTypedArray(),
-            directory.serialized,
+            *remoteFiles.map { it.asString() }.toTypedArray(),
+            directory.asString(),
             convenience = true),
     ))
 
@@ -109,8 +109,8 @@ class TarInCommand(val archive: Path, val directory: Path, val deleteArchiveAfte
     GuestfishCompositeCommand(listOfNotNull(
         GuestfishCommand(
             "tar-in",
-            archive.serialized,
-            directory.serialized
+            archive.asString(),
+            directory.asString()
         ),
         if (deleteArchiveAfterwards) !RmCommand(archive) else null,
     ))
@@ -120,8 +120,8 @@ class TarInCommand(val archive: Path, val directory: Path, val deleteArchiveAfte
  */
 class TarOutCommand(val directory: Path = Path.of("/"), val archive: Path) : GuestfishCommand(
     "tar-out",
-    directory.serialized,
-    archive.serialized,
+    directory.asString(),
+    archive.asString(),
     "excludes:${directory.resolve(archive.fileName)}"
 )
 
@@ -134,7 +134,7 @@ class TarOutCommand(val directory: Path = Path.of("/"), val archive: Path) : Gue
  */
 class TouchCommand(val file: Path) : GuestfishCommand(
     "touch",
-    file.serialized,
+    file.asString(),
 )
 
 /**
@@ -148,12 +148,12 @@ class RmCommand(val file: Path, val force: Boolean = false, val recursive: Boole
     true to false -> "-f"
     true to true -> "-rf"
     else -> ""
-}, file.serialized)
+}, file.asString())
 
 /**
  * Remove the single [directory].
  */
-class RmDirCommand(val directory: Path) : GuestfishCommand("rmdir", directory.serialized)
+class RmDirCommand(val directory: Path) : GuestfishCommand("rmdir", directory.asString())
 
 /**
  * This unmounts all mounted filesystems.

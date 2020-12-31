@@ -1,19 +1,11 @@
 package com.imgcstmzr.libguestfs.virtcustomize
 
-import com.bkahlert.koodies.builder.ListBuilder
-import com.bkahlert.koodies.builder.OnOffBuilderInit
-import com.bkahlert.koodies.builder.build
-import com.bkahlert.koodies.builder.buildIfTo
-import com.bkahlert.koodies.builder.buildList
-import com.bkahlert.koodies.builder.buildListTo
-import com.bkahlert.koodies.docker.DockerRunAdaptable
-import com.bkahlert.koodies.nio.file.Paths
-import com.bkahlert.koodies.shell.ShellScript
-import com.bkahlert.koodies.string.withRandomSuffix
-import com.bkahlert.koodies.terminal.ANSI
 import com.imgcstmzr.libguestfs.LibguestfsCommandLine
 import com.imgcstmzr.libguestfs.SharedPath
 import com.imgcstmzr.libguestfs.docker.VirtCustomizeDockerAdaptable
+import com.imgcstmzr.libguestfs.resolveOnDisk
+import com.imgcstmzr.libguestfs.resolveOnDocker
+import com.imgcstmzr.libguestfs.resolveOnHost
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.VirtCustomizeCommandLineBuilder.Companion.build
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.AppendLineOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.ChmodOption
@@ -40,7 +32,19 @@ import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeOption.QuietOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeOption.TraceOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeOption.VerboseOption
 import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.runtime.log.RenderingLogger
+import koodies.builder.ListBuilder
+import koodies.builder.OnOffBuilderInit
+import koodies.builder.build
+import koodies.builder.buildIfTo
+import koodies.builder.buildList
+import koodies.builder.buildListTo
+import koodies.docker.DockerRunAdaptable
+import koodies.io.path.Locations
+import koodies.io.path.toPath
+import koodies.logging.RenderingLogger
+import koodies.shell.ShellScript
+import koodies.terminal.ANSI
+import koodies.text.withRandomSuffix
 import java.nio.file.Path
 import java.util.TimeZone
 
@@ -83,7 +87,7 @@ class VirtCustomizeCommandLine(
     DockerRunAdaptable by VirtCustomizeDockerAdaptable(options, customizationOptions),
     LibguestfsCommandLine(
         emptyMap(),
-        options.filterIsInstance<DiskOption>().map { it.disk.parent }.singleOrNull() ?: Paths.Temp,
+        options.filterIsInstance<DiskOption>().map { it.disk.parent }.singleOrNull() ?: Locations.Temp,
         COMMAND,
         options.flatten() + customizationOptions.flatten()) {
 
@@ -217,6 +221,34 @@ class VirtCustomizeCommandLine(
             list.add { init.build(it) { CopyInOption(first, second) } }
 
         /**
+         * Copies the disk absolute [path] (e.g. `/etc/hostname`) located in the
+         * shared directory into the disk image.
+         *
+         * If [path] points to a directory, the directory is copied recursively.
+         *
+         * Before the [path] is copied, it will be processed by the optional [init],
+         * which can be used to created appropriate resources.
+         */
+        fun copyIn(path: Path, init: Path.() -> Unit = {}) =
+            copyIn { osImage ->
+                require(path.isAbsolute) { "$path must be absolute but is not." }
+                init(osImage.resolveOnHost(path))
+                osImage.resolveOnDocker(path) to osImage.resolveOnDisk(path).parent
+            }
+
+        /**
+         * Copies the disk absolute [path] (e.g. `/etc/hostname`) located in the
+         * shared directory into the disk image.
+         *
+         * If [path] points to a directory, the directory is copied recursively.
+         *
+         * Before the [path] is copied, it will be processed by the optional [init],
+         * which can be used to created appropriate resources.
+         */
+        fun copyIn(path: String, init: Path.() -> Unit = {}) =
+            copyIn(path.toPath(), init)
+
+        /**
          * Delete a file from the guest. Or delete a directory (and all its contents, recursively).
          */
         fun delete(init: (OperatingSystemImage) -> Path) =
@@ -228,15 +260,30 @@ class VirtCustomizeCommandLine(
         fun edit(init: (OperatingSystemImage) -> Pair<Path, String>) =
             list.add { init.build(it) { EditOption(first, second) } }
 
+
+        /**
+         * Set the hostname of the guest to HOSTNAME. You can use a dotted hostname.domainname (FQDN) if you want.
+         */
+        fun hostname(init: (OperatingSystemImage) -> String) =
+            list.add { init(it).run { HostnameOption(this) } }
+
         /**
          * Install SCRIPT inside the guest, so that when the guest first boots up, the script runs (as root, late in the boot process).
          */
         fun firstBoot(shellScript: ShellScript) =
-            list.add { osImage ->
-                val fileName = "script".withRandomSuffix() + ".sh"
-                SharedPath.Host.resolveRoot(osImage).resolve(fileName).also { hostPath -> shellScript.buildTo(hostPath) }
-                FirstBootOption(SharedPath.Docker.resolveRoot(osImage).resolve(fileName))
-            }
+            list.add { osImage -> firstBoot(osImage, shellScript) }
+
+        /**
+         * Install SCRIPT inside the guest, so that when the guest first boots up, the script runs (as root, late in the boot process).
+         */
+        fun firstBoot(name: String? = null, init: ShellScript.(OperatingSystemImage) -> Unit) =
+            list.add { osImage -> firstBoot(osImage, ShellScript(name) { init(osImage) }) }
+
+        private fun firstBoot(osImage: OperatingSystemImage, shellScript: ShellScript): FirstBootOption {
+            val fileName = "script".withRandomSuffix() + ".sh"
+            SharedPath.Host.resolveRoot(osImage).resolve(fileName).also { hostPath -> shellScript.buildTo(hostPath) }
+            return FirstBootOption(SharedPath.Docker.resolveRoot(osImage).resolve(fileName))
+        }
 
         /**
          * Run command (and arguments) inside the guest when the guest first boots up (as root, late in the boot process).
@@ -251,12 +298,6 @@ class VirtCustomizeCommandLine(
          */
         fun firstBootInstall(init: ListBuilder<String>.(OperatingSystemImage) -> Unit) =
             list.add { init.buildList(it).run { FirstBootInstallOption(this) } }
-
-        /**
-         * Set the hostname of the guest to HOSTNAME. You can use a dotted hostname.domainname (FQDN) if you want.
-         */
-        fun hostname(init: (OperatingSystemImage) -> String) =
-            list.add { init(it).run { HostnameOption(this) } }
 
         /**
          * Create a directory in the guest.

@@ -1,36 +1,36 @@
 package com.imgcstmzr.libguestfs.docker
 
-import com.bkahlert.koodies.concurrent.cleanUpOnShutdown
-import com.bkahlert.koodies.concurrent.process.waitForTermination
-import com.bkahlert.koodies.docker.DockerRunCommandLineBuilder
-import com.bkahlert.koodies.io.Archiver.archive
-import com.bkahlert.koodies.io.GzCompressor.gunzip
-import com.bkahlert.koodies.nio.file.Paths.Temp
-import com.bkahlert.koodies.nio.file.copyToDirectory
-import com.bkahlert.koodies.nio.file.delete
-import com.bkahlert.koodies.nio.file.hasExtension
-import com.bkahlert.koodies.nio.file.mkdirs
-import com.bkahlert.koodies.nio.file.removeExtension
-import com.bkahlert.koodies.nio.file.toPath
-import com.bkahlert.koodies.shell.HereDocBuilder.hereDoc
-import com.bkahlert.koodies.string.quoted
-import com.bkahlert.koodies.terminal.ansi.AnsiCode.Companion.colors.gray
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightYellow
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
-import com.bkahlert.koodies.time.Now
-import com.bkahlert.koodies.unit.BinaryPrefix
-import com.bkahlert.koodies.unit.Gibi
-import com.bkahlert.koodies.unit.Mebi
-import com.bkahlert.koodies.unit.Size
-import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.libguestfs.Libguestfs
-import com.imgcstmzr.runtime.log.BlockRenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.logging
-import com.imgcstmzr.runtime.log.singleLineLogging
+import koodies.docker.DockerRunCommandLineBuilder
+import koodies.io.compress.Archiver.archive
+import koodies.io.compress.GzCompressor.gunzip
+import koodies.io.path.Locations
+import koodies.io.path.copyToDirectory
+import koodies.io.path.delete
+import koodies.io.path.hasExtensions
+import koodies.io.path.removeExtensions
+import koodies.io.path.toPath
+import koodies.logging.BlockRenderingLogger
+import koodies.logging.RenderingLogger
+import koodies.logging.compactLogging
+import koodies.logging.logging
+import koodies.runtime.deleteOnExit
+import koodies.shell.HereDocBuilder.hereDoc
+import koodies.terminal.AnsiCode.Companion.colors.gray
+import koodies.terminal.AnsiColors.brightYellow
+import koodies.terminal.AnsiColors.cyan
+import koodies.terminal.AnsiColors.yellow
+import koodies.text.Unicode.Emojis.emoji
+import koodies.text.quoted
+import koodies.time.Now
+import koodies.unit.BinaryPrefix
+import koodies.unit.Gibi
+import koodies.unit.Mebi
+import koodies.unit.Size
+import koodies.unit.bytes
 import java.net.URI
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
 import kotlin.math.ceil
 
 object ImageBuilder {
@@ -56,7 +56,7 @@ object ImageBuilder {
      */
     fun BlockRenderingLogger.buildFrom(uri: URI): Path {
         var path: List<Pair<Path, Path>>? = null
-        singleLineLogging("Initiating raw image creation from $uri") {
+        compactLogging("Initiating raw image creation from $uri") {
 
             require(uri.scheme == schema) { "URI $uri is invalid as its scheme differs from ${schema.quoted}" }
             require(uri.host == host) { "URI $uri is invalid as its host differs from ${host.quoted}" }
@@ -72,19 +72,21 @@ object ImageBuilder {
             val files = query.getOrDefault("files", emptyList())
             require(query.isNotEmpty()) { "URI $uri does not reference any file using the \"files\" parameter" }
 
-            path = files.map { it.split(">", limit = 2) }.map { relation -> relation.first().toPath() to relation.last().toPath() }
+            path = files.map { it.split(">", limit = 2) }
+                .map { relation -> relation.first().toPath() to relation.last().toPath() }
             "${path!!.size} files"
         }
         return prepareImg(*path!!.toTypedArray())
     }
 
     private fun BlockRenderingLogger.prepareImg(vararg paths: Pair<Path, Path>): Path =
-        buildFrom(Temp.resolve("imgcstmzr-" + paths.take(5).mapNotNull { it.first.fileName }.joinToString(separator = "-")).mkdirs().run {
-            singleLineLogging("Copying ${paths.size} files to ${toUri()}") {
+        buildFrom(Locations.Temp.resolve("imgcstmzr-" + paths.take(5).mapNotNull { it.first.fileName }
+            .joinToString(separator = "-")).createDirectories().run {
+            compactLogging("Copying ${paths.size} files to ${toUri()}") {
                 paths.forEach { (from, to) -> from.copyToDirectory(resolve(to)) }
             }
             @Suppress("SpellCheckingInspection")
-            singleLineLogging("Gzipping") { archive("tar", overwrite = true) }
+            compactLogging("Gzipping") { archive("tar", overwrite = true) }
         }, totalSize = 4.Mebi.bytes, bootSize = 2.Mebi.bytes)
 
     /**
@@ -107,15 +109,15 @@ object ImageBuilder {
     ): Path = logging(
         caption = "${Now.emoji} Preparing raw image using the content of ${archive.fileName}. This takes a moment...",
         ansiCode = gray,
-        borderedOutput = false,
+        bordered = false,
     ) {
-        val tarball = if (archive.hasExtension("gz")) archive.gunzip(overwrite = true).cleanUpOnShutdown() else archive
-        require(tarball.hasExtension("tar")) { "Currently only \"tar\" and \"tar.gz\" files are supported." }
+        val tarball = if (archive.hasExtensions("gz")) archive.gunzip(overwrite = true).deleteOnExit() else archive
+        require(tarball.hasExtensions("tar")) { "Currently only \"tar\" and \"tar.gz\" files are supported." }
 
         val archiveDirectory = tarball.parent
 
-        val imgName = "${tarball.fileName.removeExtension("tar")}.img".also {
-            archiveDirectory.resolve(it).delete(false)
+        val imgName = "${tarball.fileName.removeExtensions("tar")}.img".also {
+            archiveDirectory.resolve(it).delete()
         }
         logLine {
             val formattedTotalSize = totalSize.round().toString<BinaryPrefix>()
@@ -140,7 +142,7 @@ object ImageBuilder {
                     +"mkdir /boot"
                     +"mount /dev/sda1 /boot"
                     +"-tar-in /shared/${tarball.fileName} /" +
-                        (if (tarball.hasExtension(".tar")) "" else " compress:gzip")
+                        (if (tarball.hasExtensions(".tar")) "" else " compress:gzip")
                 }
             }
         }.execute().waitForTermination()

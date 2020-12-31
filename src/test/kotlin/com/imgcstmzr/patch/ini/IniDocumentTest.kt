@@ -1,16 +1,15 @@
 package com.imgcstmzr.patch.ini
 
-import com.bkahlert.koodies.nio.file.mkdirs
-import com.bkahlert.koodies.nio.file.readText
-import com.bkahlert.koodies.nio.file.tempDir
-import com.bkahlert.koodies.string.quoted
-import com.bkahlert.koodies.string.replaceNonPrintableCharacters
 import com.imgcstmzr.patch.ini.IniDocument.CommentLine
 import com.imgcstmzr.patch.ini.IniDocument.KeyLine
 import com.imgcstmzr.patch.ini.IniDocument.Line
 import com.imgcstmzr.patch.ini.IniDocument.SectionLine
-import com.imgcstmzr.util.FixtureLog.deleteOnExit
-import com.imgcstmzr.util.ImgFixture
+import com.imgcstmzr.test.ImgClassPathFixture
+import com.imgcstmzr.test.UniqueId
+import com.imgcstmzr.withTempDir
+import koodies.debug.replaceNonPrintableCharacters
+import koodies.test.Fixtures.copyToDirectory
+import koodies.text.quoted
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Nested
@@ -28,11 +27,11 @@ import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import strikt.assertions.isNull
+import kotlin.io.path.createDirectories
+import kotlin.io.path.readText
 
 @Execution(CONCURRENT)
 class IniDocumentTest {
-
-    private val tempDir = tempDir().deleteOnExit()
 
     @Suppress("SpellCheckingInspection") val rawDocument = """
         # http://rpf.io/configtxt
@@ -211,8 +210,8 @@ class IniDocumentTest {
 
         @Suppress("SpellCheckingInspection")
         @Test
-        fun `should make basic changes and persist file`() {
-            val path = ImgFixture.Boot.ConfigTxt.copyToDirectory(tempDir.mkdirs())
+        fun `should make basic changes and persist file`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+            val path = ImgClassPathFixture.Boot.ConfigTxt.copyToDirectory(createDirectories())
             val iniDocument = IniDocument(path)
 
             iniDocument.findKey("dtoverlay").onEach { it.values += "added-value" }

@@ -1,11 +1,5 @@
 package com.imgcstmzr.patch
 
-import com.bkahlert.koodies.builder.ListBuilder
-import com.bkahlert.koodies.builder.buildListTo
-import com.bkahlert.koodies.concurrent.process.IO.Type.META
-import com.bkahlert.koodies.string.quoted
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
-import com.bkahlert.koodies.unit.Size
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine
 import com.imgcstmzr.libguestfs.guestfish.GuestfishDsl
@@ -15,8 +9,15 @@ import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeDsl
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemProcess
 import com.imgcstmzr.runtime.Program
-import com.imgcstmzr.runtime.log.RenderingLogger
+import koodies.builder.ListBuilder
+import koodies.builder.buildListTo
+import koodies.concurrent.process.IO.Type.META
+import koodies.logging.RenderingLogger
+import koodies.terminal.AnsiColors.magenta
+import koodies.text.quoted
+import koodies.unit.Size
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicBoolean
 
 data class SimplePatch(
     override var trace: Boolean,
@@ -26,6 +27,7 @@ data class SimplePatch(
     override val diskOperations: List<(OperatingSystemImage) -> GuestfishCommand>,
     override val fileOperations: List<FileOperation>,
     override val osPreparations: List<DiskOperation>,
+    override val osBoot: Boolean,
     override val osOperations: List<(OperatingSystemImage) -> Program>,
 ) : Patch
 
@@ -36,10 +38,19 @@ fun buildPatch(name: String, init: PatchBuilder.() -> Unit): Patch {
     val guestfishCommands = mutableListOf<(OperatingSystemImage) -> GuestfishCommand>()
     val fileSystemOperations = mutableListOf<FileOperation>()
     val postFileImgOperations = mutableListOf<DiskOperation>()
+    val boot = AtomicBoolean(false)
     val programs = mutableListOf<(OperatingSystemImage) -> Program>()
 
-    PatchBuilder(preFileImgOperations, customizationOptions, guestfishCommands, fileSystemOperations, postFileImgOperations, programs).apply(init)
-    return SimplePatch(false, name, preFileImgOperations, customizationOptions, guestfishCommands, fileSystemOperations, postFileImgOperations, programs)
+    PatchBuilder(preFileImgOperations, customizationOptions, guestfishCommands, fileSystemOperations, postFileImgOperations, boot, programs).apply(init)
+    return SimplePatch(false,
+        name,
+        preFileImgOperations,
+        customizationOptions,
+        guestfishCommands,
+        fileSystemOperations,
+        postFileImgOperations,
+        boot.get(),
+        programs)
 }
 
 @DslMarker
@@ -54,6 +65,7 @@ class PatchBuilder(
     private val diskOperations: MutableList<(OperatingSystemImage) -> GuestfishCommand>,
     private val fileOperations: MutableList<FileOperation>,
     private val osPreparations: MutableList<DiskOperation>,
+    private var osBoot: AtomicBoolean,
     private val osOperations: MutableList<(OperatingSystemImage) -> Program>,
 ) {
     fun prepareDisk(init: ImgOperationsCollector.() -> Unit) = ImgOperationsCollector(diskPreparations).apply(init)
@@ -65,6 +77,7 @@ class PatchBuilder(
     fun guestfish(init: GuestfishCommandLine.GuestfishCommandsBuilder.() -> Unit) = init.buildListTo(diskOperations)
     fun files(init: FileSystemOperationsCollector.() -> Unit) = FileSystemOperationsCollector(fileOperations).apply(init)
     fun osPrepare(init: ImgOperationsCollector.() -> Unit) = ImgOperationsCollector(osPreparations).apply(init)
+    fun boot() = osBoot.set(true)
     fun os(init: ProgramsBuilder.() -> Unit) = init.buildListTo(osOperations)
 }
 

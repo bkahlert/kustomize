@@ -1,32 +1,38 @@
 package com.imgcstmzr.cli
 
-import com.bkahlert.koodies.nio.file.cloneTo
-import com.bkahlert.koodies.nio.file.delete
-import com.bkahlert.koodies.nio.file.exists
-import com.bkahlert.koodies.nio.file.extensionOrNull
-import com.bkahlert.koodies.nio.file.serialized
-import com.bkahlert.koodies.string.random
-import com.bkahlert.koodies.unit.Size
 import com.github.ajalt.clikt.output.TermUi.echo
 import com.imgcstmzr.cli.Cache.Companion.defaultFilter
 import com.imgcstmzr.libguestfs.docker.ImageBuilder.buildFrom
 import com.imgcstmzr.libguestfs.docker.ImageExtractor.extractImage
 import com.imgcstmzr.patch.ini.RegexElement
-import com.imgcstmzr.runtime.log.BlockRenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger
 import com.imgcstmzr.util.Paths
-import com.imgcstmzr.util.isFile
-import com.imgcstmzr.util.joinToTruncatedString
-import com.imgcstmzr.util.listFilesRecursively
-import java.io.File
+import koodies.io.path.age
+import koodies.io.path.asString
+import koodies.io.path.cloneTo
+import koodies.io.path.delete
+import koodies.io.path.deleteRecursively
+import koodies.io.path.extensionOrNull
+import koodies.io.path.listDirectoryEntriesRecursively
+import koodies.logging.BlockRenderingLogger
+import koodies.logging.RenderingLogger
+import koodies.text.randomString
+import koodies.unit.Size
+import koodies.unit.size
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant.now
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter.ofPattern
 import java.time.temporal.TemporalAccessor
+import kotlin.io.path.createDirectories
+import kotlin.io.path.exists
+import kotlin.io.path.getLastModifiedTime
+import kotlin.io.path.isDirectory
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.isWritable
+import kotlin.time.minutes
 
-class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: Int = 3) : ManagedDirectory(dir) {
+class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: Int = 5) : ManagedDirectory(dir) {
 
     fun BlockRenderingLogger.provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> Path): Path =
         with(ProjectDirectory(dir, name, reuseLastWorkingCopy, maxConcurrentWorkingDirectories)) {
@@ -42,52 +48,52 @@ class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: In
 open class ManagedDirectory(val dir: Path) {
     constructor(parentDir: Path, dirName: String) : this(parentDir.resolve(dirName))
 
-    protected val file: File = dir.toAbsolutePath().toFile() // TODO remove toFile
-
     init {
-        if (!file.exists()) {
-            file.mkdirs()
-            check(file.exists()) { "$dir does not exist and could not be created." }
+        if (!dir.exists()) {
+            dir.createDirectories()
+            check(dir.exists()) { "$dir does not exist and could not be created." }
         }
-        check(file.canWrite()) { "Cannot write to $dir" }
+        check(dir.isWritable()) { "Cannot write to $dir" }
     }
 
     fun delete() {
-        if (file.exists()) file.deleteRecursively()
+        if (dir.exists()) dir.deleteRecursively()
     }
 }
 
 
-private class ProjectDirectory(parentDir: Path, dirName: String, private val reuseLastWorkingCopy: Boolean, private val maxConcurrentWorkingDirectories: Int) :
+private class ProjectDirectory(parentDir: Path, dirName: String, private val reuseLastWorkingCopy: Boolean, maxConcurrentWorkingDirectories: Int) :
     ManagedDirectory(parentDir, dirName) {
+
+    init {
+        deleteOldWorkDirs(maxConcurrentWorkingDirectories)
+    }
 
     private val downloadDir = SingleFileDirectory(dir, "download")
     private val rawDir = SingleFileDirectory(dir, "raw")
 
     private fun workDirs(): List<WorkDirectory> {
-        val listFiles: Array<File> = file.listFiles { _, name ->
-            WorkDirectory.isNameValid(name)
-        } ?: return emptyList()
+        val listFiles: List<Path> = dir.listDirectoryEntriesRecursively().filter {
+            WorkDirectory.isNameValid(it.fileName.asString())
+        }
 
         return listFiles
-            .filter { it.isDirectory }
-            .sortedByDescending { it.lastModified() }
-            .map { file -> WorkDirectory(file.toPath()) }
+            .filter { it.isDirectory() && it.age > 30.minutes }
+            .sortedByDescending { it.getLastModifiedTime() }
+            .map { WorkDirectory(it) }
     }
 
-    private fun deleteOldWorkDirs() {
+    private fun deleteOldWorkDirs(keep: Int) {
         workDirs()
             .withIndex()
-            .filter { it.index >= maxConcurrentWorkingDirectories - 1 }
-            .forEach { indexedValue ->
-                echo("Removing old ${indexedValue.value}")
-                indexedValue.value.delete()
+            .filter { it.index >= keep - 1 }
+            .forEach { (i, dir) ->
+                echo("Removing old $dir")
+                dir.delete()
             }
     }
 
     fun RenderingLogger.require(provider: () -> Path): Path {
-        deleteOldWorkDirs()
-
         val workDirs = workDirs()
         if (reuseLastWorkingCopy) {
             val lastWorkingCopy = workDirs.mapNotNull { workDir ->
@@ -115,23 +121,23 @@ private class ProjectDirectory(parentDir: Path, dirName: String, private val reu
 private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
     constructor(parentDir: Path, dirName: String) : this(parentDir.resolve(dirName))
 
-    private fun fileCount(): Int = dir.listFilesRecursively(defaultFilter(dir)).size
+    private fun fileCount(): Int = dir.listDirectoryEntriesRecursively().filter(defaultFilter(dir)).size
 
-    fun fileExists(): Boolean = file.exists() && file.isDirectory && fileCount() > 0
+    fun fileExists(): Boolean = dir.exists() && dir.isDirectory() && fileCount() > 0
 
     fun getSingle(): Path? =
         if (fileExists()) {
-            dir.listFilesRecursively(defaultFilter(dir), Size.FileSizeComparator)[0]
+            dir.listDirectoryEntriesRecursively().filter(defaultFilter(dir)).sortedWith(Size.FileSizeComparator)[0]
         } else null
 
     fun requireSingle(provider: () -> Path): Path {
         val file = getSingle()
         if (file != null) return file
-        super.file.mkdirs()
+        super.dir.createDirectories()
         return provider().let { costlyProvidedFile ->
             val destFile = dir.resolve(costlyProvidedFile.fileName)
-            if (destFile.exists) {
-                costlyProvidedFile.delete(false)
+            if (destFile.exists()) {
+                costlyProvidedFile.delete()
                 destFile
             } else {
                 echo("Moving file to $destFile...", trailingNewline = false)
@@ -149,7 +155,7 @@ private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
 private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireValidName(dir)) {
     @Suppress("unused")
     private class WorkDirectoryName(name: String) : RegexElement(name, false) {
-        constructor() : this(DATE_FORMATTER.format(now()) + SEPARATOR + String.random(4))
+        constructor() : this(DATE_FORMATTER.format(now()) + SEPARATOR + randomString(4))
 
         companion object {
             @Suppress("SpellCheckingInspection")
@@ -164,21 +170,17 @@ private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireVal
     }
 
     fun getSingle(filter: (path: Path) -> Boolean): Path? =
-        dir.listFilesRecursively({
+        dir.listDirectoryEntriesRecursively().filter {
             !it.fileName.startsWith(".") && filter(it)
-        }, Size.FileSizeComparator).firstOrNull()
+        }.sortedWith(Size.FileSizeComparator).firstOrNull()
 
     override fun toString(): String {
-        val files = dir.listFilesRecursively({ it.isFile })
-        return StringBuilder("WorkDirectory(").append(dir.fileName)
-            .append(" containing ").append(files.size).append(" file(s)")
-            .also { sb -> if (files.isNotEmpty()) sb.append(": ").append(dir.listFilesRecursively({ it.isFile }).joinToTruncatedString()) }
-            .append(")")
-            .toString()
+        val files = dir.listDirectoryEntriesRecursively().filter { it.isRegularFile() }
+        return "WorkDirectory(${dir.fileName} containing ${files.size} file(s) / ${dir.size})"
     }
 
     companion object {
-        fun requireValidName(dir: Path): String = kotlin.runCatching { WorkDirectoryName(dir.fileName.serialized).toString() }.getOrThrow()
+        fun requireValidName(dir: Path): String = kotlin.runCatching { WorkDirectoryName(dir.fileName.asString()).toString() }.getOrThrow()
         fun isNameValid(name: String) = kotlin.runCatching {
             val workDirectoryName = WorkDirectoryName(name)
             workDirectoryName.toString()

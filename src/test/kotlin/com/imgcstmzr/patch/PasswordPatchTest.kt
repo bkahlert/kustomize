@@ -1,10 +1,5 @@
 package com.imgcstmzr.patch
 
-import com.bkahlert.koodies.exception.rootCause
-import com.bkahlert.koodies.nio.file.readLines
-import com.bkahlert.koodies.string.matchesCurlyPattern
-import com.bkahlert.koodies.test.junit.FifteenMinutesTimeout
-import com.imgcstmzr.E2E
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.runGuestfishOn
 import com.imgcstmzr.libguestfs.resolveOnDisk
 import com.imgcstmzr.libguestfs.resolveOnHost
@@ -14,11 +9,14 @@ import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.runtime.execute
-import com.imgcstmzr.util.OS
-import com.imgcstmzr.util.debug
-import com.imgcstmzr.util.logging.InMemoryLogger
-import com.imgcstmzr.util.logging.expectThatLogged
-import com.imgcstmzr.util.matches
+import com.imgcstmzr.test.E2E
+import com.imgcstmzr.test.FifteenMinutesTimeout
+import com.imgcstmzr.test.OS
+import com.imgcstmzr.test.logging.expectThatLogged
+import com.imgcstmzr.test.rootCause
+import koodies.debug.debug
+import koodies.logging.InMemoryLogger
+import koodies.text.matchesCurlyPattern
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -31,6 +29,7 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
 import strikt.assertions.message
 import java.util.concurrent.CompletionException
+import kotlin.io.path.readLines
 
 @Execution(CONCURRENT)
 class PasswordPatchTest {
@@ -50,7 +49,6 @@ class PasswordPatchTest {
         val passwordPatch = PasswordPatch(osImage.operatingSystem, username, newPassword)
         val userPassword = runGuestfishOn(osImage) { copyOut { it.resolveOnDisk(passwordPath) } }
             .let { osImage.resolveOnHost(passwordPath).readLines().single { it.startsWith(username) } }
-//        Guestfish(osImage, logger).copyOut(passwordPath).readLines().single { it.startsWith(username) }
         val userPasswordPattern = "$username:{}:{}:0:99999:7:::"
         check(userPassword.matchesCurlyPattern(userPasswordPattern)) { "${userPassword.debug} does not match ${userPasswordPattern.debug}" }
 

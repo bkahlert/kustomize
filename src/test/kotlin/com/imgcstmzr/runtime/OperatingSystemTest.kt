@@ -1,32 +1,31 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.boolean.asEmoji
-import com.bkahlert.koodies.concurrent.process.IO.Type.META
-import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
-import com.bkahlert.koodies.concurrent.process.process
-import com.bkahlert.koodies.concurrent.process.waitForTermination
-import com.bkahlert.koodies.exception.dump
-import com.bkahlert.koodies.nio.NonBlockingReader
-import com.bkahlert.koodies.regex.matchEntire
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightMagenta
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.magenta
-import com.bkahlert.koodies.test.junit.JUnit
-import com.bkahlert.koodies.test.junit.Slow
-import com.bkahlert.koodies.test.junit.assertTimeoutPreemptively
-import com.bkahlert.koodies.test.junit.test
-import com.bkahlert.koodies.test.junit.uniqueId
-import com.bkahlert.koodies.time.sleep
-import com.bkahlert.koodies.tracing.trace
-import com.bkahlert.koodies.unit.Kibi
-import com.bkahlert.koodies.unit.Size.Companion.bytes
-import com.imgcstmzr.runtime.JavaProcessMock.Companion.withIndividuallySlowInput
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.empty
-import com.imgcstmzr.runtime.SlowInputStream.Companion.prompt
-import com.imgcstmzr.runtime.log.miniTrace
-import com.imgcstmzr.util.debug
-import com.imgcstmzr.util.logging.InMemoryLogger
-import com.imgcstmzr.util.logging.InMemoryLoggerFactory
+import com.imgcstmzr.test.Slow
+import com.imgcstmzr.test.UniqueId
+import com.imgcstmzr.test.assertTimeoutPreemptively
+import com.imgcstmzr.test.logging.InMemoryLoggerFactory
+import com.imgcstmzr.test.matchEntire
+import com.imgcstmzr.testWithTempDir
+import koodies.concurrent.process.IO.Type.META
+import koodies.concurrent.process.IO.Type.OUT
+import koodies.concurrent.process.process
+import koodies.debug.asEmoji
+import koodies.debug.debug
+import koodies.exception.dump
+import koodies.logging.InMemoryLogger
+import koodies.nio.NonBlockingReader
+import koodies.process.JavaProcessMock
+import koodies.process.JavaProcessMock.Companion.withIndividuallySlowInput
+import koodies.process.ProcessExitMock
+import koodies.process.SlowInputStream.Companion.prompt
+import koodies.terminal.AnsiColors.brightMagenta
+import koodies.terminal.AnsiColors.magenta
+import koodies.time.sleep
+import koodies.tracing.miniTrace
+import koodies.unit.Kibi
+import koodies.unit.bytes
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
@@ -134,14 +133,14 @@ class OperatingSystemTest {
 
     @Slow
     @TestFactory
-    fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory): List<DynamicTest> = listOf(
+    fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory, uniqueId: UniqueId): List<DynamicTest> = listOf(
         LoginSimulation(2.0, "\n"),
         LoginSimulation(0.5, "\n"),
         LoginSimulation(2.0, null),
         LoginSimulation(0.5, null),
-    ).test("{}") { loginSimulation ->
-        val processMock = loginSimulation.buildProcess(loggerFactory)
-        val runningOS = processMock.start(loginSimulation.toString())
+    ).testWithTempDir(uniqueId, "{}") { loginSimulation ->
+        val processMock: JavaProcessMock = loginSimulation.buildProcess(loggerFactory)
+        val runningOS = OperatingSystemProcessMock(loginSimulation.toString(), processMock.start(loginSimulation.toString()))
 
         val reader = NonBlockingReader(processMock.inputStream, timeout = loginSimulation.readerTimeout, logger = processMock.logger)
 
@@ -152,16 +151,16 @@ class OperatingSystemTest {
                 reader.forEachLine { line ->
                     runningOS.logger.miniTrace("read<<") {
                         if (finished) {
-                            trace(line.debug.magenta())
+                            this?.trace(line.debug.magenta())
                         } else {
-                            trace(line.debug.brightMagenta())
-                            trace("... processing")
+                            this?.trace(line.debug.brightMagenta())
+                            this?.trace("... processing")
                             500.milliseconds.sleep()
                             finished = !program.compute(runningOS, OUT typed line)
                             if (finished) {
-                                trace("FINISHED")
+                                this?.trace("FINISHED")
                             } else {
-                                trace("Ongoing")
+                                this?.trace("Ongoing")
                             }
                         }
                     }
@@ -176,8 +175,8 @@ class OperatingSystemTest {
         expectThat(processMock.received).contains("john").contains("passwd123").not { contains("stuff") }
     }
 
-    @Test
-    fun InMemoryLogger.`should invoke shutdown even if not ready`() {
+    @Slow @Test
+    fun InMemoryLogger.`should invoke shutdown even if not ready`(uniqueId: UniqueId) {
         val process = withIndividuallySlowInput(
             0.milliseconds to "[  OK  ] Started Update UTMP about System Runlevel Changes.\n",
             prompt(),
@@ -191,12 +190,20 @@ class OperatingSystemTest {
                         }
                         return 0
                     }
+
+                    override fun invoke(timeout: Duration): Boolean {
+                        while (!outputStream.toString().contains(os.shutdownCommand)) {
+                            100.milliseconds.sleep()
+                        }
+                        return true
+                    }
                 }
             },
             echoInput = true)
 
-        val runningOS = process.start(JUnit.uniqueId)
+        val runningOS = OperatingSystemProcessMock(uniqueId.simple, process.start(uniqueId.simple))
         val shutdownProgram = os.shutdownProgram()
+
         val exitValue = runningOS.process(nonBlockingReader = false) { io ->
             shutdownProgram.compute(runningOS, io)
         }.waitForTermination()
@@ -228,10 +235,10 @@ data class LoginSimulation(val readerTimeout: Duration, val ioDelay: Duration, v
     fun buildProcess(loggerFactory: InMemoryLoggerFactory): JavaProcessMock =
         with(loggerFactory.createLogger(toString())) {
             withIndividuallySlowInput(
-                inputs = generateProcessOutput(promptTerminator),
                 baseDelayPerInput = ioDelay,
                 echoInput = true,
                 processExit = { ProcessExitMock.immediateSuccess() },
+                inputs = generateProcessOutput(promptTerminator),
             )
         }
 

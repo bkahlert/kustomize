@@ -1,14 +1,5 @@
 package com.imgcstmzr.patch
 
-import com.bkahlert.koodies.concurrent.process.IO.Type.META
-import com.bkahlert.koodies.concurrent.process.IO.Type.OUT
-import com.bkahlert.koodies.nio.file.listRecursively
-import com.bkahlert.koodies.string.LineSeparators
-import com.bkahlert.koodies.string.withRandomSuffix
-import com.bkahlert.koodies.terminal.ANSI
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.brightMagenta
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.yellow
-import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
 import com.imgcstmzr.libguestfs.SharedPath
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine
@@ -17,21 +8,23 @@ import com.imgcstmzr.libguestfs.resolveOnDisk
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.Companion.virtCustomize
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
-import com.imgcstmzr.patch.Operation.Status.Failure
-import com.imgcstmzr.patch.Operation.Status.Finished
-import com.imgcstmzr.patch.Operation.Status.Ready
-import com.imgcstmzr.patch.Operation.Status.Running
-import com.imgcstmzr.runtime.HasStatus
+import com.imgcstmzr.patch.Operation.Status.*
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.Program
 import com.imgcstmzr.runtime.execute
-import com.imgcstmzr.runtime.log.BlockRenderingLogger
-import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.logging
-import com.imgcstmzr.runtime.log.singleLineLogging
 import com.imgcstmzr.util.asRootFor
-import com.imgcstmzr.util.isFile
+import koodies.concurrent.process.IO.Type.META
+import koodies.concurrent.process.IO.Type.OUT
+import koodies.io.path.listDirectoryEntriesRecursively
+import koodies.logging.*
+import koodies.terminal.ANSI
+import koodies.terminal.AnsiColors.brightMagenta
+import koodies.terminal.AnsiColors.yellow
+import koodies.terminal.AnsiFormats.bold
+import koodies.text.LineSeparators
+import koodies.text.withRandomSuffix
 import java.nio.file.Path
+import kotlin.io.path.isRegularFile
 
 /**
  * A patch to customize an [OperatingSystemImage]
@@ -77,6 +70,11 @@ interface Patch {
     val osPreparations: List<DiskOperation>
 
     /**
+     * Whether to boot the operating system.
+     */
+    val osBoot: Boolean
+
+    /**
      * Operations (in the form of [osOperations]) to be applied
      * on the booted operating system.
      */
@@ -84,11 +82,12 @@ interface Patch {
 
     fun patch(osImage: OperatingSystemImage, logger: RenderingLogger?, trace: Boolean = false): List<Throwable> {
         this.trace = trace
-        return logger.logging(name.brightMagenta(), null, (logger as? BlockRenderingLogger)?.borderedOutput ?: true) {
+        return logger.logging(name.brightMagenta(), null, true) {
             applyDiskPreparations(osImage) +
                 applyDiskCustomizations(osImage) +
                 applyDiskAndFileOperations(osImage) +
                 applyOsPreparations(osImage) +
+                applyOsBoot(osImage) +
                 applyOsOperations(osImage)
         }
     }
@@ -111,7 +110,7 @@ interface Patch {
 
     fun RenderingLogger.applyDiskPreparations(osImage: OperatingSystemImage): List<Throwable> =
         if (diskPreparations.isEmpty()) emptyList<Throwable>().also { logLine { META typed "Disk Preparation: —" } }
-        else logging("Disk Preparation (${diskPreparations.size})", null, borderedOutput = false) {
+        else logging("Disk Preparation (${diskPreparations.size})", null, bordered = false) {
             runCollecting(diskPreparations) { _, preparation, logger -> preparation(osImage, logger) }
         }
 
@@ -121,7 +120,7 @@ interface Patch {
             emptyList()
         } else {
             runCollecting {
-                logging("Disk Customization (${diskCustomizations.size})", null, borderedOutput = false) {
+                logging("Disk Customization (${diskCustomizations.size})", null, bordered = false) {
                     virtCustomize(osImage, trace = trace) {
                         +diskCustomizations
                     }
@@ -139,7 +138,12 @@ interface Patch {
 
             runCollecting {
                 logging("Disk Operations (${diskOperations.size})", null) {
-                    runGuestfishOn(osImage, trace = trace, { "Applying ${diskOperations.size} and fishing for ${fileOperations.size} files" }) {
+                    runGuestfishOn(
+                        osImage,
+                        trace = trace,
+                        { "Applying ${diskOperations.size} and fishing for ${fileOperations.size} files" },
+                        bordered = false,
+                    ) {
                         fileOperations.map { it.target }.forEach { sourcePath ->
                             val sanitizedSourcePath = Path.of("/").asRootFor(sourcePath)
                             copyOut { it.resolveOnDisk(sanitizedSourcePath) }
@@ -161,10 +165,13 @@ interface Patch {
                     logLine { META typed "No files to patch." }
                 }
 
-                val changedFiles = root.listRecursively().filter { it.isFile }.count()
+                val changedFiles = root.listDirectoryEntriesRecursively().filter { it.isRegularFile() }.size
                 if (changedFiles > 0) {
                     runCollecting {
-                        runGuestfishOn(osImage, trace = trace, { "Throwing $changedFiles files back into water" }) { tarIn() }
+                        runGuestfishOn(
+                            osImage,
+                            trace = trace,
+                            { "Throwing $changedFiles files back into water" }) { tarIn() }
                     }.also { exceptions.addAll(it) }
                 } else {
                     logLine { META typed "No changed files to copy back." }
@@ -176,8 +183,19 @@ interface Patch {
 
     fun RenderingLogger.applyOsPreparations(osImage: OperatingSystemImage): List<Throwable> =
         if (osPreparations.isEmpty()) emptyList<Throwable>().also { logLine { META typed "OS Preparation: —" } }
-        else logging("OS Preparation (${osPreparations.size})", null, borderedOutput = false) {
+        else logging("OS Preparation (${osPreparations.size})", null, bordered = false) {
             runCollecting(osPreparations) { _, preparation, logger -> preparation(osImage, logger) }
+        }
+
+    fun RenderingLogger.applyOsBoot(osImage: OperatingSystemImage): List<Throwable> =
+        if (!osBoot) emptyList<Throwable>().also { logLine { META typed "OS Boot: —" } }
+        else runCollecting {
+            osImage.execute(
+                name = name.withRandomSuffix(),
+                logger = this@applyOsBoot,
+                autoLogin = false,
+                autoShutdown = false,
+            )
         }
 
     fun RenderingLogger.applyOsOperations(osImage: OperatingSystemImage): List<Throwable> =
@@ -187,6 +205,7 @@ interface Patch {
                 name = name.withRandomSuffix(),
                 logger = this@applyOsOperations,
                 autoLogin = true,
+                autoShutdown = true,
                 *osOperations.map { it(osImage) }.toTypedArray()
             )
         }
@@ -216,6 +235,7 @@ class CompositePatch(
     patches.flatMap { it.diskOperations }.toList(),
     patches.flatMap { it.fileOperations }.toList(),
     patches.flatMap { it.osPreparations }.toList(),
+    patches.any { patch -> patch.osBoot },
     patches.flatMap { it.osOperations }.toList(),
 )
 
@@ -235,15 +255,16 @@ interface Operation<TARGET> : HasStatus {
 
     val target: TARGET
 
-    override fun status(): String
+    override fun renderStatus(): String
 }
 
-class FileOperation(override val target: Path, val verifier: (Path) -> Any, val handler: (Path) -> Any) : Operation<Path> {
+class FileOperation(override val target: Path, val verifier: (Path) -> Any, val handler: (Path) -> Any) :
+    Operation<Path> {
 
     override var currentStatus: Operation.Status = Ready
 
     override operator fun invoke(target: Path, logger: BlockRenderingLogger) {
-        logger.singleLineLogging(target.fileName.toString()) {
+        logger.compactLogging(target.fileName.toString()) {
             logLine { OUT typed ANSI.termColors.yellow("Action needed? ...") }
             val result = runCatching { verifier.invoke(target) }
             if (result.isFailure) {
@@ -261,5 +282,5 @@ class FileOperation(override val target: Path, val verifier: (Path) -> Any, val 
         }
     }
 
-    override fun status(): String = currentStatus(target.fileName.toString())
+    override fun renderStatus(): String = currentStatus(target.fileName.toString())
 }

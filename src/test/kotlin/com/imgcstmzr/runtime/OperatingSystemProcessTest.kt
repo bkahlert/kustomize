@@ -1,16 +1,13 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.exception.rootCause
-import com.bkahlert.koodies.string.containsAny
-import com.bkahlert.koodies.test.junit.FifteenMinutesTimeout
-import com.bkahlert.koodies.test.junit.JUnit
-import com.bkahlert.koodies.test.junit.uniqueId
-import com.imgcstmzr.E2E
-import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.runtime.OperatingSystems.TinyCore
-import com.imgcstmzr.util.DockerRequiring
-import com.imgcstmzr.util.OS
-import com.imgcstmzr.util.logging.InMemoryLogger
+import com.imgcstmzr.test.DockerRequiring
+import com.imgcstmzr.test.E2E
+import com.imgcstmzr.test.FifteenMinutesTimeout
+import com.imgcstmzr.test.OS
+import com.imgcstmzr.test.UniqueId
+import com.imgcstmzr.test.containsAny
+import com.imgcstmzr.test.rootCause
+import koodies.logging.InMemoryLogger
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -28,12 +25,13 @@ import java.util.concurrent.CompletionException
 class OperatingSystemProcessTest {
 
     @FifteenMinutesTimeout @E2E @Test
-    fun InMemoryLogger.`should boot and run program in user session`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+    fun InMemoryLogger.`should boot and run program in user session`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage, uniqueId: UniqueId) {
 
         val exitValue = osImage.execute(
-            name = JUnit.uniqueId,
+            name = uniqueId.simple,
             logger = this,
             autoLogin = true,
+            autoShutdown = true,
             osImage.compileScript("ping", "ping -c 1 \"imgcstmzr.com\"", "sleep 1", "echo 'test'")
         )
 
@@ -47,7 +45,7 @@ class OperatingSystemProcessTest {
     }
 
     @DockerRequiring @Test
-    fun InMemoryLogger.`should terminate if obviously stuck`(@OS(TinyCore) osImage: OperatingSystemImage) {
+    fun InMemoryLogger.`should terminate if obviously stuck`(@OS(OperatingSystems.TinyCore) osImage: OperatingSystemImage) {
         val corruptingString = "Booting Linux"
         val corruptedOsImage = OperatingSystemImage(object : OperatingSystem by osImage.operatingSystem {
             override val deadEndPattern: Regex get() = ".*$corruptingString.*".toRegex()

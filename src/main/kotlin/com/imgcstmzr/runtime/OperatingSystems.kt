@@ -1,12 +1,12 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.unit.Giga
-import com.bkahlert.koodies.unit.Mega
-import com.bkahlert.koodies.unit.Size
-import com.bkahlert.koodies.unit.Size.Companion.bytes
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.empty
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.withPassword
+import koodies.unit.Giga
+import koodies.unit.Mega
+import koodies.unit.Size
+import koodies.unit.bytes
 
 /**
  * Technically supported, yet not necessarily fully compatible operating systems
@@ -103,7 +103,7 @@ enum class OperatingSystems(
     ),
 
     /**
-     * [RISC OS Pico RC5](https://cdimage.ubuntu.com/releases/20.10/release/ubuntu-20.10-preinstalled-server-armhf+raspi.img.xz)
+     * [Ubuntu Server 20.10](https://cdimage.ubuntu.com/releases/20.10/release/ubuntu-20.10-preinstalled-server-armhf+raspi.img.xz)
      */
     UbuntuServer(
         fullName = "Ubuntu Server 20.10",

@@ -1,8 +1,8 @@
 package com.imgcstmzr.patch.ini
 
-import com.bkahlert.koodies.nio.file.readText
-import com.bkahlert.koodies.nio.file.writeText
 import java.nio.file.Path
+import kotlin.io.path.readText
+import kotlin.io.path.writeText
 
 @Suppress("PublicApiImplicitType")
 class IniDocument private constructor(mutableElements: Collection<Line>) : Collection<IniDocument.Line> by mutableElements {

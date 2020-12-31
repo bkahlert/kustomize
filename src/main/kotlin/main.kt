@@ -1,11 +1,3 @@
-import com.bkahlert.koodies.kaomoji.Kaomojis
-import com.bkahlert.koodies.nio.file.Paths.HomeDirectory
-import com.bkahlert.koodies.nio.file.serialized
-import com.bkahlert.koodies.terminal.ANSI
-import com.bkahlert.koodies.terminal.ansi.AnsiColors.cyan
-import com.bkahlert.koodies.terminal.ansi.AnsiFormats.bold
-import com.bkahlert.koodies.terminal.colorize
-import com.bkahlert.koodies.unit.Size.Companion.size
 import com.github.ajalt.clikt.core.NoOpCliktCommand
 import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.parameters.options.default
@@ -14,16 +6,26 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.path
 import com.imgcstmzr.ImgCstmzrConfig
-import com.imgcstmzr.cli.Banner.banner
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.cli.ColorHelpFormatter
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.copyOut
 import com.imgcstmzr.patch.patch
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
-import com.imgcstmzr.runtime.log.BlockRenderingLogger
-import com.imgcstmzr.runtime.log.logging
-import com.imgcstmzr.tools.Downloader
+import com.imgcstmzr.util.Disk
+import com.imgcstmzr.util.Downloader
+import com.imgcstmzr.util.flash
+import koodies.io.path.Locations
+import koodies.io.path.asString
+import koodies.kaomoji.Kaomojis
+import koodies.logging.BlockRenderingLogger
+import koodies.logging.logging
+import koodies.terminal.ANSI
+import koodies.terminal.AnsiColors.cyan
+import koodies.terminal.AnsiFormats.bold
+import koodies.terminal.Banner.banner
+import koodies.terminal.colorize
+import koodies.unit.size
 import java.nio.file.Path
 
 val debug = true
@@ -62,7 +64,7 @@ class CliCommand : NoOpCliktCommand(
         .path(mustExist = true, canBeDir = false, mustBeReadable = true).required()
 
     private val envFile: Path by option("--env", "--env-file", help = ".env file that can be used to pass credentials like a new user password")
-        .path(mustExist = false, canBeDir = false, mustBeReadable = false).default(HomeDirectory.resolve(".env.imgcstmzr"))
+        .path(mustExist = false, canBeDir = false, mustBeReadable = false).default(Locations.HomeDirectory.resolve(".env.imgcstmzr"))
 
     private val cacheDir: Path by option("--cache-dir", help = "temporary directory that holds intermediary states to improve performance")
         .path(canBeFile = false, mustBeWritable = true)
@@ -84,7 +86,7 @@ class CliCommand : NoOpCliktCommand(
         lateinit var osImage: OperatingSystemImage
         logging(banner("Configuration")) {
             config = configFile.let {
-                logLine { "File: ${it.serialized}".cyan().bold() }
+                logLine { "File: ${it.asString()}".cyan().bold() }
                 logLine { "Size: ${it.size}".cyan().bold() }
                 ImgCstmzrConfig.load(it, envFile)
             }.apply {
@@ -93,16 +95,37 @@ class CliCommand : NoOpCliktCommand(
                 logLine { "Cache: $cacheDir".cyan().bold() }
 
                 osImage = provideImageCopy(this)
-                logLine { "OS: $osImage" }
+                logLine { "OS: $osImage".cyan().bold() }
             }
         }
 
         val patches = config.toOptimizedPatches()
         val exceptions: List<Throwable> = patches.patch(osImage)
 
+        val flashDisk: Disk? = logging("Flashing $osImage") {
+            config.flashDisk?.let { disk ->
+                flash(osImage.file, disk.takeUnless { it.equals("auto", ignoreCase = true) })
+            } ?: run {
+                logLine {
+                    """
+                        
+                    To make use of your image, you have the following options:
+                    a) Check you actually inserted an SD card. 
+                       Also an once ejected SD card needs to be re-inserted to get recognized.
+                    b) Set ${ImgCstmzrConfig::flashDisk.name.cyan()} to ${"auto".cyan()} for flashing to any available physical removable disk.
+                    c) Set ${ImgCstmzrConfig::flashDisk.name.cyan()} explicitly to any available physical removable disk (e.g. ${"disk2".cyan()}) if auto fails.
+                    d) ${"Flash manually".cyan()} using the tool of your choice.
+                       ${osImage.file.toUri()}
+                """.trimIndent()
+                }
+                null
+            }
+        }
+
         logging(banner("Summary")) {
-            logLine { "Run Scripts: " + osImage.copyOut("/usr/lib/virt-sysprep").toUri() }
-            logLine { "Run Scripts Log: " + osImage.copyOut("/root/virt-sysprep-firstboot.log").toUri() }
+            logLine { "Image flashed to: " + flashDisk?.run { toString() } ?: "—" }
+            logLine { "     Run scripts: " + osImage.copyOut("/usr/lib/virt-sysprep").toUri() }
+            logLine { " Run scripts log: " + osImage.copyOut("/root/virt-sysprep-firstboot.log").toUri() }
 
             if (exceptions.isEmpty()) Kaomojis.Magic.random().toString() + " ${osImage.file.toUri()}"
             else Kaomojis.BadMood.random().also {

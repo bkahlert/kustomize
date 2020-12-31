@@ -1,7 +1,7 @@
 package com.imgcstmzr.libguestfs.guestfish
 
-import com.bkahlert.koodies.nio.file.serialized
 import com.imgcstmzr.libguestfs.Option
+import koodies.io.path.asString
 import java.nio.file.Path
 
 sealed class GuestfishOption(name: String, arguments: List<String>) : Option(name, arguments) {
@@ -36,7 +36,7 @@ sealed class GuestfishOption(name: String, arguments: List<String>) : Option(nam
      *
      * The format of the disk image is auto-detected.
      */
-    class DiskOption(override val disk: Path) : GuestfishOption("--add", listOf(disk.serialized)), com.imgcstmzr.libguestfs.DiskOption
+    class DiskOption(override val disk: Path) : GuestfishOption("--add", listOf(disk.asString())), com.imgcstmzr.libguestfs.DiskOption
 
     /**
      * Using [virt-inspector](https://libguestfs.org/virt-inspector.1.html) code,
@@ -72,10 +72,10 @@ sealed class GuestfishOption(name: String, arguments: List<String>) : Option(nam
      */
     class MountOption(val dev: Path, val mountPoint: Path?, val options: List<String> = emptyList(), val fsType: String? = null) :
         GuestfishOption("--mount",
-            listOf(StringBuilder(dev.serialized).apply {
+            listOf(StringBuilder(dev.asString()).apply {
                 mountPoint?.also {
                     append(":")
-                    append(mountPoint.serialized)
+                    append(mountPoint.asString())
 
                     options.takeIf { it.isNotEmpty() }?.also {
                         append(":")

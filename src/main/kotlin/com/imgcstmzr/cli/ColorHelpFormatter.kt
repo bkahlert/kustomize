@@ -1,8 +1,8 @@
 package com.imgcstmzr.cli
 
-import com.bkahlert.koodies.terminal.ANSI
 import com.github.ajalt.clikt.output.CliktHelpFormatter
 import com.github.ajalt.clikt.output.HelpFormatter
+import koodies.terminal.ANSI
 
 class ColorHelpFormatter : CliktHelpFormatter(showRequiredTag = true, showDefaultValues = true) {
 

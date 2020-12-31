@@ -1,10 +1,10 @@
 package com.imgcstmzr.libguestfs.docker
 
-import com.bkahlert.koodies.shell.HereDocBuilder.hereDoc
 import com.imgcstmzr.libguestfs.Option
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine
 import com.imgcstmzr.libguestfs.guestfish.GuestfishOption
+import koodies.shell.HereDocBuilder.hereDoc
 import java.nio.file.Path
 
 class GuestfishDockerAdaptable(

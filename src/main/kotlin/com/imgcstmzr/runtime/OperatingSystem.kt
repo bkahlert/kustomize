@@ -1,9 +1,9 @@
 package com.imgcstmzr.runtime
 
-import com.bkahlert.koodies.concurrent.process.IO
-import com.bkahlert.koodies.time.Now
-import com.bkahlert.koodies.unit.Size
-import com.imgcstmzr.runtime.log.RenderingLogger
+import koodies.concurrent.process.IO
+import koodies.logging.RenderingLogger
+import koodies.time.Now
+import koodies.unit.Size
 import kotlin.text.RegexOption.IGNORE_CASE
 import kotlin.time.milliseconds
 import kotlin.time.seconds

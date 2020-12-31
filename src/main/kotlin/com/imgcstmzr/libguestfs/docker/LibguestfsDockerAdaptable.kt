@@ -1,18 +1,18 @@
 package com.imgcstmzr.libguestfs.docker
 
-import com.bkahlert.koodies.builder.OnOffBuilder
-import com.bkahlert.koodies.concurrent.process.CommandLine
-import com.bkahlert.koodies.docker.DockerImage
-import com.bkahlert.koodies.docker.DockerImageBuilder
-import com.bkahlert.koodies.docker.DockerRunAdaptable
-import com.bkahlert.koodies.docker.DockerRunCommandLine
-import com.bkahlert.koodies.docker.DockerRunCommandLineBuilder.Companion.buildRunCommand
-import com.bkahlert.koodies.nio.exception.noSuchFile
-import com.bkahlert.koodies.string.withRandomSuffix
 import com.imgcstmzr.libguestfs.guestfish.GuestfishOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeOption.DiskOption
-import com.imgcstmzr.util.isReadable
+import koodies.builder.OnOffBuilder
+import koodies.concurrent.process.CommandLine
+import koodies.docker.DockerImage
+import koodies.docker.DockerImageBuilder
+import koodies.docker.DockerRunAdaptable
+import koodies.docker.DockerRunCommandLine
+import koodies.docker.DockerRunCommandLineBuilder.Companion.buildRunCommand
+import koodies.io.noSuchFile
+import koodies.text.withRandomSuffix
 import java.nio.file.Path
+import kotlin.io.path.isReadable
 
 /**
  * Layout:
@@ -49,7 +49,7 @@ interface LibguestfsDockerAdaptable : DockerRunAdaptable {
 
     fun checkDisks(): Path {
         check(disks.size == 1) { "The $command command must add exactly one disk. ${disks.size} found: ${disks.joinToString(", ")}." }
-        return disks.single().also { check(it.isReadable) { it.noSuchFile() } }
+        return disks.single().also { check(it.isReadable()) { it.noSuchFile() } }
     }
 
     override fun adapt(): DockerRunCommandLine {

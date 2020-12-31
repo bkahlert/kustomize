@@ -1,28 +1,17 @@
 package com.imgcstmzr.libguestfs.guestfish
 
-import com.bkahlert.koodies.builder.ListBuilder
-import com.bkahlert.koodies.builder.OnOffBuilderInit
-import com.bkahlert.koodies.builder.build
-import com.bkahlert.koodies.builder.buildIfTo
-import com.bkahlert.koodies.builder.buildList
-import com.bkahlert.koodies.builder.buildListTo
-import com.bkahlert.koodies.docker.DockerRunAdaptable
-import com.bkahlert.koodies.io.TarArchiver.tar
-import com.bkahlert.koodies.kaomoji.Kaomojis
-import com.bkahlert.koodies.nio.file.Paths
-import com.bkahlert.koodies.terminal.ANSI
-import com.imgcstmzr.libguestfs.Libguestfs
-import com.imgcstmzr.libguestfs.LibguestfsCommandLine
-import com.imgcstmzr.libguestfs.Option
-import com.imgcstmzr.libguestfs.SharedPath
+import com.imgcstmzr.libguestfs.*
 import com.imgcstmzr.libguestfs.docker.GuestfishDockerAdaptable
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.GuestfishCommandLineBuilder.Companion.build
-import com.imgcstmzr.libguestfs.resolveOnDisk
-import com.imgcstmzr.libguestfs.resolveOnDocker
-import com.imgcstmzr.libguestfs.resolveOnHost
 import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.runtime.log.RenderingLogger
-import com.imgcstmzr.runtime.log.logging
+import koodies.builder.*
+import koodies.docker.DockerRunAdaptable
+import koodies.io.compress.TarArchiver.tar
+import koodies.io.path.Locations
+import koodies.kaomoji.Kaomojis
+import koodies.logging.RenderingLogger
+import koodies.logging.logging
+import koodies.terminal.ANSI
 import java.nio.file.Path
 import kotlin.io.path.moveTo
 
@@ -34,29 +23,36 @@ annotation class GuestfishDsl
  *
  * It uses [Libguestfs] and exposes all of the functionality of the [guestfs API](https://libguestfs.org/guestfs.3.html).
  */
-class GuestfishCommandLine(val env: Map<String, String>, val options: List<Option>, val guestfishCommands: List<GuestfishCommand>) :
+class GuestfishCommandLine(
+    val env: Map<String, String>,
+    val options: List<Option>,
+    val guestfishCommands: List<GuestfishCommand>
+) :
     DockerRunAdaptable by GuestfishDockerAdaptable(env, options, guestfishCommands),
     LibguestfsCommandLine(
         env,
-        options.filterIsInstance<GuestfishOption.DiskOption>().map { it.disk }.singleOrNull() ?: Paths.Temp,
+        options.filterIsInstance<GuestfishOption.DiskOption>().map { it.disk }.singleOrNull() ?: Locations.Temp,
         COMMAND,
         options.flatten() +
-            guestfishCommands.toMutableList().let {
-                if (UmountAllCommand() !in it) it += UmountAllCommand()
-                if (ExitCommand() !in it) it += ExitCommand()
-                it.flatten()
-            }
+                guestfishCommands.toMutableList().let {
+                    if (UmountAllCommand() !in it) it += UmountAllCommand()
+                    if (ExitCommand() !in it) it += ExitCommand()
+                    it.flatten()
+                }
     ) {
 
     fun RenderingLogger.executeLogging(caption: List<GuestfishCommand>.() -> String = DEFAULT_CAPTION): Int =
-        executeLogging(caption = caption(guestfishCommands),
+        executeLogging(
+            caption = caption(guestfishCommands),
             ansiCode = ANSI.termColors.blue,
             nonBlockingReader = false,
-            expectedExitValue = 0)
+            expectedExitValue = 0
+        )
 
     companion object {
         const val COMMAND = "guestfish"
-        val DEFAULT_CAPTION: List<GuestfishCommand>.() -> String = { "Running $size guestfish operations... ${Kaomojis.fishing()}" }
+        val DEFAULT_CAPTION: List<GuestfishCommand>.() -> String =
+            { "Running $size guestfish operations... ${Kaomojis.fishing()}" }
 
         @GuestfishDsl
         fun build(osImage: OperatingSystemImage, init: GuestfishCommandLineBuilder.() -> Unit) = init.build(osImage)
@@ -66,6 +62,7 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
             osImage: OperatingSystemImage,
             trace: Boolean = false,
             caption: List<GuestfishCommand>.() -> String = DEFAULT_CAPTION,
+            bordered: Boolean = false,
             init: GuestfishCommandsBuilder.() -> Unit,
         ): Int =
             build(osImage) {
@@ -82,7 +79,7 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
                     mount { Path.of("/dev/sda1") to Path.of("/boot") }
                 }
                 commands(init)
-            }.run { executeLogging(caption(guestfishCommands)) }
+            }.run { executeLogging(caption(guestfishCommands), bordered = bordered) }
 
         fun OperatingSystemImage.copyOut(path: String, trace: Boolean = false): Path {
             logging("copying out $path") {
@@ -114,7 +111,8 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
             /**
              * Using `this` [GuestfishCommandLineBuilder] builds a list of [Option].
              */
-            @GuestfishDsl fun (GuestfishCommandLineBuilder.() -> Unit).build(osImage: OperatingSystemImage): GuestfishCommandLine =
+            @GuestfishDsl
+            fun (GuestfishCommandLineBuilder.() -> Unit).build(osImage: OperatingSystemImage): GuestfishCommandLine =
                 GuestfishCommandLineBuilder().apply(this).let {
                     val options = it.options.map { it(osImage) }
                     val guestfishCommands = it.commands.map { it(osImage) }
@@ -202,7 +200,8 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
          * All commands passed here will be treated as commands sent to the local shell
          * (`/bin/sh` or whatever [system(3)](http://man.he.net/man3/system) uses).
          */
-        @GuestfishDsl fun runLocally(init: GuestfishCommandsBuilder.() -> Unit): List<(OperatingSystemImage) -> GuestfishCommand> =
+        @GuestfishDsl
+        fun runLocally(init: GuestfishCommandsBuilder.() -> Unit): List<(OperatingSystemImage) -> GuestfishCommand> =
             init.buildListTo(list) {
                 { osImage: OperatingSystemImage ->
                     !this(osImage)
@@ -212,7 +211,8 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
         /**
          * All command passed here will not cause guestfish to exit, even if any of these commands returns an error.
          */
-        @GuestfishDsl fun ignoreErrors(init: GuestfishCommandsBuilder.() -> Unit): List<(OperatingSystemImage) -> GuestfishCommand> =
+        @GuestfishDsl
+        fun ignoreErrors(init: GuestfishCommandsBuilder.() -> Unit): List<(OperatingSystemImage) -> GuestfishCommand> =
             init.buildListTo(list) {
                 { osImage: OperatingSystemImage ->
                     -this(osImage)
@@ -222,13 +222,15 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
         /**
          * This creates a raw command that calls [name] and passes [arguments].
          */
-        @GuestfishDsl fun command(name: String, vararg arguments: String): GuestfishCommand =
+        @GuestfishDsl
+        fun command(name: String, vararg arguments: String): GuestfishCommand =
             GuestfishCommand(name, *arguments).also { cmd -> list.add { cmd } }
 
         /**
          * This command copies local files or directories recursively into the disk image.
          */
-        @GuestfishDsl fun copyIn(mkDir: Boolean = true, remoteDir: (OperatingSystemImage) -> Path) =
+        @GuestfishDsl
+        fun copyIn(mkDir: Boolean = true, remoteDir: (OperatingSystemImage) -> Path) =
             list.add {
                 remoteDir.build(it) {
                     CopyInCommand(
@@ -242,7 +244,8 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
         /**
          * This command copies remote files or directories recursively out of the disk image.
          */
-        @GuestfishDsl fun copyOut(mkDir: Boolean = true, remoteFile: (OperatingSystemImage) -> Path) =
+        @GuestfishDsl
+        fun copyOut(mkDir: Boolean = true, remoteFile: (OperatingSystemImage) -> Path) =
             list.add {
                 remoteFile.build(it) {
                     CopyOutCommand(
@@ -256,7 +259,8 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
         /**
          * This command uploads and unpacks the local [SharedPath.Host] directory to the [SharedPath.Disk] root directory.
          */
-        @GuestfishDsl fun tarIn() =
+        @GuestfishDsl
+        fun tarIn() =
             list.add {
                 val rootDirectory = it.resolveOnHost("")
                 val archiveOutsideRootDirectory = rootDirectory.tar(rootDirectory.parent.resolve("archive.tar"))
@@ -271,7 +275,8 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
         /**
          * * This command packs the root directory and downloads it to the [SharedPath.Host]'s shared directory.
          */
-        @GuestfishDsl fun tarOut() =
+        @GuestfishDsl
+        fun tarOut() =
             list.add {
                 TarOutCommand(
                     directory = it.resolveOnDisk(""),
@@ -286,7 +291,8 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
          *
          * This command only works on regular files, and will fail on other file types such as directories, symbolic links, block special etc.
          */
-        @GuestfishDsl fun touch(init: (OperatingSystemImage) -> Path) =
+        @GuestfishDsl
+        fun touch(init: (OperatingSystemImage) -> Path) =
             list.add { init.build(it) { TouchCommand(this) } }
 
         /**
@@ -296,13 +302,15 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
          *
          * This call cannot remove directories. Use [RmDirCommand] to remove an empty directory, or set [recursive] to remove directories recursively.
          */
-        @GuestfishDsl fun rm(force: Boolean = false, recursive: Boolean = false, file: (OperatingSystemImage) -> Path) =
+        @GuestfishDsl
+        fun rm(force: Boolean = false, recursive: Boolean = false, file: (OperatingSystemImage) -> Path) =
             list.add { file.build(it) { RmCommand(this, force, recursive) } }
 
         /**
          * Remove the single [directory].
          */
-        @GuestfishDsl fun rmDir(directory: (OperatingSystemImage) -> Path) =
+        @GuestfishDsl
+        fun rmDir(directory: (OperatingSystemImage) -> Path) =
             list.add { directory.build(it) { RmDirCommand(this) } }
 
         /**
@@ -310,12 +318,14 @@ class GuestfishCommandLine(val env: Map<String, String>, val options: List<Optio
          *
          * Some internal mounts are not unmounted by this call.
          */
-        @GuestfishDsl fun umountAll() = UmountAllCommand().also { cmd -> list.add { cmd } }
+        @GuestfishDsl
+        fun umountAll() = UmountAllCommand().also { cmd -> list.add { cmd } }
 
         /**
          * This exits guestfish.
          */
-        @GuestfishDsl fun exit() = ExitCommand().also { cmd -> list.add { cmd } }
+        @GuestfishDsl
+        fun exit() = ExitCommand().also { cmd -> list.add { cmd } }
     }
 }
 

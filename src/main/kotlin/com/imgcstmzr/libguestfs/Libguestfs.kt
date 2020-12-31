@@ -31,23 +31,23 @@ class Libguestfs(private val osImage: OperatingSystemImage) {
     }
 }
 
-fun OperatingSystemImage.resolveOnHost(pathInsideOfImage: Path) =
-    with(SharedPath.Host) { resolve(pathInsideOfImage) }
+fun OperatingSystemImage.resolveOnHost(diskAbsolutePath: Path) =
+    with(SharedPath.Host) { resolve(diskAbsolutePath) }
 
-fun OperatingSystemImage.resolveOnHost(pathInsideOfImage: String) =
-    with(SharedPath.Host) { resolve(pathInsideOfImage) }
+fun OperatingSystemImage.resolveOnHost(diskAbsolutePath: String) =
+    with(SharedPath.Host) { resolve(diskAbsolutePath) }
 
-fun OperatingSystemImage.resolveOnDocker(pathInsideOfImage: Path) =
-    with(SharedPath.Docker) { resolve(pathInsideOfImage) }
+fun OperatingSystemImage.resolveOnDocker(diskAbsolutePath: Path) =
+    with(SharedPath.Docker) { resolve(diskAbsolutePath) }
 
-fun OperatingSystemImage.resolveOnDocker(pathInsideOfImage: String) =
-    with(SharedPath.Docker) { resolve(pathInsideOfImage) }
+fun OperatingSystemImage.resolveOnDocker(diskAbsolutePath: String) =
+    with(SharedPath.Docker) { resolve(diskAbsolutePath) }
 
-fun OperatingSystemImage.resolveOnDisk(pathInsideOfImage: Path) =
-    with(SharedPath.Disk) { resolve(pathInsideOfImage) }
+fun OperatingSystemImage.resolveOnDisk(diskAbsolutePath: Path) =
+    with(SharedPath.Disk) { resolve(diskAbsolutePath) }
 
-fun OperatingSystemImage.resolveOnDisk(pathInsideOfImage: String) =
-    with(SharedPath.Disk) { resolve(pathInsideOfImage) }
+fun OperatingSystemImage.resolveOnDisk(diskAbsolutePath: String) =
+    with(SharedPath.Disk) { resolve(diskAbsolutePath) }
 
 
 
