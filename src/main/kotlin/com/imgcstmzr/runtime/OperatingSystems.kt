@@ -3,6 +3,7 @@ package com.imgcstmzr.runtime
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.empty
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.withPassword
+import com.imgcstmzr.util.GitHub
 import koodies.unit.Giga
 import koodies.unit.Mega
 import koodies.unit.Size
@@ -29,6 +30,17 @@ enum class OperatingSystems(
         downloadUrl = "https://api.balena-cloud.com/download?deviceType=raspberry-pi&version=2.54.2+rev1.dev&fileType=.zip",
         approximateImageSize = 950.Mega.bytes,
         defaultCredentials = empty,
+    ),
+
+    /**
+     * [HypriotOS](https://www.raspberrypi.org/downloads/raspberry-pi-os/)
+     */
+    HypriotOs(
+        fullName = "Hypriot OS",
+        downloadUrl = GitHub.repo("hypriot/image-builder-rpi").latestTag
+            .let { "https://github.com/hypriot/image-builder-rpi/releases/download/$it/hypriotos-rpi-$it.img.zip" },
+        approximateImageSize = 420.Mega.bytes,
+        defaultCredentials = "pirate" withPassword "hypriot",
     ),
 
     /**

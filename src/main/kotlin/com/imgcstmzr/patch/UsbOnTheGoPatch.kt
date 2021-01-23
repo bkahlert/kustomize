@@ -1,53 +1,198 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.cli.KeyValueDocument
-import com.imgcstmzr.patch.Requirements.requireContainingContent
-import com.imgcstmzr.patch.Requirements.requireContainingKeyValue
-import com.imgcstmzr.patch.ini.IniDocument
-import koodies.collections.Dictionary
-import koodies.collections.dictOf
+import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.runtime.OperatingSystemImage
+import koodies.net.Ip4Address
+import koodies.net.ipOf
 
-// TOOD vcgencmd get_config <config>: this displays a specific config value, e.g. vcgencmd get_config arm_freq
+/**
+ * Applied to an [OperatingSystemImage] this [Patch]
+ * configures the USB gadget to provide an ethernet connection
+ * using a simple USB connection.
+ *
+ * The specified [dhcpRange] will be used to auto-configure attached devices
+ * whereas the [deviceAddress] is the one used for this device. If not specified, [Ip4Address.Range.firstUsableHost] is used.
+ *
+ * This works for the Raspberry Pi Zero and 4.
+ *
+ * @see <a href="https://www.hardill.me.uk/wordpress/2019/11/02/pi4-usb-c-gadget/">Pi4 USB-C Gadget</a>
+ * @see <a href="https://github.com/imgcstmzr/rpi-gadget-image-creator/blob/master/create-image">rpi-gadget-image-creator</a>
+ */
 class UsbOnTheGoPatch(
-    module: String,
-    dict: Dictionary<String, String> = dictOf(
-        "g_serial" to "Serial",
-        "g_ether" to "Ethernet",
-        "g_mass_storage" to "Mass storage",
-        "g_midi" to "MIDI",
-        "g_audio" to "Audio",
-        "g_hid" to "Keyboard/Mouse",
-        "g_acm_ms" to "Mass storage and Serial",
-        "g_cdc" to "Ethernet and Serial",
-        "g_multi" to "Multi",
-        "g_webcam" to "Webcam",
-        "g_printer" to "Printer",
-        "g_zero" to "Gadget tester",
-    ) { profile -> "Unknown ($profile)" },
-) : Patch by buildPatch("Activate USB On-The-Go for Profile ${dict[module]}", {
-    
-    files {
-        //_prompt "Activate USB--on-the-go?" "Y n" "dwc2"
-        edit("/boot/config.txt", requireContainingContent("dtoverlay=dwc2")) { path ->
-            val iniDocument = IniDocument(path)
-            iniDocument.createKeyIfMissing("dtoverlay", "dwc2", sectionName = "all")
-            iniDocument.save(path)
-        }
+    val dhcpRange: Ip4Address.Range = ipOf("10.55.0.2")..ipOf("10.55.0.6"),
+    val deviceAddress: Ip4Address = dhcpRange.firstUsableHost,
+    val enableSerialConsole: Boolean = false,
+) : Patch by buildPatch("Activate USB gadget with DHCP address range ${dhcpRange.subnet}", {
 
-        //_prompt "Activate USB--on-the-go?" "Y n" "dwc2"
-        edit("/boot/cmdline.txt", requireContainingKeyValue("modules-load", "dwc2")) { path ->
-            with(KeyValueDocument(path)) {
-                addValue("modules-load", "dwc2")
-                save(path)
-            }
-        }
+    require(deviceAddress in dhcpRange) { "$deviceAddress must be in range $dhcpRange" }
+// TODO extract variables
+    customizeDisk {
 
-        //_prompt "Activate ...?" "Y n" "..."
-        edit("/boot/cmdline.txt", requireContainingKeyValue("modules-load", "dwc2", module)) { path ->
-            with(KeyValueDocument(path)) {
-                addValue("modules-load", module)
-                save(path)
-            }
-        }
+        firstBootInstall { +"dnsmasq" }
+
+        /**
+         * server=8.8.8.8
+         * server=1.1.1.1
+         * server=8.8.4.4
+         * server=1.0.0.1
+         * expand-hosts
+         * domain=bother-you
+         * address=/host/192.168.168.192
+         * dhcp-range=192.168.168.168,192.168.168.189,24h
+         * dhcp-option=option:dns-server,192.168.168.192
+         */
+        fileWithText(USB0_DNSMASQD,
+            """
+                dhcp-authoritative 
+                dhcp-rapid-commit
+                no-ping
+                interface=usb0 
+                dhcp-range=${dhcpRange.start},${dhcpRange.endInclusive},${dhcpRange.subnet.mask},1h 
+                dhcp-option=3 # no gateway / routing
+                #dhcp-option=option:dns-server,192.168.168.192
+                leasefile-ro
+            """.trimIndent())
+
+        /**
+         * interface usb0
+         * static ip_address=192.168.168.192/24
+         * static routers=192.168.168.168
+         * static domain_name_servers=192.168.168.168
+         * metric 999
+         * fallback usb0
+         *
+         * auto lo usb0
+         * auth usb0
+         * address 192.168.168.192
+         * netmask 255.255.255.0
+         * network 192.168.168.0
+         * broadcast 192.168.168.255
+         * gateway 192.168.168.168
+         * metric 999
+         * dns-nameservers 192.168.168.168
+         */
+        fileWithText(USB0_NETWORK,
+            """
+                auto usb0
+                allow-hotplug usb0
+                iface usb0 inet static
+                  address ${dhcpRange.subnet.firstHost}
+                  netmask ${dhcpRange.subnet.mask}
+            """.trimIndent())
+
+        fileWithText(USB_GADGET,
+            """
+                #!/bin/bash
+
+                cd /sys/kernel/config/usb_gadget/
+                mkdir -p display-pi
+                cd display-pi
+                echo 0x1d6b > idVendor # Linux Foundation
+                echo 0x0104 > idProduct # Multifunction Composite Gadget
+                echo 0x0100 > bcdDevice # v1.0.0
+                echo 0x0200 > bcdUSB # USB2
+                #echo 0xEF > bDeviceClass
+                #echo 0x02 > bDeviceSubClass
+                #echo 0x01 > bDeviceProtocol
+                mkdir -p strings/0x409
+                echo "fedcba9876543210" > strings/0x409/serialnumber
+                echo "Ben Hardill" > strings/0x409/manufacturer
+                echo "Display-Pi USB Device" > strings/0x409/product
+                mkdir -p configs/c.1/strings/0x409
+                echo "Config 1: ECM network" > configs/c.1/strings/0x409/configuration
+                echo 250 > configs/c.1/MaxPower
+                # Add functions here
+                # see gadget configurations below
+                # End functions
+                
+                mkdir -p functions/ecm.usb0
+                HOST="00:dc:c8:f7:75:15" # "HostPC"
+                SELF="00:dd:dc:eb:6d:a1" # "BadUSB"
+                echo ${'$'}HOST > functions/ecm.usb0/host_addr
+                echo ${'$'}SELF > functions/ecm.usb0/dev_addr
+                ln -s functions/ecm.usb0 configs/c.1/
+                
+                mkdir -p functions/acm.usb0
+                ln -s functions/acm.usb0 configs/c.1/
+                
+                #mkdir -p functions/mass_storage.usb0
+                #echo 0 > functions/mass_storage.usb0/stall
+                #echo 0 > functions/mass_storage.usb0/lun.0/cdrom
+                #echo 1 > functions/mass_storage.usb0/lun.0/ro
+                #echo 0 > functions/mass_storage.usb0/lun.0/nofua
+                #echo /opt/disk.img > functions/mass_storage.usb0/lun.0/file
+                #ln -s functions/mass_storage.usb0 configs/c.1/
+                
+                udevadm settle -t 5 || :
+                ls /sys/class/udc > UDC
+                
+                ifup usb0
+            """.trimIndent())
+        chmods { "0755" to USB_GADGET }
+
+        fileWithText(USBGADGET_SERVICE,
+            """
+                [Unit]
+                Description=My USB gadget
+                After=network-online.target
+                Wants=network-online.target
+                #After=systemd-modules-load.service
+                 
+                [Service]
+                Type=oneshot
+                RemainAfterExit=yes
+                ExecStart=$USB_GADGET
+                 
+                [Install]
+                WantedBy=sysinit.target
+            """.trimIndent())
+        firstBoot("enable ${USBGADGET_SERVICE.fileName}") { !"systemctl enable ${USBGADGET_SERVICE.fileName}" }
+
+        firstBoot("update ${CONFIG_TXT.fileName}") { !"echo dtoverlay=dwc2 >> $CONFIG_TXT" }
+        firstBoot("update ${CMDLINE_TXT.fileName}") { !"sed -i 's/\$/ modules-load=dwc2/' $CMDLINE_TXT" }
+        firstBoot("update ${MODULES.fileName}") { !"echo libcomposite >> $MODULES" }
+        firstBoot("update ${DHCPCD_CONF.fileName}") { !"echo denyinterfaces usb0 >> $DHCPCD_CONF" }
+        if (enableSerialConsole) firstBoot("enable getty@ttyGS0.service") { !"systemctl enable getty@ttyGS0.service" }
     }
-})
+}) {
+    companion object {
+        val USB0_DNSMASQD = DiskPath("/etc/dnsmasq.d/usb0")
+        val USB0_NETWORK: DiskPath = DiskPath("/etc/network/interfaces.d/usb0")
+        val USB_GADGET = DiskPath("/usr/local/sbin/usb-gadget.sh")
+        val USBGADGET_SERVICE = DiskPath("/lib/systemd/system/usbgadget.service")
+
+        val CONFIG_TXT: DiskPath = DiskPath("/boot/config.txt")
+        val CMDLINE_TXT: DiskPath = DiskPath("/boot/cmdline.txt")
+        val MODULES: DiskPath = DiskPath("/etc/modules")
+        val DHCPCD_CONF: DiskPath = DiskPath("/etc/dhcpcd.conf")
+    }
+}
+
+// TODO https://github.com/imgcstmzr/rpi-gadget-image-creator
+
+/** https://www.hardill.me.uk/wordpress/2019/11/02/pi4-usb-c-gadget/
+As I said in a earlier comment I don’t have an iPad so don’t know. I don’t expect this will work but you can do what I do with the Pi Zeros.
+
+Add the following to /etc/dnsmasq.d/usb
+
+dhcp-script=/root/route.sh
+leasefile-ro
+
+And then create a file called /root/route.sh with the following:
+
+#!/bin/bash
+op="${1:-op}"
+mac="${2:-mac}"
+ip="${3:-ip}"
+host="${4}"
+
+if [[ $op == "init" ]]; then
+exit 0
+fi
+
+if [[ $op == "add" ]] || [[ $op == "old" ]]; then
+route add default gw $ip usb0
+fi
+
+This will set the iPad to be the default route for the Pi. If the iPad is able to do NAT then it will work.
+ */

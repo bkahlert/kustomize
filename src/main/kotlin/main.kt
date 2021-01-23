@@ -18,7 +18,7 @@ import com.imgcstmzr.util.flash
 import koodies.io.path.Locations
 import koodies.io.path.asString
 import koodies.kaomoji.Kaomojis
-import koodies.logging.BlockRenderingLogger
+import koodies.logging.RenderingLogger
 import koodies.logging.logging
 import koodies.terminal.ANSI
 import koodies.terminal.AnsiColors.cyan
@@ -34,7 +34,8 @@ fun main() {
 //    CliCommand().subcommands(ImgCommand(), CstmzrCommand(), FlshCommand()).main(listOf("--help"))
     CliCommand().main(
         listOf(
-            "--config", "bother-you.conf"//, "--reuse-last-working-copy",
+//            "--config", "bother-you.conf"//, "--reuse-last-working-copy",
+            "--config", "debug.conf"//, "--reuse-last-working-copy",
         )
     )
 //    CliCommand().subcommands(XyzCommands(), ImgCommand(), FlshCommand()).main(listOf("img", "--name", "name-by-cmdline"))
@@ -81,6 +82,7 @@ class CliCommand : NoOpCliktCommand(
         cache = Cache(cacheDir)
 
         echo(banner("ImgCstmzr"))
+        echo()
 
         lateinit var config: ImgCstmzrConfig
         lateinit var osImage: OperatingSystemImage
@@ -98,7 +100,8 @@ class CliCommand : NoOpCliktCommand(
                 logLine { "OS: $osImage".cyan().bold() }
             }
         }
-
+// TODO check if DOcker is running
+        echo()
         val patches = config.toOptimizedPatches()
         val exceptions: List<Throwable> = patches.patch(osImage)
 
@@ -122,10 +125,12 @@ class CliCommand : NoOpCliktCommand(
             }
         }
 
+        echo()
+
         logging(banner("Summary")) {
             logLine { "Image flashed to: " + flashDisk?.run { toString() } ?: "—" }
-            logLine { "     Run scripts: " + osImage.copyOut("/usr/lib/virt-sysprep").toUri() }
-            logLine { " Run scripts log: " + osImage.copyOut("/root/virt-sysprep-firstboot.log").toUri() }
+            logLine { "Run scripts: " + osImage.copyOut("/usr/lib/virt-sysprep").toUri() }
+            logLine { "Run scripts log: " + osImage.copyOut("/root/virt-sysprep-firstboot.log").toUri() }
 
             if (exceptions.isEmpty()) Kaomojis.Magic.random().toString() + " ${osImage.file.toUri()}"
             else Kaomojis.BadMood.random().also {
@@ -137,7 +142,7 @@ class CliCommand : NoOpCliktCommand(
         }
     }
 
-    private fun BlockRenderingLogger.provideImageCopy(config: ImgCstmzrConfig) = with(cache) {
+    private fun RenderingLogger.provideImageCopy(config: ImgCstmzrConfig) = with(cache) {
         config.os based provideCopy(config.name, reuseLastWorkingCopy) {
             with(downloader) {
                 config.os.download(this@provideImageCopy).also {

@@ -1,5 +1,7 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.libguestfs.HostPath
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine
 import com.imgcstmzr.libguestfs.guestfish.GuestfishDsl
@@ -16,7 +18,6 @@ import koodies.logging.RenderingLogger
 import koodies.terminal.AnsiColors.magenta
 import koodies.text.quoted
 import koodies.unit.Size
-import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 
 data class SimplePatch(
@@ -29,7 +30,11 @@ data class SimplePatch(
     override val osPreparations: List<DiskOperation>,
     override val osBoot: Boolean,
     override val osOperations: List<(OperatingSystemImage) -> Program>,
-) : Patch
+) : Patch {
+    override val operationCount by lazy {
+        diskPreparations.size + diskCustomizations.size + diskOperations.size + fileOperations.size + osOperations.size
+    }
+}
 
 fun buildPatch(name: String, init: PatchBuilder.() -> Unit): Patch {
 
@@ -113,11 +118,8 @@ class ImgOperationsCollector(private val diskOperations: MutableList<DiskOperati
 
 @PatchDsl
 class FileSystemOperationsCollector(private val fileOperations: MutableList<FileOperation>) {
-    fun edit(path: String, validator: (Path) -> Unit, operations: (Path) -> Unit) =
-        fileOperations.add(FileOperation(Path.of(path), validator, operations))
-
-    fun create(validator: (Path) -> Unit, operations: (Path) -> Unit) =
-        fileOperations.add(FileOperation(Path.of("/"), validator, operations))
+    fun edit(path: DiskPath, validator: (HostPath) -> Unit, operations: (HostPath) -> Unit) =
+        fileOperations.add(FileOperation(path, validator, operations))
 }
 
 @PatchDsl

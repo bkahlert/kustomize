@@ -1,0 +1,131 @@
+#!/bin/bash
+set -u
+
+# Script to fix an errorneous firstboot scripts directory.
+# When using virt-customize's firstboot command line option a script is copied
+# to <firstboot>/scripts and named <counter>-script-name whereas <counter>
+# is a 4 digit number starting at 0001. Using --firstboot several times correctly
+# increases the counter.
+# But: If virt-customize itself is called multiple times the counter starts a 0001
+# allover again. That is, if the directory already contained
+# - 0001-script-a and
+# - 0002-script-b
+# and you called virt-customize with --firstboot script-1 and --firstboot script-2
+# you would end up with the following scripts directory content:
+# - 0001-script-1
+# - 0001-script-a
+# - 0002-script-2
+# - 0002-script-b
+# So although script-a was supposed to run first script-1 will now run first.
+#
+# If this script is put in the scripts directory it will solve this issue
+# by copying the scripts to a temporary directory will the epoch seconds as the prefix:
+# - 212...1-0001-script-a
+# - 212...2-0002-script-b
+# - 212...3-0001-script-1
+# - 212...4-0002-script-2
+# This way the scripts will show up again in their intended order.
+# Since this step happens while firstboot.sh is already running and calling
+# this script the first (due to its name) the scripts that run next are already resolved.
+# Therefore the scripts will not be renamed but the correctly ordered copies
+# moved back to the scripts directory—this time overwriting the existing scripts
+# in the correct order.
+# - 0001-script-1 <- 212...1-0001-script-a
+# - 0001-script-a <- 212...2-0002-script-b
+# - 0002-script-2 <- 212...3-0001-script-1
+# - 0002-script-b <- 212...4-0002-script-2
+# The downside of this approach is the initially misplaced scripts will wont
+# reflect their purpose anymore in the name. For example script 0001-script-1
+# does actually run what was originally in 0001-script-a.
+
+
+trap '[ $? -eq 0 ] && _sound Alert || _sound Error; trap - EXIT; exit' EXIT INT HUP
+_sound() { _sound="/System/Library/PrivateFrameworks/ScreenReader.framework/Versions/A/Resources/Sounds/$1.aiff"
+           ! (which afplay | grep 'not found') && [ -f "$_sound" ] && afplay "$_sound" || _bell; }
+_bell="$(tput bel)"; _bold="$(tput bold)"; _reset="$(tput sgr0)"; _bell() { printf "%s" "$_bell"; }
+_cursorLeft() { tput cub "${1:-1}"; }
+_black="$(tput setaf 0)"; _brightBlack="$_bold$_black"; _gray="$_brightBlack"
+_red="$(tput setaf 1)"; _brightRed="$_bold$_red"
+_green="$(tput setaf 2)"; _brightGreen="$_bold$_green"
+_yellow="$(tput setaf 3)"; _brightYellow="$_bold$_yellow"
+_blue="$(tput setaf 4)"; _brightBlue="$_bold$_blue"
+_magenta="$(tput setaf 5)"; _brightMagenta="$_bold$_magenta"
+_cyan="$(tput setaf 6)"; _brightCyan="$_bold$_cyan"
+_white="$(tput setaf 7)"; _brightWhite="$_bold$_white"
+_ok="${_green}✔${_reset}"; _ok() { [ -z "${1:-}" ] && echo "$_ok" || echo "$_ok $*"; }
+_new="${_yellow}✱${_reset}"; _new() { [ -z "${1:-}" ] && echo "$_new" || echo "$_new $*"; }
+_item="${_blue}▪${_reset}"; _item() { [ -z "${1:-}" ] && echo "$_item" || echo "$_item $*"; }; _list() { for item in "$@"; do _item "$item"; done; }
+_error="${_brightRed}✘${_reset}"; _error() { [ -z "${1:-}" ] && echo "$_failure" || echo "$_failure $*"; }
+_failure="$_error"; _failure() { _error "$@"; }
+_last_start=''
+_start="${_cyan}…${_reset}"; _start() { [ -z "${1:-}" ] && _last_start="$_start" || _last_start="$* $_start"; echo "${_last_start}"; }
+_end() { printf "\n\e[2A\e[K\e[2m%s\e[m%s%s\n" "${_last_start}" "$(_cursorLeft 1)" "${1:-?}"; }
+_test_print() {
+  _ok; _ok "success 123"; _new; _new "new 123"; _item; _item "item 123"; _list "item 1" "item 2" "item 3"; _error; _error "error 123"
+  _start "Processing"; _start "Processing"; _end $_ok; _start "Processing"; _end $_error
+  _sound Error
+  exit 0
+}
+#_test_print
+
+echo "FIXING SCRIPT ORDER"
+WORKDIR=$(pwd)
+_item "working directory: ${WORKDIR}"
+BASEDIR=$(dirname "$0")
+_item "base directory: ${BASEDIR}"
+BASENAME=$(basename "$0")
+_item "base name: ${BASENAME}"
+
+SCRIPTS_DIR="$(dirname "$0")/../scripts"
+COPIES_DIR="$(dirname "$0")/../copies"
+mkdir -p "${COPIES_DIR}" && rm -f ${COPIES_DIR}/* || exit 1
+cd "${SCRIPTS_DIR}" || exit 1
+
+_start "Copying all firstboot scripts timestamp-prefixed to ${COPIES_DIR}"
+ls -1 | while read _FILE; do
+  _MODIFIED="$(date -R -r "${_FILE}")"
+  _EPOCH="$(stat -c %Y "${_FILE}")"
+  _COPY="${COPIES_DIR}/${_EPOCH}-${_FILE}"
+
+  # ignore this script itself, non-regular files and all non-executables
+  if [ ! "${_FILE}" = "${BASENAME}" ] && [ -x "${_FILE}" ] && [ -f "${_FILE}" ]; then
+    # ignore already copied files
+    if [ ! -f "${_COPY}" ]; then
+
+      cp "${_FILE}" "${_COPY}"
+      touch -d "${_MODIFIED}" "${_COPY}"
+    fi
+  fi
+done
+_end $_ok
+
+_start "Moving back firstboot script copies so that alphabetical order reflects the intended order"
+ls -1 | while read _FILE; do
+  _EPOCH="$(stat -c %Y "${_FILE}")"
+
+  # ignore this script itself, non-regular files and all non-executables
+  if [ ! "${_FILE}" = "${BASENAME}" ] && [ -x "${_FILE}" ] && [ -f "${_FILE}" ]; then
+
+    _COPY="${COPIES_DIR}/""$(ls -1 "${COPIES_DIR}" | head -n 1)"
+
+    _item "${_FILE} ⬅ ${_COPY}"
+
+    mv -f "${_COPY}" "${_FILE}"
+    touch "${_FILE}"
+    sleep 1
+  fi
+done
+_end $_ok
+
+_start "Checking if all went well …"
+if [ -z "$(ls -A "${COPIES_DIR}")" ]; then
+  rmdir "${COPIES_DIR}"
+  _end $_ok
+  _sound Alert
+else
+  _end $_error
+  _sound Error
+  echo "❖ The following firstboot script copies were not copied back:"
+  ls "${COPIES_DIR}"
+  exit 1
+fi

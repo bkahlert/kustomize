@@ -214,7 +214,7 @@ systemd[1]: Proceeding WITHOUT firewalling in effect! (This warning is only show
  [  OK  ] Listening on udev Kernel Socket.
  [  OK  ] Created slice system-systemd\x2dfsck.slice.
  [  OK  ] Reached target Swap.
- [  OK  ] Started Dispatch Password …ts to Console Directory Watch.
+ [  OK  ] Started Dispatch Password …ts to Console Directory Watch.
  [  OK  ] Reached target Paths.
  systemd[1]: Condition check resulted in Journal Audit Socket being skipped.
 systemd[1]: Condition check resulted in Arbitrary Executable File Formats File System Automount Point being skipped.
@@ -265,7 +265,7 @@ systemd[1]: Condition check resulted in Arbitrary Executable File Formats File S
  [  OK  ] Found device QEMU_HARDDISK boot.
           Starting File System Check…isk/by-partuuid/907af7d0-01...
  [  OK  ] Started File System Check Daemon to report status.
- [  OK  ] Started File System Check …/disk/by-partuuid/907af7d0-01.
+ [  OK  ] Started File System Check …/disk/by-partuuid/907af7d0-01.
           Mounting /boot...
  [  OK  ] Mounted /boot.
  [  OK  ] Reached target Local File Systems.
@@ -307,7 +307,7 @@ systemd[1]: Condition check resulted in Arbitrary Executable File Formats File S
           Starting WPA supplicant...
           Starting dhcpcd on all interfaces...
           Starting triggerhappy global hotkey daemon...
-          Starting dphys-swapfile - …unt, and delete a swap file...
+          Starting dphys-swapfile - …unt, and delete a swap file...
  [  OK  ] Started Daily apt upgrade and clean activities.
  [  OK  ] Reached target Timers.
  [  OK  ] Started System Logging Service.
@@ -322,7 +322,7 @@ systemd[1]: Condition check resulted in Arbitrary Executable File Formats File S
  [  OK  ] Started LSB: Switch to ond…(unless shift key is pressed).
  [  OK  ] Started dphys-swapfile - s…mount, and delete a swap file.
  [  OK  ] Started dhcpcd on all interfaces.
- [  OK  ] Started LSB: Resize the ro… filesystem to fill partition.
+ [  OK  ] Started LSB: Resize the ro… filesystem to fill partition.
  [  OK  ] Reached target Network.
           Starting /etc/rc.local Compatibility...
           Starting Permit User Sessions...

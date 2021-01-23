@@ -1,18 +1,22 @@
 package com.imgcstmzr.libguestfs.guestfish
 
 import com.imgcstmzr.libguestfs.*
-import com.imgcstmzr.libguestfs.docker.GuestfishDockerAdaptable
+import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.GuestfishCommandLineBuilder.Companion.build
+import com.imgcstmzr.libguestfs.guestfish.GuestfishOption.DiskOption
+import com.imgcstmzr.libguestfs.guestfish.GuestfishOption.MountOption
 import com.imgcstmzr.runtime.OperatingSystemImage
 import koodies.builder.*
-import koodies.docker.DockerRunAdaptable
 import koodies.io.compress.TarArchiver.tar
-import koodies.io.path.Locations
+import koodies.io.noSuchFile
 import koodies.kaomoji.Kaomojis
 import koodies.logging.RenderingLogger
 import koodies.logging.logging
+import koodies.shell.HereDocBuilder
 import koodies.terminal.ANSI
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.isReadable
 import kotlin.io.path.moveTo
 
 @DslMarker
@@ -26,20 +30,26 @@ annotation class GuestfishDsl
 class GuestfishCommandLine(
     val env: Map<String, String>,
     val options: List<Option>,
-    val guestfishCommands: List<GuestfishCommand>
-) :
-    DockerRunAdaptable by GuestfishDockerAdaptable(env, options, guestfishCommands),
-    LibguestfsCommandLine(
-        env,
-        options.filterIsInstance<GuestfishOption.DiskOption>().map { it.disk }.singleOrNull() ?: Locations.Temp,
-        COMMAND,
-        options.flatten() +
-                guestfishCommands.toMutableList().let {
-                    if (UmountAllCommand() !in it) it += UmountAllCommand()
-                    if (ExitCommand() !in it) it += ExitCommand()
-                    it.flatten()
-                }
-    ) {
+    val guestfishCommands: List<GuestfishCommand>,
+) : LibguestfsCommandLine(
+    env,
+    options.filterIsInstance<DiskOption>().map { it.disk }.single(),
+    COMMAND,
+    options.filterIsInstance<DiskOption>().flatten() +
+        options.filter { it !is DiskOption }.flatten() +
+        "--" + HereDocBuilder.hereDoc {
+        guestfishCommands.toMutableList().also {
+            if (options.filterIsInstance<MountOption>().isNotEmpty() && UmountAllCommand() !in it) it.add(UmountAllCommand())
+            if (ExitCommand() !in it) it.add(ExitCommand())
+        }.forEach {
+            +it.joinToString(" ")
+        }
+    }
+) {
+
+    override val disk = options.filterIsInstance<DiskOption>().map { it.disk }
+        .also { disks -> check(disks.size == 1) { "The $command command must add exactly one disk. ${disks.size} found: ${disks.joinToString(", ")}." } }
+        .single().also { check(it.isReadable()) { it.noSuchFile() } }
 
     fun RenderingLogger.executeLogging(caption: List<GuestfishCommand>.() -> String = DEFAULT_CAPTION): Int =
         executeLogging(
@@ -64,30 +74,29 @@ class GuestfishCommandLine(
             caption: List<GuestfishCommand>.() -> String = DEFAULT_CAPTION,
             bordered: Boolean = false,
             init: GuestfishCommandsBuilder.() -> Unit,
-        ): Int =
-            build(osImage) {
-                env {
-                    if (trace) trace { on }
-                    debug { off }
-                }
+        ): Int = build(osImage) {
+            env {
+                if (trace) trace { on }
+                debug { off }
+            }
 
-                options {
-                    readWrite { on }
-                    disk { it.file }
+            options {
+                readWrite { on }
+                disk { it.file }
 //                    inspector { on } // does not mount /boot
-                    mount { Path.of("/dev/sda2") to Path.of("/") }
-                    mount { Path.of("/dev/sda1") to Path.of("/boot") }
-                }
-                commands(init)
-            }.run { executeLogging(caption(guestfishCommands), bordered = bordered) }
+                mount { Path.of("/dev/sda2") to DiskPath("/") }
+                mount { Path.of("/dev/sda1") to DiskPath("/boot") }
+            }
+            commands(init)
+        }.run { executeLogging(caption(guestfishCommands), bordered = bordered) }
 
         fun OperatingSystemImage.copyOut(path: String, trace: Boolean = false): Path {
-            logging("copying out $path") {
+            return logging("copying out $path") {
                 runGuestfishOn(this@copyOut, trace = trace) {
-                    copyOut { it.resolveOnDisk(path) }
+                    copyOut { DiskPath(path) }
                 }
+                hostPath(DiskPath(path))
             }
-            return resolveOnHost(path)
         }
     }
 
@@ -173,7 +182,7 @@ class GuestfishCommandLine(
          */
         @GuestfishDsl
         fun disk(init: (OperatingSystemImage) -> Path) =
-            list.add { init(it).run { GuestfishOption.DiskOption(this) } }
+            list.add { init(it).run { DiskOption(this) } }
 
         /**
          * Add file which should be a disk image from a virtual machine.
@@ -189,8 +198,8 @@ class GuestfishCommandLine(
          * e.g. `Path.of("/dev/sda1") to Path.of("/")`
          */
         @GuestfishDsl
-        fun mount(init: (OperatingSystemImage) -> Pair<Path, Path>) =
-            list.add { init(it).run { GuestfishOption.MountOption(first, second) } }
+        fun mount(init: (OperatingSystemImage) -> Pair<HostPath, DiskPath>) =
+            list.add { init(it).run { MountOption(first, second) } }
     }
 
     @GuestfishDsl
@@ -230,13 +239,13 @@ class GuestfishCommandLine(
          * This command copies local files or directories recursively into the disk image.
          */
         @GuestfishDsl
-        fun copyIn(mkDir: Boolean = true, remoteDir: (OperatingSystemImage) -> Path) =
+        fun copyIn(mkDir: Boolean = true, remoteDir: (OperatingSystemImage) -> DiskPath) =
             list.add {
                 remoteDir.build(it) {
                     CopyInCommand(
-                        remoteDir = it.resolveOnDisk(this).parent,
+                        remoteDir = this.parent,
                         mkDir = mkDir,
-                        localFiles = arrayOf(it.resolveOnDocker(this)),
+                        localFiles = arrayOf(it.hostPath(this)),
                     )
                 }
             }
@@ -245,42 +254,43 @@ class GuestfishCommandLine(
          * This command copies remote files or directories recursively out of the disk image.
          */
         @GuestfishDsl
-        fun copyOut(mkDir: Boolean = true, remoteFile: (OperatingSystemImage) -> Path) =
+        fun copyOut(mkDir: Boolean = true, remoteFile: (OperatingSystemImage) -> DiskPath) =
             list.add {
                 remoteFile.build(it) {
                     CopyOutCommand(
-                        remoteFiles = arrayOf(it.resolveOnDisk(this)),
+                        remoteFiles = listOf(this),
                         mkDir = mkDir,
-                        directory = it.resolveOnDocker(this).parent,
+                        directory = it.hostPath(this).parent,
                     )
                 }
             }
 
         /**
-         * This command uploads and unpacks the local [SharedPath.Host] directory to the [SharedPath.Disk] root directory.
+         * This command uploads and unpacks the local host share to the guest VMs root `/`.
          */
         @GuestfishDsl
         fun tarIn() =
             list.add {
-                val rootDirectory = it.resolveOnHost("")
+                val rootDirectory = it.hostPath(DiskPath("/")).createDirectories()
+                val archive = rootDirectory.resolve("archive.tar")
                 val archiveOutsideRootDirectory = rootDirectory.tar(rootDirectory.parent.resolve("archive.tar"))
-                archiveOutsideRootDirectory.moveTo(rootDirectory.resolve("archive.tar"))
+                archiveOutsideRootDirectory.moveTo(archive)
                 TarInCommand(
-                    archive = it.resolveOnDocker("archive.tar"),
-                    directory = it.resolveOnDisk(""),
+                    archive = archive,
+                    directory = DiskPath("/"),
                     deleteArchiveAfterwards = true,
                 )
             }
 
         /**
-         * * This command packs the root directory and downloads it to the [SharedPath.Host]'s shared directory.
+         * * This command packs the guest VMs root `/` and downloads it to the local host share.
          */
         @GuestfishDsl
         fun tarOut() =
             list.add {
                 TarOutCommand(
-                    directory = it.resolveOnDisk(""),
-                    archive = it.resolveOnDocker("archive.tar"),
+                    directory = DiskPath("/"),
+                    archive = it.hostPath(DiskPath("/archive.tar")),
                 )
             }
 
@@ -292,7 +302,7 @@ class GuestfishCommandLine(
          * This command only works on regular files, and will fail on other file types such as directories, symbolic links, block special etc.
          */
         @GuestfishDsl
-        fun touch(init: (OperatingSystemImage) -> Path) =
+        fun touch(init: (OperatingSystemImage) -> DiskPath) =
             list.add { init.build(it) { TouchCommand(this) } }
 
         /**
@@ -303,14 +313,14 @@ class GuestfishCommandLine(
          * This call cannot remove directories. Use [RmDirCommand] to remove an empty directory, or set [recursive] to remove directories recursively.
          */
         @GuestfishDsl
-        fun rm(force: Boolean = false, recursive: Boolean = false, file: (OperatingSystemImage) -> Path) =
-            list.add { file.build(it) { RmCommand(this, force, recursive) } }
+        fun rm(force: Boolean = false, recursive: Boolean = false, file: (OperatingSystemImage) -> DiskPath) =
+            list.add { file.build(it) { RmCommand(this.toString(), force, recursive) } }
 
         /**
          * Remove the single [directory].
          */
         @GuestfishDsl
-        fun rmDir(directory: (OperatingSystemImage) -> Path) =
+        fun rmDir(directory: (OperatingSystemImage) -> DiskPath) =
             list.add { directory.build(it) { RmDirCommand(this) } }
 
         /**

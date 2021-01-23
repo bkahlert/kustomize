@@ -34,12 +34,13 @@ import kotlin.io.path.readText
 
 
 infix fun <T> Assertion.Builder<T>.toStringIsEqualTo(expected: String): Assertion.Builder<T> =
-    assert("is equal to %s", expected) {
+    assert("to string is equal to %s", expected) {
         when (val actual = it.toString()) {
             expected -> pass()
             else -> fail(actual = actual)
         }
     }
+
 
 fun <T : Path> Assertion.Builder<T>.containsContent(expectedContent: String) =
     assert("contains content ${expectedContent.quoted}") {
@@ -186,6 +187,15 @@ fun <T : Path> Assertion.Builder<T>.containsAllFiles(other: Path) =
         }
         pass()
     }
+
+
+val <T : Path> Assertion.Builder<T>.content
+    get() =
+        get("content %s") { readText() }
+
+fun <T : Path> Assertion.Builder<T>.content(init: Assertion.Builder<String>.() -> Unit) =
+    content.apply(init)
+
 
 fun <T : Path> Assertion.Builder<T>.hasContent(expectedContent: String) =
     assert("has content ${expectedContent.quoted}") {

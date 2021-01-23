@@ -1,16 +1,16 @@
 package com.imgcstmzr.libguestfs.docker
 
 import com.imgcstmzr.libguestfs.Libguestfs
-import koodies.docker.DockerRunCommandLineBuilder
+import com.imgcstmzr.libguestfs.LibguestfsCommandLine
+import koodies.docker.DockerCommandLineBuilder
 import koodies.io.compress.Archiver.archive
 import koodies.io.compress.GzCompressor.gunzip
 import koodies.io.path.Locations
+import koodies.io.path.asPath
 import koodies.io.path.copyToDirectory
 import koodies.io.path.delete
 import koodies.io.path.hasExtensions
 import koodies.io.path.removeExtensions
-import koodies.io.path.toPath
-import koodies.logging.BlockRenderingLogger
 import koodies.logging.RenderingLogger
 import koodies.logging.compactLogging
 import koodies.logging.logging
@@ -54,7 +54,7 @@ object ImageBuilder {
      * Dynamically creates a raw image with two partitions containing the files
      * as specified by the [uri].
      */
-    fun BlockRenderingLogger.buildFrom(uri: URI): Path {
+    fun RenderingLogger.buildFrom(uri: URI): Path {
         var path: List<Pair<Path, Path>>? = null
         compactLogging("Initiating raw image creation from $uri") {
 
@@ -73,13 +73,13 @@ object ImageBuilder {
             require(query.isNotEmpty()) { "URI $uri does not reference any file using the \"files\" parameter" }
 
             path = files.map { it.split(">", limit = 2) }
-                .map { relation -> relation.first().toPath() to relation.last().toPath() }
+                .map { relation -> relation.first().asPath() to relation.last().asPath() }
             "${path!!.size} files"
         }
         return prepareImg(*path!!.toTypedArray())
     }
 
-    private fun BlockRenderingLogger.prepareImg(vararg paths: Pair<Path, Path>): Path =
+    private fun RenderingLogger.prepareImg(vararg paths: Pair<Path, Path>): Path =
         buildFrom(Locations.Temp.resolve("imgcstmzr-" + paths.take(5).mapNotNull { it.first.fileName }
             .joinToString(separator = "-")).createDirectories().run {
             compactLogging("Copying ${paths.size} files to ${toUri()}") {
@@ -127,24 +127,27 @@ object ImageBuilder {
         }
 
         @Suppress("SpellCheckingInspection")
-        DockerRunCommandLineBuilder.build(LibguestfsDockerAdaptable.IMAGE) {
-            redirects { +"2>&1" }
-            workingDirectory(archiveDirectory.parent)
+        DockerCommandLineBuilder.build(LibguestfsCommandLine.DOCKER_IMAGE) {
             options {
-                env { "LIBGUESTFS_TRACE" to "1" }
                 name { Libguestfs::class.simpleName + "-image-preparation---" + imgName }
                 mounts { archiveDirectory mountAt "/shared" }
             }
-            arguments {
-                +"-N" + "/shared/$imgName=bootroot:$bootFileSystem:$rootFileSystem:${totalSize.format()}:${bootSize.format()}:$partitionTableType"
-                +hereDoc {
-                    +"mount /dev/sda2 /"
-                    +"mkdir /boot"
-                    +"mount /dev/sda1 /boot"
-                    +"-tar-in /shared/${tarball.fileName} /" +
-                        (if (tarball.hasExtensions(".tar")) "" else " compress:gzip")
+            commandLine {
+                redirects { +"2>&1" }
+                environment { "LIBGUESTFS_TRACE" to "1" }
+                workingDirectory { archiveDirectory.parent }
+                arguments {
+                    +"-N" + "/shared/$imgName=bootroot:$bootFileSystem:$rootFileSystem:${totalSize.format()}:${bootSize.format()}:$partitionTableType"
+                    +hereDoc {
+                        +"mount /dev/sda2 /"
+                        +"mkdir /boot"
+                        +"mount /dev/sda1 /boot"
+                        +"-tar-in /shared/${tarball.fileName} /" +
+                            (if (tarball.hasExtensions(".tar")) "" else " compress:gzip")
+                    }
                 }
             }
+
         }.execute().waitForTermination()
         logLine { "Finished test img creation." }
         archiveDirectory.resolve(imgName)

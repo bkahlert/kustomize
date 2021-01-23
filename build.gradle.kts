@@ -2,9 +2,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 @Suppress("SpellCheckingInspection")
 plugins {
-    kotlin("jvm") version "1.4.20"
+    kotlin("jvm") version "1.4.21"
     id("se.patrikerdes.use-latest-versions") version "0.2.14"
     id("com.github.ben-manes.versions") version "0.29.0"
+    id("org.jlleitschuh.gradle.ktlint") version "9.4.1"
+    id("io.gitlab.arturbosch.detekt") version "1.15.0"
     id("com.github.johnrengelman.shadow") version "6.0.0"
     id("org.mikeneck.graalvm-native-image") version "0.8.0"
     application
@@ -14,6 +16,7 @@ group = "com.imgcstmzr"
 version = "1.0-SNAPSHOT"
 
 repositories {
+    mavenCentral()
     jcenter()
     maven("https://dl.bintray.com/bkahlert/koodies")
     mavenLocal()
@@ -23,7 +26,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.1")
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.10")
 
-    implementation("com.bkahlert.koodies:koodies:1.2.0-SNAPSHOT")
+    implementation("com.bkahlert.koodies:koodies:1.2.3")
 
 //    docker('bkahlert:libguestfs:0.1.2') //
 
@@ -102,12 +105,15 @@ application {
 }
 
 nativeImage {
-    graalVmHome = System.getenv("GRAALVM_HOME")
+    graalVmHome = project.JAVA_HOME ?: javaInstalls
+        .installationForCurrentVirtualMachine
+        .map { it.installationDirectory }.toString()
     jarTask = tasks.shadowJar.get()
     mainClass = "MainKt"
     executableName = "imgcstmzr"
     outputDirectory = file("$buildDir/native-image")
     arguments(
+        "--install-exit-handlers",
         "--no-fallback",
         "--no-server",
         "--enable-all-security-services",
@@ -128,4 +134,14 @@ generateNativeImageConfig {
     byRunningApplication {
         arguments("drivers")
     }
+}
+
+detekt {
+    input = files(
+        "$projectDir/src/main/kotlin",
+        "$projectDir/src/test/kotlin"
+    )
+    parallel = true
+    config = files("${rootProject.projectDir}/detekt.yaml")
+    buildUponDefaultConfig = true
 }

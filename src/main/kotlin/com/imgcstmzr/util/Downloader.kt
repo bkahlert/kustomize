@@ -7,7 +7,7 @@ import koodies.io.path.asString
 import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.io.path.randomDirectory
 import koodies.io.path.renameTo
-import koodies.logging.BlockRenderingLogger
+import koodies.logging.RenderingLogger
 import koodies.logging.compactLogging
 import koodies.runtime.deleteOnExit
 import java.net.URI
@@ -31,19 +31,19 @@ class Downloader(private val downloadDirectory: Path = Locations.Temp, vararg cu
      * Downloads an image copy containing the [OperatingSystem] and returns the [Path] where the
      * copy can be found after successful download.
      */
-    fun OperatingSystem.download(logger: BlockRenderingLogger): Path = download(downloadUrl, logger = logger, filename = fullName)
+    fun OperatingSystem.download(logger: RenderingLogger): Path = download(downloadUrl, logger = logger, filename = fullName)
 
     /**
      * Downloads the specified [url], [retries] the specified amount of times.
      *
      * Optionally a [filename] can be provided which is used for logging at places where the [url] would otherwise have been used.
      */
-    fun download(url: String, logger: BlockRenderingLogger, retries: Int = 5, filename: String? = null): Path {
+    fun download(url: String, logger: RenderingLogger, retries: Int = 5, filename: String? = null): Path {
         val handler = customHandlerMapping[url.findScheme()]
         if (handler != null) return handler(URI.create(url), logger)
 
         val downloadDirectory = downloadDirectory.randomDirectory()
-        return logger.compactLogging("Downloading ${filename ?: url} to $downloadDirectory") {
+        return logger.compactLogging("Downloading ${filename ?: url}...") {
             // TODO parse progress and feedback
             downloadDirectory.script {
                 !"for i in ${(1..retries).joinToString(" ")} ; do"
@@ -74,4 +74,4 @@ class Downloader(private val downloadDirectory: Path = Locations.Temp, vararg cu
     }
 }
 
-typealias Handler = (URI, BlockRenderingLogger) -> Path
+typealias Handler = (URI, RenderingLogger) -> Path

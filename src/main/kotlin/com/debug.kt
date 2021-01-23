@@ -7,10 +7,10 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
 import com.imgcstmzr.cli.Options.os
-import com.imgcstmzr.libguestfs.docker.LibguestfsDockerAdaptable
+import com.imgcstmzr.libguestfs.LibguestfsCommandLine
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.util.Downloader
-import koodies.docker.DockerRunCommandLineBuilder.Companion.buildRunCommand
+import koodies.docker.buildCommandLine
 import koodies.io.path.Locations
 import koodies.io.path.asString
 import koodies.logging.BlockRenderingLogger
@@ -58,8 +58,7 @@ class DebugCommand : NoOpCliktCommand(
 
             logLine { script }
 
-            val z = LibguestfsDockerAdaptable.IMAGE.buildRunCommand {
-                redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
+            val z = LibguestfsCommandLine.DOCKER_IMAGE.buildCommandLine {
                 options {
                     name { "guestfish" }
                     autoCleanup { false }
@@ -68,11 +67,14 @@ class DebugCommand : NoOpCliktCommand(
                         path.resolve("shared") mountAt "/shared"
                     }
                 }
-                arguments {
-                    +"--rw"
-                    +"--add /images/disk.img"
-                    +"--mount /dev/sda2:/"
-                    +"--mount /dev/sda1:/boot"
+                commandLine {
+                    redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
+                    arguments {
+                        +"--rw"
+                        +"--add /images/disk.img"
+                        +"--mount /dev/sda2:/"
+                        +"--mount /dev/sda1:/boot"
+                    }
                 }
             }
             logLine { z.toString() }

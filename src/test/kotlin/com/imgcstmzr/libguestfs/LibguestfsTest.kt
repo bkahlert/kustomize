@@ -43,20 +43,20 @@ class LibguestfsTest {
                     readWrite { on }
                     disk { it.file }
                     inspector { on }
-                    mount { Path.of("/dev/sda2") to Path.of("/") }
-                    mount { Path.of("/dev/sda1") to Path.of("/boot") }
+                    mount { Path.of("/dev/sda2") to DiskPath("/") }
+                    mount { Path.of("/dev/sda1") to DiskPath("/boot") }
                 }
 
                 commands {
                     runLocally {
-                        copyIn { it.resolveOnDocker("/home/pi/.ssh/known_hosts") }
+                        copyIn { DiskPath("/home/pi/.ssh/known_hosts") }
                     }
                     ignoreErrors {
-                        copyIn { it.resolveOnDisk("/home/pi/.ssh/known_hosts") }
+                        copyIn { DiskPath("/home/pi/.ssh/known_hosts") }
                     }
-                    copyOut { it.resolveOnDisk("/home/pi/.ssh/known_hosts") }
+                    copyOut { DiskPath("/home/pi/.ssh/known_hosts") }
                 }
-            }.adapt()
+            }.dockerCommandLine()
 
             expect {
                 that(commandLine.workingDirectory).isEqualTo(osImage.file.parent)
@@ -97,6 +97,8 @@ class LibguestfsTest {
                     !mkdir -p /shared/home/pi/.ssh 
                      -copy-out /home/pi/.ssh/known_hosts /shared/home/pi/.ssh 
                     
+                    umount-all
+                    exit
                     HERE-{}
                 """.trimIndent())
             }
@@ -135,7 +137,7 @@ class LibguestfsTest {
                 customizationOptions {
                     sshInject("pi", sshKey)
                 }
-            }.adapt()
+            }.dockerCommandLine()
 
             expect {
                 that(commandLine.workingDirectory).isEqualTo(osImage.file.parent)
@@ -153,9 +155,9 @@ class LibguestfsTest {
                     --mount \
                     type=bind,source=${osImage.file.asString()},target=/images/disk.img \
                     bkahlert/libguestfs@sha256{} \
+                    --colors \
                     --add \
                     /images/disk.img \
-                    --colors \
                     --ssh-inject \
                     "pi:string:$sshKey"
                 """.trimIndent())

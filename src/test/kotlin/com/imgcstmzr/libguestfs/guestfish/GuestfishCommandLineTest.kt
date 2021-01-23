@@ -1,9 +1,11 @@
 package com.imgcstmzr.libguestfs.guestfish
 
+import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.libguestfs.HostPath
+import com.imgcstmzr.libguestfs.Libguestfs
+import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
+import com.imgcstmzr.libguestfs.Libguestfs.Companion.mountRootForDisk
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.runGuestfishOn
-import com.imgcstmzr.libguestfs.resolveOnDisk
-import com.imgcstmzr.libguestfs.resolveOnDocker
-import com.imgcstmzr.libguestfs.resolveOnHost
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.test.DockerRequiring
@@ -13,14 +15,16 @@ import com.imgcstmzr.test.ImgClassPathFixture.Home.User.ExampleHtml
 import com.imgcstmzr.test.OS
 import com.imgcstmzr.test.containsContent
 import com.imgcstmzr.test.hasContent
+import com.imgcstmzr.test.matchesCurlyPattern
+import koodies.docker.asContainerPath
 import koodies.io.path.asString
 import koodies.io.path.delete
-import koodies.io.path.toPath
 import koodies.io.path.writeText
 import koodies.logging.BlockRenderingLogger
 import koodies.logging.InMemoryLogger
 import koodies.logging.logging
 import koodies.test.copyTo
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -31,7 +35,6 @@ import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
 import strikt.assertions.resolve
-import java.nio.file.Path
 import kotlin.io.path.createDirectories
 
 @Execution(CONCURRENT)
@@ -42,70 +45,124 @@ class GuestfishCommandLineTest {
         expectCatching { createGuestfishCommand(osImage) }.isSuccess()
     }
 
-    @Test
-    fun `should build proper command line even arguments by default`(osImage: OperatingSystemImage) {
-        val commandLine = createGuestfishCommand(osImage)
-        expectThat(commandLine.toString()).isEqualTo("""
-            guestfish \
-            --add \
-            ${osImage.file.asString()} \
-            --inspector \
-            !mkdir \
-            -p \
-            -mkdir-p \
-            /home/pi/.ssh \
-             \
-            -copy-in \
-            /shared/home/pi/.ssh/known_hosts \
-            /home/pi/.ssh \
-             \
-            !mkdir \
-            -p \
-            /shared/home/pi/.ssh \
-             \
-            -copy-out \
-            /home/pi/.ssh/known_hosts \
-            /shared/home/pi/.ssh \
-             \
-            tar-in \
-            /shared/archive.tar \
-            / \
-             \
-            !rm \
-            /shared/archive.tar \
-             \
-            tar-out \
-            / \
-            /shared/archive.tar \
-            excludes:/archive.tar \
-            rm \
-            /rm \
-            rm-f \
-            /rm/force \
-            rm-rf \
-            /rm/force-recursive \
-            rm \
-            /rm/invalid-only-recursive \
-            rmdir \
-            /rm/dir \
-            umount-all \
-            exit
-        """.trimIndent())
+
+    @Nested
+    inner class AsCommandLine {
+
+        @Test
+        fun `should use sibling shared dir as working dir`(osImage: OperatingSystemImage) {
+            val cmdLine = createGuestfishCommand(osImage)
+            expectThat(cmdLine.workingDirectory).isEqualTo(osImage.file.resolveSibling("shared"))
+        }
+
+        @Test
+        fun `should have correctly mapped arguments`(osImage: OperatingSystemImage) {
+            val cmdLine = createGuestfishCommand(osImage)
+            expectThat(cmdLine.toString()).matchesCurlyPattern("""
+                guestfish \
+                --add \
+                ${osImage.file.asString()} \
+                --inspector \
+                -- \
+                <<HERE-{}
+                !mkdir -p
+                -mkdir-p /home/pi/.ssh 
+                 -copy-in ${osImage.hostPath(DiskPath("home/pi/.ssh/known_hosts"))} /home/pi/.ssh 
+                
+                !mkdir -p ${osImage.hostPath(DiskPath("home/pi/.ssh"))} 
+                 -copy-out /home/pi/.ssh/known_hosts ${osImage.hostPath(DiskPath("home/pi/.ssh"))} 
+                
+                tar-in ${osImage.hostPath(DiskPath("archive.tar"))} / 
+                 !rm ${osImage.hostPath(DiskPath("archive.tar"))} 
+                
+                tar-out / ${osImage.hostPath(DiskPath("archive.tar"))} excludes:/archive.tar
+                rm /rm
+                rm-f /rm/force
+                rm-rf /rm/force-recursive
+                rm /rm/invalid-only-recursive
+                rmdir /rm/dir
+                umount-all
+                exit
+                HERE-{}
+            """.trimIndent())
+        }
+    }
+
+    @Nested
+    inner class AsDockerCommandLine {
+
+        @Test
+        fun `should use sibling shared dir as working dir`(osImage: OperatingSystemImage) {
+            val cmdLine = createGuestfishCommand(osImage).dockerCommandLine()
+            expectThat(cmdLine.workingDirectory).isEqualTo(osImage.file.resolveSibling("shared"))
+        }
+
+        @Test
+        fun `should use absolute shared dir as guest working dir`(osImage: OperatingSystemImage) {
+            val cmdLine = createGuestfishCommand(osImage).dockerCommandLine()
+            expectThat(cmdLine.options.workingDirectory).isEqualTo("/shared".asContainerPath())
+        }
+
+        @Test
+        fun `should have correctly mapped arguments`(osImage: OperatingSystemImage) {
+            val cmdLine = createGuestfishCommand(osImage).dockerCommandLine()
+            expectThat(cmdLine.toString()).matchesCurlyPattern("""
+                docker \
+                run \
+                --entrypoint \
+                guestfish \
+                --name \
+                libguestfs-guestfish-${cmdLine.options.name.toString().takeLast(4)} \
+                -w \
+                /shared \
+                --rm \
+                -i \
+                --mount \
+                type=bind,source=${Libguestfs.mountRootForDisk(osImage.file)},target=/shared \
+                --mount \
+                type=bind,source=${osImage.file},target=/images/disk.img \
+                bkahlert/libguestfs@sha256:f466595294e58c1c18efeb2bb56edb5a28a942b5ba82d3c3af70b80a50b4828a \
+                --add \
+                /images/disk.img \
+                --inspector \
+                -- \
+                <<HERE-{}
+                !mkdir -p
+                -mkdir-p /home/pi/.ssh 
+                 -copy-in home/pi/.ssh/known_hosts /home/pi/.ssh 
+                
+                !mkdir -p home/pi/.ssh 
+                 -copy-out /home/pi/.ssh/known_hosts home/pi/.ssh 
+                
+                tar-in archive.tar / 
+                 !rm archive.tar 
+                
+                tar-out / archive.tar excludes:/archive.tar
+                rm /rm
+                rm-f /rm/force
+                rm-rf /rm/force-recursive
+                rm /rm/invalid-only-recursive
+                rmdir /rm/dir
+                umount-all
+                exit
+                HERE-{}
+            """.trimIndent())
+        }
     }
 
     @FiveMinutesTimeout @DockerRequiring @Test
     fun InMemoryLogger.`should copy file from osImage, skip non-existing and override one`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage) {
         runGuestfishOn(osImage) {
-            copyOut { it.resolveOnDisk("/boot/cmdline.txt") }
-            copyOut { it.resolveOnDisk("/non/existing.txt") }
+            copyOut { DiskPath("/boot/cmdline.txt") }
+            copyOut { DiskPath("/non/existing.txt") }
         }
 
-        val dir = osImage.resolveOnHost("").apply {
+        val dir = mountRootForDisk(osImage.file).apply {
             resolve("boot/config.txt").writeText("overwrite me")
         }
 
         runGuestfishOn(osImage) {
-            copyOut { it.resolveOnDisk("/boot/config.txt") }
+            copyOut { DiskPath("/boot/config.txt") }
         }
 
         expectThat(dir) {
@@ -116,17 +173,17 @@ class GuestfishCommandLineTest {
 
     @FiveMinutesTimeout @DockerRequiring @Test
     fun InMemoryLogger.`should copy new file to osImage and overwrite a second one`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage) {
-        val exampleHtml = "/home/user/example.html".toPath()
-        val exampleHtmlOnHost = osImage.resolveOnHost(exampleHtml).also { ExampleHtml.copyTo(it) }
-        val configTxt = "/boot/config.txt".toPath()
-        val configTxtOnHost = osImage.resolveOnHost(configTxt).apply { parent.createDirectories() }.apply { writeText("overwrite guest") }
+        val exampleHtml = DiskPath("/home/user/example.html")
+        val exampleHtmlOnHost = osImage.hostPath(exampleHtml).also { ExampleHtml.copyTo(it) }
+        val configTxt = DiskPath("/boot/config.txt")
+        val configTxtOnHost = osImage.hostPath(configTxt).apply { parent.createDirectories() }.apply { writeText("overwrite guest") }
 
         runGuestfishOn(osImage) { tarIn() }
         exampleHtmlOnHost.delete()
 
         runGuestfishOn(osImage) {
-            copyOut { it.resolveOnDisk(exampleHtml) }
-            copyOut { it.resolveOnDisk(configTxt) }
+            copyOut { exampleHtml }
+            copyOut { configTxt }
         }
 
         expect {
@@ -148,31 +205,31 @@ internal fun createGuestfishCommand(osImage: OperatingSystemImage) = GuestfishCo
         }
 
         ignoreErrors {
-            copyIn { it.resolveOnDocker("/home/pi/.ssh/known_hosts") }
+            copyIn { DiskPath("/home/pi/.ssh/known_hosts") }
         }
-        copyOut { it.resolveOnDisk("/home/pi/.ssh/known_hosts") }
+        copyOut { DiskPath("/home/pi/.ssh/known_hosts") }
 
         tarIn()
         tarOut()
-        rm { it.resolveOnDisk("/rm") }
-        rm(force = true) { it.resolveOnDisk("/rm/force") }
-        rm(force = true, recursive = true) { it.resolveOnDisk("/rm/force-recursive") }
-        rm(force = false, recursive = true) { it.resolveOnDisk("/rm/invalid-only-recursive") }
-        rmDir { it.resolveOnDisk("/rm/dir") }
+        rm { DiskPath("/rm") }
+        rm(force = true) { DiskPath("/rm/force") }
+        rm(force = true, recursive = true) { DiskPath("/rm/force-recursive") }
+        rm(force = false, recursive = true) { DiskPath("/rm/invalid-only-recursive") }
+        rmDir { DiskPath("/rm/dir") }
         umountAll()
         exit()
     }
 }
 
 
-class GuestAssertions(private val assertions: MutableList<Pair<Path, Assertion.Builder<Path>.() -> Unit>>) {
-    fun path(path: String, assertion: Assertion.Builder<Path>.() -> Unit) = assertions.add(path.toPath() to assertion)
+class GuestAssertions(private val assertions: MutableList<Pair<DiskPath, Assertion.Builder<HostPath>.() -> Unit>>) {
+    fun path(path: String, assertion: Assertion.Builder<HostPath>.() -> Unit) = assertions.add(DiskPath(path) to assertion)
 }
 
 fun Assertion.Builder<OperatingSystemImage>.mounted(logger: BlockRenderingLogger, init: GuestAssertions.() -> Unit) =
     get("mounted") {
         // Getting paths and assertions
-        val assertions = mutableListOf<Pair<Path, Assertion.Builder<Path>.() -> Unit>>()
+        val assertions = mutableListOf<Pair<DiskPath, Assertion.Builder<HostPath>.() -> Unit>>()
         GuestAssertions(assertions).apply(init)
         val paths = assertions.map { it.first }
 
@@ -186,17 +243,17 @@ fun Assertion.Builder<OperatingSystemImage>.mounted(logger: BlockRenderingLogger
                 paths.forEach { path ->
                     commands {
                         ignoreErrors {
-                            copyOut { it.resolveOnDisk(path) }
+                            copyOut { path }
                         }
                     }
                 }
-            }.run { execute() }
+            }.dockerCommandLine().run { execute() }
         }
 
         // Assert
         compose("with files $paths") {
             assertions.forEach { (path, assertion) ->
-                get(path.asString()) { resolveOnHost(path) }.assertion()
+                get(path.toString()) { hostPath(path) }.assertion()
             }
         }.then { if (allPassed) pass() else fail() }
     }

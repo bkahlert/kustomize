@@ -61,7 +61,7 @@ class OperatingSystemImage(
     fun increaseDiskSpace(logger: RenderingLogger, size: Size): Any =
         logger.logging("Increasing Disk Space: ${path.size} ➜ $size", null) {
             var missing = size - path.size
-            val bytesPerStep = 100.Mega.bytes
+            val bytesPerStep = 200.Mega.bytes
             val oneHundredMegaBytes = bytesPerStep.toZeroFilledByteArray()
             when {
                 missing < 0.bytes -> {

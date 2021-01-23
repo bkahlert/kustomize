@@ -1,7 +1,7 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.libguestfs.DiskPath
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
-import com.imgcstmzr.libguestfs.resolveOnDisk
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
@@ -16,7 +16,6 @@ import com.imgcstmzr.test.logging.CapturedOutput
 import com.imgcstmzr.test.logging.OutputCaptureExtension
 import com.imgcstmzr.test.logging.expectThatLogged
 import com.imgcstmzr.test.matchesCurlyPattern
-import koodies.io.path.toPath
 import koodies.io.path.touch
 import koodies.io.path.writeLine
 import koodies.logging.InMemoryLogger
@@ -74,9 +73,10 @@ class PatchKtTest {
             │   Disk Operations: —
             │   File Operations: —
             │   OS Preparation: —
+            │   OS Boot: —
             │   OS Operations: —
             │
-            ╰─────╴✔
+            ╰─────╴➜️ []
         """.trimIndent()
             )
         }
@@ -97,14 +97,19 @@ class PatchKtTest {
             expectThatLogged().matchesCurlyPattern(
                 """
                 ▶ not-bordered
-                 ▶ No-Op Patch
-                  Disk Preparation: —
-                  Disk Customization: —
-                  Disk Operations: —
-                  File Operations: —
-                  OS Preparation: —
-                  OS Operations: —
-                 ✔
+                · 
+                · ╭─────╴No-Op Patch
+                · │   
+                · │   Disk Preparation: —
+                · │   Disk Customization: —
+                · │   Disk Operations: —
+                · │   File Operations: —
+                · │   OS Preparation: —
+                · │   OS Boot: —
+                · │   OS Operations: —
+                · │
+                · ╰─────╴➜️ []
+                ·
         """.trimIndent()
             )
         }
@@ -124,16 +129,16 @@ class PatchKtTest {
                 hostname { "test-machine" }
             }
             guestfish {
-                copyOut { it.resolveOnDisk("/etc/hostname") }
+                copyOut { DiskPath("/etc/hostname") }
             }
             files {
-                edit("/root/.imgcstmzr.created", { path ->
+                edit(DiskPath("/root/.imgcstmzr.created"), { path ->
                     require(path.readText().parseableInstant<Any>())
                 }) {
                     it.touch().writeLine(timestamp.format())
                 }
 
-                edit("/home/pi/demo.ansi", { path ->
+                edit(DiskPath("/home/pi/demo.ansi"), { path ->
                     require(path.exists())
                 }) {
                     MiscClassPathFixture.AnsiDocument.copyTo(it)
@@ -146,7 +151,7 @@ class PatchKtTest {
 
         expect {
             that(osImage) {
-                getShared("/etc/hostname".toPath()).hasContent("test-machine\n")
+                hostPath("/etc/hostname").hasContent("test-machine\n")
                 size.isEqualTo(2.Giga.bytes)
                 booted(this@`should run each op type executing patch successfully`, Program("check",
                     { "init" },
@@ -187,3 +192,17 @@ fun <T : Patch> Assertion.Builder<T>.matches(
     fileSystemOperationsAssertion(get { fileOperations })
     programsAssertion(get { osOperations })
 }.then { if (allPassed) pass() else fail() }
+
+
+fun <T : Patch> Assertion.Builder<T>.customizations(
+    osImage: OperatingSystemImage,
+    block: Assertion.Builder<List<VirtCustomizeCustomizationOption>>.() -> Unit,
+) = get("virt-customizations") { diskCustomizations.map { it(osImage) } }.block()
+
+fun <T : Patch> Assertion.Builder<T>.getCustomizations(osImage: OperatingSystemImage, index: Int) =
+    get("${index}th virt-customizations") { diskCustomizations[index].let { it(osImage) } }
+
+fun <T : Patch> Assertion.Builder<T>.guestfishCommands(
+    osImage: OperatingSystemImage,
+    block: Assertion.Builder<List<GuestfishCommand>>.() -> Unit,
+) = get("guestfish commands") { diskOperations.map { it(osImage) } }.block()

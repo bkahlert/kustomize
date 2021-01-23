@@ -1,8 +1,8 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.libguestfs.DiskPath
 import com.imgcstmzr.libguestfs.guestfish.TouchCommand
 import com.imgcstmzr.runtime.OperatingSystemImage
-import koodies.io.path.toPath
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -15,8 +15,8 @@ class SshEnablementPatchTest {
 
     @Test
     fun `should create ssh file`(osImage: OperatingSystemImage) {
-        expectThat(SshEnablementPatch()).matches(guestfishCommandsAssertion = {
-            first().get { invoke(osImage) }.isEqualTo(TouchCommand("/boot/ssh".toPath()))
-        })
+        expectThat(SshEnablementPatch()).guestfishCommands(osImage) {
+            first().isEqualTo(TouchCommand(DiskPath("/boot/ssh")))
+        }
     }
 }

@@ -1,9 +1,10 @@
 package com.imgcstmzr.libguestfs.guestfish
 
+import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.libguestfs.HostPath
 import koodies.io.path.asString
 import koodies.text.LineSeparators
 import koodies.text.withPrefix
-import java.nio.file.Path
 
 /**
  * Commands supported by the [GuestfishCommandLine].
@@ -26,7 +27,7 @@ open class GuestfishCommand(
      * (`/bin/sh` or whatever [system(3)](http://man.he.net/man3/system) uses).
      */
     operator fun not(): GuestfishCommand =
-        GuestfishCommand("!$name", arguments = arguments, convenience = convenience)
+        GuestfishCommand("!$name", convenience = convenience, arguments = arguments)
 
     /**
      * By default, guestfish will ignore any errors when in interactive mode (ie. taking commands from a human over a tty),
@@ -35,7 +36,7 @@ open class GuestfishCommand(
      * This method returns a copy of this command that will not cause guestfish to exit, even if this command returns an error.
      */
     operator fun unaryMinus(): GuestfishCommand =
-        GuestfishCommand(name.withPrefix("-"), arguments = arguments, convenience = convenience)
+        GuestfishCommand(name.withPrefix("-"), convenience = convenience, arguments = arguments)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -75,12 +76,12 @@ open class GuestfishCompositeCommand(val guestfishCommands: List<GuestfishComman
  *
  * Multiple local files and directories can be specified. Wildcards cannot be used.
  */
-class CopyInCommand(val mkDir: Boolean, val remoteDir: Path, vararg val localFiles: Path) :
+class CopyInCommand(val mkDir: Boolean, val remoteDir: DiskPath, vararg val localFiles: HostPath) :
     GuestfishCompositeCommand(listOfNotNull(
-        if (mkDir) -GuestfishCommand("mkdir-p", remoteDir.asString()) else null,
+        if (mkDir) -GuestfishCommand("mkdir-p", remoteDir.toString()) else null,
         -GuestfishCommand("copy-in",
             *localFiles.map { it.asString() }.toTypedArray(),
-            remoteDir.asString(),
+            remoteDir.toString(),
             convenience = true),
     )) {
 }
@@ -93,11 +94,11 @@ class CopyInCommand(val mkDir: Boolean, val remoteDir: Path, vararg val localFil
  *
  * Multiple remote files and directories can be specified.
  */
-class CopyOutCommand(vararg val remoteFiles: Path, val mkDir: Boolean, val directory: Path) :
+class CopyOutCommand(val remoteFiles: List<DiskPath>, val mkDir: Boolean, val directory: HostPath) :
     GuestfishCompositeCommand(listOfNotNull(
         if (mkDir) !GuestfishCommand("mkdir", "-p", directory.asString()) else null,
         -GuestfishCommand("copy-out",
-            *remoteFiles.map { it.asString() }.toTypedArray(),
+            *remoteFiles.map { it.toString() }.toTypedArray(),
             directory.asString(),
             convenience = true),
     ))
@@ -105,24 +106,24 @@ class CopyOutCommand(vararg val remoteFiles: Path, val mkDir: Boolean, val direc
 /**
  * This command uploads the [archive] (must be accessible from the guest) and unpacks it into [directory].
  */
-class TarInCommand(val archive: Path, val directory: Path, val deleteArchiveAfterwards: Boolean) :
+class TarInCommand(val archive: HostPath, val directory: DiskPath, val deleteArchiveAfterwards: Boolean) :
     GuestfishCompositeCommand(listOfNotNull(
         GuestfishCommand(
             "tar-in",
             archive.asString(),
-            directory.asString()
+            directory.toString()
         ),
-        if (deleteArchiveAfterwards) !RmCommand(archive) else null,
+        if (deleteArchiveAfterwards) !RmCommand(archive.asString()) else null,
     ))
 
 /**
  * This command packs the contents of [directory] and downloads it to the [archive].
  */
-class TarOutCommand(val directory: Path = Path.of("/"), val archive: Path) : GuestfishCommand(
+class TarOutCommand(val directory: DiskPath = DiskPath("/"), val archive: HostPath) : GuestfishCommand(
     "tar-out",
-    directory.asString(),
+    directory.toString(),
     archive.asString(),
-    "excludes:${directory.resolve(archive.fileName)}"
+    "excludes:${directory.resolve(archive.fileName.asString())}"
 )
 
 
@@ -132,10 +133,11 @@ class TarOutCommand(val directory: Path = Path.of("/"), val archive: Path) : Gue
  *
  * This command only works on regular files, and will fail on other file types such as directories, symbolic links, block special etc.
  */
-class TouchCommand(val file: Path) : GuestfishCommand(
+class TouchCommand(val file: DiskPath) : GuestfishCommand(
     "touch",
-    file.asString(),
+    file.toString(),
 )
+
 
 /**
  * Remove the single [file].
@@ -144,25 +146,25 @@ class TouchCommand(val file: Path) : GuestfishCommand(
  *
  * This call cannot remove directories. Use [RmDirCommand] to remove an empty directory, or set [recursive] to remove directories recursively.
  */
-class RmCommand(val file: Path, val force: Boolean = false, val recursive: Boolean = false) : GuestfishCommand("rm" + when (force to recursive) {
+class RmCommand(val file: String, val force: Boolean = false, val recursive: Boolean = false) : GuestfishCommand("rm" + when (force to recursive) {
     true to false -> "-f"
     true to true -> "-rf"
     else -> ""
-}, file.asString())
+}, file)
 
 /**
  * Remove the single [directory].
  */
-class RmDirCommand(val directory: Path) : GuestfishCommand("rmdir", directory.asString())
+class RmDirCommand(val directory: DiskPath) : GuestfishCommand("rmdir", directory.toString())
 
 /**
  * This unmounts all mounted filesystems.
  *
  * Some internal mounts are not unmounted by this call.
  */
-class UmountAllCommand() : GuestfishCommand("umount-all", convenience = true)
+class UmountAllCommand : GuestfishCommand("umount-all", convenience = true)
 
 /**
  * This exits guestfish.
  */
-class ExitCommand() : GuestfishCommand("exit", convenience = true)
+class ExitCommand : GuestfishCommand("exit", convenience = true)

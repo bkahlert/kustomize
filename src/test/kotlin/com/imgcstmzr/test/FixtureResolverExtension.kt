@@ -7,14 +7,13 @@ import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
 import com.imgcstmzr.runtime.OperatingSystems
-import com.imgcstmzr.test.logging.OutputCaptureExtension.Companion.isCapturingOutput
+import com.imgcstmzr.test.logging.logger
 import com.imgcstmzr.util.Downloader
 import com.imgcstmzr.util.Paths
 import koodies.collections.addElement
 import koodies.io.path.Locations
-import koodies.logging.BlockRenderingLogger
-import koodies.logging.MutedRenderingLogger
-import koodies.logging.runLogging
+import koodies.logging.RenderingLogger
+import koodies.logging.logging
 import koodies.runtime.deleteOnExit
 import koodies.terminal.AnsiColors.cyan
 import koodies.test.copyTo
@@ -39,21 +38,17 @@ open class FixtureResolverExtension : TypeBasedParameterResolver<OperatingSystem
 
     override fun resolveParameter(
         parameterContext: ParameterContext,
-        extensionContext: ExtensionContext
+        extensionContext: ExtensionContext,
     ): OperatingSystemImage = lock.withLock {
         val annotation = parameterContext.parameter.getAnnotation(OS::class.java)
         val operatingSystem: OperatingSystem = annotation?.value ?: OperatingSystems.ImgCstmzrTestOS
         val autoDelete = annotation?.autoDelete ?: true
-        val logger: BlockRenderingLogger = if (!extensionContext.isCapturingOutput()) {
-            BlockRenderingLogger("Provisioning an image containing ${operatingSystem.fullName.cyan()} (${operatingSystem.name})...")
-        } else {
-            MutedRenderingLogger()
-        }
-        logger.runLogging {
-            operatingSystem.getCopy(logger, extensionContext.uniqueId).apply {
-                if (autoDelete) file.deleteOnExit()
+        extensionContext.logger()
+            .logging("Provisioning an image containing ${operatingSystem.fullName.cyan()} (${operatingSystem.name})...", bordered = false) {
+                operatingSystem.getCopy(this, extensionContext.uniqueId).apply {
+                    if (autoDelete) file.deleteOnExit()
+                }
             }
-        }
     }
 
     companion object {
@@ -67,7 +62,7 @@ open class FixtureResolverExtension : TypeBasedParameterResolver<OperatingSystem
         fun cacheDir(uniqueId: String): Path? = copiesPerTest[uniqueId]?.firstOrNull()
 
         private val cache = Cache(Paths.TEST.resolve("test"))
-        private fun OperatingSystem.getCopy(logger: BlockRenderingLogger, uniqueId: String): OperatingSystemImage =
+        private fun OperatingSystem.getCopy(logger: RenderingLogger, uniqueId: String): OperatingSystemImage =
             lock.withLock {
                 this@getCopy based with(cache) {
                     logger.provideCopy(name, reuseLastWorkingCopy = false) {

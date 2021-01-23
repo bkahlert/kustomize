@@ -1,13 +1,13 @@
 package com.imgcstmzr.test
 
-import koodies.test.ClassPathFixture
+import koodies.test.ClassPathDirectoryFixture
 
-object MiscClassPathFixture : ClassPathFixture("") {
-    object BootingRaspberry : SubFixture("raspberry.boot")
-    object BootingGuestfish : SubFixture("guestfish.boot")
-    object FunnyImgZip : SubFixture("funny.img.zip")
-    object AnsiDocument : SubFixture("demo.ansi")
+object MiscClassPathFixture : ClassPathDirectoryFixture("") {
+    object BootingRaspberry : File("raspberry.boot")
+    object BootingGuestfish : File("guestfish.boot")
+    object FunnyImgZip : File("funny.img.zip")
+    object AnsiDocument : File("demo.ansi")
 
-    object JourneyToTheWest : SubFixture("Journey to the West - Introduction.txt")
-    object MacBeth : SubFixture("Macbeth - Chapter I.txt")
+    object JourneyToTheWest : File("Journey to the West - Introduction.txt")
+    object MacBeth : File("Macbeth - Chapter I.txt")
 }

@@ -1,6 +1,7 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.resolveOnHost
+import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemProcess
 import com.imgcstmzr.runtime.Program
@@ -12,7 +13,6 @@ import koodies.logging.BlockRenderingLogger
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
 import strikt.assertions.isEqualTo
-import java.nio.file.Path
 
 inline fun Assertion.Builder<OperatingSystemImage>.booted(
     logger: BlockRenderingLogger,
@@ -38,7 +38,7 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
                 logger,
                 true,
                 true,
-                Program("test", { "testing" }, "testing" to verificationStep),//.logging(),
+                Program("test", { "testing" }, "testing" to verificationStep)//.logging(),
             )
         }.onFailure { Docker.remove(containerName, forcibly = true) }.getOrThrow()
     }
@@ -49,8 +49,8 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
 /**
  * Assertions on the directory used to share files with the [OperatingSystemImage].
  */
-fun Assertion.Builder<OperatingSystemImage>.getShared(path: Path) =
-    get("shared directory %s") { resolveOnHost(path) }
+fun Assertion.Builder<OperatingSystemImage>.hostPath(path: String) =
+    get("shared directory %s") { this.hostPath(DiskPath(path)) }
 
 fun Assertion.Builder<OperatingSystemImage>.booted(
     logger: BlockRenderingLogger,

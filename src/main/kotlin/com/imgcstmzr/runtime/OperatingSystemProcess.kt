@@ -18,10 +18,9 @@ import koodies.docker.DockerContainerName.Companion.toUniqueContainerName
 import koodies.docker.DockerImage
 import koodies.docker.DockerImageBuilder.Companion.build
 import koodies.docker.DockerProcess
-import koodies.docker.DockerRunCommandLineBuilder.Companion.buildRunCommand
+import koodies.docker.buildCommandLine
 import koodies.kaomoji.Kaomojis
 import koodies.kaomoji.Kaomojis.thinking
-import koodies.logging.BlockRenderingLogger
 import koodies.logging.HasStatus
 import koodies.logging.RenderingLogger
 import koodies.logging.logging
@@ -62,12 +61,12 @@ fun stuckCheckingProcessor(processor: OperatingSystemProcessor): OperatingSystem
 open class OperatingSystemProcess(
     private val os: OperatingSystem,
     private val process: ManagedProcess,
-    internal open val logger: BlockRenderingLogger,
+    internal open val logger: RenderingLogger,
 ) : ManagedProcess by process {
 
-    constructor(name: String, osImage: OperatingSystemImage, logger: BlockRenderingLogger) : this(
+    constructor(name: String, osImage: OperatingSystemImage, logger: RenderingLogger) : this(
         os = osImage.operatingSystem,
-        process = DOCKER_IMAGE.buildRunCommand {
+        process = DOCKER_IMAGE.buildCommandLine {
             options {
                 name { name }
                 mounts { osImage.file mountAt "/sdcard/filesystem.img" }
@@ -128,7 +127,7 @@ open class OperatingSystemProcess(
     }
 
     fun command(input: String) {
-        enter(input)
+        enter(input, delay = Duration.ZERO)
     }
 
     fun isStuck(io: IO): Boolean {
@@ -192,7 +191,7 @@ fun OperatingSystemImage.execute(
             // pass this IO also to the next program. Otherwise the execution might get stuck should more
             // IO be emitted, like `bkahlert@bother-you-apYr:~$ [  OK  ] Started User Manager for UID 1000`
             //                                 ready till here ↑ now, no more
-            if (unfinished.isNotEmpty()) unfinished.compute(this, io)
+            if (unfinished.isNotEmpty() && !unfinished.compute(this, io)) unfinished.removeFirst()
         }
     }).waitForTermination()
 }

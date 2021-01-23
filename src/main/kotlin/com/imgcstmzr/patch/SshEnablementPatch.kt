@@ -1,13 +1,18 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.resolveOnDisk
+import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.runtime.OperatingSystemImage
 
 /**
- * Activates SSH.
+ * Applied to an [OperatingSystemImage] this [Patch]
+ * activates SSH.
+ *
+ * @see SshAuthorizationPatch
+ * @see SshPortPatch
  */
 class SshEnablementPatch :
     Patch by buildPatch("Enable SSH", {
         guestfish {
-            touch { it.resolveOnDisk("/boot/ssh") }
+            touch { DiskPath("/boot/ssh") }
         }
     })

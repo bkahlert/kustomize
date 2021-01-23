@@ -1,5 +1,7 @@
 package com.imgcstmzr.libguestfs.guestfish
 
+import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.libguestfs.HostPath
 import com.imgcstmzr.libguestfs.Option
 import koodies.io.path.asString
 import java.nio.file.Path
@@ -70,12 +72,12 @@ sealed class GuestfishOption(name: String, arguments: List<String>) : Option(nam
      * This is rarely needed, but can be useful if multiple drivers are valid for a filesystem (eg: `ext2` and `ext3`),
      * or if libguestfs misidentifies a filesystem.
      */
-    class MountOption(val dev: Path, val mountPoint: Path?, val options: List<String> = emptyList(), val fsType: String? = null) :
+    class MountOption(val dev: HostPath, val mountPoint: DiskPath?, val options: List<String> = emptyList(), val fsType: String? = null) :
         GuestfishOption("--mount",
             listOf(StringBuilder(dev.asString()).apply {
                 mountPoint?.also {
                     append(":")
-                    append(mountPoint.asString())
+                    append(mountPoint.toString())
 
                     options.takeIf { it.isNotEmpty() }?.also {
                         append(":")

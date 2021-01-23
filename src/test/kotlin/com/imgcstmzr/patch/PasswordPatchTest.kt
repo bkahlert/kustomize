@@ -1,8 +1,8 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.runGuestfishOn
-import com.imgcstmzr.libguestfs.resolveOnDisk
-import com.imgcstmzr.libguestfs.resolveOnHost
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
 import com.imgcstmzr.runtime.IncorrectPasswordException
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
@@ -36,19 +36,19 @@ class PasswordPatchTest {
 
     @Test
     fun `should provide password change command`(osImage: OperatingSystemImage) {
-        val passwordPatch = PasswordPatch(RaspberryPiLite, "pi", "po")
+        val passwordPatch = PasswordPatch("pi", "po")
         val expected = VirtCustomizeCustomizationOption.PasswordOption.byString("pi", "po")
         expectThat(passwordPatch).matches(customizationOptionsAssertion = { first().get { invoke(osImage) }.isEqualTo(expected) })
     }
 
     @FifteenMinutesTimeout @E2E @Test
     fun InMemoryLogger.`should update shadow file correctly`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-        val passwordPath = "/etc/shadow"
+        val passwordPath = DiskPath("/etc/shadow")
         val username = RaspberryPiLite.defaultCredentials.username
         val newPassword = "on-a-diet"
-        val passwordPatch = PasswordPatch(osImage.operatingSystem, username, newPassword)
-        val userPassword = runGuestfishOn(osImage) { copyOut { it.resolveOnDisk(passwordPath) } }
-            .let { osImage.resolveOnHost(passwordPath).readLines().single { it.startsWith(username) } }
+        val passwordPatch = PasswordPatch(username, newPassword)
+        val userPassword = runGuestfishOn(osImage) { copyOut { passwordPath } }
+            .let { osImage.hostPath(passwordPath).readLines().single { it.startsWith(username) } }
         val userPasswordPattern = "$username:{}:{}:0:99999:7:::"
         check(userPassword.matchesCurlyPattern(userPasswordPattern)) { "${userPassword.debug} does not match ${userPasswordPattern.debug}" }
 
@@ -62,8 +62,16 @@ class PasswordPatchTest {
     }
 
     @FifteenMinutesTimeout @E2E @Test
+    fun InMemoryLogger.`should update shadow file correctlyxxx`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+        expectThat(osImage).booted(this) {
+            command("echo '👏 🤓 👋'");
+            { true }
+        }
+    }
+
+    @FifteenMinutesTimeout @E2E @Test
     fun InMemoryLogger.`should not be able to use old password`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-        patch(osImage, PasswordPatch(osImage.operatingSystem, RaspberryPiLite.defaultCredentials.username, "po"))
+        patch(osImage, PasswordPatch(RaspberryPiLite.defaultCredentials.username, "po"))
 
         expectCatching {
             osImage.credentials = Credentials("pi", "wrong password")

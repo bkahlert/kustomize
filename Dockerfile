@@ -1,5 +1,10 @@
 ARG GRAALVM_VERSION=20.2.0-java11
-MAINTAINER "Björn Kahlert" <mail@bkahlert.com>
+#ARG VCS_REF
+#ARG BUILD_DATE
+#ARG VERSION
+#ARG UID=1000
+#ARG GID=1000
+#ARG HOME_DIR=/app
 
 # Download GraalVM and install Native Image Builder
 FROM oracle/graalvm-ce:${GRAALVM_VERSION}
@@ -18,18 +23,31 @@ COPY src ./src
 RUN ./gradlew nativeImage installNativeImage
 
 # Copy native binary
-FROM scratch
-LABEL description="(Raspberry Pi) Image Customizer" url="https://imgcstmzr.com" maintainer="\"Björn Kahlert\"<mail@bkahlert.com>"
-LABEL org.label-schema.schema-version="1.0"
-LABEL org.label-schema.name="ImgCstmzr"
-LABEL org.label-schema.description="(Raspberry Pi) Image Customizer"
-LABEL org.label-schema.vendor="\"Björn Kahlert\"<mail@bkahlert.com>"
-LABEL org.label-schema.usage="README.md"
-LABEL org.label-schema.url="https://imgcstmzr.com"
-LABEL org.label-schema.vcs-url="https://github.com/imgcstmzr/imgcstmzr.git"
-LABEL org.label-schema.docker.cmd.help="docker run --rm $CONTAINER"
-LABEL org.label-schema.docker.cmd.debug="docker run --rm -v $(PWD):/shared --entrypoint /bin/bash -it $CONTAINER"
+FROM busybox
+#ARG VCS_REF
+#ARG BUILD_DATE
+#ARG VERSION
+#ARG UID
+#ARG GID
+#ARG HOME_DIR
+LABEL maintainer="Björn Kahlert <mail@bkahlert.com" \
+      authors="Björn Kahlert <mail@bkahlert.com" \
+      org.label-schema.schema-version="1.0" \
+      org.label-schema.build-date=${BUILD_DATE} \
+      org.label-schema.license=MIT \
+      org.label-schema.name="bkahlert/imgcstmzr" \
+      org.label-schema.description="Image Customizer for Raspberry Pi OS and alike" \
+      org.label-schema.url="https://imgcstmzr.com/" \
+      org.label-schema.vcs-type=Git \
+      org.label-schema.vcs-url="https://github.com/imgcstmzr/imgcstmzr.git" \
+      org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.version=$VERSION \
+      org.label-schema.docker.cmd="docker run --rm --name imgcstmzr -it --mount type=bind,source=$(pwd),target=/work" \
+      org.label-schema.usage="README.md"
 COPY --from=0 /project/build/native-image/imgcstmzr .
-RUN groupadd -r app && useradd --no-log-init -r -g app app
-# TODO USER appuser ENV ANSIBLE_USER=ansible SUDO_GROUP=wheel DEPLOY_GROUP=deployer
-CMD ["/imgcstmzr"]
+#RUN groupadd --gid ${GID} app
+#RUN useradd --home-dir ${HOME_DIR} --create-home --no-log-init --uid ${UID} --gid ${GID} app
+#USER app
+WORKDIR /app
+ENTRYPOINT ["exec", "/project/build/native-image/imgcstmzr"]
+CMD ["-h"]

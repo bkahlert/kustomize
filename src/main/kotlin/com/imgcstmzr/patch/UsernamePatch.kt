@@ -1,25 +1,30 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.SharedPath
+import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.runtime.OperatingSystemImage
 
+/**
+ * Applied to an [OperatingSystemImage] this [Patch]
+ * changes the specified [oldUsername] to the specified [newUsername].
+ */
 class UsernamePatch(
-    oldUsername: String,
+    private val oldUsername: String,
     private val newUsername: String,
 ) : Patch by buildPatch("Change Username $oldUsername to $newUsername", {
 
     @Suppress("SpellCheckingInspection")
     customizeDisk {
         appendLine {
-            val privacyFile = SharedPath.Disk.resolveRoot(it).resolve("/etc/sudoers.d/privacy")
-            privacyFile to "Defaults        lecture = never"
+            val privacyFile = DiskPath("/etc/sudoers.d/privacy")
+            "Defaults        lecture = never" to privacyFile
         }
         appendLine {
-            val sudoersFile = SharedPath.Disk.resolveRoot(it).resolve("/etc/sudoers")
-            sudoersFile to "$newUsername ALL=(ALL) NOPASSWD:ALL"
+            val sudoersFile = DiskPath("/etc/sudoers")
+            "$newUsername ALL=(ALL) NOPASSWD:ALL" to sudoersFile
         }
-        firstBootCommand { "sudo usermod -l $newUsername $oldUsername" }
-        firstBootCommand { "sudo groupmod -n $newUsername $oldUsername" }
-        firstBootCommand { "sudo usermod -d /home/$newUsername -m $newUsername" }
+        firstBootCommand { "usermod -l $newUsername $oldUsername" }
+        firstBootCommand { "groupmod -n $newUsername $oldUsername" }
+        firstBootCommand { "usermod -d /home/$newUsername -m $newUsername" }
     }
 
     osPrepare {

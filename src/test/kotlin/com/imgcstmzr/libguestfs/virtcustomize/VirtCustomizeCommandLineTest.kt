@@ -1,24 +1,26 @@
 package com.imgcstmzr.libguestfs.virtcustomize
 
-import com.imgcstmzr.libguestfs.SharedPath
-import com.imgcstmzr.libguestfs.resolveOnDisk
-import com.imgcstmzr.libguestfs.resolveOnDocker
-import com.imgcstmzr.libguestfs.resolveOnHost
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.FirstBootOption
+import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.libguestfs.Libguestfs
+import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.test.hasContent
-import com.imgcstmzr.test.matchesCurlyPattern
+import com.imgcstmzr.test.toStringIsEqualTo
+import koodies.concurrent.process.CommandLine
+import koodies.docker.asContainerPath
+import koodies.io.path.asPath
 import koodies.io.path.asString
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
-import strikt.api.expect
 import strikt.api.expectCatching
-import strikt.assertions.all
+import strikt.api.expectThat
 import strikt.assertions.filterIsInstance
-import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
+import strikt.assertions.parent
+import strikt.assertions.single
 import java.nio.file.Path
 
 @Execution(CONCURRENT)
@@ -29,20 +31,32 @@ class VirtCustomizeCommandLineTest {
         expectCatching { createVirtCustomizeCommandLine(osImage) }.isSuccess()
     }
 
-    @Test
-    fun `should build proper command line`(osImage: OperatingSystemImage) {
-        val commandLine = createVirtCustomizeCommandLine(osImage)
-        expect {
-            that(commandLine.workingDirectory).isEqualTo(osImage.file.parent)
-            that(commandLine.customizationOptions).filterIsInstance<FirstBootOption>().hasSize(1).all {
-                get { osImage.resolveOnHost(path) }.hasContent("""
+    @Nested
+    inner class AsCommandLine {
+
+        @Test
+        fun `should use sibling shared dir as working dir`(osImage: OperatingSystemImage) {
+            val cmdLine = createVirtCustomizeCommandLine(osImage)
+            expectThat(cmdLine.workingDirectory).isEqualTo(osImage.file.resolveSibling("shared"))
+        }
+
+        @Test
+        fun `should store firstboot scripts in shared dir`(osImage: OperatingSystemImage) {
+            val cmdLine = createVirtCustomizeCommandLine(osImage)
+            expectThat(cmdLine.customizationOptions).filterIsInstance<VirtCustomizeCustomizationOption.FirstBootOption>().single()
+                .file
+                .hasContent("""
                     sed -i 's/^\#Port 22${'$'}/Port 3421/g' /etc/ssh/sshd_config
                     systemctl enable getty@ttyGS0.service
                     
                 """.trimIndent())
-            }
-            that(commandLine.toString()) {
-                matchesCurlyPattern("""
+                .parent.isEqualTo(osImage.hostPath(DiskPath("/")))
+        }
+
+        @Test
+        fun `should have correctly mapped arguments`(osImage: OperatingSystemImage) {
+            val cmdLine = createVirtCustomizeCommandLine(osImage)
+            expectThat(cmdLine).toStringIsEqualTo("""
                     virt-customize \
                     --add \
                     ${osImage.file.asString()} \
@@ -55,15 +69,19 @@ class VirtCustomizeCommandLineTest {
                     --chmod \
                     0664:/other/file \
                     --commands-from-file \
-                    /commands/from/files-1 \
+                    ${osImage.hostPath(DiskPath("commands/from/files-1"))} \
                     --commands-from-file \
-                    /commands/from/files-2 \
+                    ${osImage.hostPath(DiskPath("commands/from/files-2"))} \
                     --copy \
                     /source:/copy \
+                    --mkdir \
+                    /from \
                     --copy-in \
-                    /shared/from/host:/to/guest \
+                    ${osImage.hostPath(DiskPath("from/host"))}:/from \
+                    --mkdir \
+                    /some \
                     --copy-in \
-                    /shared/some/file:/some \
+                    ${osImage.hostPath(DiskPath("some/file"))}:/some \
                     --delete \
                     /delete/file1 \
                     --delete \
@@ -73,7 +91,7 @@ class VirtCustomizeCommandLineTest {
                     --hostname \
                     the-machine \
                     --firstboot \
-                    /shared/script-{}.sh \
+                    ${osImage.hostPath(DiskPath(cmdLine.fistbootScript().fileName.asString()))} \
                     --firstboot-command \
                     "command arg1 arg2" \
                     --firstboot-command \
@@ -103,12 +121,115 @@ class VirtCustomizeCommandLineTest {
                     --write \
                     "/write/file:write content"
                 """.trimIndent())
-            }
+        }
+    }
+
+    @Nested
+    inner class AsDockerCommandLine {
+
+        @Test
+        fun `should use sibling shared dir as working dir`(osImage: OperatingSystemImage) {
+            val cmdLine = createVirtCustomizeCommandLine(osImage).dockerCommandLine()
+            expectThat(cmdLine.workingDirectory).isEqualTo(osImage.file.resolveSibling("shared"))
+        }
+
+        @Test
+        fun `should use absolute shared dir as guest working dir`(osImage: OperatingSystemImage) {
+            val cmdLine = createVirtCustomizeCommandLine(osImage).dockerCommandLine()
+            expectThat(cmdLine.options.workingDirectory).isEqualTo("/shared".asContainerPath())
+        }
+
+        @Test
+        fun `should store firstboot scripts in absolute guest shared dir`(osImage: OperatingSystemImage) {
+            val cmdLine = createVirtCustomizeCommandLine(osImage).dockerCommandLine()
+            expectThat(cmdLine.fistbootScript()).parent.toStringIsEqualTo("/shared")
+        }
+
+        @Test
+        fun `should have correctly mapped arguments`(osImage: OperatingSystemImage) {
+            val cmdLine = createVirtCustomizeCommandLine(osImage).dockerCommandLine()
+            expectThat(cmdLine).toStringIsEqualTo("""
+                    docker \
+                    run \
+                    --entrypoint \
+                    virt-customize \
+                    --name \
+                    libguestfs-virt-customize-${cmdLine.options.name.toString().takeLast(4)} \
+                    -w \
+                    /shared \
+                    --rm \
+                    -i \
+                    --mount \
+                    type=bind,source=${Libguestfs.mountRootForDisk(osImage.file)},target=/shared \
+                    --mount \
+                    type=bind,source=${osImage.file},target=/images/disk.img \
+                    bkahlert/libguestfs@sha256:f466595294e58c1c18efeb2bb56edb5a28a942b5ba82d3c3af70b80a50b4828a \
+                    --add \
+                    /images/disk.img \
+                    --verbose \
+                    -x \
+                    --append-line \
+                    "/etc/sudoers.d/privacy:Defaults        lecture = never" \
+                    --chmod \
+                    0664:/chmod-file \
+                    --chmod \
+                    0664:/other/file \
+                    --commands-from-file \
+                    commands/from/files-1 \
+                    --commands-from-file \
+                    commands/from/files-2 \
+                    --copy \
+                    /source:/copy \
+                    --mkdir \
+                    /from \
+                    --copy-in \
+                    from/host:/from \
+                    --mkdir \
+                    /some \
+                    --copy-in \
+                    some/file:/some \
+                    --delete \
+                    /delete/file1 \
+                    --delete \
+                    /delete/dir/2 \
+                    --edit \
+                    /etc/dnf/dnf.conf:s/gpgcheck=1/gpgcheck=0/ \
+                    --hostname \
+                    the-machine \
+                    --firstboot \
+                    ${cmdLine.fistbootScript().fileName} \
+                    --firstboot-command \
+                    "command arg1 arg2" \
+                    --firstboot-command \
+                    boot-command \
+                    --firstboot-install \
+                    package1,package2 \
+                    --firstboot-install \
+                    package3 \
+                    --hostname \
+                    new-hostname \
+                    --mkdir \
+                    /new/dir \
+                    --move \
+                    /new/dir:/moved/dir \
+                    --password \
+                    "super-admin:password:super secure" \
+                    --root-password \
+                    disabled \
+                    --ssh-inject \
+                    file-user:file:file/key \
+                    --ssh-inject \
+                    string-user:string:string-key \
+                    --timezone \
+                    Europe/Berlin \
+                    --touch \
+                    /touch/file \
+                    --write \
+                    "/write/file:write content"
+                """.trimIndent())
         }
     }
 }
-
-private fun f(path: String): Path = Path.of(path)
 
 internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage) = VirtCustomizeCommandLine.build(osImage) {
     options {
@@ -118,18 +239,18 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage) = Vir
         trace { on }
     }
     customizationOptions {
-        appendLine { osImage -> SharedPath.Disk.resolveRoot(osImage).resolve("/etc/sudoers.d/privacy") to "Defaults        lecture = never" }
+        appendLine { osImage -> "Defaults        lecture = never" to DiskPath("/etc/sudoers.d/privacy") }
 
-        chmods { osImage -> "0664" to osImage.resolveOnDisk("/chmod-file") }
-        chmods { osImage -> "0664" to osImage.resolveOnDisk("/other/file") }
-        commandsFromFiles { osImage -> osImage.resolveOnDisk("/commands/from/files-1") }
-        commandsFromFiles { osImage -> osImage.resolveOnDisk("/commands/from/files-2") }
-        copy { it.resolveOnDisk("source") to it.resolveOnDisk("copy") }
-        copyIn { it.resolveOnDocker("from/host") to it.resolveOnDisk("to/guest") }
-        copyIn("/some/file")
-        delete { it.resolveOnDisk("delete/file1") }
-        delete { it.resolveOnDisk("/delete/dir/2") }
-        edit { it.resolveOnDisk("/etc/dnf/dnf.conf") to "s/gpgcheck=1/gpgcheck=0/" }
+        chmods { osImage -> "0664" to DiskPath("/chmod-file") }
+        chmods { osImage -> "0664" to DiskPath("/other/file") }
+        commandsFromFiles { osImage -> osImage.hostPath(DiskPath("/commands/from/files-1")) }
+        commandsFromFiles { osImage -> osImage.hostPath(DiskPath("/commands/from/files-2")) }
+        copy { DiskPath("/source") to DiskPath("/copy") }
+        copyIn { it.hostPath(DiskPath("/from/host")) to DiskPath("/from") }
+        copyIn(DiskPath("/some/file"))
+        delete { DiskPath("/delete/file1") }
+        delete { DiskPath("/delete/dir/2") }
+        edit { DiskPath("/etc/dnf/dnf.conf") to "s/gpgcheck=1/gpgcheck=0/" }
         hostname { "the-machine" }
         firstBoot {
             !"""sed -i 's/^\#Port 22${'$'}/Port 3421/g' /etc/ssh/sshd_config"""
@@ -145,14 +266,17 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage) = Vir
             +"package3"
         }
         hostname { "new-hostname" }
-        mkdir { it.resolveOnDisk("new/dir") }
-        move { it.resolveOnDisk("new/dir") to it.resolveOnDisk("moved/dir") }
+        mkdir { DiskPath("/new/dir") }
+        move { DiskPath("/new/dir") to DiskPath("/moved/dir") }
         password { VirtCustomizeCustomizationOption.PasswordOption.byString("super-admin", "super secure") }
         rootPassword { VirtCustomizeCustomizationOption.RootPasswordOption.disabled() }
-        sshInjectFile { osImage -> "file-user" to f("file/key") }
+        sshInjectFile { osImage -> "file-user" to Path.of("file/key") }
         sshInject("string-user", "string-key")
         timeZoneId("Europe/Berlin")
-        touch { it.resolveOnDisk("touch/file") }
-        write { it.resolveOnDisk("write/file") to "write content" }
+        touch { DiskPath("/touch/file") }
+        write { DiskPath("/write/file") to "write content" }
     }
 }
+
+private fun CommandLine.fistbootScript() =
+    commandLineParts.filter { it.contains("script-") }.single().asPath()

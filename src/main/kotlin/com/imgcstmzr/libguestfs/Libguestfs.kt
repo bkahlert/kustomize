@@ -7,7 +7,11 @@ import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.GuestfishCommandL
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.VirtCustomizeCommandLineBuilder.Companion.build
 import com.imgcstmzr.runtime.OperatingSystemImage
+import koodies.io.file.resolveBetweenFileSystems
+import koodies.io.path.asPath
+import koodies.io.path.asString
 import java.nio.file.Path
+import kotlin.io.path.relativeTo
 
 /**
  * Libguestfs integration
@@ -23,6 +27,16 @@ class Libguestfs(private val osImage: OperatingSystemImage) {
         init.build(osImage)
 
     companion object {
+        private const val DEFAULT_CONTAINER_MOUNT_POINT_ON_HOST = "shared"
+
+        fun mountRootForDisk(disk: HostPath): HostPath =
+            disk.resolveSibling(DEFAULT_CONTAINER_MOUNT_POINT_ON_HOST)
+
+        fun OperatingSystemImage.hostPath(diskPath: DiskPath): HostPath {
+            val mountRoot: Path = mountRootForDisk(file)
+            return diskPath.hostPath(mountRoot)
+        }
+
         fun of(osImage: OperatingSystemImage): Libguestfs =
             Libguestfs(osImage)
 
@@ -31,26 +45,22 @@ class Libguestfs(private val osImage: OperatingSystemImage) {
     }
 }
 
-fun OperatingSystemImage.resolveOnHost(diskAbsolutePath: Path) =
-    with(SharedPath.Host) { resolve(diskAbsolutePath) }
+typealias HostPath = Path
 
-fun OperatingSystemImage.resolveOnHost(diskAbsolutePath: String) =
-    with(SharedPath.Host) { resolve(diskAbsolutePath) }
+inline class DiskPath(val path: String) {
+    val isAbsolute: Boolean get() = path.asPath().isAbsolute
+    fun asPath(): Path = path.asPath()
+    val fileName: Path get() = asPath().fileName
+    val parent: DiskPath get() = DiskPath(asPath().parent.asString())
+    fun resolve(path: String): DiskPath = DiskPath(asPath().resolve(path).asString())
+    fun hostPath(mountRoot: HostPath): Path {
+        val rootRelative = asPath().let { diskPath -> diskPath.takeIf { !it.isAbsolute } ?: diskPath.relativeTo(ROOT) }
+        return mountRoot.resolveBetweenFileSystems(rootRelative)
+    }
 
-fun OperatingSystemImage.resolveOnDocker(diskAbsolutePath: Path) =
-    with(SharedPath.Docker) { resolve(diskAbsolutePath) }
+    override fun toString(): String = asPath().asString()
 
-fun OperatingSystemImage.resolveOnDocker(diskAbsolutePath: String) =
-    with(SharedPath.Docker) { resolve(diskAbsolutePath) }
-
-fun OperatingSystemImage.resolveOnDisk(diskAbsolutePath: Path) =
-    with(SharedPath.Disk) { resolve(diskAbsolutePath) }
-
-fun OperatingSystemImage.resolveOnDisk(diskAbsolutePath: String) =
-    with(SharedPath.Disk) { resolve(diskAbsolutePath) }
-
-
-
-
-
-
+    companion object {
+        private val ROOT = "/".asPath()
+    }
+}

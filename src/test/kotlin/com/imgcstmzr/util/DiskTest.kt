@@ -1,8 +1,9 @@
 package com.imgcstmzr.util
 
 import com.imgcstmzr.ImgCstmzrConfig
-import com.imgcstmzr.test.FifteenMinutesTimeout
-import koodies.io.path.toPath
+import com.imgcstmzr.test.ThirtyMinutesTimeout
+import koodies.io.path.Locations
+import koodies.io.path.asPath
 import koodies.logging.InMemoryLogger
 import koodies.logging.logging
 import koodies.terminal.AnsiColors.cyan
@@ -15,9 +16,9 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 class DiskTest {
 
     @Disabled
-    @FifteenMinutesTimeout @Test
+    @ThirtyMinutesTimeout @Test
     fun InMemoryLogger.`should mount and unmount listed disks`() {
-        val file = "/Users/bkahlert/.imgcstmzr.test/test/RaspberryPiLite/test/2020-08-20-raspios-buster-armhf-lite.img".toPath()
+        val file = "${Locations.HomeDirectory}/.imgcstmzr/bother-you/2021-01-03T21-28-04--csEt/2020-12-02-raspios-buster-armhf-lite.img".asPath()
         val flashDrive: String? = "auto"
 
         logging("Flashing ${file.toUri()}") {

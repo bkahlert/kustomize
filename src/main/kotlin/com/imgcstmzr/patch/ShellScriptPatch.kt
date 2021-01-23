@@ -1,13 +1,20 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.runtime.OperatingSystemImage
 import koodies.shell.ShellScript
 import koodies.shell.ShellScript.Companion.build
+import koodies.text.LineSeparators.LF
 
+/**
+ * Applied to an [OperatingSystemImage] this [Patch]
+ * runs a specified [ShellScript] instances one-by-one and
+ * when done shuts down.
+ */
 class ShellScriptPatch(
     shellScripts: List<ShellScript>,
-) : Patch by buildPatch("${shellScripts.size} shell script(s) with ${shellScripts.sumBy { it.lines.size }} lines altogether", {
+) : Patch by buildPatch("${shellScripts.size} shell script(s):${shellScripts.mapNotNull { it.name }.map { LF + it }.joinToString("")}", {
     customizeDisk {
-        firstBoot("Fist Boot") { osImage ->
+        firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o Setup") { osImage ->
             shellScripts.forEach { embed(it) }
             !osImage.shutdownCommand
         }

@@ -5,7 +5,6 @@ import com.imgcstmzr.runtime.Watchdog.Command.STOP
 import koodies.concurrent.process.IO
 import koodies.concurrent.thread
 import koodies.logging.RenderingLogger
-import koodies.logging.RenderingLogger.Companion.DEFAULT
 import koodies.terminal.AnsiColors.red
 import koodies.time.Now
 import java.util.concurrent.LinkedBlockingQueue
@@ -30,7 +29,7 @@ open class Watchdog(
     /**
      * Logger that can be accessed in [timedOut].
      */
-    private val logger: RenderingLogger? = DEFAULT,
+    private val logger: RenderingLogger? = null,
     /**
      * Gets called after more time has passed between the start of this watchdog and/or two consecutive [reset] calls.
      */

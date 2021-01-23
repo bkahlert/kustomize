@@ -13,7 +13,6 @@ import koodies.io.path.delete
 import koodies.io.path.deleteRecursively
 import koodies.io.path.extensionOrNull
 import koodies.io.path.listDirectoryEntriesRecursively
-import koodies.logging.BlockRenderingLogger
 import koodies.logging.RenderingLogger
 import koodies.text.randomString
 import koodies.unit.Size
@@ -34,8 +33,8 @@ import kotlin.time.minutes
 
 class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: Int = 5) : ManagedDirectory(dir) {
 
-    fun BlockRenderingLogger.provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> Path): Path =
-        with(ProjectDirectory(dir, name, reuseLastWorkingCopy, maxConcurrentWorkingDirectories)) {
+    fun RenderingLogger.provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> Path): Path =
+        with(ProjectDirectory(dir, name, this, reuseLastWorkingCopy, maxConcurrentWorkingDirectories)) {
             require(provider)
         }
 
@@ -62,7 +61,13 @@ open class ManagedDirectory(val dir: Path) {
 }
 
 
-private class ProjectDirectory(parentDir: Path, dirName: String, private val reuseLastWorkingCopy: Boolean, maxConcurrentWorkingDirectories: Int) :
+private class ProjectDirectory(
+    parentDir: Path,
+    dirName: String,
+    private val logger: RenderingLogger,
+    private val reuseLastWorkingCopy: Boolean,
+    maxConcurrentWorkingDirectories: Int,
+) :
     ManagedDirectory(parentDir, dirName) {
 
     init {
@@ -88,7 +93,7 @@ private class ProjectDirectory(parentDir: Path, dirName: String, private val reu
             .withIndex()
             .filter { it.index >= keep - 1 }
             .forEach { (i, dir) ->
-                echo("Removing old $dir")
+                logger.logLine { "Removing old $dir" }
                 dir.delete()
             }
     }

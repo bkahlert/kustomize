@@ -1,5 +1,6 @@
 package com.imgcstmzr
 
+import com.imgcstmzr.libguestfs.guestfish.mounted
 import com.imgcstmzr.patch.*
 import com.imgcstmzr.runtime.OperatingSystem.Credentials.Companion.withPassword
 import com.imgcstmzr.runtime.OperatingSystemImage
@@ -37,18 +38,27 @@ class ImgCstmzrConfigTest {
             get { trace }.isTrue()
             get { name }.isEqualTo("Sample Project")
             get { os }.isEqualTo(OperatingSystems.RaspberryPiLite)
+            get { timeZone ?: timezone }.isEqualTo("Europe/Berlin")
             get { hostname }.isEqualTo(ImgCstmzrConfig.Hostname("demo", true))
-            get { wpaSupplicant }.isEqualTo("entry1\nentry2")
+            get { wifi }.isEqualTo(ImgCstmzrConfig.Wifi("entry1\nentry2", true, false))
             get { imgSize }.isEqualTo(4.Giga.bytes)
-            get { ssh.enabled }.isTrue()
+            get { ssh?.enabled }.isTrue()
+            get { ssh?.port }.isEqualTo(1234)
             @Suppress("SpellCheckingInspection")
-            get { ssh.authorizedKeys }.contains(
+            get { ssh?.authorizedKeys }.isNotNull().contains(
                 listOf("""ssh-rsa MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAKbic/EEoiSu09lYR1y5001NA1K63M/Jd+IV1b2YpoXJxWDrkzQ/3v/SE84/cSayWAy4LVEXUodrt1WkPZ/NjE8CAwEAAQ== "John Doe 2020-12-10 btw, Corona sucks"""")
             )
+            get { ssh?.authorizedKeys }.isNotNull().none { containsAtLeast("ssh-", 2) }
             get { defaultUser }.isEqualTo(ImgCstmzrConfig.DefaultUser(null, "FiFi", "TRIXIbelle1234"))
             get { samba?.sanitizedHomeShare }.isEqualTo(true)
             get { samba?.sanitizedRootShare }.isEqualTo(RootShare.`read-write`)
             get { usbOtg }.isNotNull().isEqualTo("g_ether")
+            get { usbOtgOptions }.isNotNull().contains("usb0-interfaces", "usb0-dhcp", "usb0-dnsmasq")
+            get { tweaks?.aptRetries }.isEqualTo(10)
+            get { files }.isNotNull().isEqualTo(listOf(
+                ImgCstmzrConfig.FileOperation("\n        line 1\n        line 2\n        ", null, "/boot/file-of-lines.txt"),
+                ImgCstmzrConfig.FileOperation(null, "BKAHLERT.png", "/home/FiFi/image.png"),
+            )).any { get { sanitizedAppend }.isEqualTo("line 1\nline 2") }
             get { setup!![0].name }.isEqualTo("the basics")
             get { setup!![0] }.containsExactly(
                 ShellScript(
@@ -98,6 +108,16 @@ class ImgCstmzrConfigTest {
                             """.trimIndent()
                 ),
             )
+            get { firstBoot }.isNotNull().containsExactly(
+                ShellScript(
+                    name = "Finalizing A",
+                    content = """echo "Type X to...">>${'$'}HOME/first-boot.txt"""
+                ),
+                ShellScript(
+                    name = "Finalizing B",
+                    content = "startx"
+                )
+            )
             get { flashDisk }.isEqualTo("auto")
         }.then { if (allPassed) pass() else fail() }
     }
@@ -111,7 +131,6 @@ class ImgCstmzrConfigTest {
             get { diskPreparations }.isNotEmpty()
             get { diskCustomizations }.isNotEmpty()
             get { diskOperations }.isNotEmpty()
-            get { fileOperations }.isNotEmpty()
             get { osPreparations }.isNotEmpty()
             get { osOperations }.isNotEmpty()
         }
@@ -122,20 +141,33 @@ class ImgCstmzrConfigTest {
         val imgCstmztn = loadImgCstmztn()
         val patches = imgCstmztn.toOptimizedPatches()
         expectThat(patches) {
-            hasSize(4)
+            hasSize(6)
             get { get(0) }.isA<CompositePatch>().get { this.patches.map { it::class } }
                 .contains(
+                    TweaksPatch::class,
+                    TimeZonePatch::class,
                     HostnamePatch::class,
                     ImgResizePatch::class,
                     UsernamePatch::class,
                     SshEnablementPatch::class,
                     WpaSupplicantPatch::class,
-                    SambaPatch::class,
                 )
             get { get(1) }.isA<CompositePatch>().get { this.patches.map { it::class } }
-                .contains(PasswordPatch::class, SshAuthorizationPatch::class, UsbOnTheGoPatch::class)
-            get { get(2) }.isA<ShellScriptPatch>()
+                .contains(
+                    SambaPatch::class,
+                    WifiAutoReconnectPatch::class,
+                    WifiPowerSafeModePatch::class,
+                )
+            get { get(2) }.isA<CompositePatch>().get { this.patches.map { it::class } }
+                .contains(
+                    PasswordPatch::class,
+                    SshAuthorizationPatch::class,
+                    SshPortPatch::class,
+                    UsbOnTheGoPatch::class,
+                )
             get { get(3) }.isA<ShellScriptPatch>()
+            get { get(4) }.isA<ShellScriptPatch>()
+            get { get(5) }.isA<FirstBootPatch>()
         }
     }
 
@@ -153,6 +185,9 @@ class ImgCstmzrConfigTest {
         expect {
             that(osImage) {
                 get { credentials }.isEqualTo("FiFi" withPassword "TRIXIbelle1234")
+                mounted(this@`should apply patches`) {
+                    path("/home/FiFi/first-boot.txt") { not { exists() } }
+                }
                 booted(this@`should apply patches`) {
                     command("echo '👏 🤓 👋'");
                     { true }

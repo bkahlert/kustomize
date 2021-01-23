@@ -1,11 +1,13 @@
 package com.imgcstmzr.patch
 
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
-import com.imgcstmzr.runtime.OperatingSystem
+import com.imgcstmzr.runtime.OperatingSystemImage
 
-// "Change password according to custom password file?"
+/**
+ * Applied to an [OperatingSystemImage] this [Patch]
+ * set the [password] of the user with the specified [username].
+ */
 class PasswordPatch(
-    os: OperatingSystem,
     private val username: String,
     private val password: String,
 ) : Patch by buildPatch("Change Password of $username", {

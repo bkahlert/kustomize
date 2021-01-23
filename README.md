@@ -3,7 +3,11 @@
 ## Usage
 
 ```shell script
-docker build -t imgcstmzr .
+docker build --no-cache=true \
+  --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+  --build-arg VCS_REF=$(git rev-parse --short HEAD) \
+  --build-arg VERSION=$(./gradlew properties | grep ^version: | perl -pe 's/version:\s+//') \
+  -t bkahlert/imgcstmzr:latest .
 ```
 
 1. Download

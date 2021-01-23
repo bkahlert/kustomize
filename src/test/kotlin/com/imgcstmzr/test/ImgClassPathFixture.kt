@@ -1,25 +1,25 @@
 package com.imgcstmzr.test
 
-import koodies.test.ClassPathFixture
+import koodies.test.ClassPathDirectoryFixture
 
-object ImgClassPathFixture : ClassPathFixture("img") {
-    object Boot : SubFixture("boot") {
-        object CmdlineTxt : SubFixture("cmdline.txt")
-        object ConfigTxt : SubFixture("config.txt")
+object ImgClassPathFixture : ClassPathDirectoryFixture("img") {
+    object Boot : Dir("boot") {
+        object CmdlineTxt : File("cmdline.txt")
+        object ConfigTxt : File("config.txt")
     }
 
-    object Etc : SubFixture("etc") {
-        object Passwd : SubFixture("passwd")
-        object Group : SubFixture("group")
-        object Shadow : SubFixture("shadow")
-        object Gshadow : SubFixture("gshadow")
-        object Subuid : SubFixture("subuid")
-        object Subgid : SubFixture("subgid")
+    object Etc : Dir("etc") {
+        object Passwd : File("passwd")
+        object Group : File("group")
+        object Shadow : File("shadow")
+        object Gshadow : File("gshadow")
+        object Subuid : File("subuid")
+        object Subgid : File("subgid")
     }
 
-    object Home : SubFixture("home") {
-        object User : SubFixture("user") {
-            object ExampleHtml : SubFixture("example.html")
+    object Home : Dir("home") {
+        object User : Dir("user") {
+            object ExampleHtml : File("example.html")
         }
     }
 }

@@ -1,12 +1,13 @@
 package com.imgcstmzr.util
 
 import com.imgcstmzr.util.DiskUtil.listDisks
+import koodies.concurrent.process
+import koodies.concurrent.process.process
 import koodies.concurrent.script
 import koodies.io.path.asString
 import koodies.logging.RenderingLogger
 import koodies.logging.compactLogging
 import koodies.logging.logging
-import koodies.shell.ShellScript
 import koodies.terminal.AnsiColors.green
 import koodies.terminal.AnsiColors.red
 import koodies.terminal.AnsiFormats.bold
@@ -39,20 +40,22 @@ class Disk private constructor(val id: DiskIdentifier, val capacity: Size) {
         this@Disk
     }
 
-    fun RenderingLogger?.flash(file: Path, megaBytesPerTime: Int = 128): Disk =
+    fun RenderingLogger?.flash(file: Path, megaBytesPerTime: Int = 32): Disk =
         logging("Flashing to ${this@Disk} with ${megaBytesPerTime.Mega.bytes}/t") {
             unmountDisk()
 
-            val flashingProcess = file.parent.script(expectedExitValue = null, shellScript = ShellScript {
-                command("dd", "if=${file.asString().quoted}", "of=${id.name.quoted}", "bs=${megaBytesPerTime}m")
-                deleteOnCompletion()
-            }) { logLine { it } }
+            val command = "sudo dd if=${file.asString().quoted} of=${id.device.quoted} bs=${megaBytesPerTime}m"
+            logLine { command }
+            val flashingProcess = file.parent.process("/bin/sh", "-c", command, expectedExitValue = null).process { logLine { it } }
 
-            val exitValue = flashingProcess.waitForTermination()
-            if (exitValue == 0) logLine { "Success".green() }
-            else logLine { "An error occurred.".red() }
-
-            eject()
+            val exitCode = flashingProcess.also { println(it.ioLog.logged()) }.waitForTermination()
+            if (exitCode == 0) {
+                "Success".green()
+                eject()
+            } else {
+                logLine { "An error occurred running $command".red() }
+                this@Disk
+            }
         }
 
     fun Size.format() = toString<BinaryPrefix>()
@@ -96,7 +99,7 @@ fun RenderingLogger.flash(file: Path, disk: String?): Disk? =
             disks.singleOrNull { it.id.name == disk }
         } ?: disks.singleOrNull()
 
-        flashDisk?.run { flash(file, 128) } ?: run {
+        flashDisk?.run { flash(file) } ?: run {
             logLine {
                 if (disk == null) {
                     if (disks.isEmpty()) "No flash-able disks found.".bold()
@@ -116,7 +119,7 @@ inline class DiskIdentifier(val name: String) {
     override fun toString(): String = "disk \"$name\""
 
     companion object {
-        val diskIdentifierPattern = Regex("disk\\d+")
+        private val diskIdentifierPattern = Regex("disk\\d+")
         fun isDisk(id: String) = diskIdentifierPattern.matches(id)
     }
 }

@@ -39,7 +39,7 @@ class InMemoryLoggerResolver : ParameterResolver, AfterEachCallback {
     private fun ExtensionContext.createLogger(
         suffix: String? = null,
         bordered: Boolean,
-        parameterContext: ParameterContext
+        parameterContext: ParameterContext,
     ): InMemoryLogger =
         object : InMemoryLogger(
             caption = testName + if (suffix != null) "::$suffix" else "",
@@ -53,7 +53,7 @@ class InMemoryLoggerResolver : ParameterResolver, AfterEachCallback {
                     super.logResult(block).also { resultLogged = true }
                 } else Unit as R
             }
-        }.also { store().put(element, it) }
+        }.save(this)
 
     override fun afterEach(extensionContext: ExtensionContext) {
         val logger: InMemoryLogger? = extensionContext.store().get(extensionContext.element, InMemoryLogger::class.java)
@@ -66,6 +66,10 @@ class InMemoryLoggerResolver : ParameterResolver, AfterEachCallback {
             }
         }
     }
-
-    private fun ExtensionContext.store(): ExtensionContext.Store = getStore(create(InMemoryLoggerResolver::class.java))
 }
+
+private fun ExtensionContext.store(): ExtensionContext.Store = getStore(create(InMemoryLoggerResolver::class.java))
+private fun InMemoryLogger.save(extensionContext: ExtensionContext): InMemoryLogger =
+    also { extensionContext.store().put(extensionContext.element, this) }
+
+fun ExtensionContext.logger(): InMemoryLogger? = store().get(element, InMemoryLogger::class.java)

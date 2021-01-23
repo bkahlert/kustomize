@@ -44,8 +44,7 @@ class Program(
     private val stateCount: Int
         get() = states.size
     var state: String? = null
-    val halted: Boolean
-        get() = !initiating && state == null
+    val halted: Boolean get() = !initiating && state == null
 
     private val stateMachine: Map<String, OperatingSystemProcess.(String) -> String?> = states.associate { it }
     private var stateHistory: MutableList<HistoryElement> = mutableListOf()
@@ -84,7 +83,7 @@ class Program(
         override fun toString(): String = when (oldState) {
             null -> " ▶️ $leftBracket$newState$rightBracket"
             else -> {
-                val visualizedOutput = if (IO.isBlank) '\u2400' else IO.text.toString().replaceNonPrintableCharacters().cyan()
+                val visualizedOutput = if (IO.isBlank()) '\u2400' else IO.text.toString().replaceNonPrintableCharacters().cyan()
                 when (newState) {
                     oldState -> "$leftBracket$oldState$rightBracket 🔁 $visualizedOutput"
                     null -> " ⏹️ "
@@ -175,7 +174,7 @@ class Program(
 
             val states: List<ProgramState> = commands.flatMapIndexed { index, command ->
                 val currentStateName: String = stateName(index, commands)
-                val currentCompletionStateName: String = stateName(index, commands) + "…"
+                val currentCompletionStateName: String = stateName(index, commands) + " …"
                 val nextStateName: String =
                     if (index + 1 < commands.size) stateName(index + 1, commands)
                     else completionState.first
