@@ -1,34 +1,35 @@
 package com.imgcstmzr.cli
 
 import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.cli.Cache.Companion.defaultFilter
 import com.imgcstmzr.libguestfs.docker.ImageBuilder.buildFrom
 import com.imgcstmzr.libguestfs.docker.ImageExtractor.extractImage
-import com.imgcstmzr.patch.ini.RegexElement
 import com.imgcstmzr.util.Paths
-import koodies.io.path.age
+import koodies.io.path.FileSizeComparator
 import koodies.io.path.asString
 import koodies.io.path.cloneTo
 import koodies.io.path.delete
 import koodies.io.path.deleteRecursively
 import koodies.io.path.extensionOrNull
+import koodies.io.path.getSize
 import koodies.io.path.listDirectoryEntriesRecursively
+import koodies.io.path.requireDirectory
 import koodies.logging.RenderingLogger
+import koodies.text.ANSI.Colors.cyan
 import koodies.text.randomString
-import koodies.unit.Size
-import koodies.unit.size
+import koodies.time.Now
+import koodies.time.format
+import koodies.time.parseInstant
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Instant
 import java.time.Instant.now
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter.ofPattern
-import java.time.temporal.TemporalAccessor
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
-import kotlin.io.path.getLastModifiedTime
 import kotlin.io.path.isDirectory
+import kotlin.io.path.isHidden
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.isWritable
+import kotlin.time.Duration
 import kotlin.time.minutes
 
 class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: Int = 5) : ManagedDirectory(dir) {
@@ -40,7 +41,6 @@ class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: In
 
     companion object {
         val DEFAULT: Path = Paths.CACHE
-        fun defaultFilter(currentPath: Path): (Path) -> Boolean = { path: Path -> !path.fileName.startsWith(".") && path != currentPath }
     }
 }
 
@@ -56,7 +56,7 @@ open class ManagedDirectory(val dir: Path) {
     }
 
     fun delete() {
-        if (dir.exists()) dir.deleteRecursively()
+        dir.deleteRecursively()
     }
 }
 
@@ -78,62 +78,65 @@ private class ProjectDirectory(
     private val rawDir = SingleFileDirectory(dir, "raw")
 
     private fun workDirs(): List<WorkDirectory> {
-        val listFiles: List<Path> = dir.listDirectoryEntriesRecursively().filter {
-            WorkDirectory.isNameValid(it.fileName.asString())
-        }
 
-        return listFiles
-            .filter { it.isDirectory() && it.age > 30.minutes }
-            .sortedByDescending { it.getLastModifiedTime() }
+        return dir.listDirectoryEntriesRecursively()
+            .filter { WorkDirectory.isWorkDirectory(it) }
             .map { WorkDirectory(it) }
+            .sortedBy { it.age }
     }
 
-    private fun deleteOldWorkDirs(keep: Int) {
-        workDirs()
-            .withIndex()
-            .filter { it.index >= keep - 1 }
-            .forEach { (i, dir) ->
-                logger.logLine { "Removing old $dir" }
-                dir.delete()
-            }
-    }
+    private fun deleteOldWorkDirs(keep: Int) = workDirs()
+        .filter { it.age > 30.minutes }
+        .drop(keep)
+        .forEach {
+            logger.logLine { "Removing ${it.age.toString().cyan()} old $it" }
+            it.delete()
+        }
 
     fun RenderingLogger.require(provider: () -> Path): Path {
         val workDirs = workDirs()
-        if (reuseLastWorkingCopy) {
-            val lastWorkingCopy = workDirs.mapNotNull { workDir ->
+        val workDir: Path? = if (reuseLastWorkingCopy) {
+            workDirs.mapNotNull { workDir ->
                 val single = workDir.getSingle { file ->
                     file.extensionOrNull == "img"
                 }
                 single
-            }.firstOrNull()
-            if (lastWorkingCopy != null) {
-                echo("Re-using last working copy ${lastWorkingCopy.fileName}")
-                return lastWorkingCopy
+            }.firstOrNull().also {
+                if (it != null) echo("Re-using last working copy ${it.fileName}")
+                else echo("No working copy exists that could be re-used. Creating a new one.")
             }
-            echo("No working copy exists that could be re-used. Creating a new one.")
-        }
+        } else null
 
-        val img = rawDir.requireSingle {
-            val downloadedFile = downloadDir.requireSingle(provider)
-            downloadedFile.extractImage { path -> buildFrom(path) }
-        }
+        return workDir ?: run {
 
-        return WorkDirectory.from(dir, img).getSingle { it.extensionOrNull.equals("img", ignoreCase = true) } ?: throw NoSuchElementException()
+            val img = rawDir.requireSingle {
+                val downloadedFile = downloadDir.requireSingle(provider)
+                downloadedFile.extractImage { path -> buildFrom(path) }
+            }
+
+            WorkDirectory.from(dir, img).getSingle { it.extensionOrNull.equals("img", ignoreCase = true) } ?: throw NoSuchElementException()
+        }
     }
 }
 
 private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
     constructor(parentDir: Path, dirName: String) : this(parentDir.resolve(dirName))
 
-    private fun fileCount(): Int = dir.listDirectoryEntriesRecursively().filter(defaultFilter(dir)).size
+    private fun fileCount(): Int = dir
+        .listDirectoryEntriesRecursively()
+        .filterNot(Path::isHidden)
+        .filter { it != dir }
+        .size
 
     fun fileExists(): Boolean = dir.exists() && dir.isDirectory() && fileCount() > 0
 
     fun getSingle(): Path? =
-        if (fileExists()) {
-            dir.listDirectoryEntriesRecursively().filter(defaultFilter(dir)).sortedWith(Size.FileSizeComparator)[0]
-        } else null
+        if (fileExists()) dir
+            .listDirectoryEntriesRecursively()
+            .filterNot(Path::isHidden)
+            .filter { it != dir }
+            .sortedWith(FileSizeComparator)[0]
+        else null
 
     fun requireSingle(provider: () -> Path): Path {
         val file = getSingle()
@@ -145,7 +148,7 @@ private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
                 costlyProvidedFile.delete()
                 destFile
             } else {
-                echo("Moving file to $destFile...", trailingNewline = false)
+                echo("Moving file to $destFile…", trailingNewline = false)
                 Files.move(costlyProvidedFile, destFile).also { echo(" Completed.") }
             }
         }
@@ -158,42 +161,44 @@ private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
 }
 
 private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireValidName(dir)) {
-    @Suppress("unused")
-    private class WorkDirectoryName(name: String) : RegexElement(name, false) {
-        constructor() : this(DATE_FORMATTER.format(now()) + SEPARATOR + randomString(4))
 
-        companion object {
-            @Suppress("SpellCheckingInspection")
-            private val DATE_FORMATTER = ofPattern("yyyy-MM-dd'T'HH-mm-ss").withZone(ZoneId.systemDefault())
-            private const val SEPARATOR = "--"
-        }
+    val age: Duration get() = Now.passedSince(createdAt(dir).toEpochMilli())
 
-        private val iso by regex("^\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}")
-        val dateTime: TemporalAccessor get() = DATE_FORMATTER.parse(iso)
-        val separator by regex(SEPARATOR)
-        val random by regex("\\w+")
-    }
-
-    fun getSingle(filter: (path: Path) -> Boolean): Path? =
-        dir.listDirectoryEntriesRecursively().filter {
-            !it.fileName.startsWith(".") && filter(it)
-        }.sortedWith(Size.FileSizeComparator).firstOrNull()
+    fun getSingle(filter: (path: Path) -> Boolean): Path? = dir
+        .listDirectoryEntriesRecursively()
+        .filterNot(Path::isHidden)
+        .filter(filter)
+        .sortedWith(FileSizeComparator)
+        .firstOrNull()
 
     override fun toString(): String {
         val files = dir.listDirectoryEntriesRecursively().filter { it.isRegularFile() }
-        return "WorkDirectory(${dir.fileName} containing ${files.size} file(s) / ${dir.size})"
+        return "working directory ${dir.fileName} containing ${files.size} file(s) / ${dir.getSize()}"
     }
 
     companion object {
-        fun requireValidName(dir: Path): String = kotlin.runCatching { WorkDirectoryName(dir.fileName.asString()).toString() }.getOrThrow()
-        fun isNameValid(name: String) = kotlin.runCatching {
-            val workDirectoryName = WorkDirectoryName(name)
-            workDirectoryName.toString()
+        private const val SEPARATOR = "--"
+
+        fun requireValidName(dir: Path): String {
+            createdAt(dir)
+            return dir.fileName.asString()
+        }
+
+        private fun createdAt(dir: Path): Instant {
+            val name = dir.fileName.asString()
+            require(name.contains(SEPARATOR)) { "$name does not contain $SEPARATOR" }
+            val potentialDateTime = name.substringBefore(SEPARATOR).trim()
+            return potentialDateTime.parseInstant<Instant, Path>()
+        }
+
+        fun isWorkDirectory(dir: Path) = kotlin.runCatching {
+            dir.requireDirectory()
+            requireValidName(dir)
         }.isSuccess
 
-        fun from(dir: Path, file: Path): WorkDirectory {
-            val workDirectory = WorkDirectory(dir.resolve(WorkDirectoryName().toString()))
-            file.cloneTo(workDirectory.dir.resolve(file.fileName))
+        fun from(dir: Path, workFile: Path): WorkDirectory {
+            val workDirectory = WorkDirectory(dir.resolve(now().format<Path>() + SEPARATOR + randomString(4)))
+            workFile.cloneTo(workDirectory.dir.resolve(workFile.fileName))
             return workDirectory
         }
     }

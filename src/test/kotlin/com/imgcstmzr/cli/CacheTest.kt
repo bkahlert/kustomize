@@ -2,7 +2,9 @@ package com.imgcstmzr.cli
 
 import com.imgcstmzr.test.MiscClassPathFixture.FunnyImgZip
 import com.imgcstmzr.test.UniqueId
+import com.imgcstmzr.test.exists
 import com.imgcstmzr.test.hasContent
+import com.imgcstmzr.test.isDirectory
 import com.imgcstmzr.withTempDir
 import koodies.io.path.isInside
 import koodies.io.path.randomDirectory
@@ -12,8 +14,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
-import strikt.assertions.exists
-import strikt.assertions.isDirectory
 import strikt.assertions.isEqualTo
 import strikt.assertions.isTrue
 
@@ -24,10 +24,10 @@ class CacheTest {
     fun `should instantiate in user home by default`() {
         val cache = Cache()
 
-        expectThat(cache)
-            .get { dir }
-            .exists()
-            .isDirectory()
+        expectThat(cache.dir) {
+            exists()
+            isDirectory()
+        }
     }
 
     @Test
@@ -50,12 +50,12 @@ class CacheTest {
         }
 
         expectThat(copy)
-            .hasContent("funny content")
+            .hasContent("test.img content\n")
             .get { isInside(cache.dir) }.isTrue()
     }
 
     @Test
-    fun InMemoryLogger.`should only retrieve copy once`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+    fun InMemoryLogger.`should only retrieve a copy once`(uniqueId: UniqueId) = withTempDir(uniqueId) {
         val cache = Cache(randomDirectory())
         var providerCalls = 0
         val provider = {
@@ -72,7 +72,7 @@ class CacheTest {
         expectThat(providerCalls).isEqualTo(1)
         copies.forEach { copy ->
             expectThat(copy)
-                .hasContent("funny content")
+                .hasContent("test.img content\n")
                 .get { isInside(cache.dir) }.isTrue()
         }
     }
