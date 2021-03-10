@@ -40,7 +40,7 @@ val ExtensionContext.allTests: List<Method>
     }
 
 /**
- * Contains the ancestors, that is this test's parent container, the parent's parent container, ... up to the root.
+ * Contains the ancestors, that is this test's parent container, the parent's parent container, … up to the root.
  */
 val ExtensionContext.ancestors: List<Class<*>>
     get() {
@@ -54,7 +54,7 @@ val ExtensionContext.ancestors: List<Class<*>>
     }
 
 /**
- * Contains the ancestors, that is this test's parent container, the parent's parent container, ... up to the root.
+ * Contains the ancestors, that is this test's parent container, the parent's parent container, … up to the root.
  */
 val Class<*>.descendentContainers: List<Class<*>>
     get() = mutableListOf(this) + declaredClasses.flatMap { it.descendentContainers }

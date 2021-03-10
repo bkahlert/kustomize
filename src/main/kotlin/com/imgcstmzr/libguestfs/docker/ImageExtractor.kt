@@ -4,9 +4,9 @@ import com.github.ajalt.clikt.output.TermUi.echo
 import koodies.io.compress.Archiver.listArchive
 import koodies.io.compress.Archiver.unarchive
 import koodies.io.path.extensionOrNull
+import koodies.io.path.getSize
 import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.io.path.tempDir
-import koodies.unit.size
 import java.nio.file.Path
 
 object ImageExtractor {
@@ -23,7 +23,7 @@ object ImageExtractor {
         }
 
         val temp = tempDir("imgcstmzr-")
-        echo("Unarchiving $fileName ($size)...", trailingNewline = false)
+        echo("Unarchiving $fileName (${getSize()})…", trailingNewline = false)
 
         val filteredArchiveEntries = filterArchiveEntries()
         when (filteredArchiveEntries.size) {
@@ -43,9 +43,9 @@ object ImageExtractor {
 
         val file = (temp.listDirectoryEntriesRecursively()
             .filter { imgFilter.invoke(it) }
-            .maxByOrNull { it.size }
+            .maxByOrNull { it.getSize() }
             ?: throw IllegalStateException("An unknown error occurred while unarchiving. $temp was supposed to contain the unarchived file but was empty."))
-        return file.also { echo(" Completed (${it.size}).") }
+        return file.also { echo(" Completed (${it.getSize()}).") }
     }
 
     private fun Path.filterArchiveEntries() = listArchive().also {

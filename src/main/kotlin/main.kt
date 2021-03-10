@@ -8,15 +8,21 @@ import com.github.ajalt.clikt.parameters.types.path
 import com.imgcstmzr.ImgCstmzrConfig
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.cli.ColorHelpFormatter
+import com.imgcstmzr.libguestfs.LibguestfsCommandLine
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.copyOut
 import com.imgcstmzr.patch.patch
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
+import com.imgcstmzr.runtime.OperatingSystemProcess
 import com.imgcstmzr.util.Disk
 import com.imgcstmzr.util.Downloader
 import com.imgcstmzr.util.flash
+import koodies.concurrent.output
+import koodies.concurrent.script
+import koodies.docker.Docker
 import koodies.io.path.Locations
 import koodies.io.path.asString
+import koodies.io.path.getSize
 import koodies.kaomoji.Kaomojis
 import koodies.logging.RenderingLogger
 import koodies.logging.logging
@@ -25,7 +31,6 @@ import koodies.terminal.AnsiColors.cyan
 import koodies.terminal.AnsiFormats.bold
 import koodies.terminal.Banner.banner
 import koodies.terminal.colorize
-import koodies.unit.size
 import java.nio.file.Path
 
 val debug = true
@@ -89,7 +94,7 @@ class CliCommand : NoOpCliktCommand(
         logging(banner("Configuration")) {
             config = configFile.let {
                 logLine { "File: ${it.asString()}".cyan().bold() }
-                logLine { "Size: ${it.size}".cyan().bold() }
+                logLine { "Size: ${it.getSize()}".cyan().bold() }
                 ImgCstmzrConfig.load(it, envFile)
             }.apply {
                 logLine { "Name: $name".cyan().bold() }
@@ -100,7 +105,14 @@ class CliCommand : NoOpCliktCommand(
                 logLine { "OS: $osImage".cyan().bold() }
             }
         }
-// TODO check if DOcker is running
+
+        require(Docker.engineRunning) { "Docker is required to be running but could not be found." }
+        listOf(LibguestfsCommandLine.DOCKER_IMAGE, OperatingSystemProcess.DOCKER_IMAGE).subtract(Docker.images).forEach {
+            logging("Downloading required Docker image $it") {
+                script(logger = this) { !"docker pull $it" }.output()
+            }
+        }
+
         echo()
         val patches = config.toOptimizedPatches()
         val exceptions: List<Throwable> = patches.patch(osImage)
@@ -128,7 +140,7 @@ class CliCommand : NoOpCliktCommand(
         echo()
 
         logging(banner("Summary")) {
-            logLine { "Image flashed to: " + flashDisk?.run { toString() } ?: "—" }
+            logLine { "Image flashed to: " + (flashDisk?.run { toString() } ?: "—") }
             logLine { "Run scripts: " + osImage.copyOut("/usr/lib/virt-sysprep").toUri() }
             logLine { "Run scripts log: " + osImage.copyOut("/root/virt-sysprep-firstboot.log").toUri() }
 

@@ -2,7 +2,9 @@ package com.imgcstmzr.libguestfs.docker
 
 import com.imgcstmzr.libguestfs.Libguestfs
 import com.imgcstmzr.libguestfs.LibguestfsCommandLine
-import koodies.docker.DockerCommandLineBuilder
+import koodies.concurrent.execute
+import koodies.concurrent.process.toProcessor
+import koodies.docker.DockerRunCommandLine
 import koodies.io.compress.Archiver.archive
 import koodies.io.compress.GzCompressor.gunzip
 import koodies.io.path.Locations
@@ -20,7 +22,7 @@ import koodies.terminal.AnsiCode.Companion.colors.gray
 import koodies.terminal.AnsiColors.brightYellow
 import koodies.terminal.AnsiColors.cyan
 import koodies.terminal.AnsiColors.yellow
-import koodies.text.Unicode.Emojis.emoji
+import koodies.text.emoji
 import koodies.text.quoted
 import koodies.time.Now
 import koodies.unit.BinaryPrefix
@@ -107,7 +109,7 @@ object ImageBuilder {
         bootSize: Size = 128.Mebi.bytes,
         partitionTableType: PartitionTableType = PartitionTableType.MasterBootRecord,
     ): Path = logging(
-        caption = "${Now.emoji} Preparing raw image using the content of ${archive.fileName}. This takes a moment...",
+        caption = "${Now.emoji} Preparing raw image using the content of ${archive.fileName}. This takes a moment…",
         ansiCode = gray,
         bordered = false,
     ) {
@@ -127,7 +129,8 @@ object ImageBuilder {
         }
 
         @Suppress("SpellCheckingInspection")
-        DockerCommandLineBuilder.build(LibguestfsCommandLine.DOCKER_IMAGE) {
+        DockerRunCommandLine {
+            image by LibguestfsCommandLine.DOCKER_IMAGE
             options {
                 name { Libguestfs::class.simpleName + "-image-preparation---" + imgName }
                 mounts { archiveDirectory mountAt "/shared" }
@@ -148,7 +151,7 @@ object ImageBuilder {
                 }
             }
 
-        }.execute().waitForTermination()
+        }.execute(processor = this.toProcessor())
         logLine { "Finished test img creation." }
         archiveDirectory.resolve(imgName)
     }

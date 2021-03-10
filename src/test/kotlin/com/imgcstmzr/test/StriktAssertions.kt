@@ -3,11 +3,11 @@ package com.imgcstmzr.test
 import koodies.debug.asEmoji
 import koodies.debug.debug
 import koodies.exception.rootCause
-import koodies.functional.alsoIf
 import koodies.functional.compositionOf
 import koodies.io.file.quoted
 import koodies.io.file.resolveBetweenFileSystems
 import koodies.io.path.asString
+import koodies.io.path.getSize
 import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.regex.namedGroups
 import koodies.terminal.AnsiCode.Companion.removeEscapeSequences
@@ -19,14 +19,15 @@ import koodies.text.containsAny
 import koodies.text.matchesCurlyPattern
 import koodies.text.quoted
 import koodies.unit.Size
-import koodies.unit.size
 import strikt.api.Assertion
+import strikt.api.Assertion.Builder
 import strikt.api.expectThat
-import strikt.assertions.fileName
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotNull
 import strikt.assertions.isNull
+import strikt.assertions.isTrue
 import java.nio.file.Path
+import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.readBytes
@@ -63,7 +64,7 @@ fun <T : Path> Assertion.Builder<T>.containsContentAtMost(expectedContent: Strin
 
 fun <T : Path> Assertion.Builder<T>.hasSize(size: Size) =
     assert("has $size") {
-        val actualSize = it.size
+        val actualSize = it.getSize()
         when (actualSize == size) {
             true -> pass()
             else -> fail("was $actualSize (${actualSize.bytes} B; Δ: ${actualSize - size})")
@@ -144,8 +145,26 @@ fun <T : Path> Assertion.Builder<T>.isCopyOf(other: Path) =
     }
 
 
+fun <T : Path> Assertion.Builder<T>.exists() =
+    get { exists() }.isTrue()
+
+val <T : Path> Assertion.Builder<T>.fileName: Builder<String>
+    get() = get { fileName.asString() }
+
 fun <T : Path> Assertion.Builder<T>.hasSameFileName(expected: Path) =
-    fileName.isEqualTo(expected.fileName)
+    get { fileName }.isEqualTo(expected.fileName)
+
+fun <T : Path> Assertion.Builder<T>.endsWith(suffix: Path) =
+    get { endsWith(suffix) }.isTrue()
+
+fun <T : Path> Assertion.Builder<T>.endsWith(suffix: String) =
+    get { endsWith(suffix) }.isTrue()
+
+fun <T : Path> Assertion.Builder<T>.resolve(other: String): Builder<Path> =
+    get { resolve(other) }
+
+fun <T : Path> Assertion.Builder<T>.isDirectory(): Builder<Boolean> =
+    get { isDirectory() }.isTrue()
 
 
 fun <T : Path> Assertion.Builder<T>.isSiblingOf(expected: Path, order: Int = 1) =
@@ -154,10 +173,10 @@ fun <T : Path> Assertion.Builder<T>.isSiblingOf(expected: Path, order: Int = 1) 
         val otherNames = expected.map { name -> name.asString() }.toList()
         val actualIndex = actualNames.size - order - 1
         val otherIndex = otherNames.size - order - 1
-        val missing = (actualIndex - otherNames.size + 1).alsoIf({ it > 0 }) {
-            fail("$expected is too short. At least $it segments are missing to be able to be sibling.")
-        }
-        if (missing <= 0) {
+        val missing = (actualIndex - otherNames.size + 1)
+        if (missing > 0) {
+            fail("$expected is too short. At least $missing segments are missing to be able to be sibling.")
+        } else {
             val evaluation = actualNames.zip(otherNames).mapIndexed() { index, namePair ->
                 val match = if (index == actualIndex || index == otherIndex) true
                 else namePair.first == namePair.second
@@ -183,7 +202,11 @@ fun <T : Path> Assertion.Builder<T>.containsAllFiles(other: Path) =
         other.listDirectoryEntriesRecursively().filter { it.isRegularFile() }.forEach { otherPath ->
             val relativePath = other.relativize(otherPath)
             val actualPath = actual.resolveBetweenFileSystems(relativePath)
-            if (actualPath.readText() != otherPath.readText()) fail("$actualPath and $otherPath have different content:\nactual: ${actual.readText()}\nexpected:${otherPath.readText()}")
+            val otherText = otherPath.readText()
+            val actualText = actualPath.readText()
+            if (actualText != otherText) {
+                fail("$actualPath and $otherPath have different content:\nactual: $actualText\nexpected:$otherText")
+            }
         }
         pass()
     }

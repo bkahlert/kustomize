@@ -20,20 +20,20 @@ set -u
 #
 # If this script is put in the scripts directory it will solve this issue
 # by copying the scripts to a temporary directory will the epoch seconds as the prefix:
-# - 212...1-0001-script-a
-# - 212...2-0002-script-b
-# - 212...3-0001-script-1
-# - 212...4-0002-script-2
+# - 212…1-0001-script-a
+# - 212…2-0002-script-b
+# - 212…3-0001-script-1
+# - 212…4-0002-script-2
 # This way the scripts will show up again in their intended order.
 # Since this step happens while firstboot.sh is already running and calling
 # this script the first (due to its name) the scripts that run next are already resolved.
 # Therefore the scripts will not be renamed but the correctly ordered copies
 # moved back to the scripts directory—this time overwriting the existing scripts
 # in the correct order.
-# - 0001-script-1 <- 212...1-0001-script-a
-# - 0001-script-a <- 212...2-0002-script-b
-# - 0002-script-2 <- 212...3-0001-script-1
-# - 0002-script-b <- 212...4-0002-script-2
+# - 0001-script-1 <- 212…1-0001-script-a
+# - 0001-script-a <- 212…2-0002-script-b
+# - 0002-script-2 <- 212…3-0001-script-1
+# - 0002-script-b <- 212…4-0002-script-2
 # The downside of this approach is the initially misplaced scripts will wont
 # reflect their purpose anymore in the name. For example script 0001-script-1
 # does actually run what was originally in 0001-script-a.

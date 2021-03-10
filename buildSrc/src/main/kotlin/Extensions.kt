@@ -10,7 +10,7 @@ fun Project.propertyOrEmpty(name: String): String {
 fun environmentVariable(name: String) = System.getenv(name) ?: ""
 
 val Project.JAVA_HOME
-    get() = propertyOrEmpty("org.gradle.java.home")
+    get() = propertyOrEmpty("org.gradle.java.home").takeUnless { it.isBlank() }
         ?: System.getenv("JAVA_HOME")
         ?: System.getenv("GRAALVM_HOME")
 

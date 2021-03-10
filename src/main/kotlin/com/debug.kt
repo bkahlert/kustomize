@@ -10,7 +10,7 @@ import com.imgcstmzr.cli.Options.os
 import com.imgcstmzr.libguestfs.LibguestfsCommandLine
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.util.Downloader
-import koodies.docker.buildCommandLine
+import koodies.docker.DockerRunCommandLine
 import koodies.io.path.Locations
 import koodies.io.path.asString
 import koodies.logging.BlockRenderingLogger
@@ -58,10 +58,11 @@ class DebugCommand : NoOpCliktCommand(
 
             logLine { script }
 
-            val z = LibguestfsCommandLine.DOCKER_IMAGE.buildCommandLine {
+            val z = DockerRunCommandLine {
+                image by LibguestfsCommandLine.DOCKER_IMAGE
                 options {
                     name { "guestfish" }
-                    autoCleanup { false }
+                    autoCleanup { off }
                     mounts {
                         path.resolve(path.fileName) mountAt "/images/disk.img"
                         path.resolve("shared") mountAt "/shared"

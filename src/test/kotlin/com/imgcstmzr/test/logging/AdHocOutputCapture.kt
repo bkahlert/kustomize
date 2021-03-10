@@ -2,7 +2,7 @@ package com.imgcstmzr.test.logging
 
 import com.imgcstmzr.test.logging.OutputCapture.Companion.splitOutput
 import koodies.collections.withNegativeIndices
-import org.apache.commons.io.output.ByteArrayOutputStream
+import koodies.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.io.PrintStream
 

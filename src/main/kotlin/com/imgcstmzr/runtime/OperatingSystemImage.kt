@@ -5,6 +5,7 @@ import koodies.concurrent.process.IO
 import koodies.io.path.asString
 import koodies.io.path.baseName
 import koodies.io.path.duplicate
+import koodies.io.path.getSize
 import koodies.logging.BlockRenderingLogger
 import koodies.logging.RenderingLogger
 import koodies.logging.compactLogging
@@ -13,7 +14,6 @@ import koodies.terminal.AnsiColors.magenta
 import koodies.unit.Mega
 import koodies.unit.Size
 import koodies.unit.bytes
-import koodies.unit.size
 import java.nio.file.Path
 import kotlin.io.path.appendBytes
 import kotlin.io.path.isReadable
@@ -43,7 +43,7 @@ class OperatingSystemImage(
     val readable: Boolean get() = path.isReadable()
     val directory: Path get() = path.parent
     val file: Path get() = path
-    val size: Size get() = path.size
+    val size: Size get() = path.getSize()
     fun duplicate(): OperatingSystemImage = operatingSystem based (path.duplicate())
 
     fun newLogFilePath(): Path {
@@ -59,31 +59,31 @@ class OperatingSystemImage(
         execute(logger = logger, programs = programs)
 
     fun increaseDiskSpace(logger: RenderingLogger, size: Size): Any =
-        logger.logging("Increasing Disk Space: ${path.size} ➜ $size", null) {
-            var missing = size - path.size
+        logger.logging("Increasing Disk Space: ${path.getSize()} ➜ $size", null) {
+            var missing = size - path.getSize()
             val bytesPerStep = 200.Mega.bytes
-            val oneHundredMegaBytes = bytesPerStep.toZeroFilledByteArray()
+            val oneHundredMegaBytes = ByteArray(bytesPerStep.bytes.intValue()) { 0 }
             when {
                 missing < 0.bytes -> {
-                    logStatus { IO.Type.ERR typed "Requested disk space is ${-missing} smaller than current size of ${path.fileName} (${path.size})." }
+                    logStatus { IO.Type.ERR typed "Requested disk space is ${-missing} smaller than current size of ${path.fileName} (${path.getSize()})." }
                     logStatus { IO.Type.ERR typed "Decreasing an image's disk space is currently not supported." }
                 }
                 missing == 0.bytes -> {
-                    logStatus { IO.Type.OUT typed "${path.fileName} is has already ${path.size}" }
+                    logStatus { IO.Type.OUT typed "${path.fileName} is has already ${path.getSize()}" }
                 }
                 else -> {
                     compactLogging("Progress:") {
-                        logStatus { IO.Type.OUT typed path.size.toString() }
+                        logStatus { IO.Type.OUT typed path.getSize().toString() }
                         while (missing > 0.bytes) {
-                            val write = if (missing < bytesPerStep) missing.toZeroFilledByteArray() else oneHundredMegaBytes
+                            val write = if (missing < bytesPerStep) ByteArray(missing.bytes.intValue()) { 0 } else oneHundredMegaBytes
                             path.appendBytes(write)
                             missing -= write.size
-                            logStatus { IO.Type.OUT typed "⥅ ${path.size}" }
+                            logStatus { IO.Type.OUT typed "⥅ ${path.getSize()}" }
                         }
-                        path.size
+                        path.getSize()
                     }
 
-                    logLine { "Image Disk Space Successfully increased to " + path.size.toString() + "." }
+                    logLine { "Image Disk Space Successfully increased to " + path.getSize().toString() + "." }
                 }
             }
         }

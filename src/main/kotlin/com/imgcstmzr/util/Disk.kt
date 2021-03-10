@@ -5,6 +5,7 @@ import koodies.concurrent.process
 import koodies.concurrent.process.process
 import koodies.concurrent.script
 import koodies.io.path.asString
+import koodies.io.path.getSize
 import koodies.logging.RenderingLogger
 import koodies.logging.compactLogging
 import koodies.logging.logging
@@ -48,7 +49,7 @@ class Disk private constructor(val id: DiskIdentifier, val capacity: Size) {
             logLine { command }
             val flashingProcess = file.parent.process("/bin/sh", "-c", command, expectedExitValue = null).process { logLine { it } }
 
-            val exitCode = flashingProcess.also { println(it.ioLog.logged()) }.waitForTermination()
+            val exitCode = flashingProcess.waitForTermination()
             if (exitCode == 0) {
                 "Success".green()
                 eject()
@@ -91,7 +92,7 @@ class Disk private constructor(val id: DiskIdentifier, val capacity: Size) {
  * Otherwise any available physical removable disk is used iff there is exactly one candidate.
  */
 fun RenderingLogger.flash(file: Path, disk: String?): Disk? =
-    logging("Flashing ${file.fileName} (${file.size})", bordered = false) {
+    logging("Flashing ${file.fileName} (${file.getSize()})", bordered = false) {
 
         val disks = listDisks()
 

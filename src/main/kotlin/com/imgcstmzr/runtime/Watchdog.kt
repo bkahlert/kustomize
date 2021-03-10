@@ -38,12 +38,15 @@ open class Watchdog(
     private var timeoutStart: Long = -1L
     private val blockingQueue = LinkedBlockingQueue<Command>()
     private val thread = thread {
-        var lastEvent: Command? = RESET
+        var lastEvent: Command? = null
         while (true) {
             try {
                 when (blockingQueue.poll(timeout.toLongMilliseconds().also {
                     timeoutStart = System.currentTimeMillis()
-                    logger?.logLine { IO.Type.META typed "Watchdog started. Timing out in $remaining." }
+                    if (lastEvent == null) {
+                        logger?.logLine { IO.Type.META typed "Watchdog started. Timing out in $remaining." }
+                        lastEvent = RESET
+                    }
                 }, TimeUnit.MILLISECONDS)) {
                     RESET -> {
                         logger?.logLine { IO.Type.META typed "Watchdog reset. Timing out in $timeout." }

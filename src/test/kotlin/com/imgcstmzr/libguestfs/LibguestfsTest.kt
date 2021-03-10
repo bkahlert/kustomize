@@ -8,11 +8,14 @@ import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.test.DockerRequiring
 import com.imgcstmzr.test.FiveMinutesTimeout
 import com.imgcstmzr.test.OS
+import com.imgcstmzr.test.exists
 import com.imgcstmzr.test.hasContent
 import com.imgcstmzr.test.logging.expectThatLogged
 import com.imgcstmzr.test.matchesCurlyPattern
+import koodies.concurrent.execute
 import koodies.io.path.asString
 import koodies.logging.InMemoryLogger
+import koodies.logging.LoggingOptions
 import koodies.text.randomString
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -21,7 +24,6 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.contains
-import strikt.assertions.exists
 import strikt.assertions.isEqualTo
 import java.nio.file.Path
 
@@ -48,18 +50,13 @@ class LibguestfsTest {
                 }
 
                 commands {
-                    runLocally {
-                        copyIn { DiskPath("/home/pi/.ssh/known_hosts") }
-                    }
-                    ignoreErrors {
-                        copyIn { DiskPath("/home/pi/.ssh/known_hosts") }
-                    }
+                    copyIn { DiskPath("/home/pi/.ssh/known_hosts") }
                     copyOut { DiskPath("/home/pi/.ssh/known_hosts") }
                 }
             }.dockerCommandLine()
 
             expect {
-                that(commandLine.workingDirectory).isEqualTo(osImage.file.parent)
+                that(commandLine.workingDirectory).isEqualTo(osImage.file.resolveSibling("shared"))
                 that(commandLine.toString()).matchesCurlyPattern("""
                     docker \
                     run \
@@ -71,6 +68,8 @@ class LibguestfsTest {
                     guestfish \
                     --name \
                     libguestfs-guestfish-{} \
+                    -w \
+                    /shared \
                     --rm \
                     -i \
                     --mount \
@@ -88,14 +87,11 @@ class LibguestfsTest {
                     /dev/sda1:/boot \
                     -- \
                     <<HERE-{}
-                    !-mkdir-p /home/pi/.ssh 
-                     -copy-in /shared/home/pi/.ssh/known_hosts /home/pi/.ssh 
-                    
                     -mkdir-p /home/pi/.ssh 
-                     -copy-in /shared/home/pi/.ssh/known_hosts /home/pi/.ssh 
+                     -copy-in home/pi/.ssh/known_hosts /home/pi/.ssh 
                     
-                    !mkdir -p /shared/home/pi/.ssh 
-                     -copy-out /home/pi/.ssh/known_hosts /shared/home/pi/.ssh 
+                    !mkdir -p home/pi/.ssh 
+                     -copy-out /home/pi/.ssh/known_hosts home/pi/.ssh 
                     
                     umount-all
                     exit
@@ -106,16 +102,14 @@ class LibguestfsTest {
 
         @Test
         fun InMemoryLogger.`should log`(osImage: OperatingSystemImage) {
-            val commandLine = osImage.libguestfs().guestfish {
+            osImage.libguestfs().guestfish {
                 env {
                     trace { on }
                     debug { off }
                 }
 
                 options { disk { it.file } }
-            }
-
-            with(commandLine) { executeLogging() }
+            }.dockerCommandLine().execute(null, null, LoggingOptions(""))
 
             expectThatLogged().contains("libguestfs: trace: set_verbose")
         }
@@ -135,12 +129,12 @@ class LibguestfsTest {
                 }
 
                 customizationOptions {
-                    sshInject("pi", sshKey)
+                    sshInject { "pi" to sshKey }
                 }
             }.dockerCommandLine()
 
             expect {
-                that(commandLine.workingDirectory).isEqualTo(osImage.file.parent)
+                that(commandLine.workingDirectory).isEqualTo(osImage.file.resolveSibling("shared"))
                 that(commandLine.toString()).matchesCurlyPattern("""
                     docker \
                     run \
@@ -148,6 +142,8 @@ class LibguestfsTest {
                     virt-customize \
                     --name \
                     libguestfs-virt-customize-{} \
+                    -w \
+                    /shared \
                     --rm \
                     -i \
                     --mount \

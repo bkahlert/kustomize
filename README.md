@@ -138,7 +138,7 @@ https://github.com/garthvh/ansible-raspi-playbooks/blob/master/playbooks/new-def
 
 ### Done and Deleted
 
-... because it later was provided by Kotlin
+… because it later was provided by Kotlin
 
 - Java NIO extension functions
 - generic builder (e.g. `buildList`)

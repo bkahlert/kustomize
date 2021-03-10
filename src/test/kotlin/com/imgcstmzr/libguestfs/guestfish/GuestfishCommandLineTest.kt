@@ -2,10 +2,9 @@ package com.imgcstmzr.libguestfs.guestfish
 
 import com.imgcstmzr.libguestfs.DiskPath
 import com.imgcstmzr.libguestfs.HostPath
-import com.imgcstmzr.libguestfs.Libguestfs
 import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
 import com.imgcstmzr.libguestfs.Libguestfs.Companion.mountRootForDisk
-import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.runGuestfishOn
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.guestfish
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.test.DockerRequiring
@@ -16,6 +15,7 @@ import com.imgcstmzr.test.OS
 import com.imgcstmzr.test.containsContent
 import com.imgcstmzr.test.hasContent
 import com.imgcstmzr.test.matchesCurlyPattern
+import com.imgcstmzr.test.resolve
 import koodies.docker.asContainerPath
 import koodies.io.path.asString
 import koodies.io.path.delete
@@ -34,7 +34,6 @@ import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
-import strikt.assertions.resolve
 import kotlin.io.path.createDirectories
 
 @Execution(CONCURRENT)
@@ -67,15 +66,15 @@ class GuestfishCommandLineTest {
                 <<HERE-{}
                 !mkdir -p
                 -mkdir-p /home/pi/.ssh 
-                 -copy-in ${osImage.hostPath(DiskPath("home/pi/.ssh/known_hosts"))} /home/pi/.ssh 
+                 -copy-in home/pi/.ssh/known_hosts /home/pi/.ssh 
                 
-                !mkdir -p ${osImage.hostPath(DiskPath("home/pi/.ssh"))} 
-                 -copy-out /home/pi/.ssh/known_hosts ${osImage.hostPath(DiskPath("home/pi/.ssh"))} 
+                !mkdir -p home/pi/.ssh 
+                 -copy-out /home/pi/.ssh/known_hosts home/pi/.ssh 
                 
-                tar-in ${osImage.hostPath(DiskPath("archive.tar"))} / 
-                 !rm ${osImage.hostPath(DiskPath("archive.tar"))} 
+                tar-in archive.tar / 
+                 !rm archive.tar 
                 
-                tar-out / ${osImage.hostPath(DiskPath("archive.tar"))} excludes:/archive.tar
+                tar-out / archive.tar excludes:/archive.tar
                 rm /rm
                 rm-f /rm/force
                 rm-rf /rm/force-recursive
@@ -106,6 +105,7 @@ class GuestfishCommandLineTest {
         @Test
         fun `should have correctly mapped arguments`(osImage: OperatingSystemImage) {
             val cmdLine = createGuestfishCommand(osImage).dockerCommandLine()
+            @Suppress("SpellCheckingInspection")
             expectThat(cmdLine.toString()).matchesCurlyPattern("""
                 docker \
                 run \
@@ -118,7 +118,7 @@ class GuestfishCommandLineTest {
                 --rm \
                 -i \
                 --mount \
-                type=bind,source=${Libguestfs.mountRootForDisk(osImage.file)},target=/shared \
+                type=bind,source=${mountRootForDisk(osImage.file)},target=/shared \
                 --mount \
                 type=bind,source=${osImage.file},target=/images/disk.img \
                 bkahlert/libguestfs@sha256:f466595294e58c1c18efeb2bb56edb5a28a942b5ba82d3c3af70b80a50b4828a \
@@ -152,7 +152,7 @@ class GuestfishCommandLineTest {
 
     @FiveMinutesTimeout @DockerRequiring @Test
     fun InMemoryLogger.`should copy file from osImage, skip non-existing and override one`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage) {
-        runGuestfishOn(osImage) {
+        guestfish(osImage) {
             copyOut { DiskPath("/boot/cmdline.txt") }
             copyOut { DiskPath("/non/existing.txt") }
         }
@@ -161,7 +161,7 @@ class GuestfishCommandLineTest {
             resolve("boot/config.txt").writeText("overwrite me")
         }
 
-        runGuestfishOn(osImage) {
+        guestfish(osImage) {
             copyOut { DiskPath("/boot/config.txt") }
         }
 
@@ -178,10 +178,10 @@ class GuestfishCommandLineTest {
         val configTxt = DiskPath("/boot/config.txt")
         val configTxtOnHost = osImage.hostPath(configTxt).apply { parent.createDirectories() }.apply { writeText("overwrite guest") }
 
-        runGuestfishOn(osImage) { tarIn() }
+        guestfish(osImage) { tarIn() }
         exampleHtmlOnHost.delete()
 
-        runGuestfishOn(osImage) {
+        guestfish(osImage) {
             copyOut { exampleHtml }
             copyOut { configTxt }
         }
@@ -200,13 +200,9 @@ internal fun createGuestfishCommand(osImage: OperatingSystemImage) = GuestfishCo
     }
 
     commands {
-        runLocally {
-            command("mkdir", "-p")
-        }
+        custom("!mkdir", "-p")
 
-        ignoreErrors {
-            copyIn { DiskPath("/home/pi/.ssh/known_hosts") }
-        }
+        copyIn { DiskPath("/home/pi/.ssh/known_hosts") }
         copyOut { DiskPath("/home/pi/.ssh/known_hosts") }
 
         tarIn()
@@ -223,7 +219,8 @@ internal fun createGuestfishCommand(osImage: OperatingSystemImage) = GuestfishCo
 
 
 class GuestAssertions(private val assertions: MutableList<Pair<DiskPath, Assertion.Builder<HostPath>.() -> Unit>>) {
-    fun path(path: String, assertion: Assertion.Builder<HostPath>.() -> Unit) = assertions.add(DiskPath(path) to assertion)
+    fun path(diskPath: String, assertion: Assertion.Builder<HostPath>.() -> Unit) = assertions.add(DiskPath(diskPath) to assertion)
+    fun path(diskPath: DiskPath, assertion: Assertion.Builder<HostPath>.() -> Unit) = assertions.add(diskPath to assertion)
 }
 
 fun Assertion.Builder<OperatingSystemImage>.mounted(logger: BlockRenderingLogger, init: GuestAssertions.() -> Unit) =
@@ -235,19 +232,12 @@ fun Assertion.Builder<OperatingSystemImage>.mounted(logger: BlockRenderingLogger
 
         // Copying out of VM
         logger.logging("copying ${paths.size} files out of $fileName for assertions") {
-            GuestfishCommandLine.build(this@get) {
-                options {
-                    disk { it.file }
-                    inspector { on }
-                }
+            guestfish(this@get) {
                 paths.forEach { path ->
-                    commands {
-                        ignoreErrors {
-                            copyOut { path }
-                        }
-                    }
+                    hostPath(path).delete() // delete to make sure the assertions runs on a file copy from the image
+                    copyOut { path }
                 }
-            }.dockerCommandLine().run { execute() }
+            }
         }
 
         // Assert

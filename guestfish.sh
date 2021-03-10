@@ -52,7 +52,7 @@ docker 2>&1 run \
   --mount /dev/sda2:/ \
   --mount /dev/sda1:/boot \
   <<HERE
-...
+…
 HERE
 
 3. virt-customiz

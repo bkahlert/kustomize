@@ -1,4 +1,4 @@
-package com.imgcstmzr.libguestfs.guestfish
+package com.imgcstmzr.libguestfs.docker
 
 import com.imgcstmzr.libguestfs.docker.ImageBuilder.buildFrom
 import com.imgcstmzr.libguestfs.docker.ImageBuilder.format
@@ -6,6 +6,7 @@ import com.imgcstmzr.runtime.OperatingSystems
 import com.imgcstmzr.test.DockerRequiring
 import com.imgcstmzr.test.FiveMinutesTimeout
 import com.imgcstmzr.test.UniqueId
+import com.imgcstmzr.test.endsWith
 import com.imgcstmzr.test.hasSize
 import com.imgcstmzr.withTempDir
 import koodies.io.compress.TarArchiveGzCompressor.tarGzip
@@ -26,7 +27,6 @@ import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectCatching
 import strikt.api.expectThat
-import strikt.assertions.endsWith
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
@@ -66,13 +66,16 @@ class ImageBuilderTest {
             fun InMemoryLogger.`should build img from archive`(uniqueId: UniqueId) = withTempDir(uniqueId) {
                 val archive = randomDirectory().apply {
                     resolve("boot").createDirectories()
-                    resolve("boot/cmdline.txt").apply { writeText("console=serial0,115200 console=tty1 ...") }
+                    resolve("boot/cmdline.txt").apply { writeText("console=serial0,115200 console=tty1 …") }
                     resolve("boot/important.file").apply { writeText("important content") }
                 }.tarGzip()
 
                 val img = buildFrom(archive, totalSize = 6.Mebi.bytes, bootSize = 3.Mebi.bytes).deleteOnExit()
 
-                expectThat(img).endsWith(archive.removeExtensions("tar", "gz").addExtensions("img")).hasSize(6_291_456.bytes)
+                expectThat(img) {
+                    endsWith(archive.removeExtensions("tar", "gz").addExtensions("img"))
+                    hasSize(6_291_456.bytes)
+                }
             }
         }
 

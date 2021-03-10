@@ -8,7 +8,7 @@ use strict;
 
 use Sys::Guestfs;
 
-die "usage: $0 disk1 [disk2 ...] mountpoint\n" if @ARGV <= 1;
+die "usage: $0 disk1 [disk2 …] mountpoint\n" if @ARGV <= 1;
 
 my $mp = pop;
 

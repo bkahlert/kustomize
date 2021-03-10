@@ -14,11 +14,12 @@ import koodies.concurrent.process.Processor
 import koodies.concurrent.process.UserInput.input
 import koodies.concurrent.process.process
 import koodies.concurrent.thread
+import koodies.concurrent.toManagedProcess
+import koodies.docker.Docker
 import koodies.docker.DockerContainerName.Companion.toUniqueContainerName
 import koodies.docker.DockerImage
-import koodies.docker.DockerImageBuilder.Companion.build
 import koodies.docker.DockerProcess
-import koodies.docker.buildCommandLine
+import koodies.docker.DockerRunCommandLine
 import koodies.kaomoji.Kaomojis
 import koodies.kaomoji.Kaomojis.thinking
 import koodies.logging.HasStatus
@@ -66,18 +67,19 @@ open class OperatingSystemProcess(
 
     constructor(name: String, osImage: OperatingSystemImage, logger: RenderingLogger) : this(
         os = osImage.operatingSystem,
-        process = DOCKER_IMAGE.buildCommandLine {
+        process = DockerRunCommandLine {
+            image by DOCKER_IMAGE
             options {
                 name { name }
                 mounts { osImage.file mountAt "/sdcard/filesystem.img" }
             }
-        }.execute(),
+        }.toManagedProcess(),
         logger = logger,
     )
 
     companion object {
         @Suppress("SpellCheckingInspection")
-        private val DOCKER_IMAGE: DockerImage = build { "lukechilds" / "dockerpi" tag "vm" }
+        val DOCKER_IMAGE: DockerImage = Docker.image { "lukechilds" / "dockerpi" tag "vm" }
     }
 
     /**
@@ -168,11 +170,12 @@ fun OperatingSystemImage.execute(
     logger: RenderingLogger,
     autoLogin: Boolean = true,
     autoShutdown: Boolean = true,
+    bordered: Boolean = true,
     vararg programs: Program,
-): Int = logger.logging("Running $shortName with ${programs.format()}", ansiCode = ANSI.termColors.cyan) {
+): Int = logger.logging("Running $shortName with ${programs.format()}", ansiCode = ANSI.termColors.cyan, bordered = bordered) {
     val unfinished: MutableList<Program> = buildList<Program> {
         if (autoLogin) +loginProgram(credentials)/*.logging()*/
-        +programs
+        addAll(programs)
         if (autoShutdown) +shutdownProgram()/*.logging()*/
     }.toMutableList()
 
@@ -182,15 +185,16 @@ fun OperatingSystemImage.execute(
             META -> feedback(io.unformatted)
             IN -> logStatus(items = unfinished) { io }
             OUT -> logStatus(items = unfinished) { io }
-            ERR -> feedback("Unfortunately an error occurred: ${io.formatted}")
+            ERR -> feedback(io.formatted,
+                listOf(Kaomojis.Devil, Kaomojis.Evil, Kaomojis.FlipTable, Kaomojis.MiddleFinger, Kaomojis.Screaming).random().random())
         }
-        if (!unfinished.compute(this, io)) {
+        if ((io.type == OUT || io.type == ERR) && !unfinished.compute(this, io)) {
             if (unfinished.isNotEmpty()) unfinished.removeFirst()
 
             // if the OS was ready and the previous program "just" waited to confirm successful execution
             // pass this IO also to the next program. Otherwise the execution might get stuck should more
             // IO be emitted, like `bkahlert@bother-you-apYr:~$ [  OK  ] Started User Manager for UID 1000`
-            //                                 ready till here ↑ now, no more
+            //                                 ready till here ↑ … now, no more, since line is no more matched
             if (unfinished.isNotEmpty() && !unfinished.compute(this, io)) unfinished.removeFirst()
         }
     }).waitForTermination()

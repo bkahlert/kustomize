@@ -1,6 +1,6 @@
 package koodies
 
-import koodies.collections.caseIgnoringKeys
+import koodies.collections.matchKeysByIgnoringCase
 import koodies.time.toIntMilliseconds
 import java.net.URI
 import java.net.URL
@@ -13,7 +13,7 @@ fun URL.headers(connectTimeout: Duration = 5.seconds, readTimeout: Duration = 5.
 
     headerFields.toMutableMap().apply {
         put("status", get(null) ?: emptyList())
-    }.caseIgnoringKeys()
+    }.matchKeysByIgnoringCase()
 }
 
 fun URI.headers(connectTimeout: Duration = 5.seconds, readTimeout: Duration = 5.seconds) =

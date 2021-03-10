@@ -162,12 +162,12 @@ interface OperatingSystem {
             "2/4: confirm username" to { output ->
                 when {
                     !output.matches(loginPattern) -> {
-                        "3/4: password..."
+                        "3/4: password…"
                     }
                     else -> "2/4: confirm username"
                 }
             },
-            "3/4: password..." to { output ->
+            "3/4: password…" to { output ->
                 when {
                     output.contains("incorrect", ignoreCase = true) -> {
                         throw IncorrectPasswordException(credentials)
@@ -178,7 +178,7 @@ interface OperatingSystem {
                     }
                     else -> {
                         pwLineExpectationFailed++
-                        "3/4: password..."
+                        "3/4: password…"
                     }
                 }
             },
@@ -196,7 +196,7 @@ interface OperatingSystem {
                         "1/4: waiting for prompt"
                     }
                     output.matches(passwordPattern) -> {
-                        "3/4: password..."
+                        "3/4: password…"
                     }
                     output.matches(readyPattern) -> {
                         feedback("Logged in successfully")

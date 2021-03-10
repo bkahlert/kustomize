@@ -1,8 +1,8 @@
 package com.imgcstmzr.test.logging
 
+import koodies.io.ByteArrayOutputStream
 import koodies.logging.InMemoryLogger
 import koodies.terminal.AnsiCode.Companion.removeEscapeSequences
-import org.apache.commons.io.output.ByteArrayOutputStream
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.parallel.Execution

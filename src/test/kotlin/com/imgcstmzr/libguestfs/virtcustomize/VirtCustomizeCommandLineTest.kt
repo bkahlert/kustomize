@@ -4,24 +4,28 @@ import com.imgcstmzr.libguestfs.DiskPath
 import com.imgcstmzr.libguestfs.Libguestfs
 import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
 import com.imgcstmzr.runtime.OperatingSystemImage
+import com.imgcstmzr.test.exists
 import com.imgcstmzr.test.hasContent
 import com.imgcstmzr.test.toStringIsEqualTo
 import koodies.concurrent.process.CommandLine
 import koodies.docker.asContainerPath
 import koodies.io.path.asPath
 import koodies.io.path.asString
+import koodies.shell.ShellScript
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import strikt.api.Assertion
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.filterIsInstance
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNotNull
 import strikt.assertions.isSuccess
-import strikt.assertions.parent
 import strikt.assertions.single
 import java.nio.file.Path
+import kotlin.io.path.readText
 
 @Execution(CONCURRENT)
 class VirtCustomizeCommandLineTest {
@@ -50,7 +54,7 @@ class VirtCustomizeCommandLineTest {
                     systemctl enable getty@ttyGS0.service
                     
                 """.trimIndent())
-                .parent.isEqualTo(osImage.hostPath(DiskPath("/")))
+                .get { parent }.isEqualTo(osImage.hostPath(DiskPath("/")))
         }
 
         @Test
@@ -69,19 +73,19 @@ class VirtCustomizeCommandLineTest {
                     --chmod \
                     0664:/other/file \
                     --commands-from-file \
-                    ${osImage.hostPath(DiskPath("commands/from/files-1"))} \
+                    commands/from/files-1 \
                     --commands-from-file \
-                    ${osImage.hostPath(DiskPath("commands/from/files-2"))} \
+                    commands/from/files-2 \
                     --copy \
                     /source:/copy \
                     --mkdir \
                     /from \
                     --copy-in \
-                    ${osImage.hostPath(DiskPath("from/host"))}:/from \
+                    from/host:/from \
                     --mkdir \
                     /some \
                     --copy-in \
-                    ${osImage.hostPath(DiskPath("some/file"))}:/some \
+                    some/file:/some \
                     --delete \
                     /delete/file1 \
                     --delete \
@@ -90,8 +94,14 @@ class VirtCustomizeCommandLineTest {
                     /etc/dnf/dnf.conf:s/gpgcheck=1/gpgcheck=0/ \
                     --hostname \
                     the-machine \
+                    --mkdir \
+                    /usr/lib/virt-sysprep/scripts \
+                    --copy-in \
+                    usr/lib/virt-sysprep/scripts/0000---fix-order---:/usr/lib/virt-sysprep/scripts \
+                    --chmod \
+                    0755:/usr/lib/virt-sysprep/scripts/0000---fix-order--- \
                     --firstboot \
-                    ${osImage.hostPath(DiskPath(cmdLine.fistbootScript().fileName.asString()))} \
+                    ${cmdLine.firstbootScript().fileName.asString()} \
                     --firstboot-command \
                     "command arg1 arg2" \
                     --firstboot-command \
@@ -142,7 +152,7 @@ class VirtCustomizeCommandLineTest {
         @Test
         fun `should store firstboot scripts in absolute guest shared dir`(osImage: OperatingSystemImage) {
             val cmdLine = createVirtCustomizeCommandLine(osImage).dockerCommandLine()
-            expectThat(cmdLine.fistbootScript()).parent.toStringIsEqualTo("/shared")
+            expectThat(cmdLine.firstbootScript()).get { cmdLine.workingDirectory.resolve(this).parent }.isNotNull().exists()
         }
 
         @Test
@@ -196,8 +206,14 @@ class VirtCustomizeCommandLineTest {
                     /etc/dnf/dnf.conf:s/gpgcheck=1/gpgcheck=0/ \
                     --hostname \
                     the-machine \
+                    --mkdir \
+                    /usr/lib/virt-sysprep/scripts \
+                    --copy-in \
+                    usr/lib/virt-sysprep/scripts/0000---fix-order---:/usr/lib/virt-sysprep/scripts \
+                    --chmod \
+                    0755:/usr/lib/virt-sysprep/scripts/0000---fix-order--- \
                     --firstboot \
-                    ${cmdLine.fistbootScript().fileName} \
+                    ${cmdLine.firstbootScript().fileName} \
                     --firstboot-command \
                     "command arg1 arg2" \
                     --firstboot-command \
@@ -258,25 +274,36 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage) = Vir
         }
         firstBootCommand { "command arg1 arg2" }
         firstBootCommand { "boot-command" }
-        firstBootInstall {
-            +"package1"
-            +"package2"
-        }
-        firstBootInstall {
-            +"package3"
-        }
+        firstBootInstall { listOf("package1", "package2") }
+        firstBootInstall { listOf("package3") }
         hostname { "new-hostname" }
         mkdir { DiskPath("/new/dir") }
         move { DiskPath("/new/dir") to DiskPath("/moved/dir") }
-        password { VirtCustomizeCustomizationOption.PasswordOption.byString("super-admin", "super secure") }
-        rootPassword { VirtCustomizeCustomizationOption.RootPasswordOption.disabled() }
+        password(VirtCustomizeCustomizationOption.PasswordOption.byString("super-admin", "super secure"))
+        rootPassword(VirtCustomizeCustomizationOption.RootPasswordOption.disabled())
         sshInjectFile { osImage -> "file-user" to Path.of("file/key") }
-        sshInject("string-user", "string-key")
-        timeZoneId("Europe/Berlin")
+        sshInject { "string-user" to "string-key" }
+        timeZoneId { "Europe/Berlin" }
         touch { DiskPath("/touch/file") }
         write { DiskPath("/write/file") to "write content" }
     }
 }
 
-private fun CommandLine.fistbootScript() =
-    commandLineParts.filter { it.contains("script-") }.single().asPath()
+private fun CommandLine.firstbootScript(): Path =
+    commandLineParts.single { it.contains("script-") }.asPath()
+
+val Assertion.Builder<VirtCustomizeCustomizationOption.MkdirOption>.dir
+    get() = get("dir %s") { dir }
+
+fun Assertion.Builder<VirtCustomizeCustomizationOption.ChmodOption>.setsPermission(expectedPermission: String, expectedFile: DiskPath) =
+    get("dir %s") { permission to file }.isEqualTo(expectedPermission to expectedFile)
+
+val Assertion.Builder<VirtCustomizeCustomizationOption.CopyInOption>.localPath
+    get() = get("local path %s") { localPath }
+
+val Assertion.Builder<VirtCustomizeCustomizationOption.FirstBootOption>.file
+    get() = get("file %s") { path }
+
+val Assertion.Builder<VirtCustomizeCustomizationOption.FirstBootOption>.script
+    get() = get("script %s") { ShellScript(content = path.readText()) }
+
