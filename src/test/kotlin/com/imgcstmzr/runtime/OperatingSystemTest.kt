@@ -26,7 +26,6 @@ import koodies.time.sleep
 import koodies.tracing.miniTrace
 import koodies.unit.Kibi
 import koodies.unit.bytes
-import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
@@ -133,7 +132,7 @@ class OperatingSystemTest {
 
     @Slow
     @TestFactory
-    fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory, uniqueId: UniqueId): List<DynamicTest> = listOf(
+    fun `should perform log in and terminate`(loggerFactory: InMemoryLoggerFactory, uniqueId: UniqueId) = listOf(
         LoginSimulation(2.0, "\n"),
         LoginSimulation(0.5, "\n"),
         LoginSimulation(2.0, null),
@@ -154,7 +153,7 @@ class OperatingSystemTest {
                             this?.trace(line.debug.magenta())
                         } else {
                             this?.trace(line.debug.brightMagenta())
-                            this?.trace("... processing")
+                            this?.trace("… processing")
                             500.milliseconds.sleep()
                             finished = !program.compute(runningOS, OUT typed line)
                             if (finished) {

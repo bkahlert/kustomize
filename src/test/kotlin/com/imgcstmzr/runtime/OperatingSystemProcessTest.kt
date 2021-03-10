@@ -24,6 +24,7 @@ import java.util.concurrent.CompletionException
 @Execution(CONCURRENT)
 class OperatingSystemProcessTest {
 
+
     @FifteenMinutesTimeout @E2E @Test
     fun InMemoryLogger.`should boot and run program in user session`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage, uniqueId: UniqueId) {
 
@@ -32,6 +33,7 @@ class OperatingSystemProcessTest {
             logger = this,
             autoLogin = true,
             autoShutdown = true,
+            bordered = true,
             osImage.compileScript("ping", "ping -c 1 \"imgcstmzr.com\"", "sleep 1", "echo 'test'")
         )
 

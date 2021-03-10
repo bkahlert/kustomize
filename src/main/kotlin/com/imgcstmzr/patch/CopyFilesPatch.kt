@@ -2,6 +2,8 @@ package com.imgcstmzr.patch
 
 import com.imgcstmzr.libguestfs.DiskPath
 import com.imgcstmzr.libguestfs.HostPath
+import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
+import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import com.imgcstmzr.runtime.OperatingSystemImage
 import koodies.io.path.copyTo
 import koodies.io.path.requireExists
@@ -12,12 +14,15 @@ import koodies.io.path.requireExists
  * into the disk images under each [hostToDiskMappings]'s [DiskPath].
  */
 class CopyFilesPatch(private val hostToDiskMappings: Map<HostPath, DiskPath>) :
-    Patch by buildPatch(hostToDiskMappings.map { (from, to) -> "${from.fileName} ➜ ${to.fileName}" }.joinToString(", "), {
+    Patch by buildPatch("Copy Files: " + hostToDiskMappings.map { (from, to) -> "${from.fileName} ➜ ${to.fileName}" }.joinToString(", "), {
 
-        customizeDisk {
+        guestfish {
             hostToDiskMappings.forEach { (hostPath, diskPath) ->
                 hostPath.requireExists()
-                copyIn(diskPath) { hostPath.copyTo(this) }
+                copyIn {
+                    hostPath.copyTo(it.hostPath(diskPath))
+                    diskPath
+                }
             }
         }
 

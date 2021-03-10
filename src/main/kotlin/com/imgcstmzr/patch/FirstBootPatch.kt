@@ -1,5 +1,6 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import com.imgcstmzr.runtime.OperatingSystemImage
 import koodies.shell.ShellScript
 import koodies.shell.ShellScript.Companion.build
@@ -18,7 +19,7 @@ class FirstBootPatch(
     shellScripts.mapNotNull { it.name }.map { LineSeparators.LF + it }.joinToString("")
 }", {
     customizeDisk {
-        firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o First Boot") { osImage ->
+        firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o First Boot") {
             shellScripts.forEach { embed(it) }
         }
     }

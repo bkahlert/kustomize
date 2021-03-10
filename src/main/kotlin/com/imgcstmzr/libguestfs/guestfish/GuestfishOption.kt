@@ -72,9 +72,9 @@ sealed class GuestfishOption(name: String, arguments: List<String>) : Option(nam
      * This is rarely needed, but can be useful if multiple drivers are valid for a filesystem (eg: `ext2` and `ext3`),
      * or if libguestfs misidentifies a filesystem.
      */
-    class MountOption(val dev: HostPath, val mountPoint: DiskPath?, val options: List<String> = emptyList(), val fsType: String? = null) :
+    class MountOption(val hostPath: HostPath, val mountPoint: DiskPath?, val options: List<String> = emptyList(), val fsType: String? = null) :
         GuestfishOption("--mount",
-            listOf(StringBuilder(dev.asString()).apply {
+            listOf(StringBuilder(hostPath.asString()).apply {
                 mountPoint?.also {
                     append(":")
                     append(mountPoint.toString())

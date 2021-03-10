@@ -18,7 +18,6 @@ open class GuestfishCommand(
     @Suppress("UNUSED_PARAMETER") private val convenience: Boolean = false,
 ) : List<String> by listOf(name) + arguments {
 
-
     /**
      * Returns a copy of this command which runs on the (dockerized) host
      * instead of in the guest by preceding it with a `!`.
@@ -76,7 +75,7 @@ open class GuestfishCompositeCommand(val guestfishCommands: List<GuestfishComman
  *
  * Multiple local files and directories can be specified. Wildcards cannot be used.
  */
-class CopyInCommand(val mkDir: Boolean, val remoteDir: DiskPath, vararg val localFiles: HostPath) :
+class CopyInCommand(val mkDir: Boolean, remoteDir: DiskPath, vararg val localFiles: HostPath) :
     GuestfishCompositeCommand(listOfNotNull(
         if (mkDir) -GuestfishCommand("mkdir-p", remoteDir.toString()) else null,
         -GuestfishCommand("copy-in",
@@ -94,11 +93,11 @@ class CopyInCommand(val mkDir: Boolean, val remoteDir: DiskPath, vararg val loca
  *
  * Multiple remote files and directories can be specified.
  */
-class CopyOutCommand(val remoteFiles: List<DiskPath>, val mkDir: Boolean, val directory: HostPath) :
+class CopyOutCommand(val mkDir: Boolean, val directory: HostPath, val remoteFiles: DiskPath) :
     GuestfishCompositeCommand(listOfNotNull(
         if (mkDir) !GuestfishCommand("mkdir", "-p", directory.asString()) else null,
         -GuestfishCommand("copy-out",
-            *remoteFiles.map { it.toString() }.toTypedArray(),
+            remoteFiles.asString(),
             directory.asString(),
             convenience = true),
     ))
@@ -106,7 +105,7 @@ class CopyOutCommand(val remoteFiles: List<DiskPath>, val mkDir: Boolean, val di
 /**
  * This command uploads the [archive] (must be accessible from the guest) and unpacks it into [directory].
  */
-class TarInCommand(val archive: HostPath, val directory: DiskPath, val deleteArchiveAfterwards: Boolean) :
+class TarInCommand(deleteArchiveAfterwards: Boolean, val archive: HostPath, val directory: DiskPath) :
     GuestfishCompositeCommand(listOfNotNull(
         GuestfishCommand(
             "tar-in",

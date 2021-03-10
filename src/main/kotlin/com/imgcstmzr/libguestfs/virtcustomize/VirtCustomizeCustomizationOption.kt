@@ -17,10 +17,10 @@ sealed class VirtCustomizeCustomizationOption(override val name: String, overrid
      * Also a newline is added to the end of the [line] string automatically.
      */
     class AppendLineOption(val file: DiskPath, val line: String) : VirtCustomizeCustomizationOption("--append-line", "$file:$line")
-    class ChmodOption(permission: String, val file: DiskPath) : VirtCustomizeCustomizationOption("--chmod", "$permission:$file")
+    class ChmodOption(val permission: String, val file: DiskPath) : VirtCustomizeCustomizationOption("--chmod", "$permission:$file")
     class CommandsFromFileOption(val file: HostPath) : VirtCustomizeCustomizationOption("--commands-from-file", file.asString())
     class CopyOption(val source: DiskPath, val dest: DiskPath) : VirtCustomizeCustomizationOption("--copy", "$source:$dest")
-    class CopyInOption(localPath: HostPath, remoteDir: DiskPath) : VirtCustomizeCustomizationOption("--copy-in", "${localPath.asString()}:$remoteDir")
+    class CopyInOption(val localPath: HostPath, remoteDir: DiskPath) : VirtCustomizeCustomizationOption("--copy-in", "${localPath.asString()}:$remoteDir")
     class DeleteOption(path: DiskPath) : VirtCustomizeCustomizationOption("--delete", path.toString())
     class EditOption(
         val file: DiskPath,
@@ -72,7 +72,7 @@ sealed class VirtCustomizeCustomizationOption(override val name: String, overrid
         companion object {
             fun byFile(file: HostPath): RootPasswordOption = RootPasswordOption("file:${file.asString()}")
             fun byString(password: String): RootPasswordOption = RootPasswordOption("password:$password")
-            fun random(user: String): RootPasswordOption = RootPasswordOption("random")
+            fun random(): RootPasswordOption = RootPasswordOption("random")
             fun disabled(): RootPasswordOption = RootPasswordOption("disabled")
             fun PasswordOption.locked(): LockedPasswordOption = LockedPasswordOption(this)
             class LockedPasswordOption(passwordOption: PasswordOption) :

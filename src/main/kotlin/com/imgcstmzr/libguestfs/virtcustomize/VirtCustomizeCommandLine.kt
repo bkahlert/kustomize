@@ -4,7 +4,9 @@ import com.imgcstmzr.libguestfs.DiskPath
 import com.imgcstmzr.libguestfs.HostPath
 import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
 import com.imgcstmzr.libguestfs.LibguestfsCommandLine
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.VirtCustomizeCommandLineBuilder.Companion.build
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.Companion.VirtCustomizeCommandLineContext
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.VirtCustomizeCustomizationOptionsBuilder.VirtCustomizeCustomizationOptionsContext
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCommandLine.VirtCustomizeOptionsBuilder.VirtCustomizeOptionsContext
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.AppendLineOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.ChmodOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.CommandsFromFileOption
@@ -30,24 +32,30 @@ import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeOption.QuietOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeOption.TraceOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeOption.VerboseOption
 import com.imgcstmzr.runtime.OperatingSystemImage
-import koodies.builder.ListBuilder
-import koodies.builder.OnOffBuilderInit
+import koodies.builder.BooleanBuilder
+import koodies.builder.BuilderTemplate
 import koodies.builder.build
-import koodies.builder.buildIfTo
-import koodies.builder.buildList
-import koodies.builder.buildListTo
+import koodies.builder.context.CapturesMap
+import koodies.builder.context.CapturingContext
 import koodies.callableOnce
+import koodies.collections.head
+import koodies.collections.requireContainsSingleOfType
+import koodies.collections.tail
+import koodies.concurrent.execute
 import koodies.io.noSuchFile
 import koodies.io.path.withDirectoriesCreated
-import koodies.io.requireClassPath
+import koodies.logging.LoggingOptions
 import koodies.logging.RenderingLogger
+import koodies.logging.asStatus
 import koodies.shell.ShellScript
 import koodies.terminal.ANSI
+import koodies.text.TruncationStrategy.MIDDLE
+import koodies.text.truncate
+import koodies.text.truncateTo
 import koodies.text.withRandomSuffix
 import java.nio.file.Path
 import java.util.TimeZone
 import kotlin.io.path.isReadable
-import kotlin.io.path.readText
 import kotlin.io.path.writeLines
 
 @DslMarker
@@ -86,29 +94,47 @@ class VirtCustomizeCommandLine(
     val options: List<VirtCustomizeOption>,
     val customizationOptions: List<VirtCustomizeCustomizationOption>,
 ) : LibguestfsCommandLine(
-    emptyMap(),
-    options.filterIsInstance<DiskOption>().map { it.disk }.single(),
-    COMMAND,
-    options.flatten() + customizationOptions.flatten()) {
+    environment = emptyMap(),
+    disk = options.requireContainsSingleOfType<DiskOption>().disk,
+    command = COMMAND,
+    arguments = options.requireContainsSingleOfType<DiskOption>().disk.let { disk ->
+        options.flatten() + customizationOptions.flatMap { it.map { arg -> relativize(disk, arg) } }
+    }) {
 
-    override val disk = options.filterIsInstance<DiskOption>().map { it.disk }
-        .also { disks -> check(disks.size == 1) { "The $command command must add exactly one disk. ${disks.size} found: ${disks.joinToString(", ")}." } }
-        .single().also { check(it.isReadable()) { it.noSuchFile() } }
+    override val disk = options.requireContainsSingleOfType<DiskOption>().disk
+        .also { check(it.isReadable()) { it.noSuchFile() } }
 
-    fun RenderingLogger.executeLogging(): Int =
-        executeLogging(caption = "Running $summary...", ansiCode = ANSI.termColors.brightBlue, nonBlockingReader = false, expectedExitValue = 0)
+    override val summary: String
+        get() = customizationOptions
+            .map { option -> "${option.arguments.head}(${option.arguments.tail.joinToString(", ")})" }
+            .run { map { it.truncateTo(25).truncate(25, MIDDLE).toString() } }
+            .asStatus()
 
-    companion object {
+    companion object : BuilderTemplate<VirtCustomizeCommandLineContext, (OperatingSystemImage) -> VirtCustomizeCommandLine>() {
+        @VirtCustomizeDsl
+        class VirtCustomizeCommandLineContext(override val captures: CapturesMap) : CapturingContext() {
+            val options by VirtCustomizeOptionsBuilder
+            val customizationOptions by VirtCustomizeCustomizationOptionsBuilder
+        }
+
+        override fun BuildContext.build() = ::VirtCustomizeCommandLineContext {
+            { osImage: OperatingSystemImage ->
+                val options: List<(OperatingSystemImage) -> VirtCustomizeOption> = ::options.eval()
+                val customizationOptions: List<(OperatingSystemImage) -> VirtCustomizeCustomizationOption> = ::customizationOptions.eval()
+                VirtCustomizeCommandLine(options.map { it(osImage) }, customizationOptions.map { it(osImage) })
+            }
+        }
+
         const val COMMAND = "virt-customize"
 
         @VirtCustomizeDsl
-        fun build(osImage: OperatingSystemImage, init: VirtCustomizeCommandLineBuilder.() -> Unit) = init.build(osImage)
+        fun build(osImage: OperatingSystemImage, init: VirtCustomizeCommandLineContext.() -> Unit) = build(init)(osImage)
 
         @VirtCustomizeDsl
         fun RenderingLogger.virtCustomize(
             osImage: OperatingSystemImage,
             trace: Boolean = false,
-            init: VirtCustomizeCustomizationOptionsBuilder.() -> Unit,
+            init: VirtCustomizeCustomizationOptionsContext.() -> Unit,
         ): Int = build(osImage) {
             options {
                 colors { on }
@@ -116,287 +142,299 @@ class VirtCustomizeCommandLine(
                 if (trace) trace { on }
             }
             customizationOptions(init)
-        }.run { executeLogging() }
+        }.run { dockerCommandLine().execute(0, null, LoggingOptions("Running $summary…", ANSI.termColors.brightBlue)).waitForTermination() }
     }
 
-    @VirtCustomizeDsl
-    class VirtCustomizeCommandLineBuilder(
-        private val options: MutableList<(OperatingSystemImage) -> VirtCustomizeOption> = mutableListOf(),
-        private val customizationOptions: MutableList<(OperatingSystemImage) -> VirtCustomizeCustomizationOption> = mutableListOf(),
-    ) {
-        companion object {
-            @VirtCustomizeDsl
-            fun (VirtCustomizeCommandLineBuilder.() -> Unit).build(osImage: OperatingSystemImage): VirtCustomizeCommandLine =
-                VirtCustomizeCommandLineBuilder().apply(this).let { builder ->
-                    val options = builder.options.map { it(osImage) }
-                    val customizationOptions = builder.customizationOptions.map { it(osImage) }
-                    VirtCustomizeCommandLine(options, customizationOptions)
-                }
-        }
+    object VirtCustomizeOptionsBuilder : BuilderTemplate<VirtCustomizeOptionsContext, List<(OperatingSystemImage) -> VirtCustomizeOption>>() {
+        @VirtCustomizeDsl
+        class VirtCustomizeOptionsContext(override val captures: CapturesMap) : CapturingContext() {
+            val option by function<(OperatingSystemImage) -> VirtCustomizeOption>()
 
-        fun options(init: VirtCustomizeOptionsBuilder.() -> Unit) {
-            init.buildListTo(options)
-        }
-
-        fun customizationOptions(init: VirtCustomizeCustomizationOptionsBuilder.() -> Unit) {
-            init.buildListTo(customizationOptions)
-        }
-    }
-
-    @VirtCustomizeDsl
-    class VirtCustomizeOptionsBuilder : ListBuilder<(OperatingSystemImage) -> VirtCustomizeOption>() {
-
-        /**
-         * Add file which should be a disk image from a virtual machine.
-         *
-         * The format of the disk image is auto-detected.
-         */
-        fun disk(init: (OperatingSystemImage) -> Path) =
-            list.add { init.build(it) { DiskOption(this) } }
-
-        /**
-         * Use ANSI colour sequences to colourize messages.
-         * This is the default when the output is a tty.
-         *
-         * If the output of the program is redirected to a file, ANSI colour sequences are disabled unless you use this option.
-         */
-        fun colors(init: OnOffBuilderInit) =
-            init.buildIfTo(list) { { ColorsOption() } }
-
-        /**
-         * Don’t print log messages.
-         *
-         * To enable detailed logging of individual file operations, use -x.
-         */
-        fun quiet(init: OnOffBuilderInit) =
-            init.buildIfTo(list) { { QuietOption() } }
-
-        /**
-         * Display version number and exit.
-         */
-        fun verbose(init: OnOffBuilderInit) =
-            init.buildIfTo(list) { { VerboseOption() } }
-
-        /**
-         * Enable tracing of libguestfs API calls.
-         */
-        fun trace(init: OnOffBuilderInit) =
-            init.buildIfTo(list) { { TraceOption() } }
-    }
-
-    @VirtCustomizeDsl
-    class VirtCustomizeCustomizationOptionsBuilder :
-        ListBuilder<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>() {
-
-        private val fixFirstBootOrder by callableOnce {
-            fileWithText(FIRSTBOOT_FIX, requireClassPath(FIRSTBOOT_FIX.path) { readText() })
-            chmods { "0755" to FIRSTBOOT_FIX }
-        }
-
-        /**
-         * Append a single line of text to the specified [DiskPath].
-         *
-         * If the file does not already end with a newline, then one is added before the appended line.
-         * Also a newline is added to the end of the specified line automatically.
-         */
-        fun appendLine(init: (OperatingSystemImage) -> Pair<String, DiskPath>) =
-            list.add { init(it).run { AppendLineOption(second, first) } }
-
-        /**
-         * Change the permissions of FILE to PERMISSIONS.
-         *
-         * *Note:* PERMISSIONS by default would be decimal, unless you prefix it with 0 to get octal, ie. use 0700 not 700.
-         */
-        fun chmods(init: (OperatingSystemImage) -> Pair<String, DiskPath>) =
-            list.add { init(it).run { ChmodOption(first, second) } }
-
-        /**
-         * Read the customize commands from a file, one (and its arguments) each line.
-         *
-         * Each line contains a single customization command and its arguments
-         */
-        fun commandsFromFiles(init: (OperatingSystemImage) -> HostPath) =
-            list.add { init.build(it) { CommandsFromFileOption(this) } }
-
-        /**
-         * Copy files or directories recursively inside the guest.
-         *
-         * Wildcards cannot be used.
-         */
-        fun copy(init: (OperatingSystemImage) -> Pair<DiskPath, DiskPath>) =
-            list.add { init.build(it) { CopyOption(first, second) } }
-
-        /**
-         * Copy local files or directories recursively into the disk image, placing them in the directory REMOTEDIR
-         * (which must exist).
-         *
-         * Wildcards cannot be used.
-         */
-        fun copyIn(init: (OperatingSystemImage) -> Pair<HostPath, DiskPath>): Boolean {
-            list.add { init.build(it) { MkdirOption(second) } }
-            return list.add { init.build(it) { CopyInOption(first, second) } }
-        }
-
-        /**
-         * Copies the disk absolute [diskPath] (e.g. `/etc/hostname`) located in the
-         * shared directory into the disk image.
-         *
-         * If [diskPath] points to a directory, the directory is copied recursively.
-         *
-         * Before the [diskPath] is copied, it will be processed by the optional [init],
-         * which can be used to created appropriate resources. [init] has the [Path] as
-         * its receiver object which will be copied.
-         */
-        fun copyIn(diskPath: DiskPath, init: HostPath.() -> Unit = {}) =
-            copyIn { osImage ->
-                require(diskPath.isAbsolute) { "$diskPath must be absolute but is not." }
-                val hostPath = osImage.hostPath(diskPath)
-                init(hostPath)
-                hostPath to diskPath.parent
+            /**
+             * Add file which should be a disk image from a virtual machine.
+             *
+             * The format of the disk image is auto-detected.
+             */
+            fun disk(init: (OperatingSystemImage) -> Path) {
+                option { init(it).run { DiskOption(this) } }
             }
 
-        /**
-         * Convenience function to [copyIn] a file with [text] as its content
-         * under the specified [diskPath].
-         */
-        fun fileWithText(diskPath: DiskPath, text: String) =
-            copyIn(diskPath) { withDirectoriesCreated().writeLines(text.lines()) }
+            /**
+             * Use ANSI colour sequences to colourize messages.
+             * This is the default when the output is a tty.
+             *
+             * If the output of the program is redirected to a file, ANSI colour sequences are disabled unless you use this option.
+             */
+            val colors by BooleanBuilder.OnOff delegate {
+                if (it) option { ColorsOption() }
+            }
 
-        /**
-         * Delete a file from the guest. Or delete a directory (and all its contents, recursively).
-         */
-        fun delete(init: (OperatingSystemImage) -> DiskPath) =
-            list.add { init.build(it) { DeleteOption(this) } }
+            /**
+             * Don’t print log messages.
+             *
+             * To enable detailed logging of individual file operations, use -x.
+             */
+            val quiet by BooleanBuilder.OnOff delegate {
+                if (it) option { QuietOption() }
+            }
 
-        /**
-         * Edit FILE using the Perl expression EXPR.
-         */
-        fun edit(init: (OperatingSystemImage) -> Pair<DiskPath, String>) =
-            list.add { init.build(it) { EditOption(first, second) } }
+            /**
+             * Display version number and exit.
+             */
+            val verbose by BooleanBuilder.OnOff delegate {
+                if (it) option { VerboseOption() }
+            }
 
-
-        /**
-         * Set the hostname of the guest to HOSTNAME. You can use a dotted hostname.domainname (FQDN) if you want.
-         */
-        fun hostname(init: (OperatingSystemImage) -> String) =
-            list.add { init(it).run { HostnameOption(this) } }
-
-        /**
-         * Install SCRIPT inside the guest, so that when the guest first boots up, the script runs (as root, late in the boot process).
-         */
-        fun firstBoot(shellScript: ShellScript): Boolean {
-            fixFirstBootOrder()
-            return list.add { osImage -> firstBoot(osImage, shellScript) }
+            /**
+             * Enable tracing of libguestfs API calls.
+             */
+            val trace by BooleanBuilder.OnOff delegate {
+                if (it) option { TraceOption() }
+            }
         }
 
-        /**
-         * Install SCRIPT inside the guest, so that when the guest first boots up, the script runs (as root, late in the boot process).
-         */
-        fun firstBoot(name: String? = null, init: ShellScript.(OperatingSystemImage) -> Unit): Boolean {
-            fixFirstBootOrder()
-            return list.add { osImage -> firstBoot(osImage, ShellScript(name) { init(osImage) }) }
+        override fun BuildContext.build() = ::VirtCustomizeOptionsContext { evalAll() }
+    }
+
+    object VirtCustomizeCustomizationOptionsBuilder :
+        BuilderTemplate<VirtCustomizeCustomizationOptionsContext, List<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>>() {
+
+        @VirtCustomizeDsl
+        class VirtCustomizeCustomizationOptionsContext(override val captures: CapturesMap) : CapturingContext() {
+
+            private val fixFirstBootOrder by callableOnce {
+                copyIn(FirstBootFix.FIRSTBOOT_FIX, FirstBootFix.text)
+                chmods { "0755" to FirstBootFix.FIRSTBOOT_FIX }
+            }
+
+            val customizationOption by function<(OperatingSystemImage) -> VirtCustomizeCustomizationOption>()
+
+            /**
+             * Append a single line of text to the specified [DiskPath].
+             *
+             * If the file does not already end with a newline, then one is added before the appended line.
+             * Also a newline is added to the end of the specified line automatically.
+             */
+            fun appendLine(init: (OperatingSystemImage) -> Pair<String, DiskPath>) {
+                customizationOption { init(it).run { AppendLineOption(second, first) } }
+            }
+
+            /**
+             * Change the permissions of FILE to PERMISSIONS.
+             *
+             * *Note:* PERMISSIONS by default would be decimal, unless you prefix it with 0 to get octal, ie. use 0700 not 700.
+             */
+            fun chmods(init: (OperatingSystemImage) -> Pair<String, DiskPath>) {
+                customizationOption { init(it).run { ChmodOption(first, second) } }
+            }
+
+            /**
+             * Read the customize commands from a file, one (and its arguments) each line.
+             *
+             * Each line contains a single customization command and its arguments
+             */
+            fun commandsFromFiles(init: (OperatingSystemImage) -> HostPath) {
+                customizationOption { init(it).run { CommandsFromFileOption(this) } }
+            }
+
+            /**
+             * Copy files or directories recursively inside the guest.
+             *
+             * Wildcards cannot be used.
+             */
+            fun copy(init: (OperatingSystemImage) -> Pair<DiskPath, DiskPath>) {
+                customizationOption { init(it).run { CopyOption(first, second) } }
+            }
+
+            /**
+             * Copy local files or directories recursively into the disk image, placing them in the directory REMOTEDIR
+             * (which must exist).
+             *
+             * Wildcards cannot be used.
+             */
+            fun copyIn(init: (OperatingSystemImage) -> Pair<HostPath, DiskPath>) {
+                customizationOption { init(it).run { MkdirOption(second) } }
+                customizationOption { init(it).run { CopyInOption(first, second) } }
+            }
+
+            /**
+             * Copies the disk absolute [diskPath] (e.g. `/etc/hostname`) located in the
+             * shared directory into the disk image.
+             *
+             * If [diskPath] points to a directory, the directory is copied recursively.
+             *
+             * Before the [diskPath] is copied, it will be processed by the optional [init],
+             * which can be used to created appropriate resources. [init] has the [Path] as
+             * its receiver object which will be copied.
+             */
+            fun copyIn(diskPath: DiskPath, init: HostPath.() -> Unit = {}) {
+                copyIn { osImage ->
+                    require(diskPath.isAbsolute) { "$diskPath must be absolute but is not." }
+                    val hostPath = osImage.hostPath(diskPath)
+                    init(hostPath)
+                    hostPath to (diskPath.parent ?: diskPath)
+                }
+            }
+
+            /**
+             * Convenience function to [copyIn] a file with [text] as its content
+             * under the specified [diskPath].
+             */
+            fun copyIn(diskPath: DiskPath, text: String) {
+                copyIn(diskPath) { withDirectoriesCreated().writeLines(text.lines()) }
+            }
+
+            /**
+             * Delete a file from the guest. Or delete a directory (and all its contents, recursively).
+             */
+            fun delete(init: (OperatingSystemImage) -> DiskPath) {
+                customizationOption { init(it).run { DeleteOption(this) } }
+            }
+
+            /**
+             * Edit FILE using the Perl expression EXPR.
+             */
+            fun edit(init: (OperatingSystemImage) -> Pair<DiskPath, String>) {
+                customizationOption { init(it).run { EditOption(first, second) } }
+            }
+
+            /**
+             * Set the hostname of the guest to HOSTNAME. You can use a dotted hostname.domainname (FQDN) if you want.
+             */
+            fun hostname(init: (OperatingSystemImage) -> String) {
+                customizationOption { init(it).run { HostnameOption(this) } }
+            }
+
+            /**
+             * Install SCRIPT inside the guest, so that when the guest first boots up, the script runs (as root, late in the boot process).
+             */
+            fun firstBoot(shellScript: ShellScript) {
+                fixFirstBootOrder()
+                customizationOption { osImage: OperatingSystemImage ->
+                    val diskPath = DiskPath("/script".withRandomSuffix() + ".sh")
+                    val hostPath = osImage.hostPath(diskPath)
+                    val scriptFile = shellScript.buildTo(hostPath)
+                    FirstBootOption(scriptFile)
+                }
+            }
+
+            /**
+             * Install SCRIPT inside the guest, so that when the guest first boots up, the script runs (as root, late in the boot process).
+             */
+            fun firstBoot(name: String? = null, init: ShellScript.(OperatingSystemImage) -> Unit) {
+                fixFirstBootOrder()
+                customizationOption { osImage: OperatingSystemImage ->
+                    val diskPath = DiskPath("/script".withRandomSuffix() + ".sh")
+                    val hostPath = osImage.hostPath(diskPath)
+                    val scriptFile = ShellScript(name) { init(osImage) }.buildTo(hostPath)
+                    FirstBootOption(scriptFile)
+                }
+            }
+
+            /**
+             * Run command (and arguments) inside the guest when the guest first boots up (as root, late in the boot process).
+             */
+            fun firstBootCommand(init: (OperatingSystemImage) -> String) {
+                fixFirstBootOrder()
+                customizationOption { init(it).run { FirstBootCommandOption(this) } }
+            }
+
+            /**
+             * Install the named packages (a comma-separated list).
+             * These are installed when the guest first boots using the guest’s package manager (eg. apt, yum, etc.)
+             * and the guest’s network connection.
+             */
+
+            fun firstBootInstall(init: (OperatingSystemImage) -> List<String>) {
+                fixFirstBootOrder
+                customizationOption { init(it).run { FirstBootInstallOption(this) } }
+            }
+
+            /**
+             * Create a directory in the guest.
+             *
+             * This uses mkdir -p so any intermediate directories are created, and it also works if the directory already exists.
+             */
+            fun mkdir(init: (OperatingSystemImage) -> DiskPath) {
+                customizationOption { init(it).run { MkdirOption(this) } }
+            }
+
+            /**
+             * Move files or directories inside the guest.
+             *
+             * Wildcards cannot be used.
+             */
+            fun move(init: (OperatingSystemImage) -> Pair<DiskPath, DiskPath>) {
+                customizationOption { init(it).run { MoveOption(first, second) } }
+            }
+
+            /**
+             * Set the password for USER. (Note this option does not create the user account).
+             */
+
+            fun password(passwordOption: PasswordOption) {
+                customizationOption { passwordOption }
+            }
+
+            /**
+             * Set the root password.
+             */
+            fun rootPassword(rootPasswordOption: RootPasswordOption) {
+                customizationOption { rootPasswordOption }
+            }
+
+            /**
+             * Inject an ssh key so the given USER will be able to log in over ssh without supplying a password.
+             *
+             * The USER must exist already in the guest.
+             */
+            fun sshInjectFile(init: (OperatingSystemImage) -> Pair<String, HostPath>) {
+                customizationOption { init(it).run { SshInjectOption(first, second) } }
+            }
+
+            /**
+             * Inject an ssh key so the given USER will be able to log in over ssh without supplying a password.
+             *
+             * The USER must exist already in the guest.
+             */
+
+            fun sshInject(init: (OperatingSystemImage) -> Pair<String, String>) {
+                customizationOption { init(it).run { SshInjectOption(first, second) } }
+            }
+
+            /**
+             * Sets the time zone.
+             *
+             * Example: `Europe/Berlin`
+             */
+            fun timeZone(init: (OperatingSystemImage) -> TimeZone) {
+                customizationOption { init(it).run { TimeZoneOption(this) } }
+            }
+
+            /**
+             * Sets the time zone.
+             *
+             * Example: `Europe/Berlin`
+             */
+            fun timeZoneId(init: (OperatingSystemImage) -> String) {
+                customizationOption { init(it).run { TimeZoneOption(this) } }
+            }
+
+            /**
+             * This command performs a touch(1)-like operation on FILE.
+             */
+            fun touch(init: (OperatingSystemImage) -> DiskPath) {
+                customizationOption { init(it).run { TouchOption(this) } }
+            }
+
+            /**
+             * Write CONTENT to FILE.
+             */
+            fun write(init: (OperatingSystemImage) -> Pair<DiskPath, String>) {
+                customizationOption { init(it).run { WriteOption(first, second) } }
+            }
         }
 
-        private fun firstBoot(osImage: OperatingSystemImage, shellScript: ShellScript): FirstBootOption =
-            DiskPath("/script".withRandomSuffix() + ".sh")
-                .let { diskPath -> osImage.hostPath(diskPath) }
-                .let { hostPath -> shellScript.buildTo(hostPath) }
-                .let { scriptFile -> FirstBootOption(scriptFile) }
-
-        /**
-         * Run command (and arguments) inside the guest when the guest first boots up (as root, late in the boot process).
-         */
-        fun firstBootCommand(init: (OperatingSystemImage) -> String): Boolean {
-            fixFirstBootOrder()
-            return list.add { init(it).run { FirstBootCommandOption(this) } }
-        }
-
-        /**
-         * Install the named packages (a comma-separated list).
-         * These are installed when the guest first boots using the guest’s package manager (eg. apt, yum, etc.)
-         * and the guest’s network connection.
-         */
-        fun firstBootInstall(init: ListBuilder<String>.(OperatingSystemImage) -> Unit): Boolean {
-            fixFirstBootOrder()
-            return list.add { init.buildList(it).run { FirstBootInstallOption(this) } }
-        }
-
-        /**
-         * Create a directory in the guest.
-         *
-         * This uses mkdir -p so any intermediate directories are created, and it also works if the directory already exists.
-         */
-        fun mkdir(init: (OperatingSystemImage) -> DiskPath) =
-            list.add { init(it).run { MkdirOption(this) } }
-
-        /**
-         * Move files or directories inside the guest.
-         *
-         * Wildcards cannot be used.
-         */
-        fun move(init: (OperatingSystemImage) -> Pair<DiskPath, DiskPath>) =
-            list.add { init(it).run { MoveOption(first, second) } }
-
-        /**
-         * Set the password for USER. (Note this option does not create the user account).
-         */
-        fun password(init: () -> PasswordOption) =
-            list.add { init() }
-
-        /**
-         * Set the root password.
-         */
-        fun rootPassword(init: () -> RootPasswordOption) =
-            list.add { init() }
-
-        /**
-         * Inject an ssh key so the given USER will be able to log in over ssh without supplying a password.
-         *
-         * The USER must exist already in the guest.
-         */
-        fun sshInjectFile(init: (OperatingSystemImage) -> Pair<String, HostPath>) =
-            list.add { init(it).run { SshInjectOption(first, second) } }
-
-        /**
-         * Inject an ssh key so the given USER will be able to log in over ssh without supplying a password.
-         *
-         * The USER must exist already in the guest.
-         */
-        fun sshInject(username: String, password: String) =
-            list.add { SshInjectOption(username, password) }
-
-        /**
-         * Sets the time zone.
-         *
-         * Example: `Europe/Berlin`
-         */
-        fun timeZone(timezone: TimeZone) =
-            list.add { TimeZoneOption(timezone) }
-
-        /**
-         * Sets the time zone.
-         *
-         * Example: `Europe/Berlin`
-         */
-        fun timeZoneId(timezoneId: String) =
-            list.add { TimeZoneOption(timezoneId) }
-
-        /**
-         * This command performs a touch(1)-like operation on FILE.
-         */
-        fun touch(init: (OperatingSystemImage) -> DiskPath) =
-            list.add { init(it).run { TouchOption(this) } }
-
-        /**
-         * Write CONTENT to FILE.
-         */
-        fun write(init: (OperatingSystemImage) -> Pair<DiskPath, String>) =
-            list.add { init(it).run { WriteOption(first, second) } }
-
-        companion object {
-            val VIRT_SYSPREP = DiskPath("/usr/lib/virt-sysprep")
-            val FIRSTBOOT_SCRIPTS = VIRT_SYSPREP.resolve("scripts")
-            val FIRSTBOOT_FIX = FIRSTBOOT_SCRIPTS.resolve("0000---fix-order---")
-        }
+        override fun BuildContext.build() = ::VirtCustomizeCustomizationOptionsContext { ::customizationOption.evalAll() }
     }
 }

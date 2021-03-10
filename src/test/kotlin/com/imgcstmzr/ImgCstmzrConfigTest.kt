@@ -171,9 +171,7 @@ class ImgCstmzrConfigTest {
         }
     }
 
-    @ThirtyMinutesTimeout
-    @E2E
-    @Test
+    @ThirtyMinutesTimeout @E2E @Smoke @Test
     fun InMemoryLogger.`should apply patches`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage) {
         val imgCstmztn = loadImgCstmztn()
         val patches = imgCstmztn.toOptimizedPatches()

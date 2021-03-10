@@ -16,7 +16,7 @@ class AptTest {
         fun `should add command`() {
             expectThat(ShellScript {
                 apt install "dnsmasq"
-            }.lines).first().isEqualTo("apt-get install -y dnsmasq")
+            }).first().isEqualTo("apt-get install -y dnsmasq")
         }
     }
 }

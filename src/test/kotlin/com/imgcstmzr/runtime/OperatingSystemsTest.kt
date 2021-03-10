@@ -1,6 +1,6 @@
 package com.imgcstmzr.runtime
 
-import com.imgcstmzr.test
+import com.imgcstmzr.testEach
 import koodies.headers
 import koodies.unit.Mega
 import koodies.unit.bytes
@@ -8,7 +8,6 @@ import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.Assertion
-import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import strikt.assertions.isGreaterThan
 import strikt.assertions.isNotNull
@@ -19,13 +18,12 @@ class OperatingSystemsTest {
 
     @TestFactory
     fun `should have valid download URLs`() =
-        OperatingSystems.values().filter { !it.downloadUrl.startsWith("imgcstmzr") && !it.fullName.contains("RISC OS") }
-            .test { os ->
-                expectThat(os.downloadUrl) {
-                    headers {
-                        isOk()
-                        contentLength.isNotNull().isGreaterThan(5.Mega.bytes)
-                    }
+        OperatingSystems.values()
+            .filterNot { it.downloadUrl.startsWith("imgcstmzr") || it.fullName.contains("RISC OS") }
+            .testEach { os ->
+                expect { downloadUrl }.headers {
+                    isOk()
+                    contentLength.isNotNull().isGreaterThan(5.Mega.bytes)
                 }
             }
 }

@@ -1,17 +1,14 @@
 package com.imgcstmzr.libguestfs
 
-import com.github.ajalt.mordant.AnsiColorCode
 import com.imgcstmzr.libguestfs.Libguestfs.Companion.mountRootForDisk
-import koodies.builder.OnOffBuilder
 import koodies.concurrent.process.CommandLine
-import koodies.docker.DockerCommandLine
-import koodies.docker.DockerCommandLineOptionsBuilder
+import koodies.docker.Docker
 import koodies.docker.DockerImage
-import koodies.docker.DockerImageBuilder
+import koodies.docker.DockerRunCommandLine
 import koodies.io.path.asString
 import koodies.io.path.withDirectoriesCreated
-import koodies.logging.RenderingLogger
 import koodies.text.withRandomSuffix
+import koodies.text.withoutPrefix
 import java.nio.file.Path
 import kotlin.io.path.exists
 import kotlin.io.path.isReadable
@@ -22,11 +19,17 @@ abstract class LibguestfsCommandLine(
     disk: Path,
     command: String,
     arguments: List<String>,
-) : CommandLine(listOf("2>&1"), environment, mountRootForDisk(disk), command, arguments) {
+) : CommandLine(
+    redirects = listOf("2>&1"),
+    environment = environment,
+    workingDirectory = mountRootForDisk(disk),
+    command = command,
+    arguments = arguments
+) {
 
     abstract val disk: Path
 
-    fun dockerCommandLine(): DockerCommandLine {
+    fun dockerCommandLine(): DockerRunCommandLine {
         val disk: Path = disk.run {
             checkNotNull(this) { "No included disk found." }
             check(exists()) { "Disk $this does no exist." }
@@ -34,38 +37,43 @@ abstract class LibguestfsCommandLine(
             check(isWritable()) { "Disk $this is not writable." }
             this
         }
-        return DockerCommandLine(DOCKER_IMAGE, DockerCommandLineOptionsBuilder.build {
-            entrypoint { command }
-            name { "libguestfs-${command}".withRandomSuffix() }
-            autoCleanup { OnOffBuilder.on }
-            mounts {
-                with(disk) {
-                    workingDirectory mountAt "/shared"
-                    this mountAt "/images/disk.img"
+
+        val cmdLine = CommandLine(
+            redirects,
+            environment,
+            workingDirectory.withDirectoriesCreated(),
+            command,
+            arguments,
+        )
+
+        return DockerRunCommandLine {
+            image by DOCKER_IMAGE
+            options {
+                entrypoint { command }
+                name { "libguestfs-${command}".withRandomSuffix() }
+                autoCleanup { on }
+                mounts {
+                    cmdLine.workingDirectory mountAt "/shared"
+                    disk mountAt "/images/disk.img"
                 }
             }
-        }, this.run {
-            CommandLine(redirects, environment, workingDirectory.withDirectoriesCreated(), command, arguments
-                .map {
-                    // converts absolute paths like /host/dir/shared/var/log to var/log
-                    it.replace(workingDirectory.asString() + "/", "")
-                })
-        })
-    }
-
-    override fun RenderingLogger.executeLogging(
-        caption: String,
-        bordered: Boolean,
-        ansiCode: AnsiColorCode,
-        nonBlockingReader: Boolean,
-        expectedExitValue: Int,
-    ): Int = with(dockerCommandLine()) {
-        executeLogging(caption, bordered, ansiCode, nonBlockingReader, expectedExitValue)
+            commandLine by cmdLine
+        }
     }
 
     companion object {
         val DOCKER_IMAGE: DockerImage =
-            DockerImageBuilder.build { "bkahlert" / "libguestfs" digest "sha256:f466595294e58c1c18efeb2bb56edb5a28a942b5ba82d3c3af70b80a50b4828a" }
+            Docker.image { "bkahlert" / "libguestfs" digest "sha256:f466595294e58c1c18efeb2bb56edb5a28a942b5ba82d3c3af70b80a50b4828a" }
+
+        fun relativize(disk: Path, potentialPath: String): String {
+            val mountRoot = mountRootForDisk(disk).asString()
+            return potentialPath.takeUnless { it.startsWith(mountRoot) } ?: run {
+                val diskAbsolute = potentialPath.withoutPrefix(mountRoot)
+                val diskRelative = diskAbsolute.withoutPrefix("/")
+                val sanitized = diskRelative.takeUnless { it.isEmpty() } ?: "."
+                sanitized
+            }
+        }
     }
 }
 
