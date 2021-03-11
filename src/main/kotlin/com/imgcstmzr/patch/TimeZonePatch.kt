@@ -1,5 +1,6 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import com.imgcstmzr.runtime.OperatingSystemImage
 import java.util.TimeZone
 
@@ -8,5 +9,5 @@ import java.util.TimeZone
  * configures the timezone of the patched host.
  */
 class TimeZonePatch(timeZone: TimeZone) : Patch by buildPatch("Set timezone to ${timeZone.displayName}", {
-    customizeDisk { timeZone(timeZone) }
+    customizeDisk { timeZone { timeZone } }
 })

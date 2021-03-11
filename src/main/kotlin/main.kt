@@ -17,6 +17,7 @@ import com.imgcstmzr.runtime.OperatingSystemProcess
 import com.imgcstmzr.util.Disk
 import com.imgcstmzr.util.Downloader
 import com.imgcstmzr.util.flash
+import koodies.collections.plus
 import koodies.concurrent.output
 import koodies.concurrent.script
 import koodies.docker.Docker
@@ -34,20 +35,9 @@ import koodies.terminal.colorize
 import java.nio.file.Path
 
 val debug = true
+val reuseLastWorkingCopyByDefault = false
 
-fun main() {
-//    CliCommand().subcommands(ImgCommand(), CstmzrCommand(), FlshCommand()).main(listOf("--help"))
-    CliCommand().main(
-        listOf(
-//            "--config", "bother-you.conf"//, "--reuse-last-working-copy",
-            "--config", "debug.conf"//, "--reuse-last-working-copy",
-        )
-    )
-//    CliCommand().subcommands(XyzCommands(), ImgCommand(), FlshCommand()).main(listOf("img", "--name", "name-by-cmdline"))
-//    CliCommand().subcommands(XyzCommands(), ImgCommand(), FlshCommand()).main(listOf("img"))
-//    F1().subcommands(DriverCommands(), CircuitCommands(), FlshCommand()).main(args)
-}
-
+fun main(vararg args: String) = CliCommand().main(args.let { if (reuseLastWorkingCopyByDefault) it + "--reuse-last-working-copy" else it })
 
 class CliCommand : NoOpCliktCommand(
     epilog = "((ε(*･ω･)_/${ANSI.termColors.colorize("ﾟ･.*･･｡☆")}",

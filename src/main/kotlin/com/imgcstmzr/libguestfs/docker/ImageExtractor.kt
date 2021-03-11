@@ -23,7 +23,7 @@ object ImageExtractor {
         }
 
         val temp = tempDir("imgcstmzr-")
-        echo("Unarchiving $fileName (${getSize()})…", trailingNewline = false)
+        echo("Unarchiving $fileName (${getSize()}) …", trailingNewline = false)
 
         val filteredArchiveEntries = filterArchiveEntries()
         when (filteredArchiveEntries.size) {

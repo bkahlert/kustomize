@@ -136,7 +136,7 @@ object TestLabeler {
      */
     private fun getLambdaBodyOrNull(callerClassName: String, callerMethodName: String) = kotlin.runCatching {
         val line = filePeek(callerClassName).getCallerFileInfo().line
-        LambdaBody(callerMethodName, line).body.trim().truncate(40, TruncationStrategy.MIDDLE, " … ").wrap(" ❴ ", " ❵ ")
+        LambdaBody(callerMethodName, line).body.trim().truncate(40, TruncationStrategy.MIDDLE, " … ").wrap(" ❴ ", " ❵ ")
     }.getOrNull()
 
     /**

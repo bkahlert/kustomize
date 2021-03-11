@@ -1,5 +1,6 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
 import koodies.text.withRandomSuffix

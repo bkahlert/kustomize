@@ -1,5 +1,6 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import com.imgcstmzr.runtime.OperatingSystemImage
 
 /**
@@ -18,6 +19,6 @@ class SshAuthorizationPatch(
 ) : Patch by buildPatch("Add ${authorizedKeys.size} authorized SSH keys to $username", {
 
     customizeDisk {
-        authorizedKeys.forEach { password -> sshInject(username, password) }
+        authorizedKeys.forEach { password -> sshInject { username to password } }
     }
 })

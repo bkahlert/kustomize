@@ -1,6 +1,7 @@
 package com.imgcstmzr.patch
 
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
+import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import com.imgcstmzr.runtime.OperatingSystemImage
 
 /**
@@ -12,7 +13,7 @@ class PasswordPatch(
     private val password: String,
 ) : Patch by buildPatch("Change Password of $username", {
     customizeDisk {
-        password { VirtCustomizeCustomizationOption.PasswordOption.byString(username, password) }
+        password(VirtCustomizeCustomizationOption.PasswordOption.byString(username, password))
     }
 
     osPrepare {

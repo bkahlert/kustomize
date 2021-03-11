@@ -2,6 +2,7 @@ package com.imgcstmzr.patch
 
 import koodies.shell.ShellScript
 
+val ShellScript.aptGet get() = AptGet(this)
 val ShellScript.apt get() = Apt(this)
 
 /**
@@ -10,7 +11,7 @@ val ShellScript.apt get() = Apt(this)
  *
  * Several "front-end" interfaces exist, such as synaptic and aptitude.
  */
-class Apt(private val shellScript: ShellScript) {
+class AptGet(private val shellScript: ShellScript) {
     private fun command(command: String, args: List<String>) {
         shellScript.command("apt-get", *(listOf(command) + args).toTypedArray())
     }
@@ -62,5 +63,15 @@ class Apt(private val shellScript: ShellScript) {
         args.addAll(packages)
         command("autoremove", args)
     }
+}
 
+class Apt(private val shellScript: ShellScript) {
+    private fun command(command: String, args: List<String>) {
+        shellScript.command("apt", *(listOf(command) + args).toTypedArray())
+    }
+
+
+    infix fun list(option: String) {
+        command("list", listOf(option))
+    }
 }

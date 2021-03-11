@@ -49,7 +49,7 @@ open class Watchdog(
                     }
                 }, TimeUnit.MILLISECONDS)) {
                     RESET -> {
-                        logger?.logLine { IO.Type.META typed "Watchdog reset. Timing out in $timeout." }
+//                        logger?.logLine { IO.Type.META typed "Watchdog reset. Timing out in $timeout." }
                         lastEvent = RESET
                     }
                     STOP -> {

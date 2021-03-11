@@ -3,6 +3,7 @@ package com.imgcstmzr.patch
 import com.imgcstmzr.libguestfs.DiskPath
 import com.imgcstmzr.libguestfs.guestfish.GuestfishCommand
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
+import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.runtime.Program
@@ -66,18 +67,18 @@ class PatchKtTest {
             }
             expectThat(capturedOutput.out.trim().removeEscapeSequences()).matchesCurlyPattern(
                 """
-            ╭─────╴No-Op Patch
-            │   
-            │   Disk Preparation: —
-            │   Disk Customization: —
-            │   Disk Operations: —
-            │   File Operations: —
-            │   OS Preparation: —
-            │   OS Boot: —
-            │   OS Operations: —
-            │
-            ╰─────╴➜️ []
-        """.trimIndent()
+                ╭──╴No-Op Patch
+                │   
+                │   Disk Preparation: —
+                │   Disk Customization: —
+                │   Disk Operations: —
+                │   File Operations: —
+                │   OS Preparation: —
+                │   OS Boot: —
+                │   OS Operations: —
+                │
+                ╰──╴✔︎
+                """.trimIndent()
             )
         }
     }
@@ -97,8 +98,7 @@ class PatchKtTest {
             expectThatLogged().matchesCurlyPattern(
                 """
                 ▶ not-bordered
-                · 
-                · ╭─────╴No-Op Patch
+                · ╭──╴No-Op Patch
                 · │   
                 · │   Disk Preparation: —
                 · │   Disk Customization: —
@@ -108,7 +108,7 @@ class PatchKtTest {
                 · │   OS Boot: —
                 · │   OS Operations: —
                 · │
-                · ╰─────╴➜️ []
+                · ╰──╴✔︎
                 ·
         """.trimIndent()
             )
@@ -183,7 +183,7 @@ fun <T : Patch> Assertion.Builder<T>.matches(
             0
         )
     },
-    fileSystemOperationsAssertion: Assertion.Builder<List<FileOperation>>.() -> Unit = { hasSize(0) },
+    fileSystemOperationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> FileOperation>>.() -> Unit = { hasSize(0) },
     programsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Program>>.() -> Unit = { hasSize(0) },
 ) = compose("matches") { patch ->
     diskOperationsAssertion(get { diskPreparations })

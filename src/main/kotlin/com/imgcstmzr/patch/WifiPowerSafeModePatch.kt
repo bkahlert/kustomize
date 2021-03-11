@@ -1,5 +1,6 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import com.imgcstmzr.runtime.OperatingSystemImage
 import java.nio.file.Path
 
@@ -19,7 +20,7 @@ class WifiPowerSafeModePatch : Patch by buildPatch(NAME, {
         }
     }
 
-    boot()
+    boot { yes }
 
 }) {
     companion object {

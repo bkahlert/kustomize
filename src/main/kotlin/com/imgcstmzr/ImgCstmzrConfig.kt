@@ -1,7 +1,9 @@
 package com.imgcstmzr
 
+import com.imgcstmzr.Convertible.Companion.converter
 import com.imgcstmzr.cli.asParam
 import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.libguestfs.HostPath
 import com.imgcstmzr.patch.AppendToFilesPatch
 import com.imgcstmzr.patch.CompositePatch
 import com.imgcstmzr.patch.CopyFilesPatch
@@ -18,7 +20,7 @@ import com.imgcstmzr.patch.SshEnablementPatch
 import com.imgcstmzr.patch.SshPortPatch
 import com.imgcstmzr.patch.TimeZonePatch
 import com.imgcstmzr.patch.TweaksPatch
-import com.imgcstmzr.patch.UsbOnTheGoPatch
+import com.imgcstmzr.patch.UsbEthernetGadgetPatch
 import com.imgcstmzr.patch.UsernamePatch
 import com.imgcstmzr.patch.WifiAutoReconnectPatch
 import com.imgcstmzr.patch.WifiPowerSafeModePatch
@@ -31,6 +33,10 @@ import io.github.config4k.extract
 import koodies.builder.ListBuilder.Companion.buildList
 import koodies.io.path.Locations
 import koodies.io.path.Locations.ls
+import koodies.net.IPAddress
+import koodies.net.IPSubnet
+import koodies.net.ipSubnetOf
+import koodies.net.toIP
 import koodies.shell.ShellScript
 import koodies.text.minus
 import koodies.unit.Size
@@ -41,111 +47,82 @@ import java.util.TimeZone
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 
-class ImgCstmzrConfig(
+data class ImgCstmzrConfig(
     val trace: Boolean = false,
     val name: String,
-    val timeZone: String?,
-    val timezone: String?,
+    val timeZone: TimeZone?,
     val hostname: Hostname?,
     val wifi: Wifi?,
     val os: OperatingSystems,
-    size: String?,
+    val size: Size?,
     val ssh: Ssh?,
     val defaultUser: DefaultUser?,
     val samba: Samba?,
-    val usbOtg: String?,
-    val usbOtgOptions: List<String>?,
+    val usbGadgets: List<UsbGadget>,
     val tweaks: Tweaks?,
-    val files: List<FileOperation>?,
-    val setup: List<SetupScript>?,
-    val firstBoot: List<ShellScript>?,
+    val files: List<FileOperation>,
+    val setup: List<SetupScript>,
+    val firstBoot: List<ShellScript>,
     val flashDisk: String?,
 ) {
 
     companion object {
 
+        /**
+         * Loads a [ImgCstmzrConfig] based on the specified [configFiles].
+         */
         fun load(vararg configFiles: Path): ImgCstmzrConfig = configFiles
             .map { ConfigFactory.parseString(it.readText()) }
             .run { load(first(), *drop(1).toTypedArray()) }
 
+        /**
+         * Loads a [ImgCstmzrConfig] based on the mandatory [config]
+         * and the specified optional [fallbacks].
+         */
         fun load(
             config: Config,
             vararg fallbacks: Config = arrayOf(ConfigFactory.parseString(Path.of(".env").readText())),
-        ): ImgCstmzrConfig =
-            ConfigFactory.systemProperties()
-                .withFallback(config)
-                .run { fallbacks.fold(this, Config::withFallback) }
-                .resolve().extract("img-cstmztn")
+        ): ImgCstmzrConfig = ConfigFactory.systemProperties()
+            .withFallback(config)
+            .run { fallbacks.fold(this, Config::withFallback) }
+            .resolve()
+            .extract<UnsafeImgCstmzrConfig>("img-cstmztn")
+            .convert()
     }
 
     data class Hostname(val name: String, val randomSuffix: Boolean = true)
-
     data class Wifi(val wpaSupplicant: String?, val autoReconnect: Boolean?, val powerSafeMode: Boolean?)
+    data class Ssh(val enabled: Boolean?, val port: Int?, val authorizedKeys: List<String>)
+    data class DefaultUser(val username: String?, val newUsername: String?, val newPassword: String?)
+    data class Samba(val homeShare: Boolean, val rootShare: RootShare)
 
-    val imgSize: Size? = size?.takeUnless { it.isBlank() }?.toSize()
-
-    class Ssh(val enabled: Boolean?, val port: Int?, authorizedKeys: AuthorizedKeys?) {
-        private val fileBasedKeys = (authorizedKeys?.files ?: emptyList()).flatMap { glob ->
-            Locations.ls(glob)
-                .map { file -> file.readText() }
-                .filter { content -> content.startsWith("ssh-") }
-        }
-        private val stringBasedKeys = (authorizedKeys?.keys ?: emptyList()).map { it.trim() }
-        val authorizedKeys: List<String> = fileBasedKeys + stringBasedKeys
-    }
-
-    data class AuthorizedKeys(val files: List<String>?, val keys: List<String>?)
-
-    data class DefaultUser(val username: String?, val newUsername: String?, private val newPassword: String?) {
-        val unshiftPassword: String? = newPassword.takeIf { it != null && it.matches(".*\\^\\d+".toRegex()) }
-            ?.let {
-                val password = it.dropLastWhile { char -> char.isDigit() }.dropLast(1)
-                val offset = it.takeLastWhile { char -> char.isDigit() }.toInt()
-                password - offset
-            } ?: newPassword
-    }
-
-    data class Samba(val homeShare: Boolean?, val rootShare: RootShare?) {
-        val sanitizedHomeShare: Boolean get() = homeShare ?: false
-        val sanitizedRootShare: RootShare get() = rootShare ?: RootShare.none
+    sealed class UsbGadget {
+        data class Ethernet(
+            val dhcpRange: IPSubnet<out IPAddress>,
+            val deviceAddress: IPAddress?,
+            val hostAsDefaultGateway: Boolean? = null,
+            val enableSerialConsole: Boolean? = null,
+        ) : UsbGadget()
     }
 
     data class Tweaks(val aptRetries: Int?)
 
-    data class FileOperation(
-        val append: String?,
-        val hostPath: String?,
-        val diskPath: String,
-    ) {
+    data class FileOperation(val append: String?, val hostPath: HostPath?, val diskPath: DiskPath) {
         init {
-            require((append != null) xor (hostPath != null)) {
-                """
-                You can only specify ${::append.asParam()} or ${::append.asParam()} as an option per directive.
-                """.trimIndent()
+            require((append != null) || (hostPath != null)) {
+                "At least one of the options ${::append.asParam()} and ${::hostPath.asParam()} must be specified."
             }
         }
-
-        val sanitizedAppend = append?.trimIndent()
-
-        val resolvedHostPath = hostPath?.let {
-            ls(it).filter { it.exists() }.firstOrNull()
-                ?: error("The resolved expression $hostPath would point to at least one existing file.")
-        }
-        val sanitizedDiskPath = DiskPath(diskPath)
     }
 
-    class SetupScript(
-        val name: String,
-        val sources: List<URI>?,
-        scripts: List<ShellScript>,
-    ) : List<ShellScript> by scripts
+    class SetupScript(val name: String, val sources: List<URI>?, scripts: List<ShellScript>) : List<ShellScript> by scripts
 
     fun toPatches(): List<Patch> = buildList {
-        imgSize?.apply { +ImgResizePatch(this) }
+        size?.apply { +ImgResizePatch(this) }
 
         hostname?.apply { +HostnamePatch(name, randomSuffix) }
 
-        timeZone ?: timezone?.apply { +TimeZonePatch(TimeZone.getTimeZone(this)) }
+        timeZone?.apply { +TimeZonePatch(this) }
 
         wifi?.apply {
             wpaSupplicant?.also { +WpaSupplicantPatch(it) }
@@ -156,7 +133,7 @@ class ImgCstmzrConfig(
         defaultUser?.apply {
             val username = username ?: os.defaultCredentials.username
             if (newUsername != null) +UsernamePatch(username, newUsername)
-            if (unshiftPassword != null) +PasswordPatch(newUsername ?: username, unshiftPassword)
+            if (newPassword != null) +PasswordPatch(newUsername ?: username, newPassword)
         }
 
         ssh?.apply {
@@ -170,24 +147,31 @@ class ImgCstmzrConfig(
         }
 
         samba?.apply {
-            val sambdaPassword = defaultUser?.unshiftPassword
+            val sambdaPassword = defaultUser?.newPassword
             require(sambdaPassword != null) { "Samba configuration requires a set password." }
             val sambaUsername = defaultUser?.newUsername ?: defaultUser?.username ?: os.defaultCredentials.username
-            +SambaPatch(sambaUsername, sambdaPassword, sanitizedHomeShare, sanitizedRootShare)
+            +SambaPatch(sambaUsername, sambdaPassword, homeShare, rootShare)
         }
 
-        usbOtg?.apply {
-            +UsbOnTheGoPatch()
-        } // TODO fix so that the DNS is no more fucked up
-        tweaks?.aptRetries?.apply { +TweaksPatch(this) }
-        files?.apply {
-            partition { it.sanitizedAppend != null }.let { (appendOperations, copyOperations) ->
-                appendOperations.takeIf { it.isNotEmpty() }?.let { +AppendToFilesPatch(it.map { it.sanitizedAppend!! to it.sanitizedDiskPath }.toMap()) }
-                copyOperations.takeIf { it.isNotEmpty() }?.let { +CopyFilesPatch(it.map { it.resolvedHostPath!! to it.sanitizedDiskPath }.toMap()) }
+        usbGadgets.forEach {
+            +when (it) {
+                is UsbGadget.Ethernet -> UsbEthernetGadgetPatch(
+                    dhcpRange = it.dhcpRange,
+                    deviceAddress = it.deviceAddress ?: it.dhcpRange.firstUsableHost,
+                    hostAsDefaultGateway = it.hostAsDefaultGateway ?: false,
+                    enableSerialConsole = it.enableSerialConsole ?: false)
             }
         }
-        setup?.forEach { +ShellScriptPatch(it) }
-        firstBoot?.also { +FirstBootPatch(it) }
+
+        tweaks?.aptRetries?.apply { +TweaksPatch(this) }
+
+        files.forEach {
+            it.hostPath?.apply { +CopyFilesPatch(this to it.diskPath) }
+            it.append?.apply { +AppendToFilesPatch(this to it.diskPath) }
+        }
+
+        setup.forEach { +ShellScriptPatch(it) }
+        firstBoot.also { +FirstBootPatch(it) }
     }
 
     fun toOptimizedPatches(): List<Patch> = with(toPatches().toMutableList()) {
@@ -207,14 +191,126 @@ class ImgCstmzrConfig(
             CompositePatch(extract<PasswordPatch>()
                 + extract<SshAuthorizationPatch>()
                 + extract<SshPortPatch>()
-                + extract<UsbOnTheGoPatch>()),
+                + extract<UsbEthernetGadgetPatch>()),
             *toTypedArray()
         ).filter { it.isNotEmpty }
     }
 
     private inline fun <reified T : Patch> MutableList<Patch>.extract(): List<T> =
         filterIsInstance<T>().also { this.removeAll(it) }
-
-    override fun toString(): String =
-        "ImageCustomization(trace=$trace, name='$name', os=$os, ssh=$ssh, defaultUser=$defaultUser, usbOtg=$usbOtg, setup=$setup, imgSize=$imgSize)"
 }
+
+
+data class UnsafeImgCstmzrConfig(
+    val trace: Boolean = false,
+    val name: String,
+    val timeZone: String?,
+    val timezone: String?,
+    val hostname: ImgCstmzrConfig.Hostname?,
+    val wifi: ImgCstmzrConfig.Wifi?,
+    val os: OperatingSystems,
+    val size: String?,
+    val ssh: Ssh?,
+    val defaultUser: DefaultUser?,
+    val samba: Samba?,
+    val usbGadgets: UsbGadgets?,
+    val tweaks: ImgCstmzrConfig.Tweaks?,
+    val files: List<FileOperation>?,
+    val setup: List<ImgCstmzrConfig.SetupScript>?,
+    val firstBoot: List<ShellScript>?,
+    val flashDisk: String?,
+) : Convertible<ImgCstmzrConfig> by converter({
+    ImgCstmzrConfig(
+        trace = trace,
+        name = name,
+        timeZone = (timeZone ?: timezone)?.let { TimeZone.getTimeZone(it) },
+        hostname = hostname,
+        wifi = wifi,
+        os = os,
+        size = size?.takeUnless { it.isBlank() }?.toSize(),
+        ssh = ssh.convert(),
+        defaultUser = defaultUser.convert(),
+        samba = samba.convert(),
+        usbGadgets = usbGadgets.convert() ?: emptyList(),
+        tweaks = tweaks,
+        files = files?.run { map { it.convert() } } ?: emptyList(),
+        setup = setup ?: emptyList(),
+        firstBoot = firstBoot ?: emptyList(),
+        flashDisk = flashDisk,
+    )
+}) {
+    data class Ssh(val enabled: Boolean?, val port: Int?, val authorizedKeys: AuthorizedKeys?) : Convertible<ImgCstmzrConfig.Ssh> by converter({
+        val fileBasedKeys = (authorizedKeys?.files ?: emptyList()).flatMap { glob ->
+            ls(glob).map { file -> file.readText() }.filter { content -> content.startsWith("ssh-") }
+        }
+        val stringBasedKeys = (authorizedKeys?.keys ?: emptyList()).map { it.trim() }
+        ImgCstmzrConfig.Ssh(enabled, port, fileBasedKeys + stringBasedKeys)
+    }) {
+        data class AuthorizedKeys(val files: List<String>?, val keys: List<String>?)
+    }
+
+    data class DefaultUser(val username: String?, val newUsername: String?, val newPassword: String?) : Convertible<ImgCstmzrConfig.DefaultUser> by converter({
+        ImgCstmzrConfig.DefaultUser(username, newUsername, newPassword.takeIf { it != null && it.matches(".*\\^\\d+".toRegex()) }
+            ?.let {
+                val password = it.dropLastWhile { char -> char.isDigit() }.dropLast(1)
+                val offset = it.takeLastWhile { char -> char.isDigit() }.toInt()
+                password - offset
+            } ?: newPassword)
+    })
+
+    data class Samba(val homeShare: Boolean?, val rootShare: RootShare?) : Convertible<ImgCstmzrConfig.Samba> by converter({
+        ImgCstmzrConfig.Samba(homeShare ?: false, rootShare ?: RootShare.none)
+    })
+
+
+    data class UsbGadgets(val ethernet: Ethernet?) : Convertible<List<ImgCstmzrConfig.UsbGadget>> {
+        override fun convert(): List<ImgCstmzrConfig.UsbGadget> =
+            listOfNotNull(
+                ethernet.convert(),
+            )
+
+        class Ethernet(
+            dhcpRange: String,
+            deviceAddress: String?,
+            hostAsDefaultGateway: Boolean?,
+            enableSerialConsole: Boolean?,
+        ) : Convertible<ImgCstmzrConfig.UsbGadget> by converter({
+            val subnet: IPSubnet<out IPAddress> = ipSubnetOf(dhcpRange)
+            val ip: IPAddress? = deviceAddress?.toIP()
+            ImgCstmzrConfig.UsbGadget.Ethernet(
+                subnet,
+                ip,
+                hostAsDefaultGateway,
+                enableSerialConsole,
+            )
+        })
+    }
+
+    class FileOperation(
+        append: String?,
+        hostPath: String?,
+        diskPath: String,
+    ) : Convertible<ImgCstmzrConfig.FileOperation> by converter({
+        ImgCstmzrConfig.FileOperation(
+            append?.trimIndent(),
+            hostPath?.let { path ->
+                val ls = Locations.WorkingDirectory.ls(path)
+                ls.firstOrNull { it.exists() }
+                    ?: error("The resolved expression $hostPath would point to at least one existing file.")
+            },
+            DiskPath(diskPath),
+        )
+    })
+}
+
+
+fun interface Convertible<T> {
+    fun convert(): T
+
+    companion object {
+        inline fun <reified T> converter(crossinline converter: () -> T): Convertible<T> =
+            Convertible { converter() }
+    }
+}
+
+inline fun <reified T> Convertible<T>?.convert(): T? = this?.convert()

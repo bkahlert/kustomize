@@ -4,7 +4,7 @@ import com.imgcstmzr.libguestfs.DiskPath
 import com.imgcstmzr.libguestfs.guestfish.mounted
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.test.DockerRequiring
+import com.imgcstmzr.test.E2E
 import com.imgcstmzr.test.FiveMinutesTimeout
 import com.imgcstmzr.test.OS
 import com.imgcstmzr.test.UniqueId
@@ -25,7 +25,7 @@ import strikt.assertions.endsWith
 class AppendToFilesPatchTest {
 
     // TODO    @DockerRequiring(["bkahlert/libguestfs"])
-    @FiveMinutesTimeout @DockerRequiring @Test
+    @FiveMinutesTimeout @E2E @Test
     fun InMemoryLogger.`should create create one append line option for each line2`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
         withTempDir(uniqueId) {
             val logger = this@`should create create one append line option for each line2`

@@ -1,15 +1,12 @@
 package com.imgcstmzr.patch
 
 import com.imgcstmzr.libguestfs.guestfish.mounted
-import com.imgcstmzr.libguestfs.virtcustomize.FirstBootFix
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
-import com.imgcstmzr.libguestfs.virtcustomize.dir
+import com.imgcstmzr.libguestfs.virtcustomize.containsFirstBootScriptFix
 import com.imgcstmzr.libguestfs.virtcustomize.file
-import com.imgcstmzr.libguestfs.virtcustomize.localPath
-import com.imgcstmzr.libguestfs.virtcustomize.setsPermission
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.test.DockerRequiring
+import com.imgcstmzr.test.E2E
 import com.imgcstmzr.test.FiveMinutesTimeout
 import com.imgcstmzr.test.OS
 import com.imgcstmzr.test.Smoke
@@ -25,12 +22,9 @@ import org.junit.jupiter.api.parallel.ExecutionMode
 import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.contains
-import strikt.assertions.filterIsInstance
-import strikt.assertions.first
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.last
-import strikt.assertions.trim
 
 
 @Execution(ExecutionMode.CONCURRENT)
@@ -42,7 +36,7 @@ class FirstBootPatchTest {
         "${AnsiCode.ESC}[96mTEST${AnsiCode.ESC}[39m"
 
     private val patch = FirstBootPatch("Test") {
-        !"""echo "Type X to…""""
+        !"""echo "Type X to …""""
         !"""startx"""
     }
 
@@ -51,7 +45,7 @@ class FirstBootPatchTest {
         expectThat(patch).customizations(osImage) {
             last().isA<VirtCustomizeCustomizationOption.FirstBootOption>().file.content {
                 contains("echo \"$testBanner\"")
-                contains("echo \"Type X to…\"")
+                contains("echo \"Type X to …\"")
                 contains("startx")
             }
         }
@@ -59,16 +53,11 @@ class FirstBootPatchTest {
 
     @Test
     fun `should copy firstboot script order fix`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(patch).customizations(osImage) {
-            filterIsInstance<VirtCustomizeCustomizationOption.MkdirOption>().first().dir.isEqualTo(FirstBootFix.FIRSTBOOT_SCRIPTS)
-            filterIsInstance<VirtCustomizeCustomizationOption.CopyInOption>().first().localPath.content.trim().isEqualTo(FirstBootFix.text.trim())
-            filterIsInstance<VirtCustomizeCustomizationOption.ChmodOption>().first().setsPermission("0755", FirstBootFix.FIRSTBOOT_FIX)
-
-        }
+        expectThat(patch).customizations(osImage) { containsFirstBootScriptFix() }
     }
 
     // TODO    @DockerRequiring(["bkahlert/libguestfs"])
-    @FiveMinutesTimeout @DockerRequiring @Smoke @Test
+    @FiveMinutesTimeout @E2E @Smoke @Test
     fun `should run firstboot scripts in correct order`(logger: InMemoryLogger, uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
         withTempDir(uniqueId) {
 

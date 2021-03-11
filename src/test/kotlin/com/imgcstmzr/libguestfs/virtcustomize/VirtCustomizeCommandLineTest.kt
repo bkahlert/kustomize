@@ -1,9 +1,18 @@
 package com.imgcstmzr.libguestfs.virtcustomize
 
 import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.libguestfs.HostPath
 import com.imgcstmzr.libguestfs.Libguestfs
 import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.ChmodOption
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.CopyInOption
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.FirstBootCommandOption
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.FirstBootInstallOption
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.FirstBootOption
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.MkdirOption
+import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
+import com.imgcstmzr.test.content
 import com.imgcstmzr.test.exists
 import com.imgcstmzr.test.hasContent
 import com.imgcstmzr.test.toStringIsEqualTo
@@ -19,11 +28,14 @@ import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.Assertion
 import strikt.api.expectCatching
 import strikt.api.expectThat
+import strikt.assertions.any
+import strikt.assertions.contains
 import strikt.assertions.filterIsInstance
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotNull
 import strikt.assertions.isSuccess
 import strikt.assertions.single
+import strikt.assertions.trim
 import java.nio.file.Path
 import kotlin.io.path.readText
 
@@ -47,7 +59,7 @@ class VirtCustomizeCommandLineTest {
         @Test
         fun `should store firstboot scripts in shared dir`(osImage: OperatingSystemImage) {
             val cmdLine = createVirtCustomizeCommandLine(osImage)
-            expectThat(cmdLine.customizationOptions).filterIsInstance<VirtCustomizeCustomizationOption.FirstBootOption>().single()
+            expectThat(cmdLine.customizationOptions).filterIsInstance<FirstBootOption>().single()
                 .file
                 .hasContent("""
                     sed -i 's/^\#Port 22${'$'}/Port 3421/g' /etc/ssh/sshd_config
@@ -292,18 +304,37 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage) = Vir
 private fun CommandLine.firstbootScript(): Path =
     commandLineParts.single { it.contains("script-") }.asPath()
 
-val Assertion.Builder<VirtCustomizeCustomizationOption.MkdirOption>.dir
+fun Assertion.Builder<List<VirtCustomizeCustomizationOption>>.containsFirstBootScriptFix() {
+    filterIsInstance<MkdirOption>().any { dir.isEqualTo(FirstBootFix.FIRSTBOOT_SCRIPTS) }
+    filterIsInstance<CopyInOption>().any { localPath.content.trim().isEqualTo(FirstBootFix.text.trim()) }
+    filterIsInstance<ChmodOption>().any { setsPermission("0755", FirstBootFix.FIRSTBOOT_FIX) }
+}
+
+fun Assertion.Builder<List<VirtCustomizeCustomizationOption>>.containsFirstBootShutdownCommand() {
+    filterIsInstance<FirstBootOption>().any {
+        file.content.contains(OperatingSystem.DEFAULT_SHUTDOWN_COMMAND)
+    }
+}
+
+
+val Assertion.Builder<MkdirOption>.dir: Assertion.Builder<DiskPath>
     get() = get("dir %s") { dir }
 
-fun Assertion.Builder<VirtCustomizeCustomizationOption.ChmodOption>.setsPermission(expectedPermission: String, expectedFile: DiskPath) =
+fun Assertion.Builder<ChmodOption>.setsPermission(expectedPermission: String, expectedFile: DiskPath) =
     get("dir %s") { permission to file }.isEqualTo(expectedPermission to expectedFile)
 
-val Assertion.Builder<VirtCustomizeCustomizationOption.CopyInOption>.localPath
+val Assertion.Builder<CopyInOption>.localPath: Assertion.Builder<HostPath /* = java.nio.file.Path */>
     get() = get("local path %s") { localPath }
 
-val Assertion.Builder<VirtCustomizeCustomizationOption.FirstBootOption>.file
+val Assertion.Builder<FirstBootInstallOption>.packages: Assertion.Builder<List<String>>
+    get() = get("packages %s") { packages }
+
+val Assertion.Builder<FirstBootCommandOption>.command: Assertion.Builder<String>
+    get() = get("command %s") { command }
+
+val Assertion.Builder<FirstBootOption>.file: Assertion.Builder<HostPath /* = java.nio.file.Path */>
     get() = get("file %s") { path }
 
-val Assertion.Builder<VirtCustomizeCustomizationOption.FirstBootOption>.script
+val Assertion.Builder<FirstBootOption>.script: Assertion.Builder<ShellScript>
     get() = get("script %s") { ShellScript(content = path.readText()) }
 

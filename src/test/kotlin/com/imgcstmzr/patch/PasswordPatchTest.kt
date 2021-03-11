@@ -2,7 +2,7 @@ package com.imgcstmzr.patch
 
 import com.imgcstmzr.libguestfs.DiskPath
 import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
-import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.runGuestfishOn
+import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.guestfish
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
 import com.imgcstmzr.runtime.IncorrectPasswordException
 import com.imgcstmzr.runtime.OperatingSystem.Credentials
@@ -47,7 +47,7 @@ class PasswordPatchTest {
         val username = RaspberryPiLite.defaultCredentials.username
         val newPassword = "on-a-diet"
         val passwordPatch = PasswordPatch(username, newPassword)
-        val userPassword = runGuestfishOn(osImage) { copyOut { passwordPath } }
+        val userPassword = guestfish(osImage) { copyOut { passwordPath } }
             .let { osImage.hostPath(passwordPath).readLines().single { it.startsWith(username) } }
         val userPasswordPattern = "$username:{}:{}:0:99999:7:::"
         check(userPassword.matchesCurlyPattern(userPasswordPattern)) { "${userPassword.debug} does not match ${userPasswordPattern.debug}" }
@@ -55,14 +55,6 @@ class PasswordPatchTest {
         patch(osImage, passwordPatch)
 
         expectThat(osImage.credentials).isEqualTo(Credentials(username, newPassword))
-        expectThat(osImage).booted(this) {
-            command("echo '👏 🤓 👋'");
-            { true }
-        }
-    }
-
-    @FifteenMinutesTimeout @E2E @Test
-    fun InMemoryLogger.`should update shadow file correctlyxxx`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         expectThat(osImage).booted(this) {
             command("echo '👏 🤓 👋'");
             { true }

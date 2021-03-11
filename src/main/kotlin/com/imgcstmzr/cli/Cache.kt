@@ -148,7 +148,7 @@ private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
                 costlyProvidedFile.delete()
                 destFile
             } else {
-                echo("Moving file to $destFile…", trailingNewline = false)
+                echo("Moving file to $destFile …", trailingNewline = false)
                 Files.move(costlyProvidedFile, destFile).also { echo(" Completed.") }
             }
         }

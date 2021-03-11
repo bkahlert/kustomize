@@ -1,6 +1,7 @@
 package com.imgcstmzr.patch
 
 import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import com.imgcstmzr.runtime.OperatingSystemImage
 import koodies.io.path.withDirectoriesCreated
 import kotlin.io.path.writeLines
@@ -39,8 +40,8 @@ class SambaPatch(
         if (homeShare) {
             appendLine("""
                 [home]
-                comment = Home of ${username}
-                path = /home/${username}
+                comment = Home of $username
+                path = /home/$username
                 writeable=Yes
                 create mask=0744
                 directory mask=0744
@@ -53,7 +54,7 @@ class SambaPatch(
         when (rootShare) {
             RootShare.`read-only` -> append("""
                 [/]
-                comment = Home of ${username}
+                comment = Home of $username
                 path = /
                 writeable=No
                 public=no
@@ -79,27 +80,23 @@ class SambaPatch(
     }.toString()
 
     customizeDisk {
-        firstBootInstall { +"samba" + "cifs-utils" }
+        firstBootInstall { listOf("samba", "cifs-utils") }
         copyIn(SAMBA_CONF) {
             withDirectoriesCreated().writeLines(config.lines())
         }
         firstBoot("Change SMB Password for $username") {
             !"""
-            echo "..."
-            echo "..."
-            echo "..."
+            echo "…"
+            echo "…"
+            echo "…"
             pass="$password"
             (echo "${'$'}pass"; echo "${'$'}pass") | smbpasswd -s -a "$username"
             """.trimIndent()
         }
-        firstBoot("Shutdown") {
-            !"""
-            ${it.shutdownCommand}
-            """.trimIndent()
-        }
+        firstBootShutdownCommand()
     }
 
-    boot()
+    boot { yes }
 
 }) {
     companion object {

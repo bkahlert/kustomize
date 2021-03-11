@@ -153,7 +153,7 @@ class OperatingSystemTest {
                             this?.trace(line.debug.magenta())
                         } else {
                             this?.trace(line.debug.brightMagenta())
-                            this?.trace("… processing")
+                            this?.trace("… processing")
                             500.milliseconds.sleep()
                             finished = !program.compute(runningOS, OUT typed line)
                             if (finished) {

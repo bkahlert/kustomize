@@ -10,7 +10,7 @@ if [ -r "${avahi_services_dir}" ]; then
       _p "Skipping."
       ;;
     *)
-      _p "Configuring Avahi services... "
+      _p "Configuring Avahi services … "
       for f in ${avahi_services_dir}/*; do
         cp "$f" "etc/avahi/services"
       done

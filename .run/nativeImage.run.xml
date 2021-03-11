@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="run --config" type="GradleRunConfiguration" factoryName="Gradle">
+  <configuration default="false" name=" ⭐ bother-you.conf" type="GradleRunConfiguration" factoryName="Gradle">
     <ExternalSystemSettings>
       <option name="executionName" />
       <option name="externalProjectPath" value="$PROJECT_DIR$" />
@@ -11,7 +11,7 @@
       <option name="taskNames">
         <list>
           <option value="run" />
-          <option value="--args=&quot;--config=bother-you.json&quot;" />
+          <option value="--args=&quot;--config=bother-you.conf&quot;" />
         </list>
       </option>
       <option name="vmOptions" value="" />

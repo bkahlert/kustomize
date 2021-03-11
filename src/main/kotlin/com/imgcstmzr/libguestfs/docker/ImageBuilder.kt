@@ -109,7 +109,7 @@ object ImageBuilder {
         bootSize: Size = 128.Mebi.bytes,
         partitionTableType: PartitionTableType = PartitionTableType.MasterBootRecord,
     ): Path = logging(
-        caption = "${Now.emoji} Preparing raw image using the content of ${archive.fileName}. This takes a moment…",
+        caption = "${Now.emoji} Preparing raw image using the content of ${archive.fileName}. This takes a moment …",
         ansiCode = gray,
         bordered = false,
     ) {

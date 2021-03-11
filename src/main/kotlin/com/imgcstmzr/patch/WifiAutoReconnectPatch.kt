@@ -1,6 +1,7 @@
 package com.imgcstmzr.patch
 
 import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import com.imgcstmzr.runtime.OperatingSystemImage
 
 /**
@@ -11,10 +12,10 @@ import com.imgcstmzr.runtime.OperatingSystemImage
  */
 class WifiAutoReconnectPatch(vararg hosts: String = arrayOf("google.com", "amazon.com")) : Patch by buildPatch(NAME, {
 
-    val printChecking = "printf 'Periodic internet connection check... '"
+    val printChecking = "printf 'Periodic internet connection check … '"
     val checkHosts = "(${hosts.map { netcat(it) }.or()})"
     val printOk = "echo 'ok.'"
-    val printReconnecting = "printf 'failed. Trying to re-connect... '"
+    val printReconnecting = "printf 'failed. Trying to re-connect … '"
     val wifiDown = "sudo /sbin/ip --force link set wlan0 down"
     val wifiUp = "sudo /sbin/ip link set wlan0 up"
     val sleep10s = "/bin/sleep 10"
@@ -30,7 +31,7 @@ class WifiAutoReconnectPatch(vararg hosts: String = arrayOf("google.com", "amazo
         }
     }
 
-    boot()
+    boot { yes }
 
 }) {
     companion object {

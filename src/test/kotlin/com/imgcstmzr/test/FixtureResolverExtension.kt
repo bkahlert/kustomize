@@ -44,7 +44,7 @@ open class FixtureResolverExtension : TypeBasedParameterResolver<OperatingSystem
         val operatingSystem: OperatingSystem = annotation?.value ?: OperatingSystems.ImgCstmzrTestOS
         val autoDelete = annotation?.autoDelete ?: true
         extensionContext.logger()
-            .logging("Provisioning an image containing ${operatingSystem.fullName.cyan()}… ", bordered = false) {
+            .logging("Provisioning an image containing ${operatingSystem.fullName.cyan()} … ", bordered = false) {
                 operatingSystem.getCopy(this, extensionContext.uniqueId).apply {
                     if (autoDelete) file.deleteOnExit()
                 }

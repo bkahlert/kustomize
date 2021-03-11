@@ -3,21 +3,25 @@ package com.imgcstmzr.patch
 import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.ChmodOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.CopyInOption
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.FirstBootInstallOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.FirstBootOption
 import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.MkdirOption
 import com.imgcstmzr.libguestfs.virtcustomize.file
-import com.imgcstmzr.patch.UsbOnTheGoPatch.Companion.CMDLINE_TXT
-import com.imgcstmzr.patch.UsbOnTheGoPatch.Companion.CONFIG_TXT
-import com.imgcstmzr.patch.UsbOnTheGoPatch.Companion.DHCPCD_CONF
-import com.imgcstmzr.patch.UsbOnTheGoPatch.Companion.MODULES
-import com.imgcstmzr.patch.UsbOnTheGoPatch.Companion.USB0_DNSMASQD
-import com.imgcstmzr.patch.UsbOnTheGoPatch.Companion.USB0_NETWORK
-import com.imgcstmzr.patch.UsbOnTheGoPatch.Companion.USBGADGET_SERVICE
-import com.imgcstmzr.patch.UsbOnTheGoPatch.Companion.USB_GADGET
+import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.CMDLINE_TXT
+import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.CONFIG_TXT
+import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.DHCPCD_CONF
+import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.DHCP_SCRIPT
+import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.MODULES
+import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USB0_DNSMASQD
+import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USB0_NETWORK
+import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USBGADGET_SERVICE
+import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USB_GADGET
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.test.UniqueId
 import com.imgcstmzr.test.content
+import com.imgcstmzr.test.matchesCurlyPattern
 import com.imgcstmzr.withTempDir
+import koodies.net.ip4Of
 import koodies.net.ipOf
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -30,36 +34,73 @@ import strikt.assertions.filterIsInstance
 import strikt.assertions.isEqualTo
 
 @Execution(CONCURRENT)
-class UsbOnTheGoPatchTest {
+class UsbEthernetGadgetPatchTest {
 
-    private val usbOnTheGoPatch = UsbOnTheGoPatch(ipOf("192.168.168.161")..ipOf("192.168.168.174"), ipOf("192.168.168.168"), true)
+    private val patch = UsbEthernetGadgetPatch(
+        dhcpRange = (ip4Of("192.168.168.161")..ip4Of("192.168.168.174")).smallestCommonSubnet,
+        deviceAddress = ipOf("192.168.168.168"),
+        hostAsDefaultGateway = true,
+        enableSerialConsole = true,
+    )
 
     @Test
     fun `should have name`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
-        expectThat(usbOnTheGoPatch.name).isEqualTo("Activate USB gadget with DHCP address range 192.168.168.161..192.168.168.174")
+        expectThat(patch.name).isEqualTo("Activate USB gadget with DHCP address range 192.168.168.160/28")
     }
 
     @Test
     fun `should configure dnsmasq for usb0`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(usbOnTheGoPatch).customizations(osImage) {
+            that(patch).customizations(osImage) {
                 contains(
-                    MkdirOption(USB0_DNSMASQD.parent),
-                    CopyInOption(osImage.hostPath(USB0_DNSMASQD), USB0_DNSMASQD.parent))
-                filterIsInstance<FirstBootOption>().any {
-                    file.content.contains("apt-get install -y dnsmasq")
-                }
+                    MkdirOption(USB0_DNSMASQD.requiredParent),
+                    CopyInOption(osImage.hostPath(USB0_DNSMASQD), USB0_DNSMASQD.requiredParent),
+                    FirstBootInstallOption("dnsmasq"),
+                )
             }
             that(osImage.hostPath(USB0_DNSMASQD)) {
-                content.isEqualTo("""
+                content.matchesCurlyPattern("""
                     dhcp-authoritative 
                     dhcp-rapid-commit
                     no-ping
                     interface=usb0 
-                    dhcp-range=192.168.168.161,192.168.168.174,255.255.255.240,1h 
+                    dhcp-range=192.168.168.161,192.168.168.174,1h 
                     dhcp-option=3 # no gateway / routing
                     #dhcp-option=option:dns-server,192.168.168.192
+                    dhcp-script=$DHCP_SCRIPT
                     leasefile-ro
+                    
+                """.trimIndent())
+            }
+        }
+    }
+
+    @Test
+    fun `should configure DHCP script`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
+        expect {
+            that(patch).customizations(osImage) {
+                contains(
+                    MkdirOption(DHCP_SCRIPT.requiredParent),
+                    CopyInOption(osImage.hostPath(DHCP_SCRIPT), DHCP_SCRIPT.requiredParent),
+                    ChmodOption("0755", DHCP_SCRIPT),
+                )
+            }
+            that(osImage.hostPath(DHCP_SCRIPT)) {
+                content.matchesCurlyPattern("""
+                    #!/bin/bash
+                    op="${'$'}{1:-op}"
+                    mac="${'$'}{2:-mac}"
+                    ip="${'$'}{3:-ip}"
+                    host="${'$'}{4}"
+                    
+                    if [[ ${'$'}op == "init" ]]; then
+                        exit 0
+                    fi
+                    
+                    if [[ ${'$'}op == "add" ]] || [[ ${'$'}op == "old" ]]; then
+                        route add default gw ${'$'}ip usb0
+                    fi
+                    
                     
                 """.trimIndent())
             }
@@ -69,18 +110,17 @@ class UsbOnTheGoPatchTest {
     @Test
     fun `should configure network interface for usb0`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(usbOnTheGoPatch).customizations(osImage) {
+            that(patch).customizations(osImage) {
                 contains(
-                    MkdirOption(USB0_NETWORK.parent),
-                    CopyInOption(osImage.hostPath(USB0_NETWORK), USB0_NETWORK.parent))
+                    MkdirOption(USB0_NETWORK.requiredParent),
+                    CopyInOption(osImage.hostPath(USB0_NETWORK), USB0_NETWORK.requiredParent))
             }
             that(osImage.hostPath(USB0_NETWORK)) {
                 content.isEqualTo("""
                     auto usb0
                     allow-hotplug usb0
                     iface usb0 inet static
-                      address 192.168.168.161
-                      netmask 255.255.255.240
+                      address 192.168.168.168/28
                     
                 """.trimIndent())
             }
@@ -90,10 +130,10 @@ class UsbOnTheGoPatchTest {
     @Test
     fun `should configure USB gadget`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(usbOnTheGoPatch).customizations(osImage) {
+            that(patch).customizations(osImage) {
                 contains(
-                    MkdirOption(USB_GADGET.parent),
-                    CopyInOption(osImage.hostPath(USB_GADGET), USB_GADGET.parent),
+                    MkdirOption(USB_GADGET.requiredParent),
+                    CopyInOption(osImage.hostPath(USB_GADGET), USB_GADGET.requiredParent),
                     ChmodOption("0755", USB_GADGET),
                 )
             }
@@ -154,10 +194,10 @@ class UsbOnTheGoPatchTest {
     @Test
     fun `should configure USB gadget service`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(usbOnTheGoPatch).customizations(osImage) {
+            that(patch).customizations(osImage) {
                 contains(
-                    MkdirOption(USBGADGET_SERVICE.parent),
-                    CopyInOption(osImage.hostPath(USBGADGET_SERVICE), USBGADGET_SERVICE.parent),
+                    MkdirOption(USBGADGET_SERVICE.requiredParent),
+                    CopyInOption(osImage.hostPath(USBGADGET_SERVICE), USBGADGET_SERVICE.requiredParent),
                 )
             }
             that(osImage.hostPath(USBGADGET_SERVICE)) {
@@ -178,7 +218,7 @@ class UsbOnTheGoPatchTest {
                     
                 """.trimIndent())
             }
-            that(usbOnTheGoPatch).customizations(osImage) {
+            that(patch).customizations(osImage) {
                 filterIsInstance<FirstBootOption>().apply {
                     any { file.content.contains("systemctl enable usbgadget.service") }
                 }
@@ -189,7 +229,7 @@ class UsbOnTheGoPatchTest {
     @Test
     fun `should update various files`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(usbOnTheGoPatch).customizations(osImage) {
+            that(patch).customizations(osImage) {
                 filterIsInstance<FirstBootOption>().apply {
                     any { file.content.contains("echo dtoverlay=dwc2 >> $CONFIG_TXT") }
                     any { file.content.contains("sed -i 's/${'$'}/ modules-load=dwc2/' $CMDLINE_TXT") }

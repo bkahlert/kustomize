@@ -142,7 +142,7 @@ class VirtCustomizeCommandLine(
                 if (trace) trace { on }
             }
             customizationOptions(init)
-        }.run { dockerCommandLine().execute(0, null, LoggingOptions("Running $summary…", ANSI.termColors.brightBlue)).waitForTermination() }
+        }.run { dockerCommandLine().execute(0, null, LoggingOptions("Running $summary …", ANSI.termColors.brightBlue)).waitForTermination() }
     }
 
     object VirtCustomizeOptionsBuilder : BuilderTemplate<VirtCustomizeOptionsContext, List<(OperatingSystemImage) -> VirtCustomizeOption>>() {
@@ -348,6 +348,24 @@ class VirtCustomizeCommandLine(
             fun firstBootInstall(init: (OperatingSystemImage) -> List<String>) {
                 fixFirstBootOrder
                 customizationOption { init(it).run { FirstBootInstallOption(this) } }
+            }
+
+            /**
+             * Run [OperatingSystemImage] specific [OperatingSystemImage.shutdownCommand]
+             * when the guest first boots up (as root, late in the boot process).
+             *
+             * This command can be used to shutdown a machine after a couple
+             * previously added first boot commands have finished.
+             *
+             * Actually it must be called if no other mechanism shuts down the machine
+             * to avoid the image customization to hang.
+             *
+             * @see firstBoot
+             * @see firstBootCommand
+             * @see firstBootInstall
+             */
+            fun firstBootShutdownCommand() {
+                firstBoot("Shutdown") { !it.shutdownCommand }
             }
 
             /**

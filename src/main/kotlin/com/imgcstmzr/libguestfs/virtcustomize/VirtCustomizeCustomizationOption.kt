@@ -49,7 +49,7 @@ sealed class VirtCustomizeCustomizationOption(override val name: String, overrid
     /**
      * Install the named packages (a comma-separated list). These are installed when the guest first boots using the guest’s package manager (eg. apt, yum, etc.) and the guest’s network connection.
      */
-    class FirstBootInstallOption(packages: List<String>) : VirtCustomizeCustomizationOption("--firstboot-install", packages.joinToString(",")) {
+    class FirstBootInstallOption(val packages: List<String>) : VirtCustomizeCustomizationOption("--firstboot-install", packages.joinToString(",")) {
         constructor(vararg packages: String) : this(packages.toList())
     }
 

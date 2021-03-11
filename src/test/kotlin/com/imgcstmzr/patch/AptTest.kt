@@ -15,8 +15,19 @@ class AptTest {
         @Test
         fun `should add command`() {
             expectThat(ShellScript {
-                apt install "dnsmasq"
+                aptGet install "dnsmasq"
             }).first().isEqualTo("apt-get install -y dnsmasq")
+        }
+    }
+
+    @Nested
+    inner class List {
+
+        @Test
+        fun `should add command`() {
+            expectThat(ShellScript {
+                apt list "--installed"
+            }).first().isEqualTo("apt list --installed")
         }
     }
 }

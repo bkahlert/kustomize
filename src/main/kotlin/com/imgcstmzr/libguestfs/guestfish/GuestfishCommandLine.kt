@@ -81,7 +81,7 @@ class GuestfishCommandLine(
         }
 
         const val COMMAND = "guestfish"
-        val DEFAULT_CAPTION: List<GuestfishCommand>.() -> String = { "Running $size guestfish operations… ${Kaomojis.fishing()}" }
+        val DEFAULT_CAPTION: List<GuestfishCommand>.() -> String = { "Running $size guestfish operations … ${Kaomojis.fishing()}" }
 
         @GuestfishDsl
         fun build(osImage: OperatingSystemImage, init: Init<GuestfishCommandLineContext>) = build(init)(osImage)

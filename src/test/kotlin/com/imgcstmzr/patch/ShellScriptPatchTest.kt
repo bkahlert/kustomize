@@ -1,27 +1,30 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.FirstBootOption
+import com.imgcstmzr.libguestfs.guestfish.mounted
+import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
+import com.imgcstmzr.libguestfs.virtcustomize.containsFirstBootScriptFix
 import com.imgcstmzr.libguestfs.virtcustomize.file
 import com.imgcstmzr.runtime.OperatingSystem
 import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.runtime.OperatingSystems
+import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.test.E2E
-import com.imgcstmzr.test.FifteenMinutesTimeout
+import com.imgcstmzr.test.FiveMinutesTimeout
 import com.imgcstmzr.test.OS
+import com.imgcstmzr.test.Smoke
 import com.imgcstmzr.test.UniqueId
 import com.imgcstmzr.test.content
-import com.imgcstmzr.test.logging.expectThatLogged
 import com.imgcstmzr.withTempDir
 import koodies.logging.InMemoryLogger
 import koodies.terminal.AnsiCode
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
+import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.contains
-import strikt.assertions.filterIsInstance
-import strikt.assertions.first
-import strikt.assertions.hasSize
+import strikt.assertions.isA
+import strikt.assertions.isEqualTo
+import strikt.assertions.last
 
 @Execution(CONCURRENT)
 class ShellScriptPatchTest {
@@ -37,10 +40,9 @@ class ShellScriptPatchTest {
     }
 
     @Test
-    fun `should provide firstboot command`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
+    fun `should copy firstboot script`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
         expectThat(patch).customizations(osImage) {
-            hasSize(1)
-            filterIsInstance<FirstBootOption>().first().file.content {
+            last().isA<VirtCustomizeCustomizationOption.FirstBootOption>().file.content {
                 contains("echo \"$testBanner\"")
                 contains("touch /root/shell-script-test.txt")
                 contains("echo 'Frank was here; went to get beer.' > /root/shell-script-test.txt")
@@ -49,11 +51,24 @@ class ShellScriptPatchTest {
         }
     }
 
-    @FifteenMinutesTimeout @E2E @Test
-    fun InMemoryLogger.`should run shell script`(@OS(OperatingSystems.RaspberryPiLite) osImage: OperatingSystemImage, uniqueId: UniqueId) =
+    @Test
+    fun `should copy firstboot script order fix`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
+        expectThat(patch).customizations(osImage) { containsFirstBootScriptFix() }
+    }
+
+    // TODO    @DockerRequiring(["bkahlert/libguestfs"])
+    @FiveMinutesTimeout @E2E @Smoke @Test
+    fun `should run shell script`(logger: InMemoryLogger, uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
         withTempDir(uniqueId) {
-            patch(osImage, patch)
-            osImage.boot(this@`should run shell script`, osImage.compileScript("read log", "sudo cat ~root/virt-sysprep-firstboot.log"))
-            expectThatLogged().contains("=== Running /usr/lib/virt-sysprep/scripts/0001--shared")
+
+            logger.patch(osImage, patch)
+
+            expect {
+                that(osImage).mounted(logger) {
+                    path("/root/shell-script-test.txt") {
+                        content.isEqualTo("Frank was here; went to get beer.")
+                    }
+                }
+            }
         }
 }

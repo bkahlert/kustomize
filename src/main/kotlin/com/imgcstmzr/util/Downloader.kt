@@ -43,7 +43,7 @@ class Downloader(private val downloadDirectory: Path = Locations.Temp, vararg cu
         if (handler != null) return handler(URI.create(url), logger)
 
         val downloadDirectory = downloadDirectory.randomDirectory()
-        return logger.compactLogging("Downloading ${filename ?: url}…") {
+        return logger.compactLogging("Downloading ${filename ?: url} …") {
             // TODO parse progress and feedback
             downloadDirectory.script {
                 !"for i in ${(1..retries).joinToString(" ")} ; do"

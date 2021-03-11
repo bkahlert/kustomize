@@ -5,7 +5,7 @@ import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
 import com.imgcstmzr.libguestfs.guestfish.mounted
 import com.imgcstmzr.runtime.OperatingSystemImage
 import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.test.DockerRequiring
+import com.imgcstmzr.test.E2E
 import com.imgcstmzr.test.FiveMinutesTimeout
 import com.imgcstmzr.test.OS
 import com.imgcstmzr.test.UniqueId
@@ -33,7 +33,7 @@ import java.nio.file.NoSuchFileException
 class CopyFilesPatchTest {
 
     // TODO    @DockerRequiring(["bkahlert/libguestfs"])
-    @FiveMinutesTimeout @DockerRequiring @Test
+    @FiveMinutesTimeout @E2E @Test
     fun InMemoryLogger.`should create mkdir and copy-in options`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
         withTempDir(uniqueId) {
             val logger = this@`should create mkdir and copy-in options`

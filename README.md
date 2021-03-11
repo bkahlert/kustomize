@@ -1,4 +1,6 @@
-# ImgCstmzr — Downloads and Customizes Raspberry Pi Images
+# ImgCstmzr — Kotlin Based Image Customizer
+
+**ONLY THOROUGLY TESTED WITH RASPBERRY PI OS IMAGES**
 
 ## Usage
 
@@ -121,6 +123,7 @@ https://github.com/garthvh/ansible-raspi-playbooks/blob/master/playbooks/new-def
 
 ### Demo
 
+- `FirstBootFixTest.kt`
 - `Size.kt`
 - `NonBlockingReader.kt`
 - `OperatingSystemTest.kt`

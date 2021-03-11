@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name=" ⭐ wifi.conf" type="JetRunConfigurationType">
+  <configuration default="false" name=" ⭐" type="JetRunConfigurationType">
     <module name="imgcstmzr.main" />
     <extension name="net.ashald.envfile">
       <option name="IS_ENABLED" value="false" />
@@ -12,7 +12,7 @@
       </ENTRIES>
     </extension>
     <option name="VM_PARAMETERS" value="" />
-    <option name="PROGRAM_PARAMETERS" value="--config=wifi.conf" />
+    <option name="PROGRAM_PARAMETERS" value="" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
     <option name="ALTERNATIVE_JRE_PATH" />
     <option name="PASS_PARENT_ENVS" value="true" />

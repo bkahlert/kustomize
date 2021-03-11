@@ -1,5 +1,6 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import com.imgcstmzr.runtime.OperatingSystemImage
 import koodies.shell.ShellScript
 import koodies.shell.ShellScript.Companion.build
@@ -20,7 +21,7 @@ class ShellScriptPatch(
         }
     }
 
-    boot()
+    boot { yes }
 }) {
     constructor(vararg shellScripts: ShellScript) : this(shellScripts.toList())
     constructor(name: String? = null, init: ShellScript.() -> Unit) : this(init.build(name))
