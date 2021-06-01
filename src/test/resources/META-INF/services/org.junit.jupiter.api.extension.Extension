@@ -1,5 +1,5 @@
 com.imgcstmzr.test.FixtureResolverExtension
-com.imgcstmzr.test.UniqueIdResolver
-com.imgcstmzr.test.logging.InMemoryLoggerResolver
-com.imgcstmzr.test.debug.DebugCondition
-com.imgcstmzr.test.debug.DebugParameterResolver
+koodies.test.UniqueIdResolver
+koodies.test.output.InMemoryLoggerResolver
+koodies.debug.DebugCondition
+koodies.debug.DebugParameterResolver

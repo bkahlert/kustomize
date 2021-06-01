@@ -1,25 +1,25 @@
 package com.imgcstmzr.cli
 
-import com.github.ajalt.clikt.output.TermUi.echo
-import com.imgcstmzr.libguestfs.docker.ImageBuilder.buildFrom
-import com.imgcstmzr.libguestfs.docker.ImageExtractor.extractImage
+import com.imgcstmzr.libguestfs.ImageBuilder.buildFrom
+import com.imgcstmzr.libguestfs.ImageExtractor.extractImage
 import com.imgcstmzr.util.Paths
 import koodies.io.path.FileSizeComparator
-import koodies.io.path.asString
 import koodies.io.path.cloneTo
 import koodies.io.path.delete
 import koodies.io.path.deleteRecursively
 import koodies.io.path.extensionOrNull
 import koodies.io.path.getSize
 import koodies.io.path.listDirectoryEntriesRecursively
+import koodies.io.path.pathString
 import koodies.io.path.requireDirectory
+import koodies.logging.FixedWidthRenderingLogger
 import koodies.logging.RenderingLogger
 import koodies.text.ANSI.Colors.cyan
 import koodies.text.randomString
 import koodies.time.Now
 import koodies.time.format
+import koodies.time.minutes
 import koodies.time.parseInstant
-import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import java.time.Instant.now
@@ -29,12 +29,12 @@ import kotlin.io.path.isDirectory
 import kotlin.io.path.isHidden
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.isWritable
+import kotlin.io.path.moveTo
 import kotlin.time.Duration
-import kotlin.time.minutes
 
 class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: Int = 5) : ManagedDirectory(dir) {
 
-    fun RenderingLogger.provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> Path): Path =
+    fun FixedWidthRenderingLogger.provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> Path): Path =
         with(ProjectDirectory(dir, name, this, reuseLastWorkingCopy, maxConcurrentWorkingDirectories)) {
             require(provider)
         }
@@ -93,7 +93,7 @@ private class ProjectDirectory(
             it.delete()
         }
 
-    fun RenderingLogger.require(provider: () -> Path): Path {
+    fun FixedWidthRenderingLogger.require(provider: () -> Path): Path {
         val workDirs = workDirs()
         val workDir: Path? = if (reuseLastWorkingCopy) {
             workDirs.mapNotNull { workDir ->
@@ -102,16 +102,16 @@ private class ProjectDirectory(
                 }
                 single
             }.firstOrNull().also {
-                if (it != null) echo("Re-using last working copy ${it.fileName}")
-                else echo("No working copy exists that could be re-used. Creating a new one.")
+                if (it != null) logLine { "Re-using last working copy ${it.fileName}" }
+                else logLine { "No working copy exists that could be re-used. Creating a new one." }
             }
         } else null
 
         return workDir ?: run {
 
-            val img = rawDir.requireSingle {
-                val downloadedFile = downloadDir.requireSingle(provider)
-                downloadedFile.extractImage { path -> buildFrom(path) }
+            val img = rawDir.requireSingle(this) {
+                val downloadedFile = downloadDir.requireSingle(this, provider)
+                downloadedFile.extractImage(this) { path -> buildFrom(path) }
             }
 
             WorkDirectory.from(dir, img).getSingle { it.extensionOrNull.equals("img", ignoreCase = true) } ?: throw NoSuchElementException()
@@ -138,7 +138,7 @@ private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
             .sortedWith(FileSizeComparator)[0]
         else null
 
-    fun requireSingle(provider: () -> Path): Path {
+    fun requireSingle(logger: FixedWidthRenderingLogger, provider: () -> Path): Path {
         val file = getSingle()
         if (file != null) return file
         super.dir.createDirectories()
@@ -148,8 +148,9 @@ private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
                 costlyProvidedFile.delete()
                 destFile
             } else {
-                echo("Moving file to $destFile …", trailingNewline = false)
-                Files.move(costlyProvidedFile, destFile).also { echo(" Completed.") }
+                logger.compactLogging("Moving download to $destFile …") {
+                    costlyProvidedFile.moveTo(destFile)
+                }
             }
         }
     }
@@ -181,11 +182,11 @@ private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireVal
 
         fun requireValidName(dir: Path): String {
             createdAt(dir)
-            return dir.fileName.asString()
+            return dir.fileName.pathString
         }
 
         private fun createdAt(dir: Path): Instant {
-            val name = dir.fileName.asString()
+            val name = dir.fileName.pathString
             require(name.contains(SEPARATOR)) { "$name does not contain $SEPARATOR" }
             val potentialDateTime = name.substringBefore(SEPARATOR).trim()
             return potentialDateTime.parseInstant<Instant, Path>()
@@ -203,4 +204,3 @@ private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireVal
         }
     }
 }
-

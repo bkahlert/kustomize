@@ -1,8 +1,8 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.os.OperatingSystem
+import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
-import com.imgcstmzr.runtime.OperatingSystem
-import com.imgcstmzr.runtime.OperatingSystemImage
 import koodies.text.withRandomSuffix
 
 /**
@@ -13,13 +13,11 @@ import koodies.text.withRandomSuffix
 class HostnamePatch(
     private val hostname: String,
     private val randomSuffix: Boolean,
-) : Patch by buildPatch("hostname change to $hostname", {
+) : Patch by buildPatch("Set Hostname to $hostname", {
     customizeDisk {
         hostname {
-            hostname.let {
-                if (randomSuffix) it.withRandomSuffix()
-                else it
-            }
+            if (randomSuffix) hostname.withRandomSuffix()
+            else hostname
         }
     }
 })

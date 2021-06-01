@@ -1,9 +1,9 @@
 package com.imgcstmzr.patch
 
-import koodies.shell.ShellScript
+import koodies.shell.ShellScript.ScriptContext
 
-val ShellScript.aptGet get() = AptGet(this)
-val ShellScript.apt get() = Apt(this)
+val ScriptContext.aptGet get() = AptGet(this)
+val ScriptContext.apt get() = Apt(this)
 
 /**
  * apt-get is the command-line tool for handling packages, and may be considered
@@ -11,9 +11,9 @@ val ShellScript.apt get() = Apt(this)
  *
  * Several "front-end" interfaces exist, such as synaptic and aptitude.
  */
-class AptGet(private val shellScript: ShellScript) {
-    private fun command(command: String, args: List<String>) {
-        shellScript.command("apt-get", *(listOf(command) + args).toTypedArray())
+class AptGet(private val script: ScriptContext) {
+    private fun command(command: String, args: List<String>): CharSequence = "".apply {
+        script.command("apt-get", *(listOf(command) + args).toTypedArray())
     }
 
     /**
@@ -32,7 +32,7 @@ class AptGet(private val shellScript: ShellScript) {
          * Ignore missing packages. If packages cannot be retrieved or fail the integrity check after retrieval (corrupted package files), hold back those packages and handle the result.
          */
         ignoreMissing: Boolean = false,
-    ) {
+    ): CharSequence = "".apply {
         val args = mutableListOf<String>()
         if (yes) args.add("-y")
         if (ignoreMissing) args.add("-m")
@@ -43,7 +43,7 @@ class AptGet(private val shellScript: ShellScript) {
     /**
      * Install shorthand for [install].
      */
-    infix fun install(`package`: String) = install(*arrayOf(`package`))
+    infix fun install(`package`: String): CharSequence = "".apply { install(*arrayOf(`package`)) }
 
     /**
      * Uninstalls the optional specified [packages]. Afterwards all no more needed packages will be automatically removed as well.
@@ -57,7 +57,7 @@ class AptGet(private val shellScript: ShellScript) {
          * Automatic yes to prompts. Assume "yes" as answer to all prompts and run non-interactively. If an undesirable situation, such as changing a held package or removing an essential package, occurs then apt-get will abort.
          */
         yes: Boolean = true,
-    ) {
+    ): CharSequence = "".apply {
         val args = mutableListOf<String>()
         if (yes) args.add("-y")
         args.addAll(packages)
@@ -65,13 +65,12 @@ class AptGet(private val shellScript: ShellScript) {
     }
 }
 
-class Apt(private val shellScript: ShellScript) {
-    private fun command(command: String, args: List<String>) {
-        shellScript.command("apt", *(listOf(command) + args).toTypedArray())
+class Apt(private val script: ScriptContext) {
+    private fun command(command: String, args: List<String>): CharSequence = "".apply {
+        script.command("apt", *(listOf(command) + args).toTypedArray())
     }
 
-
-    infix fun list(option: String) {
+    infix fun list(option: String): CharSequence = "".apply {
         command("list", listOf(option))
     }
 }

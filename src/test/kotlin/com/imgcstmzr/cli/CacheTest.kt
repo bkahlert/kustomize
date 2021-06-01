@@ -1,23 +1,20 @@
 package com.imgcstmzr.cli
 
-import com.imgcstmzr.test.MiscClassPathFixture.FunnyImgZip
-import com.imgcstmzr.test.UniqueId
-import com.imgcstmzr.test.exists
-import com.imgcstmzr.test.hasContent
-import com.imgcstmzr.test.isDirectory
-import com.imgcstmzr.withTempDir
+import com.imgcstmzr.test.MiscClassPathFixture.TestImgZip
+import koodies.io.copyToDirectory
+import koodies.io.path.hasContent
 import koodies.io.path.isInside
 import koodies.io.path.randomDirectory
 import koodies.logging.InMemoryLogger
-import koodies.test.Fixtures.copyToDirectory
+import koodies.test.UniqueId
+import koodies.test.withTempDir
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import strikt.assertions.isTrue
+import strikt.java.exists
+import strikt.java.isDirectory
 
-@Execution(CONCURRENT)
 class CacheTest {
 
     @Test
@@ -45,7 +42,7 @@ class CacheTest {
 
         val copy = with(cache) {
             provideCopy("my-copy") {
-                FunnyImgZip.copyToDirectory(this@withTempDir)
+                TestImgZip.copyToDirectory(this@withTempDir)
             }
         }
 
@@ -60,7 +57,7 @@ class CacheTest {
         var providerCalls = 0
         val provider = {
             providerCalls++
-            FunnyImgZip.copyToDirectory(this)
+            TestImgZip.copyToDirectory(this)
         }
 
         val copies = (0..2).map {

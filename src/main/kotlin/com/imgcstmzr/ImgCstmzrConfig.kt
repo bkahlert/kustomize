@@ -2,8 +2,10 @@ package com.imgcstmzr
 
 import com.imgcstmzr.Convertible.Companion.converter
 import com.imgcstmzr.cli.asParam
-import com.imgcstmzr.libguestfs.DiskPath
-import com.imgcstmzr.libguestfs.HostPath
+import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.HostPath
+import com.imgcstmzr.os.OperatingSystem
+import com.imgcstmzr.os.OperatingSystems
 import com.imgcstmzr.patch.AppendToFilesPatch
 import com.imgcstmzr.patch.CompositePatch
 import com.imgcstmzr.patch.CopyFilesPatch
@@ -25,14 +27,11 @@ import com.imgcstmzr.patch.UsernamePatch
 import com.imgcstmzr.patch.WifiAutoReconnectPatch
 import com.imgcstmzr.patch.WifiPowerSafeModePatch
 import com.imgcstmzr.patch.WpaSupplicantPatch
-import com.imgcstmzr.runtime.OperatingSystem
-import com.imgcstmzr.runtime.OperatingSystems
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import io.github.config4k.extract
-import koodies.builder.ListBuilder.Companion.buildList
-import koodies.io.path.Locations
-import koodies.io.path.Locations.ls
+import koodies.builder.buildList
+import koodies.io.ls
 import koodies.net.IPAddress
 import koodies.net.IPSubnet
 import koodies.net.ipSubnetOf
@@ -82,12 +81,17 @@ data class ImgCstmzrConfig(
         fun load(
             config: Config,
             vararg fallbacks: Config = arrayOf(ConfigFactory.parseString(Path.of(".env").readText())),
-        ): ImgCstmzrConfig = ConfigFactory.systemProperties()
-            .withFallback(config)
-            .run { fallbacks.fold(this, Config::withFallback) }
-            .resolve()
-            .extract<UnsafeImgCstmzrConfig>("img-cstmztn")
-            .convert()
+        ): ImgCstmzrConfig {
+            val resolve = ConfigFactory.systemProperties()
+                .withFallback(config)
+                .run { fallbacks.fold(this, Config::withFallback) }
+                .resolve()
+            val extract = resolve
+                .extract<UnsafeImgCstmzrConfig>("img-cstmztn")
+            val convert = extract
+                .convert()
+            return convert
+        }
     }
 
     data class Hostname(val name: String, val randomSuffix: Boolean = true)
@@ -115,7 +119,11 @@ data class ImgCstmzrConfig(
         }
     }
 
-    class SetupScript(val name: String, val sources: List<URI>?, scripts: List<ShellScript>) : List<ShellScript> by scripts
+    class SetupScript(
+        val name: String,
+        val sources: List<URI>,
+        scripts: List<ShellScript>,
+    ) : List<ShellScript> by scripts
 
     fun toPatches(): List<Patch> = buildList {
         size?.apply { +ImgResizePatch(this) }
@@ -127,7 +135,8 @@ data class ImgCstmzrConfig(
         wifi?.apply {
             wpaSupplicant?.also { +WpaSupplicantPatch(it) }
             autoReconnect?.takeIf { it }?.also { +WifiAutoReconnectPatch() }
-            powerSafeMode?.takeIf { !it }?.also { +WifiPowerSafeModePatch() }
+            powerSafeMode?.takeIf { !it }
+                ?.also { +WifiPowerSafeModePatch() } // TODO check why power applied although false; then username patch zum warten auf ende von firstboot script
         }
 
         defaultUser?.apply {
@@ -216,7 +225,7 @@ data class UnsafeImgCstmzrConfig(
     val usbGadgets: UsbGadgets?,
     val tweaks: ImgCstmzrConfig.Tweaks?,
     val files: List<FileOperation>?,
-    val setup: List<ImgCstmzrConfig.SetupScript>?,
+    val setup: List<SetupScript>?,
     val firstBoot: List<ShellScript>?,
     val flashDisk: String?,
 ) : Convertible<ImgCstmzrConfig> by converter({
@@ -234,14 +243,14 @@ data class UnsafeImgCstmzrConfig(
         usbGadgets = usbGadgets.convert() ?: emptyList(),
         tweaks = tweaks,
         files = files?.run { map { it.convert() } } ?: emptyList(),
-        setup = setup ?: emptyList(),
-        firstBoot = firstBoot ?: emptyList(),
+        setup = setup?.map { it.convert() } ?: emptyList(),
+        firstBoot = firstBoot?.map { it.convert() } ?: emptyList(),
         flashDisk = flashDisk,
     )
 }) {
     data class Ssh(val enabled: Boolean?, val port: Int?, val authorizedKeys: AuthorizedKeys?) : Convertible<ImgCstmzrConfig.Ssh> by converter({
         val fileBasedKeys = (authorizedKeys?.files ?: emptyList()).flatMap { glob ->
-            ls(glob).map { file -> file.readText() }.filter { content -> content.startsWith("ssh-") }
+            Locations.HomeDirectory.ls(glob).map { file -> file.readText() }.filter { content -> content.startsWith("ssh-") }
         }
         val stringBasedKeys = (authorizedKeys?.keys ?: emptyList()).map { it.trim() }
         ImgCstmzrConfig.Ssh(enabled, port, fileBasedKeys + stringBasedKeys)
@@ -300,6 +309,21 @@ data class UnsafeImgCstmzrConfig(
             },
             DiskPath(diskPath),
         )
+    })
+
+    data class SetupScript(
+        val name: String,
+        val sources: List<URI>?,
+        val scripts: List<ShellScript>?,
+    ) : Convertible<ImgCstmzrConfig.SetupScript> by converter({
+        ImgCstmzrConfig.SetupScript(name, sources ?: emptyList(), scripts?.map { it.convert() } ?: emptyList())
+    })
+
+    data class ShellScript(
+        val name: String?,
+        val content: String?,
+    ) : Convertible<koodies.shell.ShellScript> by converter({
+        koodies.shell.ShellScript(name, content ?: "")
     })
 }
 

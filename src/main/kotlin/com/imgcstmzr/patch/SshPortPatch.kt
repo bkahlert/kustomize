@@ -1,7 +1,7 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
-import com.imgcstmzr.runtime.OperatingSystemImage
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]

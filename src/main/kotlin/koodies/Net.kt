@@ -2,10 +2,10 @@ package koodies
 
 import koodies.collections.matchKeysByIgnoringCase
 import koodies.time.toIntMilliseconds
+import koodies.time.seconds
 import java.net.URI
 import java.net.URL
 import kotlin.time.Duration
-import kotlin.time.seconds
 
 fun URL.headers(connectTimeout: Duration = 5.seconds, readTimeout: Duration = 5.seconds) = openConnection().run {
     this.connectTimeout = connectTimeout.toIntMilliseconds()

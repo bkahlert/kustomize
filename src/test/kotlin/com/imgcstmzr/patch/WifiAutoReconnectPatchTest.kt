@@ -1,20 +1,17 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.DiskPath
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.AppendLineOption
-import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.test.UniqueId
-import com.imgcstmzr.withTempDir
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.AppendLineOption
+import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.OperatingSystemImage
+import koodies.test.UniqueId
+import koodies.test.withTempDir
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.filterIsInstance
 import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 import strikt.assertions.single
 
-@Execution(CONCURRENT)
 class WifiAutoReconnectPatchTest {
 
     @Test

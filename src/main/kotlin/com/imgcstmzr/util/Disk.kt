@@ -1,60 +1,56 @@
 package com.imgcstmzr.util
 
+import com.imgcstmzr.logError
+import com.imgcstmzr.util.DiskUtil.disks
 import com.imgcstmzr.util.DiskUtil.listDisks
-import koodies.concurrent.process
-import koodies.concurrent.process.process
-import koodies.concurrent.script
-import koodies.io.path.asString
+import koodies.exec.Process.State.Exited.Succeeded
 import koodies.io.path.getSize
-import koodies.logging.RenderingLogger
-import koodies.logging.compactLogging
-import koodies.logging.logging
-import koodies.terminal.AnsiColors.green
-import koodies.terminal.AnsiColors.red
+import koodies.io.path.pathString
+import koodies.logging.FixedWidthRenderingLogger
+import koodies.logging.MutedRenderingLogger
+import koodies.shell.ShellScript
 import koodies.terminal.AnsiFormats.bold
+import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.quoted
-import koodies.unit.*
+import koodies.unit.BinaryPrefix
+import koodies.unit.DecimalPrefix
+import koodies.unit.Mega
+import koodies.unit.Size
+import koodies.unit.bytes
 import java.nio.file.Path
 
 class Disk private constructor(val id: DiskIdentifier, val capacity: Size) {
 
     val roundedCapacity get() = capacity.toString<DecimalPrefix>(decimals = 0)
 
-    fun RenderingLogger?.mountDisk(): Disk = compactLogging("Mounting ${this@Disk}") {
-        script(expectedExitValue = null) {
-            command(DiskUtil.command, "mountDisk", id.name)
-        }
+    fun FixedWidthRenderingLogger.mountDisk(): Disk = compactLogging("Mounting ${this@Disk}") {
+        ShellScript { command(DiskUtil.command, "mountDisk", id.name) }
         this@Disk
     }
 
-    fun RenderingLogger?.unmountDisk(): Disk = compactLogging("Un-mounting ${this@Disk}") {
-        script(expectedExitValue = null) {
-            command(DiskUtil.command, "unmountDisk", id.name)
-        }
+    fun FixedWidthRenderingLogger.unmountDisk(): Disk = compactLogging("Un-mounting ${this@Disk}") {
+        ShellScript { command(DiskUtil.command, "unmountDisk", id.name) }
         this@Disk
     }
 
-    fun RenderingLogger?.eject(): Disk = compactLogging("Ejecting ${this@Disk}") {
-        script(expectedExitValue = null) {
-            command(DiskUtil.command, "eject", id.name)
-        }
+    fun FixedWidthRenderingLogger.eject(): Disk = compactLogging("Ejecting ${this@Disk}") {
+        ShellScript { command(DiskUtil.command, "eject", id.name) }
         this@Disk
     }
 
-    fun RenderingLogger?.flash(file: Path, megaBytesPerTime: Int = 32): Disk =
+    fun FixedWidthRenderingLogger.flash(file: Path, megaBytesPerTime: Int = 32): Disk =
         logging("Flashing to ${this@Disk} with ${megaBytesPerTime.Mega.bytes}/t") {
             unmountDisk()
 
-            val command = "sudo dd if=${file.asString().quoted} of=${id.device.quoted} bs=${megaBytesPerTime}m"
+            val command = "sudo dd if=${file.pathString.quoted} of=${id.device.quoted} bs=${megaBytesPerTime}m"
             logLine { command }
-            val flashingProcess = file.parent.process("/bin/sh", "-c", command, expectedExitValue = null).process { logLine { it } }
+            val flashingProcess = ShellScript { command }.exec.logging(this, file.parent)
 
-            val exitCode = flashingProcess.waitForTermination()
-            if (exitCode == 0) {
-                "Success".green()
+            if (flashingProcess.waitFor() is Succeeded) {
+                "Success".ansi.green
                 eject()
             } else {
-                logLine { "An error occurred running $command".red() }
+                logError("An error occurred running $command")
                 this@Disk
             }
         }
@@ -77,13 +73,13 @@ class Disk private constructor(val id: DiskIdentifier, val capacity: Size) {
     override fun hashCode(): Int = id.hashCode()
 
     companion object {
-        fun flashDiskOf(id: String, capacity: Size): Disk {
+        fun FixedWidthRenderingLogger.flashDiskOf(id: String, capacity: Size): Disk {
             require(DiskIdentifier.isDisk(id)) { "$id is no valid disk identifier" }
             return Disk(DiskIdentifier(id), capacity)
         }
 
-        fun flashDiskOf(id: String): Disk? =
-            DiskUtil.disks.find { it.id.name == id } ?: throw IllegalArgumentException("$id does not exist.")
+        fun FixedWidthRenderingLogger.flashDiskOf(id: String): Disk? =
+            disks.find { it.id.name == id } ?: throw IllegalArgumentException("$id does not exist.")
     }
 }
 
@@ -91,10 +87,10 @@ class Disk private constructor(val id: DiskIdentifier, val capacity: Size) {
  * Flashes a disk using [file]. If specified [disk] (e.g. `disk2`) is used.
  * Otherwise any available physical removable disk is used iff there is exactly one candidate.
  */
-fun RenderingLogger.flash(file: Path, disk: String?): Disk? =
-    logging("Flashing ${file.fileName} (${file.getSize()})", bordered = false) {
+fun FixedWidthRenderingLogger.flash(file: Path, disk: String?): Disk? =
+    logging("Flashing ${file.fileName} (${file.getSize()})") {
 
-        val disks = listDisks()
+        val disks = MutedRenderingLogger.listDisks()
 
         val flashDisk: Disk? = disk?.let {
             disks.singleOrNull { it.id.name == disk }
@@ -115,7 +111,8 @@ fun RenderingLogger.flash(file: Path, disk: String?): Disk? =
     }
 
 
-inline class DiskIdentifier(val name: String) {
+@JvmInline
+value class DiskIdentifier(val name: String) {
     val device: String get() = "/dev/$name"
     override fun toString(): String = "disk \"$name\""
 

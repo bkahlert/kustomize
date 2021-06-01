@@ -1,8 +1,8 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
-import com.imgcstmzr.runtime.OperatingSystemImage
 import koodies.net.IPAddress
 import koodies.net.IPSubnet
 import koodies.net.div
@@ -63,7 +63,7 @@ class UsbEthernetGadgetPatch(
      * Whether to activate the serial console.
      */
     val enableSerialConsole: Boolean = false,
-) : Patch by buildPatch("Activate USB gadget with DHCP address range $dhcpRange", {
+) : Patch by buildPatch("Configure USB Gadget with DHCP Address Range $dhcpRange", {
 
     require(deviceAddress in dhcpRange.firstUsableHost..dhcpRange.lastUsableHost) { "$deviceAddress must be in range ${dhcpRange.usable}" }
 
@@ -208,13 +208,13 @@ class UsbEthernetGadgetPatch(
                     [Install]
                     WantedBy=sysinit.target
                 """.trimIndent())
-        firstBoot("enable ${USBGADGET_SERVICE.fileName}") { !"systemctl enable ${USBGADGET_SERVICE.fileName}" }
+        firstBoot("enable ${USBGADGET_SERVICE.fileName}") { "systemctl enable ${USBGADGET_SERVICE.fileName}" }
 
-        firstBoot("update ${CONFIG_TXT.fileName}") { !"echo dtoverlay=dwc2 >> $CONFIG_TXT" }
-        firstBoot("update ${CMDLINE_TXT.fileName}") { !"sed -i 's/\$/ modules-load=dwc2/' $CMDLINE_TXT" }
-        firstBoot("update ${MODULES.fileName}") { !"echo libcomposite >> $MODULES" }
-        firstBoot("update ${DHCPCD_CONF.fileName}") { !"echo denyinterfaces usb0 >> $DHCPCD_CONF" }
-        if (enableSerialConsole) firstBoot("enable getty@ttyGS0.service") { !"systemctl enable getty@ttyGS0.service" }
+        firstBoot("update ${CONFIG_TXT.fileName}") { "echo dtoverlay=dwc2 >> $CONFIG_TXT" }
+        firstBoot("update ${CMDLINE_TXT.fileName}") { "sed -i 's/\$/ modules-load=dwc2/' $CMDLINE_TXT" }
+        firstBoot("update ${MODULES.fileName}") { "echo libcomposite >> $MODULES" }
+        firstBoot("update ${DHCPCD_CONF.fileName}") { "echo denyinterfaces usb0 >> $DHCPCD_CONF" }
+        if (enableSerialConsole) firstBoot("enable getty@ttyGS0.service") { "systemctl enable getty@ttyGS0.service" }
     }
 }) {
     companion object {

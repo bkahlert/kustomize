@@ -1,35 +1,34 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.guestfish.mounted
-import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
+import com.imgcstmzr.libguestfs.mounted
+import com.imgcstmzr.os.OperatingSystemImage
+import com.imgcstmzr.os.OperatingSystemProcess.Companion.DockerPiImage
+import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.test.E2E
-import com.imgcstmzr.test.FiveMinutesTimeout
 import com.imgcstmzr.test.OS
-import com.imgcstmzr.test.exists
-import com.imgcstmzr.test.hasContent
-import com.imgcstmzr.test.logging.logged
+import koodies.docker.DockerRequiring
+import koodies.io.path.hasContent
 import koodies.logging.InMemoryLogger
+import koodies.logging.expectLogged
+import koodies.test.FiveMinutesTimeout
+import koodies.text.LineSeparators.LF
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
-import strikt.api.expect
+import strikt.api.expectThat
+import strikt.assertions.contains
+import strikt.java.exists
 
-@Execution(CONCURRENT)
 class SshAuthorizationPatchTest {
 
-    @FiveMinutesTimeout @E2E @Test
+    @FiveMinutesTimeout @DockerRequiring([DockerPiImage::class]) @E2E @Test
     fun InMemoryLogger.`should add ssh key`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
 
-        patch(osImage, SshAuthorizationPatch("pi", listOf("123")))
+        SshAuthorizationPatch("pi", listOf("123")).patch(osImage)
 
-        expect {
-            logged("SSH key inject: pi")
-            that(osImage).mounted(this@`should add ssh key`) {
-                path("/home/pi/.ssh/authorized_keys") {
-                    exists()
-                    hasContent("123\n")
-                }
+        expectLogged.contains("SSH key inject: pi")
+        expectThat(osImage).mounted {
+            path("/home/pi/.ssh/authorized_keys") {
+                exists()
+                hasContent("123$LF")
             }
         }
     }

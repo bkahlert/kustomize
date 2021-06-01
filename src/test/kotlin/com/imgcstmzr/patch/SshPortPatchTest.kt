@@ -1,16 +1,13 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.FirstBootCommandOption
-import com.imgcstmzr.libguestfs.virtcustomize.containsFirstBootScriptFix
-import com.imgcstmzr.runtime.OperatingSystemImage
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootCommandOption
+import com.imgcstmzr.libguestfs.containsFirstBootScriptFix
+import com.imgcstmzr.os.OperatingSystemImage
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import strikt.assertions.last
 
-@Execution(CONCURRENT)
 class SshPortPatchTest {
 
     @Test

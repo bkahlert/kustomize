@@ -1,7 +1,7 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
-import com.imgcstmzr.runtime.OperatingSystemImage
 import koodies.unit.Size
 
 /**
@@ -11,7 +11,7 @@ import koodies.unit.Size
  */
 class ImgResizePatch(
     private val size: Size,
-) : Patch by buildPatch("Increasing Disk Space: $size", {
+) : Patch by buildPatch("Increase Disk Space to $size", {
     prepareDisk { resize(size) }
 
     os {

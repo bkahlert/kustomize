@@ -1,31 +1,30 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.guestfish.mounted
-import com.imgcstmzr.runtime.OperatingSystem
-import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
+import com.imgcstmzr.libguestfs.LibguestfsImage
+import com.imgcstmzr.libguestfs.mounted
+import com.imgcstmzr.os.OperatingSystem
+import com.imgcstmzr.os.OperatingSystemImage
+import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.test.E2E
-import com.imgcstmzr.test.FiveMinutesTimeout
 import com.imgcstmzr.test.OS
-import com.imgcstmzr.test.exists
+import koodies.docker.DockerRequiring
 import koodies.logging.InMemoryLogger
+import koodies.test.FifteenMinutesTimeout
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
+import strikt.java.exists
 
-@Execution(CONCURRENT)
 class UsernamePatchTest {
 
-    @FiveMinutesTimeout @E2E @Test
+    @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @E2E @Test
     fun InMemoryLogger.`should log in with updated username`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val newUsername = "ella".also { check(it != osImage.defaultCredentials.username) { "$it is already the default username." } }
 
-        patch(osImage, UsernamePatch(osImage.defaultCredentials.username, newUsername))
+        UsernamePatch(osImage.defaultCredentials.username, newUsername).patch(osImage)
 
         expectThat(osImage.credentials).isEqualTo(OperatingSystem.Credentials(newUsername, osImage.defaultCredentials.password))
-        expectThat(osImage).mounted(this) {
+        expectThat(osImage).mounted {
             path("/home/$newUsername") { exists() }
             path("/home/${osImage.defaultCredentials.username}") { not { exists() } }
         }

@@ -1,10 +1,9 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.DiskPath
-import com.imgcstmzr.libguestfs.HostPath
-import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
+import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.HostPath
+import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
-import com.imgcstmzr.runtime.OperatingSystemImage
 import koodies.io.path.copyTo
 import koodies.io.path.requireExists
 

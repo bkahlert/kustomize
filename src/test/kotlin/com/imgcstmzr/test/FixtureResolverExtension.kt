@@ -1,22 +1,26 @@
 package com.imgcstmzr.test
 
+import com.imgcstmzr.Locations
 import com.imgcstmzr.cli.Cache
-import com.imgcstmzr.libguestfs.docker.ImageBuilder
-import com.imgcstmzr.libguestfs.docker.ImageBuilder.buildFrom
-import com.imgcstmzr.runtime.OperatingSystem
-import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
-import com.imgcstmzr.runtime.OperatingSystems
-import com.imgcstmzr.test.logging.logger
+import com.imgcstmzr.libguestfs.ImageBuilder
+import com.imgcstmzr.libguestfs.ImageBuilder.buildFrom
+import com.imgcstmzr.os.OperatingSystem
+import com.imgcstmzr.os.OperatingSystemImage
+import com.imgcstmzr.os.OperatingSystemImage.Companion.based
+import com.imgcstmzr.os.OperatingSystems
 import com.imgcstmzr.util.Downloader
 import com.imgcstmzr.util.Paths
 import koodies.collections.addElement
-import koodies.io.path.Locations
-import koodies.logging.RenderingLogger
-import koodies.logging.logging
-import koodies.runtime.deleteOnExit
-import koodies.terminal.AnsiColors.cyan
-import koodies.test.copyTo
+import koodies.io.autoCleaning
+import koodies.io.copyTo
+import koodies.io.path.deleteOnExit
+import koodies.logging.FixedWidthRenderingLogger
+import koodies.logging.FixedWidthRenderingLogger.Border.DOTTED
+import koodies.logging.MutedRenderingLogger
+import koodies.test.output.testLocalLogger
+import koodies.text.ANSI.Formatter.Companion.fromScratch
+import koodies.text.Semantics.formattedAs
+import koodies.time.hours
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.support.TypeBasedParameterResolver
@@ -35,7 +39,6 @@ annotation class OS(
 
 open class FixtureResolverExtension : TypeBasedParameterResolver<OperatingSystemImage>() {
 
-
     override fun resolveParameter(
         parameterContext: ParameterContext,
         extensionContext: ExtensionContext,
@@ -43,26 +46,30 @@ open class FixtureResolverExtension : TypeBasedParameterResolver<OperatingSystem
         val annotation = parameterContext.parameter.getAnnotation(OS::class.java)
         val operatingSystem: OperatingSystem = annotation?.value ?: OperatingSystems.ImgCstmzrTestOS
         val autoDelete = annotation?.autoDelete ?: true
-        extensionContext.logger()
-            .logging("Provisioning an image containing ${operatingSystem.fullName.cyan()} … ", bordered = false) {
-                operatingSystem.getCopy(this, extensionContext.uniqueId).apply {
-                    if (autoDelete) file.deleteOnExit()
-                }
+        (extensionContext.testLocalLogger ?: MutedRenderingLogger).logging(
+            "Provisioning ${operatingSystem.fullName.formattedAs.input} … ",
+            decorationFormatter = fromScratch { formattedAs.meta },
+            border = DOTTED,
+        ) {
+            operatingSystem.getCopy(this, extensionContext.uniqueId).apply {
+                if (autoDelete) file.deleteOnExit()
             }
+        }
     }
 
     companion object {
+
+        private val temp by Locations.Temp.autoCleaning("download", 1.hours, 5)
+
         private val lock: ReentrantLock = ReentrantLock()
 
-        private val downloader = Downloader(
-            Locations.Temp.resolve("imgcstmzr.downloads").createDirectories(),
-            ImageBuilder.schema to { uri, logger -> logger.buildFrom(uri) })
+        private val downloader = Downloader(temp, ImageBuilder.schema to { uri, logger -> logger.buildFrom(uri) })
 
         private val copiesPerTest = mutableMapOf<String, List<Path>>()
         fun cacheDir(uniqueId: String): Path? = copiesPerTest[uniqueId]?.firstOrNull()
 
         private val cache = Cache(Paths.TEST.resolve("test"))
-        private fun OperatingSystem.getCopy(logger: RenderingLogger, uniqueId: String): OperatingSystemImage =
+        private fun OperatingSystem.getCopy(logger: FixedWidthRenderingLogger, uniqueId: String): OperatingSystemImage =
             lock.withLock {
                 this@getCopy based with(cache) {
                     logger.provideCopy(name, reuseLastWorkingCopy = false) {

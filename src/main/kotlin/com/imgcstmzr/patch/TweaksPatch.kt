@@ -1,8 +1,8 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
-import com.imgcstmzr.runtime.OperatingSystemImage
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]
@@ -11,7 +11,7 @@ import com.imgcstmzr.runtime.OperatingSystemImage
  */
 class TweaksPatch(
     val aptRetries: Int,
-) : Patch by buildPatch("Tweaks (apt retries)", {
+) : Patch by buildPatch("Tweaks (APT Retries)", {
 
     customizeDisk {
         appendLine { """APT::Acquire::Retries "$aptRetries";""" to APT_CONF_RETRIES }

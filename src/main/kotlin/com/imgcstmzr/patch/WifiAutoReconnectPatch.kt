@@ -1,8 +1,8 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
-import com.imgcstmzr.runtime.OperatingSystemImage
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]

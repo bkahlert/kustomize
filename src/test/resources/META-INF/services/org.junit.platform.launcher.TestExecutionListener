@@ -1,1 +1,2 @@
-com.imgcstmzr.test.Verbosity
+koodies.test.junit.TestExecutionReporter
+koodies.test.Verbosity

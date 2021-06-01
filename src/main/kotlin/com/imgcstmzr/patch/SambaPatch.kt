@@ -1,8 +1,8 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
-import com.imgcstmzr.runtime.OperatingSystemImage
 import koodies.io.path.withDirectoriesCreated
 import kotlin.io.path.writeLines
 
@@ -85,13 +85,13 @@ class SambaPatch(
             withDirectoriesCreated().writeLines(config.lines())
         }
         firstBoot("Change SMB Password for $username") {
-            !"""
+            """
             echo "…"
             echo "…"
             echo "…"
             pass="$password"
             (echo "${'$'}pass"; echo "${'$'}pass") | smbpasswd -s -a "$username"
-            """.trimIndent()
+            """
         }
         firstBootShutdownCommand()
     }

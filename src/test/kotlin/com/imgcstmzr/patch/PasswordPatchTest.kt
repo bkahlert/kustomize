@@ -1,58 +1,56 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.DiskPath
-import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
-import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.guestfish
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption
-import com.imgcstmzr.runtime.IncorrectPasswordException
-import com.imgcstmzr.runtime.OperatingSystem.Credentials
-import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.runtime.execute
+import com.imgcstmzr.libguestfs.LibguestfsImage
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization
+import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.IncorrectPasswordException
+import com.imgcstmzr.os.OperatingSystem.Credentials
+import com.imgcstmzr.os.OperatingSystemImage
+import com.imgcstmzr.os.OperatingSystemProcess.Companion.DockerPiImage
+import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
+import com.imgcstmzr.os.boot
 import com.imgcstmzr.test.E2E
-import com.imgcstmzr.test.FifteenMinutesTimeout
 import com.imgcstmzr.test.OS
-import com.imgcstmzr.test.logging.expectThatLogged
-import com.imgcstmzr.test.rootCause
 import koodies.debug.debug
+import koodies.docker.DockerRequiring
+import koodies.exec.Process.State.Excepted
+import koodies.exec.rootCause
 import koodies.logging.InMemoryLogger
+import koodies.logging.expectThatLogged
+import koodies.test.FifteenMinutesTimeout
+import koodies.test.expecting
 import koodies.text.matchesCurlyPattern
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
-import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.first
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
-import strikt.assertions.isFailure
 import strikt.assertions.message
-import java.util.concurrent.CompletionException
 import kotlin.io.path.readLines
 
-@Execution(CONCURRENT)
 class PasswordPatchTest {
 
     @Test
     fun `should provide password change command`(osImage: OperatingSystemImage) {
         val passwordPatch = PasswordPatch("pi", "po")
-        val expected = VirtCustomizeCustomizationOption.PasswordOption.byString("pi", "po")
-        expectThat(passwordPatch).matches(customizationOptionsAssertion = { first().get { invoke(osImage) }.isEqualTo(expected) })
+        val expected = Customization.PasswordOption.byString("pi", "po")
+        expectThat(passwordPatch).matches(customizationsAssertion = { first().get { invoke(osImage) }.isEqualTo(expected) })
     }
 
-    @FifteenMinutesTimeout @E2E @Test
+    @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class]) @E2E @Test
     fun InMemoryLogger.`should update shadow file correctly`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val passwordPath = DiskPath("/etc/shadow")
         val username = RaspberryPiLite.defaultCredentials.username
         val newPassword = "on-a-diet"
         val passwordPatch = PasswordPatch(username, newPassword)
-        val userPassword = guestfish(osImage) { copyOut { passwordPath } }
-            .let { osImage.hostPath(passwordPath).readLines().single { it.startsWith(username) } }
+        val userPassword = osImage.guestfish(this, false, null, false) {
+            copyOut { passwordPath }
+        }.let { osImage.hostPath(passwordPath).readLines().single { it.startsWith(username) } }
         val userPasswordPattern = "$username:{}:{}:0:99999:7:::"
         check(userPassword.matchesCurlyPattern(userPasswordPattern)) { "${userPassword.debug} does not match ${userPasswordPattern.debug}" }
 
-        patch(osImage, passwordPatch)
+        passwordPatch.patch(osImage)
 
         expectThat(osImage.credentials).isEqualTo(Credentials(username, newPassword))
         expectThat(osImage).booted(this) {
@@ -61,18 +59,15 @@ class PasswordPatchTest {
         }
     }
 
-    @FifteenMinutesTimeout @E2E @Test
+    @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class]) @E2E @Test
     fun InMemoryLogger.`should not be able to use old password`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-        patch(osImage, PasswordPatch(RaspberryPiLite.defaultCredentials.username, "po"))
+        PasswordPatch(RaspberryPiLite.defaultCredentials.username, "po").patch(osImage)
 
-        expectCatching {
-            osImage.credentials = Credentials("pi", "wrong password")
-            osImage.execute(logger = this, autoLogin = true)
-        }.isFailure()
-            .isA<CompletionException>()
-            .rootCause
-            .isA<IncorrectPasswordException>()
-            .message.isEqualTo("The entered password \"wrong password\" is incorrect.")
+        osImage.credentials = Credentials("pi", "wrong password")
+        expecting { osImage.boot(null, logger = this) } that {
+            isA<Excepted>().rootCause.isA<IncorrectPasswordException>()
+                .message.isEqualTo("The entered password \"wrong password\" is incorrect.")
+        }
         expectThatLogged().contains("Login incorrect")
     }
 }

@@ -1,12 +1,12 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import koodies.text.LineSeparators.lines
 
 class WpaSupplicantPatch(
     private val fileContent: String,
-) : Patch by buildPatch("WPA supplicant (${fileContent.lines().size} lines)", {
+) : Patch by buildPatch("Inject WPA Supplicant (${fileContent.lines().size} lines)", {
     customizeDisk {
         copyIn(WPA_SUPPLICANT, fileContent)
     }

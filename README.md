@@ -134,7 +134,7 @@ https://github.com/garthvh/ansible-raspi-playbooks/blob/master/playbooks/new-def
 - `ContainsExactlyInSomeOrder` (easily understandable builder pattern)
   -> now in koodies.builder
 - `ImgFixture` (static builder)
-- `ShellScriptBuilder` (with !"echo 'this is a command'")
+- `ShellScriptBuilder` (with "echo 'this is a command'")
 - `ReadOnlyFileSystem`
 - `RegExDocument` (delegates properties)
 - `PatchTest`, esp. GuestfishCommandBuilder (Complex builder pattern)

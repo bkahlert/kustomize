@@ -45,9 +45,14 @@ _sound() {
 }
 _bell="$(tput bel)"
 _bold="$(tput bold)"
-_reset="$(tput sgr0)"
+_reset="$(printf "\e[0;10m")" #"$(tput sgr0)"
 _bell() { printf "%s" "$_bell"; }
-_cursorLeft() { tput cub "${1:-1}"; }
+_el="$(tput el)"                       # clear to end of line
+_dim="$(tput dim)"                     # dim
+_cursorUp() { tput cuu "${1:-1}"; }    # move $1 (default 1) positions up
+_cursorDown() { tput cud "${1:-1}"; }  # move $1 (default 1) positions down
+_cursorLeft() { tput cub "${1:-1}"; }  # move $1 (default 1) positions left
+_cursorRight() { tput cuf "${1:-1}"; } # move $1 (default 1) positions right
 _black="$(tput setaf 0)"
 _brightBlack="$_bold$_black"
 _gray="$_brightBlack"
@@ -84,7 +89,8 @@ _start() {
   [ -z "${1:-}" ] && _last_start="$_start" || _last_start="$* $_start"
   echo "${_last_start}"
 }
-_end() { printf "\n\e[2A\e[K\e[2m%s\e[m%s%s\n" "${_last_start}" "$(_cursorLeft 2)" " ${1:-?}"; }
+
+_end() { printf "\n%s%s%s%s%s%s%s\n" "$(_cursorUp 2)" "$_el" "$_dim" "$_reset" "${_last_start}" "$(_cursorLeft 2)" " ${1:-?}"; }
 _test_print() {
   echo "$_black ▎$_red ▎$_green ▍$_yellow ▌$_blue ▋$_magenta ▊$_cyan ▉$_white █$_reset"
   echo "$_gray ▎$_brightRed ▎$_brightGreen ▍$_brightYellow ▌$_brightBlue ▋$_brightMagenta ▊$_brightCyan ▉$_brightWhite █$_reset"
@@ -135,9 +141,9 @@ ls -1 | while read _FILE; do
     # ignore already copied files
     if [ ! -f "${_COPY}" ]; then
 
-      printf "\n\t"
+      printf "\n  "
       _item "${SCRIPTS_DIR}/${_FILE}"
-      printf "\t⮕ %s\n" "${_COPY}"
+      printf "  ⮕ %s\n" "${_COPY}"
 
       cp -p "${SCRIPTS_DIR}/${_FILE}" "${_COPY}"
     fi
@@ -154,9 +160,9 @@ ls -1 | while read _FILE; do
 
     _COPY="${COPIES_DIR}/""$(ls -1 "${COPIES_DIR}" | head -n 1)"
 
-    printf "\n\t"
+    printf "\n  "
     _item "${SCRIPTS_DIR}/${_FILE}"
-    printf "\t⬅ %s\n" "${_COPY}"
+    printf "  ⬅ %s\n" "${_COPY}"
 
     mv -f "${_COPY}" "${SCRIPTS_DIR}/${_FILE}"
     touch "${SCRIPTS_DIR}/${_FILE}"
@@ -169,7 +175,7 @@ _start "Contents of files swapped but enumeration order kept"
 ls -1 | while read _FILE; do
   # ignore this script itself, non-regular files and all non-executables
   if [ ! "${_FILE}" = "${BASENAME}" ] && [ -x "${_FILE}" ] && [ -f "${_FILE}" ]; then
-    printf "\n\t"
+    printf "\n  "
     _item "${SCRIPTS_DIR}/${_FILE}"
   fi
 done

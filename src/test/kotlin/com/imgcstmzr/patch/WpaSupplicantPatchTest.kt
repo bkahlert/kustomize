@@ -1,18 +1,14 @@
 package com.imgcstmzr.patch//import static org.assertj.core.api.Assertions.assertThat;
-import com.imgcstmzr.libguestfs.DiskPath
-import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.CopyInOption
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.MkdirOption
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.CopyInOption
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.MkdirOption
+import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.WpaSupplicantPatch.Companion.WPA_SUPPLICANT
-import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.test.hasContent
+import koodies.io.path.hasContent
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expect
 import strikt.assertions.containsExactly
 
-@Execution(CONCURRENT)
 class WpaSupplicantPatchTest {
 
     @Test

@@ -1,16 +1,13 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.TimeZoneOption
-import com.imgcstmzr.runtime.OperatingSystemImage
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.TimeZoneOption
+import com.imgcstmzr.os.OperatingSystemImage
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expectThat
 import strikt.assertions.isA
 import strikt.assertions.single
 import java.util.TimeZone
 
-@Execution(CONCURRENT)
 class TimeZonePatchTest {
 
     private val timeZone: TimeZone = TimeZone.getTimeZone("Europe/Berlin")

@@ -6,29 +6,29 @@ import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
+import com.imgcstmzr.Locations
 import com.imgcstmzr.cli.Options.os
-import com.imgcstmzr.libguestfs.LibguestfsCommandLine
-import com.imgcstmzr.runtime.OperatingSystems
+import com.imgcstmzr.libguestfs.LibguestfsImage
+import com.imgcstmzr.os.OperatingSystems
 import com.imgcstmzr.util.Downloader
 import koodies.docker.DockerRunCommandLine
-import koodies.io.path.Locations
-import koodies.io.path.asString
+import koodies.io.path.pathString
 import koodies.logging.BlockRenderingLogger
 import koodies.logging.applyLogging
-import koodies.terminal.ANSI
-import koodies.terminal.colorize
+import koodies.text.ANSI.Text.Companion.ansi
+import koodies.text.ANSI.colorize
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.moveTo
 import kotlin.reflect.KClass
 
 fun main() {
-    DebugCommand().main(listOf(Locations.HomeDirectory.resolve(".imgcstmzr.test/guestfish").asString()))
+    DebugCommand().main(listOf(Locations.HomeDirectory.resolve(".imgcstmzr.test/guestfish").pathString))
 }
 
 
 class DebugCommand : NoOpCliktCommand(
-    epilog = "((ε(*･ω･)_/${ANSI.termColors.colorize("ﾟ･.*･･｡☆")}",
+    epilog = "((ε(*･ω･)_/${"ﾟ･.*･･｡☆".ansi.colorize()}",
     name = "imgcstmzr",
     allowMultipleSubcommands = false,
     printHelpOnEmptyArgs = true,
@@ -59,7 +59,7 @@ class DebugCommand : NoOpCliktCommand(
             logLine { script }
 
             val z = DockerRunCommandLine {
-                image by LibguestfsCommandLine.DOCKER_IMAGE
+                image by LibguestfsImage
                 options {
                     name { "guestfish" }
                     autoCleanup { off }
@@ -69,7 +69,6 @@ class DebugCommand : NoOpCliktCommand(
                     }
                 }
                 commandLine {
-                    redirects { +"2>&1" } // needed since some commandrvf writes all output to stderr
                     arguments {
                         +"--rw"
                         +"--add /images/disk.img"

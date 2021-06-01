@@ -42,7 +42,8 @@ docker run --privileged --rm -v $(PWD)/shared:/shared -v $(PWD)/disk.img:/images
 cd /Users/bkahlert/.imgcstmzr.test/guestfish
 docker 2>&1 run \
   --name "guestfish" \
-  -it \
+  --interactive \
+  --tty \
   --rm \
   --mount type=bind,source="$(pwd)/shared/",target=/shared \
   --mount type=bind,source="$(pwd)/disk.img",target=/images/disk.img \
@@ -54,6 +55,27 @@ docker 2>&1 run \
   <<HERE
 …
 HERE
+
+docker 2>&1 run \
+  --env LIBGUESTFS_DEBUG="1" \
+  --env LIBGUESTFS_TRACE="1" \
+  --workdir / \
+  --rm \
+  --interactive \
+  --tty \
+  --mount type=bind,source="$(pwd)/shared/",target=/shared \
+  --mount type=bind,source="$(pwd)/disk.img",target=/images/disk.img \
+  bkahlert/libguestfs \
+  --ro \
+  --add /images/disk.img \
+  --mount /dev/sda2:/ \
+  --mount /dev/sda1:/boot \
+  <<COMMANDS
+!mkdir -p "shared/bin"
+-copy-out "/bin" "shared/bin"
+umount-all
+exit
+COMMANDS
 
 3. virt-customiz
 

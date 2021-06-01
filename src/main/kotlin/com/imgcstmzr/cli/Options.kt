@@ -3,7 +3,7 @@ package com.imgcstmzr.cli
 import com.github.ajalt.clikt.parameters.options.NullableOption
 import com.github.ajalt.clikt.parameters.options.RawOption
 import com.github.ajalt.clikt.parameters.types.choice
-import com.imgcstmzr.runtime.OperatingSystems
+import com.imgcstmzr.os.OperatingSystems
 
 object Options {
     fun RawOption.os(

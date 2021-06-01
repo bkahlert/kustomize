@@ -1,29 +1,29 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.guestfish.mounted
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.CopyInOption
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.FirstBootInstallOption
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.FirstBootOption
-import com.imgcstmzr.libguestfs.virtcustomize.containsFirstBootScriptFix
-import com.imgcstmzr.libguestfs.virtcustomize.containsFirstBootShutdownCommand
-import com.imgcstmzr.libguestfs.virtcustomize.file
-import com.imgcstmzr.libguestfs.virtcustomize.localPath
-import com.imgcstmzr.libguestfs.virtcustomize.packages
+import com.imgcstmzr.libguestfs.LibguestfsImage
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.CopyInOption
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootInstallOption
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootOption
+import com.imgcstmzr.libguestfs.containsFirstBootScriptFix
+import com.imgcstmzr.libguestfs.containsFirstBootShutdownCommand
+import com.imgcstmzr.libguestfs.file
+import com.imgcstmzr.libguestfs.localPath
+import com.imgcstmzr.libguestfs.mounted
+import com.imgcstmzr.libguestfs.packages
+import com.imgcstmzr.os.OperatingSystemImage
+import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.patch.RootShare.`read-write`
-import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.runtime.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.test.E2E
-import com.imgcstmzr.test.FifteenMinutesTimeout
 import com.imgcstmzr.test.OS
-import com.imgcstmzr.test.Smoke
-import com.imgcstmzr.test.UniqueId
-import com.imgcstmzr.test.content
-import com.imgcstmzr.withTempDir
+import koodies.content
+import koodies.docker.DockerRequiring
 import koodies.logging.InMemoryLogger
+import koodies.test.FifteenMinutesTimeout
+import koodies.test.Smoke
+import koodies.test.UniqueId
+import koodies.test.withTempDir
 import koodies.text.LineSeparators.lineSequence
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.any
@@ -33,56 +33,57 @@ import strikt.assertions.filterIsInstance
 import strikt.assertions.first
 import strikt.assertions.isEqualTo
 
-@Execution(CONCURRENT)
 class SambaPatchTest {
 
-    private val patch = SambaPatch("the-user", "the-password", true, `read-write`)
+    private val sambaPatch = SambaPatch("the-user", "the-password", true, `read-write`)
 
     @Test
     fun `should install samba`(osImage: OperatingSystemImage) {
-        expectThat(patch).customizations(osImage) {
+        expectThat(sambaPatch).customizations(osImage) {
             filterIsInstance<FirstBootInstallOption>().first().packages.containsExactlyInAnyOrder("samba", "cifs-utils")
         }
     }
 
     @Test
     fun `should build samba conf`(osImage: OperatingSystemImage) {
-        expectThat(patch).customizations(osImage) {
-            filterIsInstance<CopyInOption>().first().localPath.content.isEqualTo(
-                """
-                [global]
-                workgroup = smb
-                security = user
-                map to guest = never
-                #unix password sync = yes
-                #passwd program = /usr/bin/passwd %u
-                #passwd chat = "*New Password:*" %n\n "*Reenter New Password:*" %n\n "*Password changed.*"
-                
-                [home]
-                comment = Home of the-user
-                path = /home/the-user
-                writeable=Yes
-                create mask=0744
-                directory mask=0744
-                public=no
-                guest ok=no
-                
-                [/]
-                path = /
-                writeable=Yes
-                create mask=0740
-                directory mask=0740
-                public=no
-                guest ok=no
-                
-                
-                """.trimIndent())
+        expectThat(sambaPatch).customizations(osImage) {
+            filterIsInstance<CopyInOption>().any {
+                localPath.content.isEqualTo(
+                    """
+                    [global]
+                    workgroup = smb
+                    security = user
+                    map to guest = never
+                    #unix password sync = yes
+                    #passwd program = /usr/bin/passwd %u
+                    #passwd chat = "*New Password:*" %n\n "*Reenter New Password:*" %n\n "*Password changed.*"
+                    
+                    [home]
+                    comment = Home of the-user
+                    path = /home/the-user
+                    writeable=Yes
+                    create mask=0744
+                    directory mask=0744
+                    public=no
+                    guest ok=no
+                    
+                    [/]
+                    path = /
+                    writeable=Yes
+                    create mask=0740
+                    directory mask=0740
+                    public=no
+                    guest ok=no
+                    
+                    
+                    """.trimIndent())
+            }
         }
     }
 
     @Test
     fun `should set samba password`(osImage: OperatingSystemImage) {
-        expectThat(patch).customizations(osImage) {
+        expectThat(sambaPatch).customizations(osImage) {
             filterIsInstance<FirstBootOption>().any {
                 file.content.contains(
                     """
@@ -98,28 +99,26 @@ class SambaPatchTest {
 
     @Test
     fun `should shutdown`(osImage: OperatingSystemImage) {
-        expectThat(patch).customizations(osImage) { containsFirstBootShutdownCommand() }
+        expectThat(sambaPatch).customizations(osImage) { containsFirstBootShutdownCommand() }
     }
 
     @Test
     fun `should copy firstboot script order fix`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(patch).customizations(osImage) { containsFirstBootScriptFix() }
+        expectThat(sambaPatch).customizations(osImage) { containsFirstBootScriptFix() }
     }
 
-    // TODO    @DockerRequiring(["bkahlert/libguestfs"])
-    @FifteenMinutesTimeout @E2E @Smoke @Test
-    fun `should run install samba and set password and shutdown`(
-        logger: InMemoryLogger,
+    @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @E2E @Smoke @Test
+    fun InMemoryLogger.`should install samba and set password and shutdown`(
         uniqueId: UniqueId,
         @OS(RaspberryPiLite) osImage: OperatingSystemImage,
     ) = withTempDir(uniqueId) {
 
-        patch.patch(osImage, logger)
+        sambaPatch.patch(osImage)
 
         expect {
             lateinit var output: Sequence<String>
-            that(osImage).booted(logger) {
-                script { apt list "--installed" }.let { output = it };
+            that(osImage).booted {
+                script { apt list "--installed";"" }.let { output = it };
                 { true }
             }
             val packages = output.toList().maxByOrNull { it.length }?.lineSequence()?.filter { it.isNotBlank() }?.toList() ?: emptyList()
@@ -129,7 +128,7 @@ class SambaPatchTest {
                 any { contains("cifs-utils") }
             }
 
-            that(osImage).mounted(logger) {
+            that(osImage).mounted {
                 path("/etc/samba/smb.conf") {
                     content.isEqualTo(
                         """

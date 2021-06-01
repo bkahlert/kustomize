@@ -1,15 +1,13 @@
 package com.imgcstmzr.util
 
-import koodies.builder.BooleanBuilder.YesNo.Context.yes
-import koodies.concurrent.output
-import koodies.concurrent.script
-import koodies.docker.Docker.run
-import koodies.docker.asContainerPath
-import koodies.io.path.Locations
+import com.imgcstmzr.Locations
+import koodies.docker.curlJq
+import koodies.docker.docker
+import koodies.exec.output
 import koodies.io.path.getSize
 import koodies.io.path.randomDirectory
 import koodies.logging.RenderingLogger
-import koodies.logging.onlyIfDebugging
+import koodies.takeIfDebugging
 import java.nio.file.Path
 import kotlin.io.path.listDirectoryEntries
 
@@ -19,29 +17,23 @@ class LoggingGitHub private constructor(private val logger: RenderingLogger?) {
 
     inner class Repository(val repo: String) {
         val latestTag: String
-            get() = script(logger.onlyIfDebugging()) { !"curl \"https://api.github.com/repos/$repo/releases/latest\" | jq -r .tag_name" }.output()
+            get() {
+                val url = "https://api.github.com/repos/$repo/releases/latest"
+                return Locations.Temp.curlJq(null) { "curl '$url' 2>/dev/null | jq -r '.tag_name'" }.io.output.ansiRemoved
+            }
 
-        fun downloadRelease(release: String = "latest", downloadDirectory: Path = Locations.Temp) =
+        fun downloadRelease(release: String = "latest", downloadDirectory: Path = Locations.Temp): Path =
             downloadDirectory.randomDirectory().let { randomSubDir ->
-                val tmp = "/tmp".asContainerPath()
-                with(logger.onlyIfDebugging()) {
-                    run {
-                        image { "zero88" / "ghrd" tag "1.1.2" }
-                        options {
-                            name { "download-$release-$repo" }
-                            autoCleanup { yes }
-                            mounts { randomSubDir mountAt tmp }
-                            workingDirectory { tmp }
-                        }
-                        commandLine {
-                            arguments {
-                                +"--source" + "zip"
-                                +"--release" + release
-                                +"--regex" + repo
-                            }
-                        }
-                    }
-                }
+                randomSubDir.docker({ "zero88" / "ghrd" tag "1.1.2" },
+                    null,
+                    "--source",
+                    "zip",
+                    "--release",
+                    release,
+                    "--regex",
+                    repo,
+                    logger = logger.takeIfDebugging()
+                )
                 randomSubDir.listDirectoryEntries().maxByOrNull { it.getSize() }!!
             }
     }

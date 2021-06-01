@@ -1,12 +1,12 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.Libguestfs.Companion.hostPath
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.ChmodOption
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.CopyInOption
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.FirstBootInstallOption
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.FirstBootOption
-import com.imgcstmzr.libguestfs.virtcustomize.VirtCustomizeCustomizationOption.MkdirOption
-import com.imgcstmzr.libguestfs.virtcustomize.file
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.ChmodOption
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.CopyInOption
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootInstallOption
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootOption
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.MkdirOption
+import com.imgcstmzr.libguestfs.file
+import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.CMDLINE_TXT
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.CONFIG_TXT
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.DHCPCD_CONF
@@ -16,16 +16,13 @@ import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USB0_DNSMASQD
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USB0_NETWORK
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USBGADGET_SERVICE
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USB_GADGET
-import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.test.UniqueId
-import com.imgcstmzr.test.content
-import com.imgcstmzr.test.matchesCurlyPattern
-import com.imgcstmzr.withTempDir
+import koodies.content
 import koodies.net.ip4Of
 import koodies.net.ipOf
+import koodies.test.UniqueId
+import koodies.test.withTempDir
+import koodies.text.matchesCurlyPattern
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.any
@@ -33,7 +30,6 @@ import strikt.assertions.contains
 import strikt.assertions.filterIsInstance
 import strikt.assertions.isEqualTo
 
-@Execution(CONCURRENT)
 class UsbEthernetGadgetPatchTest {
 
     private val patch = UsbEthernetGadgetPatch(
@@ -45,7 +41,7 @@ class UsbEthernetGadgetPatchTest {
 
     @Test
     fun `should have name`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
-        expectThat(patch.name).isEqualTo("Activate USB gadget with DHCP address range 192.168.168.160/28")
+        expectThat(patch.name).isEqualTo("Configure USB Gadget with DHCP Address Range 192.168.168.160/28")
     }
 
     @Test

@@ -1,6 +1,6 @@
 package com.imgcstmzr.util
 
-import koodies.io.path.Locations
+import com.imgcstmzr.Locations
 import java.nio.file.Path
 
 object Paths {

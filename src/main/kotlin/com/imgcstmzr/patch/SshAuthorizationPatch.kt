@@ -1,7 +1,7 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
-import com.imgcstmzr.runtime.OperatingSystemImage
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]
@@ -16,7 +16,7 @@ import com.imgcstmzr.runtime.OperatingSystemImage
 class SshAuthorizationPatch(
     private val username: String,
     private val authorizedKeys: List<String>,
-) : Patch by buildPatch("Add ${authorizedKeys.size} authorized SSH keys to $username", {
+) : Patch by buildPatch("Add ${authorizedKeys.size} SSH Key(s) for $username", {
 
     customizeDisk {
         authorizedKeys.forEach { password -> sshInject { username to password } }

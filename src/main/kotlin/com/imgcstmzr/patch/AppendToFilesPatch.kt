@@ -1,15 +1,17 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.DiskPath
+import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
-import com.imgcstmzr.runtime.OperatingSystemImage
-import koodies.text.LineSeparators.LF
+import koodies.io.path.writeText
+import koodies.text.LineSeparators
 import koodies.text.LineSeparators.hasTrailingLineSeparator
 import koodies.text.LineSeparators.lines
+import koodies.text.LineSeparators.withTrailingLineSeparator
 import kotlin.io.path.appendText
 import kotlin.io.path.exists
+import kotlin.io.path.readLines
 import kotlin.io.path.readText
-import kotlin.io.path.writeText
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]
@@ -33,18 +35,35 @@ class AppendToFilesPatch(private val contentToDiskMappings: Map<String, DiskPath
             // ... therefore files are manipulated on the host
             files {
                 contentToDiskMappings.forEach { (content, path) ->
-                    edit(path, { require(it.readText().trim().endsWith(content.trim())) }) {
-                        if (!it.exists()) {
-                            it.writeText(content)
-                        } else {
-                            if (!it.readText().hasTrailingLineSeparator) it.appendText(LF)
-                            it.appendText(content)
+                    edit(path, {
+                        val actualLines = it.readLines().flatMap { line ->
+                            val lines = line.lines()
+                            lines
                         }
-                        if (!content.hasTrailingLineSeparator) it.appendText(LF)
+                        val expectedLines = content.lines(ignoreTrailingSeparator = true)
+                        val actualLastLines = actualLines.takeLast(expectedLines.size)
+                        require(actualLastLines == expectedLines)
+                    }) {
+                        if (!it.exists()) {
+                            // "Also a newline is added to the end of the LINE string automatically."
+                            // https://libguestfs.org/virt-customize.1.html#customization-options
+                            it.writeText(content.withTrailingLineSeparator())
+                        } else {
+                            // "If the file does not already end with a newline, then one is added before the appended line."
+                            // https://libguestfs.org/virt-customize.1.html#customization-options
+                            val actual = it.readText()
+                            val lineSeparator = LineSeparators.autoDetect(actual)
+                            if (!actual.hasTrailingLineSeparator) it.writeText(lineSeparator)
+
+                            // "Also a newline is added to the end of the LINE string automatically."
+                            // https://libguestfs.org/virt-customize.1.html#customization-options
+                            it.appendText(content.withTrailingLineSeparator(lineSeparator = lineSeparator))
+                        }
                     }
                 }
             }
 
         }) {
+
     constructor(vararg contentToDiskMappings: Pair<String, DiskPath>) : this(contentToDiskMappings.toMap())
 }

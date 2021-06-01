@@ -6,32 +6,30 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.path
 import com.imgcstmzr.ImgCstmzrConfig
+import com.imgcstmzr.Locations
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.cli.ColorHelpFormatter
-import com.imgcstmzr.libguestfs.LibguestfsCommandLine
-import com.imgcstmzr.libguestfs.guestfish.GuestfishCommandLine.Companion.copyOut
+import com.imgcstmzr.libguestfs.LibguestfsImage
+import com.imgcstmzr.os.OperatingSystemImage
+import com.imgcstmzr.os.OperatingSystemImage.Companion.based
+import com.imgcstmzr.os.OperatingSystemProcess.Companion.DockerPiImage
 import com.imgcstmzr.patch.patch
-import com.imgcstmzr.runtime.OperatingSystemImage
-import com.imgcstmzr.runtime.OperatingSystemImage.Companion.based
-import com.imgcstmzr.runtime.OperatingSystemProcess
 import com.imgcstmzr.util.Disk
 import com.imgcstmzr.util.Downloader
 import com.imgcstmzr.util.flash
 import koodies.collections.plus
-import koodies.concurrent.output
-import koodies.concurrent.script
 import koodies.docker.Docker
-import koodies.io.path.Locations
-import koodies.io.path.asString
+import koodies.exception.toCompactString
 import koodies.io.path.getSize
-import koodies.kaomoji.Kaomojis
-import koodies.logging.RenderingLogger
+import koodies.io.path.pathString
+import koodies.kaomoji.Kaomoji
+import koodies.logging.FixedWidthRenderingLogger
+import koodies.logging.ReturnValues
 import koodies.logging.logging
-import koodies.terminal.ANSI
-import koodies.terminal.AnsiColors.cyan
-import koodies.terminal.AnsiFormats.bold
-import koodies.terminal.Banner.banner
-import koodies.terminal.colorize
+import koodies.text.ANSI.Text.Companion.ansi
+import koodies.text.ANSI.colorize
+import koodies.text.Banner.banner
+import koodies.text.Semantics.formattedAs
 import java.nio.file.Path
 
 val debug = true
@@ -40,7 +38,7 @@ val reuseLastWorkingCopyByDefault = false
 fun main(vararg args: String) = CliCommand().main(args.let { if (reuseLastWorkingCopyByDefault) it + "--reuse-last-working-copy" else it })
 
 class CliCommand : NoOpCliktCommand(
-    epilog = "((ε(*･ω･)_/${ANSI.termColors.colorize("ﾟ･.*･･｡☆")}",
+    epilog = "((ε(*･ω･)_/${"ﾟ･.*･･｡☆".ansi.colorize()}",
     name = "imgcstmzr",
     allowMultipleSubcommands = true,
     printHelpOnEmptyArgs = true,
@@ -71,11 +69,9 @@ class CliCommand : NoOpCliktCommand(
     private val flashImage: Boolean by option("--flash", help = "If an SD card is present, it will be flashed with the newly customized image.")
         .flag()
 
-    private lateinit var cache: Cache
+    private val cache: Cache by lazy { Cache(cacheDir) }
 
     override fun run() {
-        cache = Cache(cacheDir)
-
         echo(banner("ImgCstmzr"))
         echo()
 
@@ -83,31 +79,27 @@ class CliCommand : NoOpCliktCommand(
         lateinit var osImage: OperatingSystemImage
         logging(banner("Configuration")) {
             config = configFile.let {
-                logLine { "File: ${it.asString()}".cyan().bold() }
-                logLine { "Size: ${it.getSize()}".cyan().bold() }
+                logLine { "File: ${it.pathString}".ansi.cyan.bold }
+                logLine { "Size: ${it.getSize()}".ansi.cyan.bold }
                 ImgCstmzrConfig.load(it, envFile)
             }.apply {
-                logLine { "Name: $name".cyan().bold() }
-                logLine { "Env: $envFile".cyan().bold() }
-                logLine { "Cache: $cacheDir".cyan().bold() }
+                logLine { "Name: $name".ansi.cyan.bold }
+                logLine { "Env: $envFile".ansi.cyan.bold }
+                logLine { "Cache: $cacheDir".ansi.cyan.bold }
 
                 osImage = provideImageCopy(this)
-                logLine { "OS: $osImage".cyan().bold() }
+                logLine { "OS: $osImage".ansi.cyan.bold }
             }
         }
 
         require(Docker.engineRunning) { "Docker is required to be running but could not be found." }
-        listOf(LibguestfsCommandLine.DOCKER_IMAGE, OperatingSystemProcess.DOCKER_IMAGE).subtract(Docker.images).forEach {
-            logging("Downloading required Docker image $it") {
-                script(logger = this) { !"docker pull $it" }.output()
-            }
-        }
+        // TODO get complete id for Docker.images
+        listOf(LibguestfsImage, DockerPiImage).subtract(Docker.images.list()).forEach { it.pull() }
 
-        echo()
         val patches = config.toOptimizedPatches()
-        val exceptions: List<Throwable> = patches.patch(osImage)
+        val exceptions: ReturnValues<Throwable> = patches.patch(osImage)
 
-        val flashDisk: Disk? = logging("Flashing $osImage") {
+        val flashDisk: Disk? = logging(banner("Flashing $osImage")) {
             config.flashDisk?.let { disk ->
                 flash(osImage.file, disk.takeUnless { it.equals("auto", ignoreCase = true) })
             } ?: run {
@@ -117,9 +109,9 @@ class CliCommand : NoOpCliktCommand(
                     To make use of your image, you have the following options:
                     a) Check you actually inserted an SD card. 
                        Also an once ejected SD card needs to be re-inserted to get recognized.
-                    b) Set ${ImgCstmzrConfig::flashDisk.name.cyan()} to ${"auto".cyan()} for flashing to any available physical removable disk.
-                    c) Set ${ImgCstmzrConfig::flashDisk.name.cyan()} explicitly to any available physical removable disk (e.g. ${"disk2".cyan()}) if auto fails.
-                    d) ${"Flash manually".cyan()} using the tool of your choice.
+                    b) Set ${ImgCstmzrConfig::flashDisk.name.formattedAs.input} to ${"auto".formattedAs.input} for flashing to any available physical removable disk.
+                    c) Set ${ImgCstmzrConfig::flashDisk.name.formattedAs.input} explicitly to any available physical removable disk (e.g. ${"disk2".formattedAs.input}) if auto fails.
+                    d) ${"Flash manually".formattedAs.input} using the tool of your choice.
                        ${osImage.file.toUri()}
                 """.trimIndent()
                 }
@@ -131,25 +123,23 @@ class CliCommand : NoOpCliktCommand(
 
         logging(banner("Summary")) {
             logLine { "Image flashed to: " + (flashDisk?.run { toString() } ?: "—") }
-            logLine { "Run scripts: " + osImage.copyOut("/usr/lib/virt-sysprep").toUri() }
-            logLine { "Run scripts log: " + osImage.copyOut("/root/virt-sysprep-firstboot.log").toUri() }
+            logLine { "Run scripts: " + osImage.copyOut("/usr/lib/virt-sysprep", logger = this).toUri() }
+            logLine { "Run scripts log: " + osImage.copyOut("/root/virt-sysprep-firstboot.log", logger = this).toUri() }
 
-            if (exceptions.isEmpty()) Kaomojis.Magic.random().toString() + " ${osImage.file.toUri()}"
-            else Kaomojis.BadMood.random().also {
+            if (exceptions.isEmpty()) Kaomoji.Magical.random().toString() + " ${osImage.file.toUri()}"
+            else Kaomoji.BadMood.random().also {
                 logLine { "The following problems occurred during image customization:" }
                 exceptions.forEach { ex ->
-                    this.logCaughtException { ex }
+                    logLine { ex.toCompactString() }
                 }
             }
         }
     }
 
-    private fun RenderingLogger.provideImageCopy(config: ImgCstmzrConfig) = with(cache) {
+    private fun FixedWidthRenderingLogger.provideImageCopy(config: ImgCstmzrConfig) = with(cache) {
         config.os based provideCopy(config.name, reuseLastWorkingCopy) {
             with(downloader) {
-                config.os.download(this@provideImageCopy).also {
-                    logLine { "Download completed." }
-                }
+                config.os.download(this@provideImageCopy)
             }
         }
     }
