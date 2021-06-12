@@ -1,7 +1,7 @@
 package com.imgcstmzr.libguestfs
 
 import com.imgcstmzr.os.DiskPath
-import com.imgcstmzr.os.HostPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import koodies.collections.head
 import koodies.collections.tail
@@ -19,6 +19,7 @@ import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
+import java.nio.file.Path
 
 class GuestfishCommandLineTest {
 
@@ -87,25 +88,25 @@ internal fun createGuestfishCommand(osImage: OperatingSystemImage): GuestfishCom
     commands {
         custom("!mkdir", "-p")
 
-        copyIn { DiskPath("/home/pi/.ssh/known_hosts") }
-        copyOut { DiskPath("/home/pi/.ssh/known_hosts") }
+        copyIn { LinuxRoot.home / "pi" / ".ssh" / "known_hosts" }
+        copyOut { LinuxRoot.home / "pi" / ".ssh" / "known_hosts" }
 
         tarIn()
         tarOut()
-        rm { DiskPath("/rm") }
-        rm(force = true) { DiskPath("/rm/force") }
-        rm(force = true, recursive = true) { DiskPath("/rm/force-recursive") }
-        rm(force = false, recursive = true) { DiskPath("/rm/invalid-only-recursive") }
-        rmDir { DiskPath("/rm/dir") }
+        rm { LinuxRoot / "rm" }
+        rm(force = true) { LinuxRoot / "rm" / "force" }
+        rm(force = true, recursive = true) { LinuxRoot / "rm" / "force-recursive" }
+        rm(force = false, recursive = true) { LinuxRoot / "rm" / "invalid-only-recursive" }
+        rmDir { LinuxRoot / "rm" / "dir" }
         umountAll()
         exit()
     }
 }
 
 
-class GuestAssertions(private val assertions: MutableList<Pair<DiskPath, Assertion.Builder<HostPath>.() -> Unit>>) {
-    fun path(diskPath: String, assertion: Assertion.Builder<HostPath>.() -> Unit) = assertions.add(DiskPath(diskPath) to assertion)
-    fun path(diskPath: DiskPath, assertion: Assertion.Builder<HostPath>.() -> Unit) = assertions.add(diskPath to assertion)
+class GuestAssertions(private val assertions: MutableList<Pair<DiskPath, Assertion.Builder<Path>.() -> Unit>>) {
+    fun path(diskPath: String, assertion: Assertion.Builder<Path>.() -> Unit) = assertions.add(LinuxRoot / diskPath to assertion)
+    fun path(diskPath: DiskPath, assertion: Assertion.Builder<Path>.() -> Unit) = assertions.add(diskPath to assertion)
 }
 
 /**
@@ -122,7 +123,7 @@ inline val FixedWidthRenderingLogger.mounted: Assertion.Builder<OperatingSystemI
 fun Assertion.Builder<OperatingSystemImage>.mounted(logger: FixedWidthRenderingLogger, init: GuestAssertions.() -> Unit) =
     get("mounted") {
         // Getting paths and assertions
-        val assertions = mutableListOf<Pair<DiskPath, Assertion.Builder<HostPath>.() -> Unit>>()
+        val assertions = mutableListOf<Pair<DiskPath, Assertion.Builder<Path>.() -> Unit>>()
         GuestAssertions(assertions).apply(init)
         val paths = assertions.map { it.first }
 

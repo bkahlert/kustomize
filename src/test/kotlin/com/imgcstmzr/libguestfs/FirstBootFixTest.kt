@@ -1,6 +1,6 @@
 package com.imgcstmzr.libguestfs
 
-import koodies.io.copyToDirectory
+import koodies.docker.ubuntu
 import koodies.io.path.executable
 import koodies.logging.InMemoryLogger
 import koodies.logging.RenderingLogger
@@ -21,7 +21,7 @@ import kotlin.io.path.readText
 class FirstBootFixTest {
 
     private fun Path.runFourScripts(logger: RenderingLogger, customization: Path.() -> Unit = {}): String {
-        val outputFile = resolve("test.txt")
+        val outputFile = "test.txt"
         val scriptFile =
             dir("usr") {
                 dir("lib") {
@@ -33,12 +33,12 @@ class FirstBootFixTest {
                             sh("0002-script-2") < "echo '2' >> '$outputFile'"
                             customization()
                         }
-                        libguestfsFirstBootScript()
+                        libguestfsFirstBootScript(this@runFourScripts)
                     }
                 }
             }
-        ShellScript { "$scriptFile start" }.exec.logging(logger)
-        return outputFile.readText()
+        ubuntu(logger) { "$scriptFile start" }
+        return resolve(outputFile).readText()
     }
 
     @TwoMinutesTimeout @Test
@@ -99,9 +99,10 @@ private data class ScriptStub(val dir: Path, val name: String) {
 
 /**
  * Create the given the **[libguestfs firstboot script](https://github.com/raspbian-packages/libguestfs/blob/5dd450eaf5dad56b8539a2d324ad1cb5b1277ffa/customize/firstboot.ml)**
- * in `this` directory and returns its path.
+ * in `this` directory and returns its relative path.
  */
-private fun Path.libguestfsFirstBootScript() = script("firstboot.sh") { dir ->
+private fun Path.libguestfsFirstBootScript(root: Path) = script("firstboot.sh") { absDir ->
+    val dir = root.relativize(absDir)
     """
     #!/bin/sh -
     d=$dir/scripts
@@ -125,6 +126,6 @@ private fun Path.libguestfsFirstBootScript() = script("firstboot.sh") { dir ->
       rm -f ${`$`}d_done/*
     fi
     """
-}
+}.let { root.relativize(it) }
 
 private val `$` = "$"

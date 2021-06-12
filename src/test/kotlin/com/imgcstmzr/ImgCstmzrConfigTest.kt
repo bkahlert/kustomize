@@ -7,7 +7,7 @@ import com.imgcstmzr.ImgCstmzrConfig.Samba
 import com.imgcstmzr.ImgCstmzrConfig.UsbGadget.Ethernet
 import com.imgcstmzr.ImgCstmzrConfig.Wifi
 import com.imgcstmzr.libguestfs.mounted
-import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystem.Credentials.Companion.withPassword
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
@@ -61,6 +61,7 @@ import strikt.assertions.isTrue
 import strikt.assertions.none
 import strikt.java.exists
 import java.util.TimeZone
+import kotlin.io.path.div
 
 @SystemProperties(
     SystemProperty("IMG_CSTMZR_USERNAME", "FiFi"),
@@ -106,8 +107,8 @@ class ImgCstmzrConfigTest {
         expecting { tweaks?.aptRetries } that { isEqualTo(10) }
         expecting { files } that {
             isEqualTo(listOf(
-                FileOperation("line 1\nline 2", null, DiskPath("/boot/file-of-lines.txt")),
-                FileOperation(null, Locations.WorkingDirectory.resolve("src/test/resources/BKAHLERT.png"), DiskPath("/home/FiFi/image.png")),
+                FileOperation("line 1\nline 2", null, LinuxRoot.boot / "file-of-lines.txt"),
+                FileOperation(null, Locations.WorkingDirectory / "src" / "test" / "resources" / "BKAHLERT.png", LinuxRoot.home / "FiFi" / "image.png"),
             )).any { get { append } isEqualTo ("line 1\nline 2") }
         }
         expecting { setup[0].name } that { isEqualTo("the basics") }
@@ -123,7 +124,7 @@ class ImgCstmzrConfigTest {
             containsExactly(
                 ShellScript(
                     name = "Finalizing A",
-                    content = """echo "Type X to …">>${'$'}HOME/first-boot.txt"""
+                    content = "echo 'Type X to …'>>${'$'}HOME/first-boot.txt"
                 ),
                 ShellScript(
                     name = "Finalizing B",

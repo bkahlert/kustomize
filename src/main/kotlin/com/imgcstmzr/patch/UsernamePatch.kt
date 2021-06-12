@@ -1,6 +1,6 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
 
@@ -16,11 +16,11 @@ class UsernamePatch(
     @Suppress("SpellCheckingInspection")
     customizeDisk {
         appendLine {
-            val privacyFile = DiskPath("/etc/sudoers.d/privacy")
+            val privacyFile = LinuxRoot.etc / "sudoers.d" / "privacy"
             "Defaults        lecture = never" to privacyFile
         }
         appendLine {
-            val sudoersFile = DiskPath("/etc/sudoers")
+            val sudoersFile = LinuxRoot.etc / "sudoers"
             "$newUsername ALL=(ALL) NOPASSWD:ALL" to sudoersFile
         }
         firstBootCommand { "usermod -l $newUsername $oldUsername" }

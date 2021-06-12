@@ -137,7 +137,7 @@ class Program(
          * sed -i 's/^\#Port 22$/Port 1234/g' /etc/ssh/sshd_config
          *
          * : configure
-         * systemctl enable getty@ttyGS0.service
+         * systemctl enable serial-getty@ttyGS0.service
          *
          * : remove unused DHCP clients
          * apt-get purge -qq -m isc-dhcp-client
@@ -145,6 +145,7 @@ class Program(
          * apt-get autoremove -y -m
          * ```
          */
+        @Deprecated("delete")
         @Suppress("SpellCheckingInspection")
         fun fromSetupScript(name: String, readyPattern: Regex, labelledScripts: String): Array<Program> {
             return splitScripts(labelledScripts).map { labelledScript ->

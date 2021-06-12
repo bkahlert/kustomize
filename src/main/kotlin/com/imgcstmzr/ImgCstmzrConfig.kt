@@ -3,7 +3,7 @@ package com.imgcstmzr
 import com.imgcstmzr.Convertible.Companion.converter
 import com.imgcstmzr.cli.asParam
 import com.imgcstmzr.os.DiskPath
-import com.imgcstmzr.os.HostPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystem
 import com.imgcstmzr.os.OperatingSystems
 import com.imgcstmzr.patch.AppendToFilesPatch
@@ -111,7 +111,7 @@ data class ImgCstmzrConfig(
 
     data class Tweaks(val aptRetries: Int?)
 
-    data class FileOperation(val append: String?, val hostPath: HostPath?, val diskPath: DiskPath) {
+    data class FileOperation(val append: String?, val hostPath: Path?, val diskPath: DiskPath) {
         init {
             require((append != null) || (hostPath != null)) {
                 "At least one of the options ${::append.asParam()} and ${::hostPath.asParam()} must be specified."
@@ -307,7 +307,7 @@ data class UnsafeImgCstmzrConfig(
                 ls.firstOrNull { it.exists() }
                     ?: error("The resolved expression $hostPath would point to at least one existing file.")
             },
-            DiskPath(diskPath),
+            LinuxRoot / diskPath,
         )
     })
 

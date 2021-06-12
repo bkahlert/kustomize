@@ -33,6 +33,7 @@ import strikt.assertions.contains
 import strikt.assertions.isEqualTo
 import strikt.java.exists
 import java.nio.file.Path
+import kotlin.io.path.div
 import kotlin.io.path.isWritable
 import kotlin.io.path.readLines
 
@@ -91,7 +92,7 @@ class OperatingSystemImageTest {
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
         fun InMemoryLogger.`should copy-out existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
             osImage.guestfish(this, false, null, false) {
-                copyOut { DiskPath("/boot/cmdline.txt") }
+                copyOut { LinuxRoot.boot / "cmdline.txt" }
             }
 
             expectThat(osImage.exchangeDirectory.resolve("boot/cmdline.txt"))
@@ -101,10 +102,10 @@ class OperatingSystemImageTest {
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
         fun InMemoryLogger.`should ignore missing files`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
             osImage.guestfish(this, false, null, false) {
-                copyOut { DiskPath("/missing.txt") }
+                copyOut { LinuxRoot / "missing.txt" }
             }
 
-            expectThat(osImage.exchangeDirectory.resolve("missing.txt")) {
+            expectThat(osImage.exchangeDirectory / "missing.txt") {
                 not { exists() }
             }
             expectLogged.contains("successfully")
@@ -114,7 +115,7 @@ class OperatingSystemImageTest {
         fun InMemoryLogger.`should override locally existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
             val dir = osImage.exchangeDirectory.apply { resolve("boot/cmdline.txt").withDirectoriesCreated().writeText("overwrite me") }
             osImage.guestfish(this, false, null, false) {
-                copyOut { DiskPath("/boot/cmdline.txt") }
+                copyOut { LinuxRoot / "boot" / "cmdline.txt" }
             }
 
             expectThat(dir.resolve("boot/cmdline.txt")).content
@@ -126,10 +127,10 @@ class OperatingSystemImageTest {
         fun InMemoryLogger.`should override existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
             val dir = osImage.exchangeDirectory.apply { resolve("boot/cmdline.txt").withDirectoriesCreated().writeText("overwrite me") }
             osImage.guestfish(this, false, null, false) {
-                copyIn { DiskPath("/boot/cmdline.txt") }
+                copyIn { LinuxRoot / "boot" / "cmdline.txt" }
             }
             osImage.guestfish(this, false, null, false) {
-                copyOut { DiskPath("/boot/cmdline.txt") }
+                copyOut { LinuxRoot / "boot" / "cmdline.txt" }
             }
 
             expectThat(dir.resolve("boot/cmdline.txt")).hasContent("overwrite me")

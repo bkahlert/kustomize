@@ -98,7 +98,7 @@ output. Although that output is very likely mingled since those tests still run 
   possibly [creating them on the fly](https://www.testcontainers.org/features/creating_images/); seems to even work
   with [consuming logs](https://www.testcontainers.org/features/container_logs/)
 - [ ] Bluetooth PAN
-- [ ] Serial connection using g_serial (`sudo systemctl enable getty@ttyGS0.service`)
+- [ ] Serial connection using g_serial (`sudo systemctl enable serial-getty@ttyGS0.service`)
   , [based on INI files](https://www.digitalocean.com/community/tutorials/understanding-systemd-units-and-unit-files) so consider doing while increasing disk
   image
     - [ ] Connect on `/dev/tty.usbmodemNNNN` using "115200 baud (8N1 8- bit No-parity 1-stop if you need to set that)"

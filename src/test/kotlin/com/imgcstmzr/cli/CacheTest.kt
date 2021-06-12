@@ -1,6 +1,6 @@
 package com.imgcstmzr.cli
 
-import com.imgcstmzr.test.MiscClassPathFixture.TestImgZip
+import koodies.io.ClassPathFile
 import koodies.io.copyToDirectory
 import koodies.io.path.hasContent
 import koodies.io.path.isInside
@@ -42,7 +42,7 @@ class CacheTest {
 
         val copy = with(cache) {
             provideCopy("my-copy") {
-                TestImgZip.copyToDirectory(this@withTempDir)
+                ClassPathFile("test.img.zip").copyToDirectory(this@withTempDir)
             }
         }
 
@@ -57,7 +57,7 @@ class CacheTest {
         var providerCalls = 0
         val provider = {
             providerCalls++
-            TestImgZip.copyToDirectory(this)
+            ClassPathFile("test.img.zip").copyToDirectory(this)
         }
 
         val copies = (0..2).map {

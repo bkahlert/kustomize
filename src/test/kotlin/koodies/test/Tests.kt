@@ -30,6 +30,7 @@ import koodies.text.ANSI.ansiRemoved
 import koodies.text.Semantics.BlockDelimiters.TEXT
 import koodies.text.Semantics.Symbols
 import koodies.text.Semantics.formattedAs
+import koodies.text.decapitalize
 import koodies.text.takeUnlessBlank
 import koodies.text.truncate
 import koodies.text.withRandomSuffix

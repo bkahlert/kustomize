@@ -117,27 +117,34 @@ if [ "${1:-}" = "test" ]; then
   exit 0
 fi
 
-echo "FIXING SCRIPT ORDER"
+echo "== Fixing script order =="
 WORKDIR=$(pwd)
 _info "working directory: ${WORKDIR}"
 BASEDIR=$(dirname "$0")
 _info "base directory: ${BASEDIR}"
 BASENAME=$(basename "$0")
 _info "base name: ${BASENAME}"
+PARENTDIR=$(dirname "${BASEDIR}")
+_info "parent directory: ${PARENTDIR}"
 
-SCRIPTS_DIR="$(dirname "$0")/../scripts"
-COPIES_DIR="$(dirname "$0")/../copies"
-mkdir -p "${COPIES_DIR}" && rm -f ${COPIES_DIR}/* || exit 1
-cd "${SCRIPTS_DIR}" || exit 1
+SCRIPTS_DIR="${PARENTDIR}/scripts"
+COPIES_DIR="${PARENTDIR}/copies"
+[ -d "${COPIES_DIR}" ] && rm -f "${COPIES_DIR}"
+mkdir -p "${COPIES_DIR}"
+if [ ! -d "${COPIES_DIR}" ]; then
+  echo "Could not create ${COPIES_DIR}"
+  exit 1
+fi
 
 _start "Copying all firstboot scripts timestamp-prefixed to ${COPIES_DIR}"
-ls -1 | while read _FILE; do
+find "${SCRIPTS_DIR}" -type f | while read -r _FILE; do
+  _FILE=$(basename "${_FILE}")
   #  _EPOCH="$(stat -c %Y "${_FILE}")"
   _EPOCH="$(perl -e 'print +(stat $ARGV[0])[9], "\n"' "${SCRIPTS_DIR}/${_FILE}")"
   _COPY="${COPIES_DIR}/${_EPOCH}-${_FILE}"
 
   # ignore this script itself, non-regular files and all non-executables
-  if [ ! "${_FILE}" = "${BASENAME}" ] && [ -x "${_FILE}" ] && [ -f "${_FILE}" ]; then
+  if [ ! "${SCRIPTS_DIR}/${_FILE}" = "${BASENAME}" ] && [ -x "${SCRIPTS_DIR}/${_FILE}" ] && [ -f "${SCRIPTS_DIR}/${_FILE}" ]; then
     # ignore already copied files
     if [ ! -f "${_COPY}" ]; then
 
@@ -152,11 +159,12 @@ done
 _end $_ok
 
 _start "Moving back firstboot script copies so that alphabetical order reflects the intended order"
-ls -1 | while read _FILE; do
+find "${SCRIPTS_DIR}" -type f | while read -r _FILE; do
+  _FILE=$(basename "${_FILE}")
   _EPOCH="$(perl -e 'print +(stat $ARGV[0])[9], "\n"' "${SCRIPTS_DIR}/${_FILE}")"
 
   # ignore this script itself, non-regular files and all non-executables
-  if [ ! "${_FILE}" = "${BASENAME}" ] && [ -x "${_FILE}" ] && [ -f "${_FILE}" ]; then
+  if [ ! "${SCRIPTS_DIR}/${_FILE}" = "${BASENAME}" ] && [ -x "${SCRIPTS_DIR}/${_FILE}" ] && [ -f "${SCRIPTS_DIR}/${_FILE}" ]; then
 
     _COPY="${COPIES_DIR}/""$(ls -1 "${COPIES_DIR}" | head -n 1)"
 
@@ -172,9 +180,10 @@ done
 _end $_ok
 
 _start "Contents of files swapped but enumeration order kept"
-ls -1 | while read _FILE; do
+find "${SCRIPTS_DIR}" -type f | while read -r _FILE; do
+  _FILE=$(basename "${_FILE}")
   # ignore this script itself, non-regular files and all non-executables
-  if [ ! "${_FILE}" = "${BASENAME}" ] && [ -x "${_FILE}" ] && [ -f "${_FILE}" ]; then
+  if [ ! "${SCRIPTS_DIR}/${_FILE}" = "${BASENAME}" ] && [ -x "${SCRIPTS_DIR}/${_FILE}" ] && [ -f "${SCRIPTS_DIR}/${_FILE}" ]; then
     printf "\n  "
     _item "${SCRIPTS_DIR}/${_FILE}"
   fi

@@ -1,6 +1,7 @@
 package com.imgcstmzr.patch
 
 import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
 
@@ -19,6 +20,6 @@ class TweaksPatch(
 
 }) {
     companion object {
-        val APT_CONF_RETRIES: DiskPath = DiskPath("/etc/apt/apt.conf.d/80-retries")
+        val APT_CONF_RETRIES: DiskPath = LinuxRoot.etc / "apt" / "apt.conf.d" / "80-retries"
     }
 }

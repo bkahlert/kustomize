@@ -1,6 +1,7 @@
 package com.imgcstmzr.patch
 
 import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import koodies.net.IPAddress
@@ -82,37 +83,35 @@ class UsbEthernetGadgetPatch(
          * dhcp-range=192.168.168.168,192.168.168.189,24h
          * dhcp-option=option:dns-server,192.168.168.192
          */
-        copyIn(USB0_DNSMASQD,
-            """
-                    dhcp-authoritative 
-                    dhcp-rapid-commit
-                    no-ping
-                    interface=usb0 
-                    dhcp-range=${dhcpRange.firstUsableHost},${dhcpRange.lastUsableHost},1h 
-                    dhcp-option=3 # no gateway / routing
-                    #dhcp-option=option:dns-server,192.168.168.192
-                    ${if (hostAsDefaultGateway) "dhcp-script=$DHCP_SCRIPT" else ""}
-                    leasefile-ro
-                """.trimIndent())
+        copyIn(USB0_DNSMASQD, """
+            dhcp-authoritative 
+            dhcp-rapid-commit
+            no-ping
+            interface=usb0 
+            dhcp-range=${dhcpRange.firstUsableHost},${dhcpRange.lastUsableHost},1h 
+            dhcp-option=3 # no gateway / routing
+            #dhcp-option=option:dns-server,192.168.168.192
+            ${if (hostAsDefaultGateway) "dhcp-script=$DHCP_SCRIPT" else ""}
+            leasefile-ro
+        """.trimIndent())
 
         if (hostAsDefaultGateway) {
-            copyIn(DHCP_SCRIPT,
-                """
-                        #!/bin/bash
-                        op="${'$'}{1:-op}"
-                        mac="${'$'}{2:-mac}"
-                        ip="${'$'}{3:-ip}"
-                        host="${'$'}{4}"
-                        
-                        if [[ ${'$'}op == "init" ]]; then
-                            exit 0
-                        fi
-                        
-                        if [[ ${'$'}op == "add" ]] || [[ ${'$'}op == "old" ]]; then
-                            route add default gw ${'$'}ip usb0
-                        fi
-                        
-                    """.trimIndent())
+            copyIn(DHCP_SCRIPT, """
+                #!/bin/bash
+                op="${'$'}{1:-op}"
+                mac="${'$'}{2:-mac}"
+                ip="${'$'}{3:-ip}"
+                host="${'$'}{4}"
+                
+                if [[ ${'$'}op == "init" ]]; then
+                    exit 0
+                fi
+                
+                if [[ ${'$'}op == "add" ]] || [[ ${'$'}op == "old" ]]; then
+                    route add default gw ${'$'}ip usb0
+                fi
+                
+            """.trimIndent())
             chmods { "0755" to DHCP_SCRIPT }
         }
 
@@ -134,100 +133,97 @@ class UsbEthernetGadgetPatch(
          * metric 999
          * dns-nameservers 192.168.168.168
          */
-        copyIn(USB0_NETWORK,
-            """
-                    auto usb0
-                    allow-hotplug usb0
-                    iface usb0 inet static
-                      address $deviceAddress/${dhcpRange.prefixLength}
-                """.trimIndent())
+        copyIn(USB0_NETWORK, """
+            auto usb0
+            allow-hotplug usb0
+            iface usb0 inet static
+              address $deviceAddress/${dhcpRange.prefixLength}
+        """.trimIndent())
 
-        copyIn(USB_GADGET,
-            """
-                    #!/bin/bash
-    
-                    cd /sys/kernel/config/usb_gadget/
-                    mkdir -p display-pi
-                    cd display-pi
-                    echo 0x1d6b > idVendor # Linux Foundation
-                    echo 0x0104 > idProduct # Multifunction Composite Gadget
-                    echo 0x0100 > bcdDevice # v1.0.0
-                    echo 0x0200 > bcdUSB # USB2
-                    #echo 0xEF > bDeviceClass
-                    #echo 0x02 > bDeviceSubClass
-                    #echo 0x01 > bDeviceProtocol
-                    mkdir -p strings/0x409
-                    echo "fedcba9876543210" > strings/0x409/serialnumber
-                    echo "Ben Hardill" > strings/0x409/manufacturer
-                    echo "Display-Pi USB Device" > strings/0x409/product
-                    mkdir -p configs/c.1/strings/0x409
-                    echo "Config 1: ECM network" > configs/c.1/strings/0x409/configuration
-                    echo 250 > configs/c.1/MaxPower
-                    # Add functions here
-                    # see gadget configurations below
-                    # End functions
-                    
-                    mkdir -p functions/ecm.usb0
-                    HOST="00:dc:c8:f7:75:15" # "HostPC"
-                    SELF="00:dd:dc:eb:6d:a1" # "BadUSB"
-                    echo ${'$'}HOST > functions/ecm.usb0/host_addr
-                    echo ${'$'}SELF > functions/ecm.usb0/dev_addr
-                    ln -s functions/ecm.usb0 configs/c.1/
-                    
-                    mkdir -p functions/acm.usb0
-                    ln -s functions/acm.usb0 configs/c.1/
-                    
-                    #mkdir -p functions/mass_storage.usb0
-                    #echo 0 > functions/mass_storage.usb0/stall
-                    #echo 0 > functions/mass_storage.usb0/lun.0/cdrom
-                    #echo 1 > functions/mass_storage.usb0/lun.0/ro
-                    #echo 0 > functions/mass_storage.usb0/lun.0/nofua
-                    #echo /opt/disk.img > functions/mass_storage.usb0/lun.0/file
-                    #ln -s functions/mass_storage.usb0 configs/c.1/
-                    
-                    udevadm settle -t 5 || :
-                    ls /sys/class/udc > UDC
-                    
-                    ifup usb0
-                """.trimIndent())
+        copyIn(USB_GADGET, """
+            #!/bin/bash
+
+            cd /sys/kernel/config/usb_gadget/
+            mkdir -p display-pi
+            cd display-pi
+            echo 0x1d6b > idVendor # Linux Foundation
+            echo 0x0104 > idProduct # Multifunction Composite Gadget
+            echo 0x0100 > bcdDevice # v1.0.0
+            echo 0x0200 > bcdUSB # USB2
+            #echo 0xEF > bDeviceClass
+            #echo 0x02 > bDeviceSubClass
+            #echo 0x01 > bDeviceProtocol
+            mkdir -p strings/0x409
+            echo "fedcba9876543210" > strings/0x409/serialnumber
+            echo "Ben Hardill" > strings/0x409/manufacturer
+            echo "Display-Pi USB Device" > strings/0x409/product
+            mkdir -p configs/c.1/strings/0x409
+            echo "Config 1: ECM network" > configs/c.1/strings/0x409/configuration
+            echo 250 > configs/c.1/MaxPower
+            # Add functions here
+            # see gadget configurations below
+            # End functions
+            
+            mkdir -p functions/ecm.usb0
+            HOST="00:dc:c8:f7:75:15" # "HostPC"
+            SELF="00:dd:dc:eb:6d:a1" # "BadUSB"
+            echo ${'$'}HOST > functions/ecm.usb0/host_addr
+            echo ${'$'}SELF > functions/ecm.usb0/dev_addr
+            ln -s functions/ecm.usb0 configs/c.1/
+            
+            mkdir -p functions/acm.usb0
+            ln -s functions/acm.usb0 configs/c.1/
+            
+            #mkdir -p functions/mass_storage.usb0
+            #echo 0 > functions/mass_storage.usb0/stall
+            #echo 0 > functions/mass_storage.usb0/lun.0/cdrom
+            #echo 1 > functions/mass_storage.usb0/lun.0/ro
+            #echo 0 > functions/mass_storage.usb0/lun.0/nofua
+            #echo /opt/disk.img > functions/mass_storage.usb0/lun.0/file
+            #ln -s functions/mass_storage.usb0 configs/c.1/
+            
+            udevadm settle -t 5 || :
+            ls /sys/class/udc > UDC
+            
+            ifup usb0
+        """.trimIndent())
         chmods { "0755" to USB_GADGET }
 
-        copyIn(USBGADGET_SERVICE,
-            """
-                    [Unit]
-                    Description=My USB gadget
-                    After=network-online.target
-                    Wants=network-online.target
-                    #After=systemd-modules-load.service
-                     
-                    [Service]
-                    Type=oneshot
-                    RemainAfterExit=yes
-                    ExecStart=$USB_GADGET
-                     
-                    [Install]
-                    WantedBy=sysinit.target
-                """.trimIndent())
+        copyIn(USBGADGET_SERVICE, """
+            [Unit]
+            Description=My USB gadget
+            After=network-online.target
+            Wants=network-online.target
+            #After=systemd-modules-load.service
+             
+            [Service]
+            Type=oneshot
+            RemainAfterExit=yes
+            ExecStart=$USB_GADGET
+             
+            [Install]
+            WantedBy=sysinit.target
+        """.trimIndent())
         firstBoot("enable ${USBGADGET_SERVICE.fileName}") { "systemctl enable ${USBGADGET_SERVICE.fileName}" }
 
-        firstBoot("update ${CONFIG_TXT.fileName}") { "echo dtoverlay=dwc2 >> $CONFIG_TXT" }
+        firstBoot("update ${CONFIG_TXT.fileName}") { "echo 'dtoverlay=dwc2' >> $CONFIG_TXT" }
         firstBoot("update ${CMDLINE_TXT.fileName}") { "sed -i 's/\$/ modules-load=dwc2/' $CMDLINE_TXT" }
-        firstBoot("update ${MODULES.fileName}") { "echo libcomposite >> $MODULES" }
-        firstBoot("update ${DHCPCD_CONF.fileName}") { "echo denyinterfaces usb0 >> $DHCPCD_CONF" }
-        if (enableSerialConsole) firstBoot("enable getty@ttyGS0.service") { "systemctl enable getty@ttyGS0.service" }
+        firstBoot("update ${MODULES.fileName}") { "echo 'libcomposite' >> $MODULES" }
+        firstBoot("update ${DHCPCD_CONF.fileName}") { "echo 'denyinterfaces usb0' >> $DHCPCD_CONF" }
+        if (enableSerialConsole) firstBoot("enable serial-getty@ttyGS0.service") { "systemctl enable serial-getty@ttyGS0.service" }
     }
 }) {
     companion object {
-        val USB0_DNSMASQD = DiskPath("/etc/dnsmasq.d/usb0")
-        val DHCP_SCRIPT = DiskPath("/root/route.sh")
-        val USB0_NETWORK: DiskPath = DiskPath("/etc/network/interfaces.d/usb0")
-        val USB_GADGET = DiskPath("/usr/local/sbin/usb-gadget.sh")
-        val USBGADGET_SERVICE = DiskPath("/lib/systemd/system/usbgadget.service")
+        val USB0_DNSMASQD = LinuxRoot.etc / "dnsmasq.d" / "usb0"
+        val DHCP_SCRIPT = LinuxRoot.root / "route.sh"
+        val USB0_NETWORK = LinuxRoot.etc / "network" / "interfaces.d" / "usb0"
+        val USB_GADGET = LinuxRoot.usr / "local" / "sbin" / "usb-gadget.sh"
+        val USBGADGET_SERVICE = LinuxRoot.etc.systemd.system / "usbgadget.service"
 
-        val CONFIG_TXT: DiskPath = DiskPath("/boot/config.txt")
-        val CMDLINE_TXT: DiskPath = DiskPath("/boot/cmdline.txt")
-        val MODULES: DiskPath = DiskPath("/etc/modules")
-        val DHCPCD_CONF: DiskPath = DiskPath("/etc/dhcpcd.conf")
+        val CONFIG_TXT: DiskPath = LinuxRoot.boot.ConfigTxt
+        val CMDLINE_TXT: DiskPath = LinuxRoot.boot.CmdlineTxt
+        val MODULES: DiskPath = LinuxRoot.etc / "modules"
+        val DHCPCD_CONF: DiskPath = LinuxRoot.etc / "dhcpcd.conf"
 
         val DEFAULT_DHCP_RANGE = ip4Of("10.55.0.1") / 29
     }

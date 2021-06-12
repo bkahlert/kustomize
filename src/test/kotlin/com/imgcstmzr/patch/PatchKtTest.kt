@@ -3,7 +3,7 @@ package com.imgcstmzr.patch
 import com.imgcstmzr.libguestfs.GuestAssertions
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization
-import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemProcess
 import com.imgcstmzr.os.OperatingSystemProcess.Companion.DockerPiImage
@@ -49,6 +49,7 @@ import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
 import strikt.assertions.hasSize
 import strikt.assertions.isGreaterThanOrEqualTo
+import java.nio.file.Path
 import java.time.Instant
 import kotlin.io.path.exists
 import kotlin.io.path.readText
@@ -91,22 +92,16 @@ class PatchKtTest {
                 hostname { "test-machine" }
             }
             guestfish {
-                copyOut { DiskPath("/etc/hostname") }
+                copyOut { LinuxRoot.etc / "hostname" }
             }
             files {
-                edit(DiskPath("/root/.imgcstmzr.created"), {
+                edit(LinuxRoot.root / ".imgcstmzr.created", {
                     require(it.readText().trim().parseableInstant<Any>())
                 }) {
                     it.touch().writeLine(timestamp.format())
                 }
 
-//                edit(DiskPath("/home/pi/demo.ansi"), { path ->
-//                    require(path.exists())
-//                }) {
-//                    MiscClassPathFixture.AnsiDocument.copyTo(it)
-//                }
-
-                edit(DiskPath("/home/pi/demo.ansi"), {
+                edit(LinuxRoot / "home/pi/demo.ansi", {
                     require(it.exists())
                 }) {
                     it.writeText(SvgFixture.toAsciiArt())
@@ -150,7 +145,7 @@ fun <T : Patch> Assertion.Builder<T>.matches(
     },
     fileSystemOperationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> FileOperation>>.() -> Unit = { hasSize(0) },
     programsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Program>>.() -> Unit = { hasSize(0) },
-) = compose("matches") { patch ->
+) = compose("matches") {
     diskOperationsAssertion(get { diskPreparations })
     customizationsAssertion(get { diskCustomizations })
     guestfishCommandsAssertion(get { diskOperations })
@@ -222,7 +217,7 @@ inline fun OperatingSystemProcess.script(
             script()
             !"printf '$outputMarker'"
         })
-    }.build()
+    }.toString()
     command(snippet)
     return Sequence {
         val regex = Regex(Regex.escape(outputMarker) + "(?<captured>.*)" + Regex.escape(outputMarker), setOf(DOT_MATCHES_ALL, MULTILINE))
@@ -233,8 +228,8 @@ inline fun OperatingSystemProcess.script(
 /**
  * Assertions on the directory used to share files with the [OperatingSystemImage].
  */
-fun Assertion.Builder<OperatingSystemImage>.hostPath(path: String) =
-    get("shared directory %s") { this.hostPath(DiskPath(path)) }
+fun Assertion.Builder<OperatingSystemImage>.hostPath(path: String): DescribeableBuilder<Path> =
+    get("shared directory %s") { hostPath(LinuxRoot / path) }
 
 fun Assertion.Builder<OperatingSystemImage>.booted(
     logger: BlockRenderingLogger,

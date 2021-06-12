@@ -1,7 +1,7 @@
 package com.imgcstmzr.libguestfs
 
-import com.imgcstmzr.os.DiskPath
-import koodies.test.ClassPathFileFixture
+import com.imgcstmzr.os.LinuxRoot
+import koodies.io.ClassPathFile
 
 /**
  * Script (stored at [ClassPathFileFixture.path]) which fixes the execution
@@ -12,11 +12,12 @@ import koodies.test.ClassPathFileFixture
  * @see <a href="https://libguestfs.org/virt-builder.1.html#first-boot-scripts">First Boot Scripts</a>
  * @see <a href="https://libguestfs.org/virt-customize.1.html">virt-customize - Customize a virtual machine</a>
  */
-object FirstBootFix : ClassPathFileFixture("/usr/lib/virt-sysprep/scripts/0000---fix-order---") {
+object FirstBootFix : ClassPathFile("/usr/lib/virt-sysprep/scripts/0000---fix-order---") {
     /**
      * Directory in which virt-customize
      */
-    val VIRT_SYSPREP: DiskPath = DiskPath("/usr/lib/virt-sysprep")
-    val FIRSTBOOT_SCRIPTS = VIRT_SYSPREP.resolve("scripts")
-    val FIRSTBOOT_FIX = FIRSTBOOT_SCRIPTS.resolve("0000---fix-order---")
+    val VIRT_SYSPREP = LinuxRoot.usr / "lib" / "virt-sysprep"
+    val FIRSTBOOT_SCRIPTS = VIRT_SYSPREP / "scripts"
+    val FIRSTBOOT_SCRIPTS_DONE = VIRT_SYSPREP / "scripts-done"
+    val FIRSTBOOT_FIX = FIRSTBOOT_SCRIPTS / "0000---fix-order---"
 }

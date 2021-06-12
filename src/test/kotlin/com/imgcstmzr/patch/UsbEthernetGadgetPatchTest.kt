@@ -40,7 +40,7 @@ class UsbEthernetGadgetPatchTest {
     )
 
     @Test
-    fun `should have name`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
+    fun `should have name`(uniqueId: UniqueId) = withTempDir(uniqueId) {
         expectThat(patch.name).isEqualTo("Configure USB Gadget with DHCP Address Range 192.168.168.160/28")
     }
 
@@ -49,8 +49,8 @@ class UsbEthernetGadgetPatchTest {
         expect {
             that(patch).customizations(osImage) {
                 contains(
-                    MkdirOption(USB0_DNSMASQD.requiredParent),
-                    CopyInOption(osImage.hostPath(USB0_DNSMASQD), USB0_DNSMASQD.requiredParent),
+                    MkdirOption(USB0_DNSMASQD.parent),
+                    CopyInOption(osImage.hostPath(USB0_DNSMASQD), USB0_DNSMASQD.parent),
                     FirstBootInstallOption("dnsmasq"),
                 )
             }
@@ -76,8 +76,8 @@ class UsbEthernetGadgetPatchTest {
         expect {
             that(patch).customizations(osImage) {
                 contains(
-                    MkdirOption(DHCP_SCRIPT.requiredParent),
-                    CopyInOption(osImage.hostPath(DHCP_SCRIPT), DHCP_SCRIPT.requiredParent),
+                    MkdirOption(DHCP_SCRIPT.parent),
+                    CopyInOption(osImage.hostPath(DHCP_SCRIPT), DHCP_SCRIPT.parent),
                     ChmodOption("0755", DHCP_SCRIPT),
                 )
             }
@@ -108,8 +108,8 @@ class UsbEthernetGadgetPatchTest {
         expect {
             that(patch).customizations(osImage) {
                 contains(
-                    MkdirOption(USB0_NETWORK.requiredParent),
-                    CopyInOption(osImage.hostPath(USB0_NETWORK), USB0_NETWORK.requiredParent))
+                    MkdirOption(USB0_NETWORK.parent),
+                    CopyInOption(osImage.hostPath(USB0_NETWORK), USB0_NETWORK.parent))
             }
             that(osImage.hostPath(USB0_NETWORK)) {
                 content.isEqualTo("""
@@ -128,8 +128,8 @@ class UsbEthernetGadgetPatchTest {
         expect {
             that(patch).customizations(osImage) {
                 contains(
-                    MkdirOption(USB_GADGET.requiredParent),
-                    CopyInOption(osImage.hostPath(USB_GADGET), USB_GADGET.requiredParent),
+                    MkdirOption(USB_GADGET.parent),
+                    CopyInOption(osImage.hostPath(USB_GADGET), USB_GADGET.parent),
                     ChmodOption("0755", USB_GADGET),
                 )
             }
@@ -192,8 +192,8 @@ class UsbEthernetGadgetPatchTest {
         expect {
             that(patch).customizations(osImage) {
                 contains(
-                    MkdirOption(USBGADGET_SERVICE.requiredParent),
-                    CopyInOption(osImage.hostPath(USBGADGET_SERVICE), USBGADGET_SERVICE.requiredParent),
+                    MkdirOption(USBGADGET_SERVICE.parent),
+                    CopyInOption(osImage.hostPath(USBGADGET_SERVICE), USBGADGET_SERVICE.parent),
                 )
             }
             that(osImage.hostPath(USBGADGET_SERVICE)) {
@@ -227,11 +227,11 @@ class UsbEthernetGadgetPatchTest {
         expect {
             that(patch).customizations(osImage) {
                 filterIsInstance<FirstBootOption>().apply {
-                    any { file.content.contains("echo dtoverlay=dwc2 >> $CONFIG_TXT") }
+                    any { file.content.contains("echo 'dtoverlay=dwc2' >> $CONFIG_TXT") }
                     any { file.content.contains("sed -i 's/${'$'}/ modules-load=dwc2/' $CMDLINE_TXT") }
-                    any { file.content.contains("echo libcomposite >> $MODULES") }
-                    any { file.content.contains("echo denyinterfaces usb0 >> $DHCPCD_CONF") }
-                    any { file.content.contains("systemctl enable getty@ttyGS0.service") }
+                    any { file.content.contains("echo 'libcomposite' >> $MODULES") }
+                    any { file.content.contains("echo 'denyinterfaces usb0' >> $DHCPCD_CONF") }
+                    any { file.content.contains("systemctl enable serial-getty@ttyGS0.service") }
                 }
             }
         }

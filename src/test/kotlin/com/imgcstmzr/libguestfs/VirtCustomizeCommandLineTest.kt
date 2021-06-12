@@ -8,7 +8,7 @@ import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBoot
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.MkdirOption
 import com.imgcstmzr.os.DiskPath
-import com.imgcstmzr.os.HostPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystem
 import com.imgcstmzr.os.OperatingSystemImage
 import koodies.content
@@ -18,6 +18,7 @@ import koodies.exec.CommandLine
 import koodies.exec.Executable
 import koodies.io.path.asPath
 import koodies.io.path.hasContent
+import koodies.io.text
 import koodies.shell.ShellScript
 import koodies.test.toStringIsEqualTo
 import koodies.text.LineSeparators.LF
@@ -105,6 +106,20 @@ class VirtCustomizeCommandLineTest {
             'usr/lib/virt-sysprep/scripts/0000---fix-order---:/usr/lib/virt-sysprep/scripts' \
             '--chmod' \
             '0755:/usr/lib/virt-sysprep/scripts/0000---fix-order---' \
+            '--mkdir' \
+            '/etc/systemd/system' \
+            '--copy-in' \
+            'etc/systemd/system/firstboot-wait.service:/etc/systemd/system' \
+            '--mkdir' \
+            '/etc/systemd/system/multi-user.target.wants' \
+            '--link' \
+            '/etc/systemd/system/firstboot-wait.service:/etc/systemd/system/multi-user.target.wants/firstboot-wait.service' \
+            '--mkdir' \
+            '/etc/systemd/scripts' \
+            '--copy-in' \
+            'etc/systemd/scripts/firstboot-wait.sh:/etc/systemd/scripts' \
+            '--chmod' \
+            '0755:/etc/systemd/scripts/firstboot-wait.sh' \
             '--firstboot' \
             '${cmdLine.firstbootScript(emptyMap(), osImage.exchangeDirectory).fileName}' \
             '--firstboot-command' \
@@ -117,6 +132,8 @@ class VirtCustomizeCommandLineTest {
             'package3' \
             '--hostname' \
             'new-hostname' \
+            '--link' \
+            '/target:/link' \
             '--mkdir' \
             '/new/dir' \
             '--move' \
@@ -157,23 +174,23 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
         trace { on }
     }
     customizations {
-        appendLine { osImage -> "Defaults        lecture = never" to DiskPath("/etc/sudoers.d/privacy") }
+        appendLine { "Defaults        lecture = never" to LinuxRoot.etc / "sudoers.d" / "privacy" }
 
-        chmods { osImage -> "0664" to DiskPath("/chmod-file") }
-        chmods { osImage -> "0664" to DiskPath("/other/file") }
-        commandsFromFiles { osImage -> osImage.hostPath(DiskPath("/commands/from/files-1")) }
-        commandsFromFiles { osImage -> osImage.hostPath(DiskPath("/commands/from/files-2")) }
-        copy { DiskPath("/source") to DiskPath("/copy") }
-        copyIn { it.hostPath(DiskPath("/from/host")) to DiskPath("/from") }
-        copyIn(DiskPath("/some/file"))
-        delete { DiskPath("/delete/file1") }
-        delete { DiskPath("/delete/dir/2") }
-        edit { DiskPath("/etc/dnf/dnf.conf") to "s/gpgcheck=1/gpgcheck=0/" }
+        chmods { "0664" to LinuxRoot / "chmod-file" }
+        chmods { "0664" to LinuxRoot / "other" / "file" }
+        commandsFromFiles { osImage -> osImage.hostPath(LinuxRoot / "commands" / "from/files-1") }
+        commandsFromFiles { osImage -> osImage.hostPath(LinuxRoot / "commands" / "from/files-2") }
+        copy { LinuxRoot / "source" to LinuxRoot / "copy" }
+        copyIn { it.hostPath(LinuxRoot / "from" / "host") to LinuxRoot / "from" }
+        copyIn(LinuxRoot / "some/file")
+        delete { LinuxRoot / "delete" / "file1" }
+        delete { LinuxRoot / "delete" / "dir" / "2" }
+        edit { LinuxRoot.etc / "dnf" / "dnf.conf" to "s/gpgcheck=1/gpgcheck=0/" }
         hostname { "the-machine" }
         firstBoot {
             """
                 sed -i 's/^\#Port 22${'$'}/Port 3421/g' /etc/ssh/sshd_config
-                systemctl enable getty@ttyGS0.service
+                systemctl enable serial-getty@ttyGS0.service
             """
         }
         firstBootCommand { "command arg1 arg2" }
@@ -181,15 +198,16 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
         firstBootInstall { listOf("package1", "package2") }
         firstBootInstall { listOf("package3") }
         hostname { "new-hostname" }
-        mkdir { DiskPath("/new/dir") }
-        move { DiskPath("/new/dir") to DiskPath("/moved/dir") }
+        link { LinuxRoot / "link" to LinuxRoot / "target" }
+        mkdir { LinuxRoot / "new" / "dir" }
+        move { LinuxRoot / "new" / "dir" to LinuxRoot / "moved" / "dir" }
         password(Customization.PasswordOption.byString("super-admin", "super secure"))
         rootPassword(Customization.RootPasswordOption.disabled())
-        sshInjectFile { osImage -> "file-user" to Path.of("file/key") }
+        sshInjectFile { "file-user" to Path.of("file/key") }
         sshInject { "string-user" to "string-key" }
         timeZoneId { "Europe/Berlin" }
-        touch { DiskPath("/touch/file") }
-        write { DiskPath("/write/file") to "write content" }
+        touch { LinuxRoot / "touch" / "file" }
+        write { LinuxRoot / "write" / "file" to "write content" }
     }
 }
 
@@ -220,7 +238,7 @@ val Assertion.Builder<MkdirOption>.dir: Assertion.Builder<DiskPath>
 fun Assertion.Builder<ChmodOption>.setsPermission(expectedPermission: String, expectedFile: DiskPath) =
     get("dir %s") { permission to file }.isEqualTo(expectedPermission to expectedFile)
 
-val Assertion.Builder<CopyInOption>.localPath: Assertion.Builder<HostPath /* = java.nio.file.Path */>
+val Assertion.Builder<CopyInOption>.localPath: Assertion.Builder<Path /* = java.nio.file.Path */>
     get() = get("local path %s") { localPath }
 
 val Assertion.Builder<FirstBootInstallOption>.packages: Assertion.Builder<List<String>>
@@ -229,7 +247,7 @@ val Assertion.Builder<FirstBootInstallOption>.packages: Assertion.Builder<List<S
 val Assertion.Builder<FirstBootCommandOption>.command: Assertion.Builder<String>
     get() = get("command %s") { command }
 
-val Assertion.Builder<FirstBootOption>.file: Assertion.Builder<HostPath /* = java.nio.file.Path */>
+val Assertion.Builder<FirstBootOption>.file: Assertion.Builder<Path /* = java.nio.file.Path */>
     get() = get("file %s") { path }
 
 val Assertion.Builder<FirstBootOption>.script: Assertion.Builder<ShellScript>

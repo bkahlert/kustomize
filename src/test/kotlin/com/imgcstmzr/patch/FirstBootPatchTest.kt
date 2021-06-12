@@ -31,18 +31,16 @@ import strikt.assertions.last
 class FirstBootPatchTest {
 
     private val patch = FirstBootPatch("Test") {
-        """
-            echo "Type X to …"
-            startx
-        """
+        echo("Type X to …")
+        !"startx"
     }
 
     @Test
     fun `should copy firstboot script`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
         expectThat(patch).customizations(osImage) {
             last().isA<Customization.FirstBootOption>().file.content {
-                contains("echo ${banner("Test").quoted}")
-                contains("echo \"Type X to …\"")
+                contains("'echo' ${banner("Test").quoted}")
+                contains("'echo' 'Type X to …'")
                 contains("startx")
             }
         }

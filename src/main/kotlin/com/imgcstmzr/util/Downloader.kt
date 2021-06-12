@@ -26,14 +26,14 @@ class Downloader(private val downloadDirectory: Path = Locations.Temp, vararg cu
      * Downloads an image copy containing the [OperatingSystem] and returns the [Path] where the
      * copy can be found after successful download.
      */
-    fun OperatingSystem.download(logger: FixedWidthRenderingLogger): Path = download(downloadUrl, logger = logger, filename = fullName)
+    fun OperatingSystem.download(logger: FixedWidthRenderingLogger): Path = download(downloadUrl, logger = logger)
 
     /**
-     * Downloads the specified [url], [retries] the specified amount of times.
+     * Downloads the specified [url].
      *
      * Optionally a [filename] can be provided which is used for logging at places where the [url] would otherwise have been used.
      */
-    fun download(url: String, logger: FixedWidthRenderingLogger, retries: Int = 5, filename: String? = null): Path {
+    fun download(url: String, logger: FixedWidthRenderingLogger, filename: String? = null): Path {
         val handler = customHandlerMapping[url.findScheme()]
         if (handler != null) return handler(URI.create(url), logger)
 

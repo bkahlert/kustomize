@@ -1,8 +1,8 @@
 package com.imgcstmzr.test
 
-import koodies.test.ClassPathDirectoryFixture
+import koodies.io.ClassPathDirectory
 
-object ImgClassPathFixture : ClassPathDirectoryFixture("img") {
+object ImgClassPathFixture : ClassPathDirectory("img") {
     object Boot : Dir("boot") {
         object CmdlineTxt : File("cmdline.txt")
         object ConfigTxt : File("config.txt")

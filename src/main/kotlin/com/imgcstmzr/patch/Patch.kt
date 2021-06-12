@@ -10,7 +10,7 @@ import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder
 import com.imgcstmzr.libguestfs.VirtCustomizeDsl
 import com.imgcstmzr.logMeta
 import com.imgcstmzr.os.DiskPath
-import com.imgcstmzr.os.HostPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemProcess
 import com.imgcstmzr.os.Program
@@ -38,6 +38,7 @@ import koodies.text.LineSeparators
 import koodies.text.Semantics.formattedAs
 import koodies.text.withRandomSuffix
 import koodies.unit.Size
+import java.nio.file.Path
 import kotlin.io.path.isRegularFile
 
 /**
@@ -194,7 +195,7 @@ interface Patch {
                     }.forEach { exceptions.add(it) }
                 }
 
-                val changedFiles = osImage.hostPath(DiskPath("/")).listDirectoryEntriesRecursively().filter { it.isRegularFile() }.size
+                val changedFiles = osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().filter { it.isRegularFile() }.size
                 if (changedFiles > 0) {
                     runCollecting {
                         osImage.guestfish(this, trace, { "Copying in $changedFiles file(s)" }, false) {
@@ -385,7 +386,7 @@ interface Patch {
                  *
                  * That is, if the [validator] does not throw, [path] is considered already respectively successfully changed.
                  */
-                fun edit(path: DiskPath, validator: (HostPath) -> Unit, operations: (HostPath) -> Unit) =
+                fun edit(path: DiskPath, validator: (Path) -> Unit, operations: (Path) -> Unit) =
                     fileOperation { FileOperation(path, validator, operations) }
             }
 
@@ -482,9 +483,9 @@ class CompositePatch(
     patches.flatMap { it.osOperations }.toList(),
 )
 
-class FileOperation(val target: DiskPath, val verifier: (HostPath) -> Unit, val handler: (HostPath) -> Unit) {
+class FileOperation(val target: DiskPath, val verifier: (Path) -> Unit, val handler: (Path) -> Unit) {
 
-    operator fun invoke(target: HostPath, logger: FixedWidthRenderingLogger) {
+    operator fun invoke(target: Path, logger: FixedWidthRenderingLogger) {
         logger.compactLogging(target.fileName.toString()) {
             logLine { "Action needed? …".ansi.yellow }
             val result = runCatching { verifier.invoke(target) }

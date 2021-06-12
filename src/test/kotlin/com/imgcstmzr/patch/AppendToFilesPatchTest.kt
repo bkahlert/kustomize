@@ -2,7 +2,7 @@ package com.imgcstmzr.patch
 
 import com.imgcstmzr.libguestfs.LibguestfsImage
 import com.imgcstmzr.libguestfs.mounted
-import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.test.E2E
@@ -27,9 +27,9 @@ class AppendToFilesPatchTest {
     @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @E2E @Test
     fun InMemoryLogger.`should create create one append line option for each line`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
         withTempDir(uniqueId) {
-            val sampleHtmlDiskPath = DiskPath("/boot/sample.html")
-            val sampleTxtDiskPath = DiskPath("/etc/sample.txt")
-            val configTxtDiskPath = DiskPath("/boot/config.txt")
+            val sampleHtmlDiskPath = LinuxRoot.boot / "sample.html"
+            val sampleTxtDiskPath = LinuxRoot.etc / "sample.txt"
+            val configTxtDiskPath = LinuxRoot.boot / "config.txt"
             val appendToFilesPatch = AppendToFilesPatch(
                 HtmlFixture.text to sampleHtmlDiskPath,
                 TextFixture.text to sampleTxtDiskPath,

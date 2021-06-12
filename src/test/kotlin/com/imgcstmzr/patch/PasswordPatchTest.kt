@@ -2,8 +2,8 @@ package com.imgcstmzr.patch
 
 import com.imgcstmzr.libguestfs.LibguestfsImage
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization
-import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.IncorrectPasswordException
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystem.Credentials
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemProcess.Companion.DockerPiImage
@@ -12,6 +12,8 @@ import com.imgcstmzr.os.boot
 import com.imgcstmzr.test.E2E
 import com.imgcstmzr.test.OS
 import koodies.debug.debug
+import koodies.docker.CleanUpMode.ThanksForCleaningUp
+import koodies.docker.DockerContainer
 import koodies.docker.DockerRequiring
 import koodies.exec.Process.State.Excepted
 import koodies.exec.rootCause
@@ -40,7 +42,7 @@ class PasswordPatchTest {
 
     @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class]) @E2E @Test
     fun InMemoryLogger.`should update shadow file correctly`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-        val passwordPath = DiskPath("/etc/shadow")
+        val passwordPath = LinuxRoot.etc.shadow
         val username = RaspberryPiLite.defaultCredentials.username
         val newPassword = "on-a-diet"
         val passwordPatch = PasswordPatch(username, newPassword)
@@ -59,12 +61,12 @@ class PasswordPatchTest {
         }
     }
 
-    @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class]) @E2E @Test
-    fun InMemoryLogger.`should not be able to use old password`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+    @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class], ThanksForCleaningUp) @E2E @Test
+    fun InMemoryLogger.`should not be able to use old password`(container: DockerContainer, @OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         PasswordPatch(RaspberryPiLite.defaultCredentials.username, "po").patch(osImage)
 
         osImage.credentials = Credentials("pi", "wrong password")
-        expecting { osImage.boot(null, logger = this) } that {
+        expecting { osImage.boot(container.name, logger = this) } that {
             isA<Excepted>().rootCause.isA<IncorrectPasswordException>()
                 .message.isEqualTo("The entered password \"wrong password\" is incorrect.")
         }

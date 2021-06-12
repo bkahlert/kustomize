@@ -1,6 +1,7 @@
 package com.imgcstmzr.patch
 
 import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import koodies.io.path.withDirectoriesCreated
@@ -100,6 +101,6 @@ class SambaPatch(
 
 }) {
     companion object {
-        val SAMBA_CONF: DiskPath = DiskPath("/etc/samba/smb.conf")
+        val SAMBA_CONF: DiskPath = LinuxRoot.etc / "samba" / "smb.conf"
     }
 }

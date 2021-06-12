@@ -9,7 +9,6 @@ import koodies.io.path.pathString
 import koodies.logging.FixedWidthRenderingLogger
 import koodies.logging.MutedRenderingLogger
 import koodies.shell.ShellScript
-import koodies.terminal.AnsiFormats.bold
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.quoted
 import koodies.unit.BinaryPrefix
@@ -99,7 +98,7 @@ fun FixedWidthRenderingLogger.flash(file: Path, disk: String?): Disk? =
         flashDisk?.run { flash(file) } ?: run {
             logLine {
                 if (disk == null) {
-                    if (disks.isEmpty()) "No flash-able disks found.".bold()
+                    if (disks.isEmpty()) "No flash-able disks found.".ansi.bold
                     else "Found multiple candidates: ${disks.joinToString(", ")}. Please explicitly choose one."
                 } else {
                     if (disks.isEmpty()) "No disk $disk found."

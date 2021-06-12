@@ -20,8 +20,9 @@ import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOption.TraceOption
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOption.VerboseOption
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOptionsBuilder.GuestfishOptionsContext
 import com.imgcstmzr.libguestfs.LibguestfsOption.Companion.relativize
+import com.imgcstmzr.os.DiskDirectory
 import com.imgcstmzr.os.DiskPath
-import com.imgcstmzr.os.HostPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemImage.Companion.mountRootForDisk
 import koodies.builder.BooleanBuilder
@@ -51,6 +52,7 @@ import koodies.text.LineSeparators.size
 import koodies.text.withPrefix
 import koodies.text.withRandomSuffix
 import java.nio.file.Path
+import kotlin.io.path.div
 import kotlin.io.path.exists
 import kotlin.io.path.isReadable
 import kotlin.io.path.isWritable
@@ -102,8 +104,8 @@ class GuestfishCommandLine(
             val nonDiskOptions: List<GuestfishOption> = options.filter { it !is DiskOption } +
                 listOf(
                     // inspector { on } // does not mount /boot
-                    MountOption("/dev/sda2".asPath(), DiskPath("/")),
-                    MountOption("/dev/sda1".asPath(), DiskPath("/boot")),
+                    MountOption("/dev/sda2".asPath(), LinuxRoot),
+                    MountOption("/dev/sda1".asPath(), LinuxRoot.boot),
                 )
 
             line(
@@ -226,7 +228,7 @@ class GuestfishCommandLine(
          * This is rarely needed, but can be useful if multiple drivers are valid for a filesystem (eg: `ext2` and `ext3`),
          * or if libguestfs misidentifies a filesystem.
          */
-        class MountOption(val hostPath: HostPath, val mountPoint: DiskPath?, val options: List<String> = emptyList(), val fsType: String? = null) :
+        class MountOption(val hostPath: Path, val mountPoint: DiskPath?, val options: List<String> = emptyList(), val fsType: String? = null) :
             GuestfishOption("--mount",
                 listOf(StringBuilder(hostPath.pathString).apply {
                     mountPoint?.also {
@@ -301,7 +303,7 @@ class GuestfishCommandLine(
              * Mount the named partition or logical volume on the given mount point,
              * e.g. `Path.of("/dev/sda1") to Path.of("/")`
              */
-            fun mount(init: (OperatingSystemImage) -> Pair<HostPath, DiskPath>) {
+            fun mount(init: (OperatingSystemImage) -> Pair<Path, DiskPath>) {
                 option { init(it).run { MountOption(first, second) } }
             }
 
@@ -353,11 +355,11 @@ class GuestfishCommandLine(
         /**
          * This command packs the contents of [directory] and downloads it to the [archive].
          */
-        class TarOutCommand(val directory: DiskPath = DiskPath("/"), val archive: HostPath) : GuestfishCommand(
+        class TarOutCommand(val directory: DiskDirectory = LinuxRoot, val archive: Path) : GuestfishCommand(
             "tar-out",
-            directory.toString(),
+            directory.pathString,
             archive.pathString,
-            "excludes:${directory.resolve(archive.fileName.pathString)}"
+            "excludes:${directory / archive.fileName.pathString}"
         )
 
         /**
@@ -368,7 +370,7 @@ class GuestfishCommandLine(
          */
         class TouchCommand(val file: DiskPath) : GuestfishCommand(
             "touch",
-            file.toString(),
+            file.pathString,
         )
 
         /**
@@ -387,7 +389,7 @@ class GuestfishCommandLine(
         /**
          * Remove the single [directory].
          */
-        class RmDirCommand(val directory: DiskPath) : GuestfishCommand("rmdir", directory.toString())
+        class RmDirCommand(val directory: DiskPath) : GuestfishCommand("rmdir", directory.pathString)
 
         /**
          * This unmounts all mounted filesystems.
@@ -424,12 +426,13 @@ class GuestfishCommandLine(
              *
              * Multiple local files and directories can be specified. Wildcards cannot be used.
              */
-            class CopyIn(val mkDir: Boolean, remoteDir: DiskPath, vararg val localFiles: HostPath) :
+            class CopyIn(val mkDir: Boolean, remoteDir: DiskPath, vararg val localFiles: Path) :
                 Composite(listOfNotNull(
-                    if (mkDir) -GuestfishCommand("mkdir-p", remoteDir.toString()) else null,
-                    -GuestfishCommand("copy-in",
+                    if (mkDir) -GuestfishCommand("mkdir-p", remoteDir.pathString) else null,
+                    -GuestfishCommand(
+                        "copy-in",
                         *localFiles.map { it.pathString }.toTypedArray(),
-                        remoteDir.toString()
+                        remoteDir.pathString,
                     ),
                 ))
 
@@ -441,11 +444,11 @@ class GuestfishCommandLine(
              *
              * Multiple remote files and directories can be specified.
              */
-            class CopyOut(val mkDir: Boolean, val directory: HostPath, val remoteFiles: DiskPath) :
+            class CopyOut(val mkDir: Boolean, val directory: Path, val remoteFiles: DiskPath) :
                 Composite(listOfNotNull(
                     if (mkDir) !GuestfishCommand("mkdir", "-p", directory.pathString) else null,
                     -GuestfishCommand("copy-out",
-                        remoteFiles.asString(),
+                        remoteFiles.pathString,
                         directory.pathString
                     ),
                 ))
@@ -453,7 +456,7 @@ class GuestfishCommandLine(
             /**
              * This command uploads the [archive] (must be accessible from the guest) and unpacks it into [directory].
              */
-            class TarIn(deleteArchiveAfterwards: Boolean, val archive: HostPath, val directory: DiskPath) :
+            class TarIn(deleteArchiveAfterwards: Boolean, val archive: Path, val directory: DiskPath) :
                 Composite(listOfNotNull(
                     GuestfishCommand(
                         "tar-in",
@@ -483,7 +486,7 @@ class GuestfishCommandLine(
              * This command copies local files or directories recursively into the disk image.
              */
             fun copyIn(mkDir: Boolean = true, remoteDir: (OperatingSystemImage) -> DiskPath) {
-                command { remoteDir(it).run { CopyIn(mkDir, parent ?: this, it.hostPath(this)) } }
+                command { remoteDir(it).run { CopyIn(mkDir, parentOrNull ?: this, it.hostPath(this)) } }
             }
 
             /**
@@ -496,7 +499,7 @@ class GuestfishCommandLine(
             /**
              * This command uploads and unpacks the local host share to the guest VMs root `/`.
              */
-            fun tarIn(diskPath: (OperatingSystemImage) -> DiskPath = { DiskPath("/") }) {
+            fun tarIn(diskPath: (OperatingSystemImage) -> DiskPath = { LinuxRoot }) {
                 command { diskPath(it).run { TarIn(true, tar(it), this) } }
             }
 
@@ -504,13 +507,13 @@ class GuestfishCommandLine(
              * Creates a tar archive of `this` [DiskPath] and places the archive inside of this path.
              */
             private fun DiskPath.tar(osImage: OperatingSystemImage, archiveName: String = "archive.tar"): Path =
-                osImage.hostPath(this).run { resolve(archiveName).also { target -> tar(parent.resolve(archiveName)).moveTo(target) } }
+                osImage.hostPath(this).run { resolve(archiveName).also { target -> tar(parent / archiveName).moveTo(target) } }
 
             /**
              * * This command packs the guest VMs root `/` and downloads it to the local host share.
              */
             fun tarOut() {
-                command { TarOutCommand(DiskPath("/"), it.hostPath(DiskPath("/archive.tar"))) }
+                command { TarOutCommand(LinuxRoot, it.hostPath(LinuxRoot / "archive.tar")) }
             }
 
             /**
@@ -531,7 +534,7 @@ class GuestfishCommandLine(
              * This call cannot remove directories. Use [RmDirCommand] to remove an empty directory, or set [recursive] to remove directories recursively.
              */
             fun rm(force: Boolean = false, recursive: Boolean = false, file: () -> DiskPath) {
-                command { RmCommand(file().toString(), force, recursive) }
+                command { RmCommand(file().pathString, force, recursive) }
             }
 
             /**

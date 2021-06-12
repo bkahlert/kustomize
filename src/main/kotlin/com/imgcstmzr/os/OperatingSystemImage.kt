@@ -9,8 +9,6 @@ import com.imgcstmzr.os.OperatingSystem.Credentials
 import koodies.builder.Init
 import koodies.docker.DockerExec
 import koodies.exec.IO
-import koodies.io.file.resolveBetweenFileSystems
-import koodies.io.path.asPath
 import koodies.io.path.duplicate
 import koodies.io.path.getSize
 import koodies.io.path.pathString
@@ -31,7 +29,6 @@ import java.nio.file.Path
 import kotlin.io.path.appendBytes
 import kotlin.io.path.createDirectories
 import kotlin.io.path.isReadable
-import kotlin.io.path.relativeTo
 
 /**
  * An [path] holding an [operatingSystem] that can be accessed using the specified [credentials].
@@ -62,7 +59,7 @@ class OperatingSystemImage(
      * Example: For `$HOME/.imgcstmzr/project/os.img` the exchange directory
      * would be `$HOME/.imgcstmzr/project/shared`.
      */
-    val exchangeDirectory: HostPath get() = mountRootForDisk(file)
+    val exchangeDirectory: Path get() = mountRootForDisk(file)
 
     /**
      * Returns the given [diskPath] mapped to its location in the [exchangeDirectory].
@@ -70,15 +67,15 @@ class OperatingSystemImage(
      * Example: For `/var/file` the mapped location would be
      * `$HOME/.imgcstmzr/project/shared/var/file`.
      */
-    fun hostPath(diskPath: DiskPath): HostPath = diskPath.hostPath(exchangeDirectory)
+    fun hostPath(diskPath: DiskPath): Path = diskPath.hostPath(exchangeDirectory)
 
     fun copyOut(path: String, vararg paths: String, logger: FixedWidthRenderingLogger? = BACKGROUND, trace: Boolean = false): Path =
         (logger ?: MutedRenderingLogger).logging("Copying out ${path.formattedAs.input}" + if (paths.isNotEmpty()) " and ${paths.size} other files" else "") {
             guestfish(MutedRenderingLogger, trace) {
-                copyOut { DiskPath(path) }
-                paths.forEach { copyOut { _ -> DiskPath(it) } }
+                copyOut { LinuxRoot / path }
+                paths.forEach { copyOut { _ -> LinuxRoot / it } }
             }
-            hostPath(DiskPath(path))
+            hostPath(LinuxRoot / path)
         }
 
     /**
@@ -177,29 +174,7 @@ class OperatingSystemImage(
          * Example: For [disk] `$HOME/.imgcstmzr/project/os.img` the mount root
          * would be `$HOME/.imgcstmzr/project/shared`.
          */
-        fun mountRootForDisk(disk: HostPath): HostPath =
+        fun mountRootForDisk(disk: Path): Path =
             disk.resolveSibling(EXCHANGE_DIRECTORY_NAME).createDirectories()
-    }
-}
-typealias HostPath = Path
-
-@JvmInline
-value class DiskPath(val pathString: String) {
-    val isAbsolute: Boolean get() = pathString.asPath().isAbsolute
-    fun asPath(): Path = pathString.asPath()
-    val fileName: Path get() = asPath().fileName
-    val parent: DiskPath? get() = asPath().parent?.let { DiskPath(it.pathString) }
-    val requiredParent: DiskPath get() = parent ?: error("Parent required but $pathString has none.")
-    fun resolve(path: String): DiskPath = DiskPath(asPath().resolve(path).pathString)
-    fun hostPath(mountRoot: HostPath): Path {
-        val rootRelative = asPath().let { diskPath -> diskPath.takeIf { !it.isAbsolute } ?: diskPath.relativeTo(ROOT) }
-        return mountRoot.resolveBetweenFileSystems(rootRelative)
-    }
-
-    fun asString(): String = asPath().pathString
-    override fun toString(): String = asString()
-
-    companion object {
-        private val ROOT = "/".asPath()
     }
 }

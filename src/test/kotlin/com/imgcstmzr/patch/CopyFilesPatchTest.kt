@@ -2,7 +2,7 @@ package com.imgcstmzr.patch
 
 import com.imgcstmzr.libguestfs.LibguestfsImage
 import com.imgcstmzr.libguestfs.mounted
-import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.test.E2E
@@ -34,9 +34,9 @@ class CopyFilesPatchTest {
     @FiveMinutesTimeout @E2E @Test
     fun InMemoryLogger.`should create mkdir and copy-in options`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
         withTempDir(uniqueId) {
-            val sampleHtmlDiskPath = DiskPath("/boot/sample.html")
-            val sampleTxtDiskPath = DiskPath("/etc/sample.txt")
-            val configTxtDiskPath = DiskPath("/boot/config.txt")
+            val sampleHtmlDiskPath = LinuxRoot.boot / "sample.html"
+            val sampleTxtDiskPath = LinuxRoot.etc / "sample.txt"
+            val configTxtDiskPath = LinuxRoot.boot / "config.txt"
             val copyFilesPatch = CopyFilesPatch(
                 HtmlFixture.copyTo(resolve("sample.html")) to sampleHtmlDiskPath,
                 TextFixture.copyTo(resolve("sample.txt")) to sampleTxtDiskPath,
@@ -56,7 +56,7 @@ class CopyFilesPatchTest {
 
     @Test
     fun `should throw on missing file`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectCatching { CopyFilesPatch(resolve("sample.html") to DiskPath("/boot/sample.html")) }
+        expectCatching { CopyFilesPatch(resolve("sample.html") to LinuxRoot / "boot" / "sample.html") }
             .isFailure()
             .rootCause
             .isA<NoSuchFileException>()

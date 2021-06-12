@@ -1,6 +1,6 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.os.DiskPath
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
 
@@ -14,6 +14,6 @@ import com.imgcstmzr.patch.Patch.Companion.buildPatch
 class SshEnablementPatch :
     Patch by buildPatch("Enable SSH", {
         guestfish {
-            touch { DiskPath("/boot/ssh") }
+            touch { LinuxRoot.boot / "ssh" }
         }
     })
