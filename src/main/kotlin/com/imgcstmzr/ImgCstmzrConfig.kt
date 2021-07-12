@@ -250,7 +250,7 @@ data class UnsafeImgCstmzrConfig(
 }) {
     data class Ssh(val enabled: Boolean?, val port: Int?, val authorizedKeys: AuthorizedKeys?) : Convertible<ImgCstmzrConfig.Ssh> by converter({
         val fileBasedKeys = (authorizedKeys?.files ?: emptyList()).flatMap { glob ->
-            Locations.HomeDirectory.ls(glob).map { file -> file.readText() }.filter { content -> content.startsWith("ssh-") }
+            ImgCstmzr.HomeDirectory.ls(glob).map { file -> file.readText() }.filter { content -> content.startsWith("ssh-") }
         }
         val stringBasedKeys = (authorizedKeys?.keys ?: emptyList()).map { it.trim() }
         ImgCstmzrConfig.Ssh(enabled, port, fileBasedKeys + stringBasedKeys)
@@ -303,7 +303,7 @@ data class UnsafeImgCstmzrConfig(
         ImgCstmzrConfig.FileOperation(
             append?.trimIndent(),
             hostPath?.let { path ->
-                val ls = Locations.WorkingDirectory.ls(path)
+                val ls = ImgCstmzr.WorkingDirectory.ls(path)
                 ls.firstOrNull { it.exists() }
                     ?: error("The resolved expression $hostPath would point to at least one existing file.")
             },

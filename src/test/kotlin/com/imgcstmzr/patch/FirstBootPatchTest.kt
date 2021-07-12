@@ -12,11 +12,10 @@ import com.imgcstmzr.test.E2E
 import com.imgcstmzr.test.OS
 import koodies.content
 import koodies.docker.DockerRequiring
-import koodies.logging.InMemoryLogger
+import koodies.junit.UniqueId
 import koodies.shell.ShellScript
 import koodies.test.FifteenMinutesTimeout
 import koodies.test.Smoke
-import koodies.test.UniqueId
 import koodies.test.withTempDir
 import koodies.text.Banner.banner
 import koodies.text.quoted
@@ -52,7 +51,7 @@ class FirstBootPatchTest {
     }
 
     @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class]) @E2E @Smoke @Test
-    fun InMemoryLogger.`should run firstboot scripts in correct order`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
+    fun `should run firstboot scripts in correct order`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
         withTempDir(uniqueId) {
 
             FirstBootPatch(

@@ -8,7 +8,6 @@ import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.test.E2E
 import com.imgcstmzr.test.OS
 import koodies.docker.DockerRequiring
-import koodies.logging.InMemoryLogger
 import koodies.test.FifteenMinutesTimeout
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
@@ -18,7 +17,7 @@ import strikt.java.exists
 class UsernamePatchTest {
 
     @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @E2E @Test
-    fun InMemoryLogger.`should log in with updated username`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+    fun `should log in with updated username`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val newUsername = "ella".also { check(it != osImage.defaultCredentials.username) { "$it is already the default username." } }
 
         UsernamePatch(osImage.defaultCredentials.username, newUsername).patch(osImage)

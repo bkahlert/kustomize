@@ -7,12 +7,10 @@ import koodies.collections.head
 import koodies.collections.tail
 import koodies.docker.asContainerPath
 import koodies.io.path.delete
-import koodies.logging.FixedWidthRenderingLogger
-import koodies.logging.MutedRenderingLogger
-import koodies.logging.RenderingLogger
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.Semantics.formattedAs
 import koodies.text.toStringMatchesCurlyPattern
+import koodies.tracing.spanning
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expectCatching
@@ -53,7 +51,7 @@ class GuestfishCommandLineTest {
             'type=bind,source=${osImage.exchangeDirectory},target=/shared' \
             '--mount' \
             'type=bind,source=${osImage.file},target=/images/disk.img' \
-            'bkahlert/libguestfs@sha256:f466595294e58c1c18efeb2bb56edb5a28a942b5ba82d3c3af70b80a50b4828a' \
+            'bkahlert/libguestfs@sha256:e8fdf16c69a9155b0e30cdc9b2f872232507f5461be2e7dff307f4c1b50faa20' \
             '-c' \
             'guestfish --rw --add /images/disk.img --mount /dev/sda2:/ --mount /dev/sda1:/boot <<HERE-{}
             !mkdir -p
@@ -110,17 +108,17 @@ class GuestAssertions(private val assertions: MutableList<Pair<DiskPath, Asserti
 }
 
 /**
- * Returns callable that mounts `this` [OperatingSystemImage] while logging with `this` [RenderingLogger]
+ * Returns callable that mounts `this` [OperatingSystemImage]
  * and runs the specified [GuestAssertions].
  */
-inline val FixedWidthRenderingLogger.mounted: Assertion.Builder<OperatingSystemImage>.(init: GuestAssertions.() -> Unit) -> Unit
-    get() = { init: GuestAssertions.() -> Unit -> mounted(this@mounted, init) }
+inline val mounted: Assertion.Builder<OperatingSystemImage>.(init: GuestAssertions.() -> Unit) -> Unit
+    get() = { init: GuestAssertions.() -> Unit -> mounted(init) }
 
 /**
  * Returns callable that mounts `this` [OperatingSystemImage] while logging with the specified [logger]
  * and runs the specified [GuestAssertions].
  */
-fun Assertion.Builder<OperatingSystemImage>.mounted(logger: FixedWidthRenderingLogger, init: GuestAssertions.() -> Unit) =
+fun Assertion.Builder<OperatingSystemImage>.mounted(init: GuestAssertions.() -> Unit) =
     get("mounted") {
         // Getting paths and assertions
         val assertions = mutableListOf<Pair<DiskPath, Assertion.Builder<Path>.() -> Unit>>()
@@ -128,14 +126,13 @@ fun Assertion.Builder<OperatingSystemImage>.mounted(logger: FixedWidthRenderingL
         val paths = assertions.map { it.first }
 
         // Copying out of VM
-        logger.logLine { "" }
-        logger.logging(
+        spanning(
             "╶──╴copying ${paths.size} files out of $fileName for assertions".formattedAs.debug,
-            decorationFormatter = { it.ansi.formattedAs.debug },
+            decorationFormatter = { it.toString().ansi.formattedAs.debug },
         ) {
             // delete to make sure the assertions runs on a file copy from the image
             paths.forEach { path -> hostPath(path).delete() }
-            copyOut(paths.head.pathString, *paths.tail.map { it.pathString }.toTypedArray(), logger = MutedRenderingLogger)
+            copyOut(paths.head.pathString, *paths.tail.map { it.pathString }.toTypedArray())
         }
 
         // Assert

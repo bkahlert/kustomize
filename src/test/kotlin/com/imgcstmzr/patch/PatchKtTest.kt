@@ -24,21 +24,16 @@ import koodies.io.path.touch
 import koodies.io.path.writeLine
 import koodies.io.path.writeText
 import koodies.io.toAsciiArt
-import koodies.logging.BlockRenderingLogger
-import koodies.logging.FixedWidthRenderingLogger
-import koodies.logging.FixedWidthRenderingLogger.Border.DOTTED
-import koodies.logging.InMemoryLogger
-import koodies.logging.RenderingLogger
-import koodies.logging.expectLogged
 import koodies.regex.groupValue
 import koodies.shell.ScriptInit
 import koodies.shell.ShellScript
+import koodies.test.CapturedOutput
 import koodies.test.SvgFixture
+import koodies.test.SystemIOExclusive
 import koodies.test.ThirtyMinutesTimeout
 import koodies.text.LineSeparators.LF
-import koodies.text.Unicode
+import koodies.text.Whitespaces
 import koodies.text.matchesCurlyPattern
-import koodies.text.repeat
 import koodies.time.format
 import koodies.time.parseableInstant
 import koodies.unit.Giga
@@ -56,15 +51,16 @@ import kotlin.io.path.readText
 import kotlin.text.RegexOption.DOT_MATCHES_ALL
 import kotlin.text.RegexOption.MULTILINE
 
+@SystemIOExclusive
 class PatchKtTest {
 
     private val nullPatch = buildPatch("No-Op Patch") {}
 
     @Test
-    fun InMemoryLogger.`should log not bordered if specified`(osImage: OperatingSystemImage) {
+    fun `should log not bordered if specified`(osImage: OperatingSystemImage, output: CapturedOutput) {
         nullPatch.patch(osImage)
 
-        expectLogged.matchesCurlyPattern("""
+        output.all.matchesCurlyPattern("""
             {{}}
             {}╭──╴No-Op Patch
             {}│   
@@ -81,7 +77,7 @@ class PatchKtTest {
     }
 
     @ThirtyMinutesTimeout @DockerRequiring([DockerPiImage::class]) @E2E @Test
-    fun InMemoryLogger.`should run each op type executing patch successfully`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+    fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val timestamp = Instant.now()
 
         buildPatch("Try Everything Patch") {
@@ -115,7 +111,7 @@ class PatchKtTest {
         expectThat(osImage) {
             hostPath("/etc/hostname").hasContent("test-machine$LF")
             size.isGreaterThanOrEqualTo(2.Giga.bytes)
-            booted(this@`should run each op type executing patch successfully`, { "init" },
+            booted({ "init" },
                 "init" to {
                     enter("sudo cat /etc/hostname")
                     enter("sudo cat /root/.imgcstmzr.created")
@@ -169,14 +165,13 @@ fun <T : Patch> Assertion.Builder<T>.guestfishCommands(
 
 
 /**
- * Returns callable that mounts `this` [OperatingSystemImage] while logging with `this` [RenderingLogger]
+ * Returns callable that mounts `this` [OperatingSystemImage]
  * and runs the specified [GuestAssertions].
  */
-inline val FixedWidthRenderingLogger.booted: Assertion.Builder<OperatingSystemImage>.(assertion: OperatingSystemProcess.(String) -> ((String) -> Boolean)?) -> Unit
-    get() = { assertion: OperatingSystemProcess.(String) -> ((String) -> Boolean)? -> booted(this@booted, assertion) }
+inline val booted: Assertion.Builder<OperatingSystemImage>.(assertion: OperatingSystemProcess.(String) -> ((String) -> Boolean)?) -> Unit
+    get() = { assertion: OperatingSystemProcess.(String) -> ((String) -> Boolean)? -> booted(assertion) }
 
 inline fun Assertion.Builder<OperatingSystemImage>.booted(
-    logger: FixedWidthRenderingLogger,
     crossinline assertion: OperatingSystemProcess.(String) -> ((String) -> Boolean)?,
 ): Assertion.Builder<OperatingSystemImage> {
     get("booted ${this.get { operatingSystem }}") {
@@ -194,7 +189,7 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
 
         val container = DockerContainer.from(file)
         kotlin.runCatching {
-            boot(container.name, logger, Program("test", { "testing" }, "testing" to verificationStep))
+            boot(container.name, Program("test", { "testing" }, "testing" to verificationStep))
         }.onFailure { container.remove(force = true) }.getOrThrow()
     }
 
@@ -208,7 +203,7 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
  * Returns
  */
 inline fun OperatingSystemProcess.script(
-    outputMarker: String = Unicode.zeroWidthSpace.repeat(5),
+    outputMarker: String = Whitespaces.ZeroWidthWhitespaces.toString().repeat(5),
     crossinline script: ScriptInit,
 ): Sequence<String> {
     val snippet = ShellScript {
@@ -232,12 +227,11 @@ fun Assertion.Builder<OperatingSystemImage>.hostPath(path: String): Describeable
     get("shared directory %s") { hostPath(LinuxRoot / path) }
 
 fun Assertion.Builder<OperatingSystemImage>.booted(
-    logger: BlockRenderingLogger,
     initialState: OperatingSystemProcess.() -> String?,
     vararg states: ProgramState,
 ): Assertion.Builder<OperatingSystemImage> =
     assert("booted ${this.get { operatingSystem }}") {
-        when (val exitState = it.boot(DockerContainer.from("Assertion Boot of $this").name, logger, Program("check", initialState, *states), border = DOTTED)) {
+        when (val exitState = it.boot(DockerContainer.from("Assertion Boot of $this").name, Program("check", initialState, *states))) {
             is Succeeded -> pass()
             else -> fail(exitState)
         }

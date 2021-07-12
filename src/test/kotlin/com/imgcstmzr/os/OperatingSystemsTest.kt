@@ -1,6 +1,6 @@
 package com.imgcstmzr.os
 
-import koodies.headers
+import koodies.net.headers
 import koodies.test.testEach
 import koodies.unit.Mega
 import koodies.unit.bytes
@@ -29,11 +29,11 @@ class OperatingSystemsTest {
 }
 
 
-fun Assertion.Builder<String>.headers(block: Assertion.Builder<Map<String?, String?>>.() -> Unit) =
+fun Assertion.Builder<String>.headers(block: Assertion.Builder<Map<String, String?>>.() -> Unit) =
     get("as URL") { URL(this).headers().mapValues { it.value.firstOrNull() } }.apply(block)
 
-val Assertion.Builder<Map<String?, String?>>.contentLength
+val Assertion.Builder<Map<String, String?>>.contentLength
     get() = get("content-length") { get("content-length")?.toLong()?.bytes }
 
-fun Assertion.Builder<Map<String?, String?>>.isOk() =
-    get("is OK?") { get(null) }.isNotNull().isEqualTo("HTTP/1.1 200 OK")
+fun Assertion.Builder<Map<String, String?>>.isOk() =
+    get("is OK?") { get("status") }.isNotNull().isEqualTo("HTTP/1.1 200 OK")

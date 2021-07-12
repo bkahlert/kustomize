@@ -17,9 +17,9 @@ import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USB0_NETWORK
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USBGADGET_SERVICE
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USB_GADGET
 import koodies.content
+import koodies.junit.UniqueId
 import koodies.net.ip4Of
 import koodies.net.ipOf
-import koodies.test.UniqueId
 import koodies.test.withTempDir
 import koodies.text.matchesCurlyPattern
 import org.junit.jupiter.api.Test

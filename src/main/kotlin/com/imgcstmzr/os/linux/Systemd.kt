@@ -12,7 +12,7 @@ import kotlin.io.path.writeLines
  * for all provided [wantedBys].
  */
 fun CustomizationsContext.installService(serviceUnit: ServiceUnit) {
-    copyIn(serviceUnit.diskFile) { osImage ->
+    copyIn(serviceUnit.diskFile) {
         withDirectoriesCreated().writeLines(serviceUnit.text.lines())
     }
     serviceUnit.wantedBy.forEach { wantedBy ->

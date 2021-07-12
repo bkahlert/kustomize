@@ -6,6 +6,7 @@ import java.util.function.Supplier
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 
+@Deprecated("delete")
 fun <T : CharSequence> assertTimeoutPreemptively(
     timeout: Duration,
     executable: Executable,
@@ -14,6 +15,7 @@ fun <T : CharSequence> assertTimeoutPreemptively(
     Assertions.assertTimeoutPreemptively(timeout.toJavaDuration(), executable, messageSupplier?.let { "$it" })
 }
 
+@Deprecated("delete")
 fun assertTimeoutPreemptively(
     timeout: Duration,
     executable: Executable,

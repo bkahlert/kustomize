@@ -3,10 +3,8 @@ package com.imgcstmzr.os
 import com.github.ajalt.clikt.output.TermUi.echo
 import koodies.debug.replaceNonPrintableCharacters
 import koodies.exec.IO
-import koodies.logging.asStatus
 import koodies.runtime.isDebugging
 import koodies.text.ANSI.Text.Companion.ansi
-import koodies.text.ANSI.ansiRemoved
 import koodies.text.Semantics.formattedAs
 import koodies.text.quoted
 import koodies.text.truncate
@@ -67,7 +65,7 @@ class Program(
      */
     fun compute(operatingSystemProcess: OperatingSystemProcess, io: IO): Boolean {
         val oldState = state
-        state = handler(operatingSystemProcess).invoke(operatingSystemProcess, io.unformatted.ansiRemoved)
+        state = handler(operatingSystemProcess).invoke(operatingSystemProcess, io.ansiRemoved)
         val historyElement = HistoryElement(oldState, io, state)
         if (logging) echo("$name execution step #${stateHistory.size}: $historyElement")
         stateHistory.add(historyElement)
@@ -80,7 +78,7 @@ class Program(
         override fun toString(): String = when (oldState) {
             null -> " ▶️ $leftBracket$newState$rightBracket"
             else -> {
-                val visualizedOutput = if (io.isBlank()) "\u2400" else io.unformatted.ansiRemoved.replaceNonPrintableCharacters().formattedAs.input
+                val visualizedOutput = if (io.isBlank()) "\u2400" else io.ansiRemoved.replaceNonPrintableCharacters().formattedAs.input
                 when (newState) {
                     oldState -> "$leftBracket$oldState$rightBracket 🔁 $visualizedOutput"
                     null -> " ⏹️ "
@@ -104,6 +102,7 @@ class Program(
     }
 
     companion object {
+
         /**
          * Utility version of [Program.compute] that delegates the output to the first [Program] of this [Collection].
          *
@@ -115,7 +114,7 @@ class Program(
         /**
          * Formats an array of programs
          */
-        fun Array<out Program>.format(): String = if (size > 0) map { it.name }.asStatus() else "no programs".formattedAs.meta
+        fun Array<out Program>.format(): CharSequence = if (size > 0) map { it.name }.asExtra() else "no programs".formattedAs.meta
 
         private fun stateName(index: Int, commands: Array<out String>): String {
             val commandLine = commands[index]
@@ -167,7 +166,7 @@ class Program(
 
             val states: List<ProgramState> = commands.flatMapIndexed { index, command ->
                 val currentStateName: String = stateName(index, commands)
-                val currentCompletionStateName: String = stateName(index, commands) + " …"
+                val currentCompletionStateName: String = stateName(index, commands) + " …"
                 val nextStateName: String =
                     if (index + 1 < commands.size) stateName(index + 1, commands)
                     else completionState.first

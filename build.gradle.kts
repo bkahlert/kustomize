@@ -3,9 +3,9 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.5.0"
-//    id("se.patrikerdes.use-latest-versions") version "0.2.15"
-//    id("com.github.ben-manes.versions") version "0.36.0"
+    kotlin("jvm") version "1.5.20"
+//    id("se.patrikerdes.use-latest-versions") version "0.2.17"
+//    id("com.github.ben-manes.versions") version "0.39.0"
 //    id("com.github.johnrengelman.shadow") version "6.0.0"
     application
 }
@@ -23,9 +23,14 @@ dependencies {
 
     implementation("com.bkahlert:koodies:1.6.0-SNAPSHOT")
 
-    implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.0") {
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.20") {
         because("filepeek takes 1.3")
     }
+
+    implementation("io.opentelemetry:opentelemetry-sdk:1.3.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-jaeger:1.3.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-logging:1.3.0")
+    implementation("io.grpc:grpc-okhttp:1.38.0")
 
     implementation("com.github.ajalt.clikt:clikt:3.1.0")
 //    implementation("com.github.ajalt:mordant:1.2.1") {// implementation("com.github.ajalt.mordant:mordant:2.0.0-alpha1")

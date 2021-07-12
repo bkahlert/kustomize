@@ -8,23 +8,23 @@ import com.imgcstmzr.test.E2E
 import com.imgcstmzr.test.OS
 import koodies.docker.DockerRequiring
 import koodies.io.path.hasContent
-import koodies.logging.InMemoryLogger
-import koodies.logging.expectLogged
+import koodies.test.CapturedOutput
 import koodies.test.FiveMinutesTimeout
+import koodies.test.SystemIOExclusive
 import koodies.text.LineSeparators.LF
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
-import strikt.assertions.contains
 import strikt.java.exists
 
+@SystemIOExclusive
 class SshAuthorizationPatchTest {
 
     @FiveMinutesTimeout @DockerRequiring([DockerPiImage::class]) @E2E @Test
-    fun InMemoryLogger.`should add ssh key`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+    fun `should add ssh key`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
 
         SshAuthorizationPatch("pi", listOf("123")).patch(osImage)
 
-        expectLogged.contains("SSH key inject: pi")
+        output.all.contains("SSH key inject: pi")
         expectThat(osImage).mounted {
             path("/home/pi/.ssh/authorized_keys") {
                 exists()

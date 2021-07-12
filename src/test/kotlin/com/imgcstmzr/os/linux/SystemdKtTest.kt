@@ -6,24 +6,26 @@ import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.os.boot
 import com.imgcstmzr.test.OS
 import koodies.docker.DockerRequiring
-import koodies.logging.InMemoryLogger
-import koodies.logging.expectLogged
+import koodies.junit.UniqueId
+import koodies.test.CapturedOutput
 import koodies.test.FifteenMinutesTimeout
-import koodies.test.UniqueId
-import koodies.text.ansiRemoved
+import koodies.test.SystemIOExclusive
+import koodies.text.ANSI.ansiRemoved
 import koodies.toBaseName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import strikt.api.expectThat
 import strikt.assertions.contains
 
+@SystemIOExclusive
 class SystemdKtTest {
 
     @Nested
     inner class InstallService {
 
         @FifteenMinutesTimeout @DockerRequiring([DockerPiImage::class]) @Test
-        fun InMemoryLogger.`should create service unit and links`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-            osImage.virtCustomize(this) {
+        fun `should create service unit and links`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
+            osImage.virtCustomize {
                 installService(ServiceUnit("custom.service", """
                         [Unit]
                         Description=custom description
@@ -39,13 +41,13 @@ class SystemdKtTest {
                         WantedBy=multi-user.target
                     """))
             }
-            osImage.boot(uniqueId.value.toBaseName(), this)
-            expectLogged.ansiRemoved.contains("Copying: etc/systemd/system/custom.service to /etc/systemd/system") and {
-                contains("Linking: /etc/systemd/system/multi-user.target.wants/custom.service -> /etc/systemd/system/custom.service")
-                contains("Starting custom description")
-                contains("custom service exec")
-                contains("Started custom description")
-            }
+            osImage.boot(uniqueId.value.toBaseName())
+            expectThat(output.all.ansiRemoved)
+                .contains("Copying: etc/systemd/system/custom.service to /etc/systemd/system")
+                .contains("Linking: /etc/systemd/system/multi-user.target.wants/custom.service -> /etc/systemd/system/custom.service")
+                .contains("Starting custom description")
+                .contains("custom service exec")
+                .contains("Started custom description")
         }
     }
 }

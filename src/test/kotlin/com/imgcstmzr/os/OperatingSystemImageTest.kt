@@ -1,6 +1,6 @@
 package com.imgcstmzr.os
 
-import com.imgcstmzr.Locations
+import com.imgcstmzr.ImgCstmzr
 import com.imgcstmzr.libguestfs.LibguestfsImage
 import com.imgcstmzr.libguestfs.mounted
 import com.imgcstmzr.os.OperatingSystemImage.Companion.based
@@ -11,18 +11,18 @@ import koodies.docker.DockerRequiring
 import koodies.io.path.hasContent
 import koodies.io.path.isDuplicateOf
 import koodies.io.path.pathString
-import koodies.io.path.randomDirectory
-import koodies.io.path.randomFile
 import koodies.io.path.touch
 import koodies.io.path.withDirectoriesCreated
 import koodies.io.path.writeLine
 import koodies.io.path.writeText
-import koodies.logging.InMemoryLogger
-import koodies.logging.expectLogged
+import koodies.io.randomDirectory
+import koodies.io.randomFile
+import koodies.junit.UniqueId
+import koodies.test.CapturedOutput
 import koodies.test.FifteenMinutesTimeout
 import koodies.test.FiveMinutesTimeout
 import koodies.test.Smoke
-import koodies.test.UniqueId
+import koodies.test.SystemIOExclusive
 import koodies.test.toStringContainsAll
 import koodies.test.withTempDir
 import org.junit.jupiter.api.Nested
@@ -37,6 +37,7 @@ import kotlin.io.path.div
 import kotlin.io.path.isWritable
 import kotlin.io.path.readLines
 
+@SystemIOExclusive
 class OperatingSystemImageTest {
 
     @Test
@@ -52,7 +53,7 @@ class OperatingSystemImageTest {
     @Test
     fun `should have full name`() {
         expectThat((OperatingSystemMock("full-name-test") based Path.of("foo/bar")).fullName)
-            .isEqualTo("ImgCstmzr Test OS ／ file://${Locations.WorkingDirectory}/foo/bar")
+            .isEqualTo("ImgCstmzr Test OS ／ file://${ImgCstmzr.WorkingDirectory}/foo/bar")
     }
 
     @Test
@@ -71,8 +72,8 @@ class OperatingSystemImageTest {
     inner class CopyOut {
 
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Smoke @Test
-        fun InMemoryLogger.`should copy-out existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-            osImage.copyOut("/boot/cmdline.txt", logger = this)
+        fun `should copy-out existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+            osImage.copyOut("/boot/cmdline.txt")
 
             expectThat(osImage.exchangeDirectory.resolve("boot/cmdline.txt"))
                 .content.toStringContainsAll("console=serial", "console=tty", "rootfstype=ext4")
@@ -83,15 +84,18 @@ class OperatingSystemImageTest {
     inner class Guestfish {
 
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
-        fun InMemoryLogger.`should trace if specified`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-            osImage.guestfish(this, trace = true) {}
+        fun `should trace if specified`(
+            @OS(RaspberryPiLite) osImage: OperatingSystemImage,
+            output: CapturedOutput,
+        ) {
+            osImage.guestfish(true) {}
 
-            expectLogged.contains("libguestfs: trace: launch")
+            expectThat(output.all).contains("libguestfs: trace: launch")
         }
 
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
-        fun InMemoryLogger.`should copy-out existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-            osImage.guestfish(this, false, null, false) {
+        fun `should copy-out existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+            osImage.guestfish {
                 copyOut { LinuxRoot.boot / "cmdline.txt" }
             }
 
@@ -100,21 +104,20 @@ class OperatingSystemImageTest {
         }
 
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
-        fun InMemoryLogger.`should ignore missing files`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-            osImage.guestfish(this, false, null, false) {
+        fun `should ignore missing files`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+            osImage.guestfish {
                 copyOut { LinuxRoot / "missing.txt" }
             }
 
             expectThat(osImage.exchangeDirectory / "missing.txt") {
                 not { exists() }
             }
-            expectLogged.contains("successfully")
         }
 
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
-        fun InMemoryLogger.`should override locally existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+        fun `should override locally existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
             val dir = osImage.exchangeDirectory.apply { resolve("boot/cmdline.txt").withDirectoriesCreated().writeText("overwrite me") }
-            osImage.guestfish(this, false, null, false) {
+            osImage.guestfish {
                 copyOut { LinuxRoot / "boot" / "cmdline.txt" }
             }
 
@@ -124,12 +127,12 @@ class OperatingSystemImageTest {
         }
 
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
-        fun InMemoryLogger.`should override existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+        fun `should override existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
             val dir = osImage.exchangeDirectory.apply { resolve("boot/cmdline.txt").withDirectoriesCreated().writeText("overwrite me") }
-            osImage.guestfish(this, false, null, false) {
+            osImage.guestfish {
                 copyIn { LinuxRoot / "boot" / "cmdline.txt" }
             }
-            osImage.guestfish(this, false, null, false) {
+            osImage.guestfish {
                 copyOut { LinuxRoot / "boot" / "cmdline.txt" }
             }
 
@@ -141,11 +144,14 @@ class OperatingSystemImageTest {
     inner class VirtCustomize {
 
         @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Smoke @Test
-        fun InMemoryLogger.`should set hostname`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-            osImage.virtCustomize(logger = this) {
+        fun `should set hostname`(
+            @OS(RaspberryPiLite) osImage: OperatingSystemImage,
+            output: CapturedOutput,
+        ) {
+            osImage.virtCustomize {
                 hostname { "test-machine" }
             }
-            expectThat(osImage).mounted(logger = this) {
+            expectThat(osImage).mounted {
                 path("/etc/hostname") {
                     exists()
                     hasContent("test-machine\n")

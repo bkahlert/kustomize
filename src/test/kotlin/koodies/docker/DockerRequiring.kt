@@ -3,14 +3,17 @@ package koodies.docker
 import koodies.docker.CleanUpMode.FailAndKill
 import koodies.docker.CleanUpMode.ThanksForCleaningUp
 import koodies.docker.DockerContainer.State.Existent.Running
-import koodies.logging.FixedWidthRenderingLogger
-import koodies.logging.conditionallyVerboseLogger
+import koodies.junit.TestName.Companion.testName
+import koodies.junit.UniqueId.Companion.simplifiedId
 import koodies.test.Slow
-import koodies.test.UniqueId.Companion.simplifiedId
-import koodies.test.testName
 import koodies.test.withAnnotation
 import koodies.text.Semantics.formattedAs
 import koodies.text.quoted
+import koodies.tracing.rendering.BackgroundPrinter
+import koodies.tracing.rendering.BlockStyles.None
+import koodies.tracing.rendering.spanningLine
+import koodies.tracing.spanning
+import koodies.tracing.tracing
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
@@ -60,36 +63,38 @@ enum class CleanUpMode {
 
 class TestContainerCheck : BeforeEachCallback, AfterEachCallback, TypeBasedParameterResolver<DockerContainer>() {
 
-    private val ExtensionContext.logger: FixedWidthRenderingLogger
-        get() = conditionallyVerboseLogger(withAnnotation<ContainersTestFactory, Boolean> { logging } ?: withAnnotation<ContainersTest, Boolean> { logging })
-
     override fun beforeEach(context: ExtensionContext) = with(context) {
-        pullRequiredImages()
+        spanning("Checking for required images and running containers", blockStyle = None, printer = BackgroundPrinter) {
+            pullRequiredImages()
 
-        with(context.uniqueContainer()) {
-            if (logger.state is Running) {
-                logger.logLine { "Container $name is (still) running and will be removed forcibly." }
-                remove(force = true)
+            with(context.uniqueContainer()) {
+                if (containerState is Running) {
+                    log("Container $name is (still) running and will be removed forcibly.")
+                    remove(force = true)
+                }
             }
         }
     }
 
     override fun afterEach(context: ExtensionContext) = with(context) {
-
-        with(uniqueContainer()) {
-            when (withAnnotation<DockerRequiring, CleanUpMode?> { mode }) {
-                ThanksForCleaningUp -> {
-                    if (logger.state is Running) remove(force = true, logger = logger)
-                }
-                FailAndKill -> {
-                    check(logger.state !is Running) {
-                        remove(true)
-                        "Container $name was still running and had to be removed forcibly."
+        spanning("Cleaning up", blockStyle = None, printer = BackgroundPrinter) {
+            with(uniqueContainer()) {
+                when (withAnnotation<DockerRequiring, CleanUpMode?> { mode }) {
+                    ThanksForCleaningUp -> {
+                        if (containerState is Running) remove(force = true)
                     }
-                }
-                else -> {
-                    if (logger.state is Running) {
-                        logger.logLine { "Container $name is still running… just saying".formattedAs.debug }
+                    FailAndKill -> {
+                        check(containerState !is Running) {
+                            remove(true)
+                            "Container $name was still running and had to be removed forcibly."
+                        }
+                    }
+                    else -> {
+                        if (containerState is Running) {
+                            tracing {
+                                log("Container $name is still running… just saying".formattedAs.debug)
+                            }
+                        }
                     }
                 }
             }
@@ -102,9 +107,9 @@ class TestContainerCheck : BeforeEachCallback, AfterEachCallback, TypeBasedParam
     private fun ExtensionContext.uniqueContainer() = DockerContainer(simplifiedId)
 
     private fun ExtensionContext.pullRequiredImages() =
-        logger.logging("Pulling required images") {
-            val missing = requiredDockerImages() subtract DockerImage.list(logger = logger)
-            missing.forEach { it.pull(logger = logger) }
+        spanningLine("Pulling required images") {
+            val missing = requiredDockerImages() subtract DockerImage.list()
+            missing.forEach { it.pull() }
         }
 
     private fun ExtensionContext.requiredDockerImages(): List<DockerImage> =

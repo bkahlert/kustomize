@@ -1,6 +1,6 @@
 package com.imgcstmzr.libguestfs
 
-import com.imgcstmzr.Locations
+import com.imgcstmzr.ImgCstmzr
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.ExitCommand
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.UmountAllCommand
 import com.imgcstmzr.libguestfs.ImageBuilder.FileSystemType.EXT4
@@ -8,7 +8,6 @@ import com.imgcstmzr.libguestfs.ImageBuilder.FileSystemType.FAT
 import com.imgcstmzr.libguestfs.ImageBuilder.PartitionTableType.MasterBootRecord
 import koodies.docker.DockerRunCommandLine
 import koodies.docker.DockerRunCommandLine.Options
-import koodies.io.autoCleaning
 import koodies.io.compress.Archiver.archive
 import koodies.io.compress.GzCompressor.gunzip
 import koodies.io.path.asPath
@@ -17,16 +16,22 @@ import koodies.io.path.delete
 import koodies.io.path.deleteOnExit
 import koodies.io.path.hasExtensions
 import koodies.io.path.removeExtensions
-import koodies.logging.FixedWidthRenderingLogger
-import koodies.logging.FixedWidthRenderingLogger.Border.DOTTED
+import koodies.io.path.uriString
+import koodies.io.selfCleaning
 import koodies.shell.HereDoc
 import koodies.shell.ShellScript
-import koodies.text.ANSI
 import koodies.text.ANSI.Text.Companion.ansi
+import koodies.text.LineSeparators.LF
+import koodies.text.Semantics.Symbols.PointNext
+import koodies.text.Unicode.TAB
 import koodies.text.quoted
+import koodies.text.spaced
 import koodies.time.Now
 import koodies.time.hours
-import koodies.unit.BinaryPrefix
+import koodies.tracing.rendering.BlockStyles.Dotted
+import koodies.tracing.rendering.spanningLine
+import koodies.tracing.spanning
+import koodies.unit.BinaryPrefixes
 import koodies.unit.Gibi
 import koodies.unit.Mebi
 import koodies.unit.Size
@@ -38,17 +43,17 @@ import kotlin.math.ceil
 
 object ImageBuilder {
 
-    private val temp by Locations.Temp.autoCleaning("image-build", 1.hours, 5)
+    private val temp by ImgCstmzr.Temp.selfCleaning("image-build", 1.hours, 5)
 
     private fun Size.round(): Size {
-        val toString = toString(BinaryPrefix.Mebi, 1)
+        val toString = toString(BinaryPrefixes.Mebi, 1)
         val mb = toString.split(" ")[0]
         val roundedMb = ceil(mb.toDouble())
         return roundedMb.Mebi.bytes
     }
 
     fun Size.format(): String {
-        val toString = round().toString(BinaryPrefix.Mebi, 0)
+        val toString = round().toString(BinaryPrefixes.Mebi, 0)
         return toString.split(" ")[0] + "M"
     }
 
@@ -59,39 +64,37 @@ object ImageBuilder {
      * Dynamically creates a raw image with two partitions containing the files
      * as specified by the [uri].
      */
-    fun FixedWidthRenderingLogger.buildFrom(uri: URI): Path {
-        var path: List<Pair<Path, Path>>? = null
-        compactLogging("Initiating raw image creation from $uri") {
+    fun buildFrom(uri: URI): Path = spanning("Initiating raw image creation from $uri") {
 
-            require(uri.scheme == schema) { "URI $uri is invalid as its scheme differs from ${schema.quoted}" }
-            require(uri.host == host) { "URI $uri is invalid as its host differs from ${host.quoted}" }
+        require(uri.scheme == schema) { "URI $uri is invalid as its scheme differs from ${schema.quoted}" }
+        require(uri.host == host) { "URI $uri is invalid as its host differs from ${host.quoted}" }
 
-            val query = mutableMapOf<String, MutableList<String>>().apply {
-                uri.query.split("&").map {
-                    it.split("=", limit = 2).run { first() to last() }
-                }.forEach { (key, value) ->
-                    computeIfAbsent(key) { mutableListOf() }.add(value)
-                }
+        val query = mutableMapOf<String, MutableList<String>>().apply {
+            uri.query.split("&").map {
+                it.split("=", limit = 2).run { first() to last() }
+            }.forEach { (key, value) ->
+                computeIfAbsent(key) { mutableListOf() }.add(value)
             }
-
-            val files = query.getOrDefault("files", emptyList())
-            require(query.isNotEmpty()) { "URI $uri does not reference any file using the \"files\" parameter" }
-
-            path = files.map { it.split(">", limit = 2) }
-                .map { relation -> relation.first().asPath() to relation.last().asPath() }
-            "${path!!.size} files"
         }
-        return prepareImg(*path!!.toTypedArray())
+
+        val files = query.getOrDefault("files", emptyList())
+        require(query.isNotEmpty()) { "URI $uri does not reference any file using the \"files\" parameter" }
+
+        val path: List<Pair<Path, Path>> = files.map { it.split(">", limit = 2) }
+            .map { relation -> relation.first().asPath() to relation.last().asPath() }
+        log("${path.size} files:" + path.joinToString("") { (from, to) -> "$LF$TAB${from.uriString}${PointNext.spaced}${to.uriString}" })
+
+        prepareImg(*path.toTypedArray())
     }
 
-    private fun FixedWidthRenderingLogger.prepareImg(vararg paths: Pair<Path, Path>): Path =
+    private fun prepareImg(vararg paths: Pair<Path, Path>): Path =
         buildFrom(temp.resolve("imgcstmzr-" + paths.take(5).mapNotNull { it.first.fileName }
             .joinToString(separator = "-")).createDirectories().run {
-            compactLogging("Copying ${paths.size} files to ${toUri()}") {
+            spanningLine("Copying ${paths.size} files to ${toUri()}") {
                 paths.forEach { (from, to) -> from.copyToDirectory(resolve(to)) }
             }
             @Suppress("SpellCheckingInspection")
-            compactLogging("Gzipping") { archive("tar", overwrite = true) }
+            spanningLine("Gzipping") { archive("tar", overwrite = true) }
         }, totalSize = 4.Mebi.bytes, bootSize = 2.Mebi.bytes)
 
     /**
@@ -104,16 +107,16 @@ object ImageBuilder {
      * @param bootSize the size of the boot filesystem
      * @param partitionTableType partition table type
      */
-    fun FixedWidthRenderingLogger.buildFrom(
+    fun buildFrom(
         archive: Path,
         bootFileSystem: FileSystemType = FAT,
         rootFileSystem: FileSystemType = EXT4,
         totalSize: Size = 1.Gibi.bytes,
         bootSize: Size = 128.Mebi.bytes,
         partitionTableType: PartitionTableType = MasterBootRecord,
-    ): Path = logging("${Now.emoji} Preparing raw image using the content of ${archive.fileName}. This takes a moment …",
-        decorationFormatter = ANSI.Formatter { it.ansi.gray.done },
-        border = DOTTED) {
+    ): Path = spanning("${Now.emoji} Preparing raw image using the content of ${archive.uriString}. This takes a moment …",
+        decorationFormatter = { it.toString().ansi.gray.done },
+        blockStyle = Dotted) {
         val tarball = if (archive.hasExtensions("gz")) archive.gunzip(overwrite = true).deleteOnExit() else archive
         require(tarball.hasExtensions("tar")) { "Currently only \"tar\" and \"tar.gz\" files are supported." }
 
@@ -122,12 +125,12 @@ object ImageBuilder {
         val imgName = "${tarball.fileName.removeExtensions("tar")}.img".also {
             archiveDirectory.resolve(it).delete()
         }
-        logLine {
-            val formattedTotalSize = totalSize.round().toString<BinaryPrefix>()
-            val formattedRootSize = (totalSize.round() - bootSize.round()).toString<BinaryPrefix>()
-            val formattedBootSize = bootSize.round().toString<BinaryPrefix>()
+        log(run {
+            val formattedTotalSize = totalSize.round().toString(BinaryPrefixes)
+            val formattedRootSize = (totalSize.round() - bootSize.round()).toString(BinaryPrefixes)
+            val formattedBootSize = bootSize.round().toString(BinaryPrefixes)
             "Size: ${formattedTotalSize.ansi.yellow} — ${"/".ansi.cyan} ${formattedRootSize.ansi.brightYellow} — ${"boot".ansi.cyan} ${formattedBootSize.ansi.brightYellow}"
-        }
+        })
 
         DockerRunCommandLine(LibguestfsImage, Options {
             name { "libguestfs-image-preparation---$imgName" }
@@ -147,8 +150,8 @@ object ImageBuilder {
                     +ExitCommand.joinToString(" ")
                 }
             )
-        }).exec.logging(this, archiveDirectory.parent)
-        logLine { "Finished test img creation." }
+        }).exec.logging(archiveDirectory.parent)
+        log("Finished test img creation.")
         archiveDirectory.resolve(imgName)
     }
 

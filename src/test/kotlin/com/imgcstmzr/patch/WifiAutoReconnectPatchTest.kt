@@ -3,7 +3,7 @@ package com.imgcstmzr.patch
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.AppendLineOption
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
-import koodies.test.UniqueId
+import koodies.junit.UniqueId
 import koodies.test.withTempDir
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat

@@ -1,17 +1,18 @@
 package koodies.docker
 
-import koodies.docker.DockerSearchCommandLine.DockerSeachResult
+import koodies.docker.DockerSearchCommandLine.DockerSearchResult
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
 
-val Assertion.Builder<DockerSeachResult>.image: DescribeableBuilder<DockerImage>
+
+val Assertion.Builder<DockerSearchResult>.image: DescribeableBuilder<DockerImage>
     get() = get("image") { image }
-val Assertion.Builder<DockerSeachResult>.description: DescribeableBuilder<String>
+val Assertion.Builder<DockerSearchResult>.description: DescribeableBuilder<String>
     get() = get("description") { description }
-val Assertion.Builder<DockerSeachResult>.stars: DescribeableBuilder<Int>
+val Assertion.Builder<DockerSearchResult>.stars: DescribeableBuilder<Int>
     get() = get("starCount") { stars }
 
-fun Assertion.Builder<DockerSeachResult>.isOfficial() =
+fun Assertion.Builder<DockerSearchResult>.isOfficial() =
     assert("is official") {
         when (it.official) {
             true -> pass()
@@ -19,7 +20,7 @@ fun Assertion.Builder<DockerSeachResult>.isOfficial() =
         }
     }
 
-fun Assertion.Builder<DockerSeachResult>.isAutomated() =
+fun Assertion.Builder<DockerSearchResult>.isAutomated() =
     assert("is automated") {
         when (it.automated) {
             true -> pass()

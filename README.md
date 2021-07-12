@@ -2,6 +2,113 @@
 
 **ONLY THOROUGLY TESTED WITH RASPBERRY PI OS IMAGES**
 
+```text
+╭──╴Running Raspberry Pi OS Lite ／ 2021-03-04-raspios-buster-armhf-lite.img with ◀◀ print HOME
+│
+│   image: /sdcard/filesystem.img                                                     ◀◀ login ◀ print HOME ◀ shutdown
+│   file format: raw                                                                  ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   virtual size: 1.74 GiB (1866465280 bytes)                                         ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   disk size: 1.74 GiB                                                               ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   Booting QEMU machine "versatilepb" with kernel=/root/qemu-rpi-kernel/kernel-      ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   qemu-4.19.50-buster dtb=/root/qem
+┊                                                                                    
+│   Run /sbin/init as init process                                                    ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   systemd[1]: Failed to lookup module alias 'autofs4': Function not implemented     ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   systemd[1]: systemd 241 running in system mode. (+PAM +AUDIT +SELINUX +IMA        ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│    +APPARMOR +SMACK +SYSVINIT +UTMP +LIBCRYPTSETUP +GCRYPT +GNUTLS +ACL +XZ
+│    +LZ4 +SECCOMP +BLKID +ELFUTILS +KMOD -IDN2 +IDN -PCRE2 default-hierarchy=hybrid)
+│   systemd[1]: Detected architecture arm.                                            ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│                                                                                     ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   Welcome to Raspbian GNU/Linux 10 (buster)!                                        ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│                                                                                     ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   systemd[1]: Set hostname to <raspberrypi>.                                        ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+┊
+│   systemd[1]: Initializing machine ID from random generator.                        ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+┊
+│   [  OK  ] Started /etc/rc.local Compatibility.                                     ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   [  OK  ] Started Permit User Sessions.                                            ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   [  OK  ] Started Getty on tty1.                                                   ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   [  OK  ] Started Serial Getty on ttyAMA0.                                         ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   [  OK  ] Reached target Login Prompts.                                            ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│                                                                                     ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│                                                                                     ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   Raspbian GNU/Linux 10 raspberrypi ttyAMA0                                         ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│                                                                                     ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│   raspberrypi login: [  OK  ] Started Regenerate SSH host keys.                     ◀◀ login❬1/4: wait … t HOME ◀ shutdown
+│                                                                                     
+│            ̣ ˱ ❨ ( Entering "pi" )                                                   
+│   (*^-ﾟ)v                                                                           
+│                                                                                     
+│   [ TIME ] Timed out waiting for device /dev/serial1.                               ◀◀ login❬2/4: conf … t HOME ◀ shutdown
+│   [DEPEND] Dependency failed for Conf…ooth Modems connected by UART.                ◀◀ login❬3/4: pass … t HOME ◀ shutdown
+│   pi                                                                                ◀◀ login❬3/4: pass … t HOME ◀ shutdown
+│                                                                                     ◀◀ login❬3/4: pass … t HOME ◀ shutdown
+│                                                                                     
+│            ̣ ˱ ❨ ( Entering "raspberry" )                                            
+│   (o^-`)b                                                                           
+│                                                                                     
+│   Password:                                                                         ◀◀ login❬4/4 confi … t HOME ◀ shutdown
+│   Linux raspberrypi 4.19.50+ #1 Tue Nov 26 01:49:16 CET 2019 armv6l                 ◀◀ login❬3/4: pass … t HOME ◀ shutdown
+│                                                                                     ◀◀ login❬4/4 confi … t HOME ◀ shutdown
+│   The programs included with the Debian GNU/Linux system are free software;         ◀◀ login❬4/4 confi … t HOME ◀ shutdown
+│   the exact distribution terms for each program are described in the                ◀◀ login❬4/4 confi … t HOME ◀ shutdown
+│   individual files in /usr/share/doc/*/copyright.                                   ◀◀ login❬4/4 confi … t HOME ◀ shutdown
+│                                                                                     ◀◀ login❬4/4 confi … t HOME ◀ shutdown
+│   Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent                 ◀◀ login❬4/4 confi … t HOME ◀ shutdown
+│   permitted by applicable law.                                                      ◀◀ login❬4/4 confi … t HOME ◀ shutdown
+│   pi@raspberrypi:~$                                                                 ◀◀ login❬4/4 confi … t HOME ◀ shutdown
+│                                                                                     
+│            ̣ ˱ ❨ ( Logged in successfully )                                          
+│   o(^▽^)o                                                                           
+│                                                                                     
+│                                                                                     
+│            ̣ ˱ ❨ ( Entering "printenv HOME" )                                        
+│   o(^▽^)o                                                                           
+│                                                                                     
+│   pi@raspberrypi:~$ printenv HOME                                                   ◀◀ print HOME❬1/1: … env …❭ ◀ shutdown
+│   /home/pi                                                                          ◀◀ print HOME❬1/1: … env …❭ ◀ shutdown
+│   pi@raspberrypi:~$                                                                 ◀◀ print HOME❬1/1: … env …❭ ◀ shutdown
+│   pi@raspberrypi:~$                                                                 ◀◀ print HOME❬wait … inish❭ ◀ shutdown
+│   Watchdog started. Timing out in 5.00s.                                            
+│   Watchdog stopped.                                                                 
+│                                                                                     
+│               ̣ ˱ ❨ ( Entering "sudo shutdown -h now" )                              
+│   v(*`-^*)ｂ                                                                        
+│                                                                                     
+│   pi@raspberrypi:~$ sudo shutdown -h now                                            ◀◀ shutdown❬shutting down❭
+│            Unmounting RPC Pipe File System...                                       ◀◀ shutdown❬shutting down❭
+│            Stopping Session c1 of user pi.                                          ◀◀ shutdown❬shutting down❭
+│   [  OK  ] Stopped target Timers.                                                   ◀◀ shutdown❬shutting down❭
+│   [  OK  ] Stopped Daily man-db regeneration.                                       ◀◀ shutdown❬shutting down❭
+│   [  OK  ] Stopped Daily Cleanup of Temporary Directories.                          ◀◀ shutdown❬shutting down❭
+│   [  OK  ] Stopped Daily apt upgrade and clean activities.                          ◀◀ shutdown❬shutting down❭
+│   [  OK  ] Stopped Daily apt download activities.                                   ◀◀ shutdown❬shutting down❭
+│   [  OK  ] Stopped target Graphical Interface.                                      ◀◀ shutdown❬shutting down❭
+│   [  OK  ] Stopped target Multi-User System.                                        ◀◀ shutdown❬shutting down❭
+┊
+│   [  OK  ] Reached target Shutdown.                                                 ◀◀ shutdown❬shutting down❭
+│   [  OK  ] Reached target Final Step.                                               ◀◀ shutdown❬shutting down❭
+│   [  OK  ] Started Power-Off.                                                       ◀◀ shutdown❬shutting down❭
+│   [  OK  ] Reached target Power-Off.                                                ◀◀ shutdown❬shutting down❭
+│   reboot: System halted                                                             ◀◀ shutdown❬shutting down❭
+│   Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000000           ◀◀ shutdown❬shutting down❭
+│                                                                                     ◀◀ shutdown❬shutting down❭
+│   CPU: 0 PID: 1 Comm: systemd-shutdow Not tainted 4.19.50+ #1                       ◀◀ 
+│   Hardware name: ARM-Versatile (Device Tree Support)                                ◀◀ 
+│   [<c001d230>] (unwind_backtrace) from [<c00190ac>] (show_stack+0x10/0x14)          ◀◀ 
+│   [<c00190ac>] (show_stack) from [<c0025f14>] (panic+0xc8/0x240)                    ◀◀ 
+│   [<c0025f14>] (panic) from [<c0028444>] (do_exit+0x950/0x9fc)                      ◀◀ 
+│   [<c0028444>] (do_exit) from [<c0042440>] (sys_reboot+0x1a0/0x1f0)                 ◀◀ 
+│   [<c0042440>] (sys_reboot) from [<c0009000>] (ret_fast_syscall+0x0/0x54)           ◀◀ 
+│   Exception stack(0xcf823fa8 to 0xcf823ff0)                                         ◀◀ 
+│   3fa0:                   00000000 00000000 fee1dead 28121969 4321fedc 93372d00     ◀◀ 
+│   3fc0: 00000000 00000000 00000000 00000058 00000fff beb14c08 00000000 00486b80     ◀◀ 
+│   3fe0: 00498e3c beb14b88 004834a8 b6efca38                                         ◀◀ 
+│   Rebooting in 1 seconds..                                                          ◀◀ 
+│
+╰──╴✔︎
+```
+
 ## Usage
 
 ```shell script

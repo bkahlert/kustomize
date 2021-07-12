@@ -17,10 +17,9 @@ import com.imgcstmzr.test.E2E
 import com.imgcstmzr.test.OS
 import koodies.content
 import koodies.docker.DockerRequiring
-import koodies.logging.InMemoryLogger
+import koodies.junit.UniqueId
 import koodies.test.FifteenMinutesTimeout
 import koodies.test.Smoke
-import koodies.test.UniqueId
 import koodies.test.withTempDir
 import koodies.text.LineSeparators.lineSequence
 import org.junit.jupiter.api.Test
@@ -108,7 +107,7 @@ class SambaPatchTest {
     }
 
     @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @E2E @Smoke @Test
-    fun InMemoryLogger.`should install samba and set password and shutdown`(
+    fun `should install samba and set password and shutdown`(
         uniqueId: UniqueId,
         @OS(RaspberryPiLite) osImage: OperatingSystemImage,
     ) = withTempDir(uniqueId) {

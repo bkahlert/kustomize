@@ -5,8 +5,8 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.path
+import com.imgcstmzr.ImgCstmzr
 import com.imgcstmzr.ImgCstmzrConfig
-import com.imgcstmzr.Locations
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.cli.ColorHelpFormatter
 import com.imgcstmzr.libguestfs.LibguestfsImage
@@ -23,13 +23,12 @@ import koodies.exception.toCompactString
 import koodies.io.path.getSize
 import koodies.io.path.pathString
 import koodies.kaomoji.Kaomoji
-import koodies.logging.FixedWidthRenderingLogger
-import koodies.logging.ReturnValues
-import koodies.logging.logging
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.ANSI.colorize
 import koodies.text.Banner.banner
 import koodies.text.Semantics.formattedAs
+import koodies.tracing.rendering.ReturnValues
+import koodies.tracing.spanning
 import java.nio.file.Path
 
 val debug = true
@@ -58,11 +57,11 @@ class CliCommand : NoOpCliktCommand(
         .path(mustExist = true, canBeDir = false, mustBeReadable = true).required()
 
     private val envFile: Path by option("--env", "--env-file", help = ".env file that can be used to pass credentials like a new user password")
-        .path(mustExist = false, canBeDir = false, mustBeReadable = false).default(Locations.HomeDirectory.resolve(".env.imgcstmzr"))
+        .path(mustExist = false, canBeDir = false, mustBeReadable = false).default(ImgCstmzr.HomeDirectory.resolve(".env.imgcstmzr"))
 
     private val cacheDir: Path by option("--cache-dir", help = "temporary directory that holds intermediary states to improve performance")
         .path(canBeFile = false, mustBeWritable = true)
-        .default(Cache.DEFAULT)
+        .default(ImgCstmzr.Cache)
 
     private val reuseLastWorkingCopy: Boolean by option().flag(default = false)
 
@@ -77,18 +76,18 @@ class CliCommand : NoOpCliktCommand(
 
         lateinit var config: ImgCstmzrConfig
         lateinit var osImage: OperatingSystemImage
-        logging(banner("Configuration")) {
+        spanning(banner("Configuration")) {
             config = configFile.let {
-                logLine { "File: ${it.pathString}".ansi.cyan.bold }
-                logLine { "Size: ${it.getSize()}".ansi.cyan.bold }
+                log("File: ${it.pathString}".ansi.cyan.bold)
+                log("Size: ${it.getSize()}".ansi.cyan.bold)
                 ImgCstmzrConfig.load(it, envFile)
             }.apply {
-                logLine { "Name: $name".ansi.cyan.bold }
-                logLine { "Env: $envFile".ansi.cyan.bold }
-                logLine { "Cache: $cacheDir".ansi.cyan.bold }
+                log("Name: $name".ansi.cyan.bold)
+                log("Env: $envFile".ansi.cyan.bold)
+                log("Cache: $cacheDir".ansi.cyan.bold)
 
                 osImage = provideImageCopy(this)
-                logLine { "OS: $osImage".ansi.cyan.bold }
+                log("OS: $osImage".ansi.cyan.bold)
             }
         }
 
@@ -99,11 +98,11 @@ class CliCommand : NoOpCliktCommand(
         val patches = config.toOptimizedPatches()
         val exceptions: ReturnValues<Throwable> = patches.patch(osImage)
 
-        val flashDisk: Disk? = logging(banner("Flashing $osImage")) {
+        val flashDisk: Disk? = spanning(banner("Flashing $osImage")) {
             config.flashDisk?.let { disk ->
                 flash(osImage.file, disk.takeUnless { it.equals("auto", ignoreCase = true) })
             } ?: run {
-                logLine {
+                log(
                     """
                         
                     To make use of your image, you have the following options:
@@ -114,32 +113,32 @@ class CliCommand : NoOpCliktCommand(
                     d) ${"Flash manually".formattedAs.input} using the tool of your choice.
                        ${osImage.file.toUri()}
                 """.trimIndent()
-                }
+                )
                 null
             }
         }
 
         echo()
 
-        logging(banner("Summary")) {
-            logLine { "Image flashed to: " + (flashDisk?.run { toString() } ?: "—") }
-            logLine { "Run scripts: " + osImage.copyOut("/usr/lib/virt-sysprep", logger = this).toUri() }
-            logLine { "Run scripts log: " + osImage.copyOut("/root/virt-sysprep-firstboot.log", logger = this).toUri() }
+        spanning(banner("Summary")) {
+            log("Image flashed to: " + (flashDisk?.run { toString() } ?: "—"))
+            log("Run scripts: " + osImage.copyOut("/usr/lib/virt-sysprep").toUri())
+            log("Run scripts log: " + osImage.copyOut("/root/virt-sysprep-firstboot.log").toUri())
 
             if (exceptions.isEmpty()) Kaomoji.Magical.random().toString() + " ${osImage.file.toUri()}"
             else Kaomoji.BadMood.random().also {
-                logLine { "The following problems occurred during image customization:" }
+                log("The following problems occurred during image customization:")
                 exceptions.forEach { ex ->
-                    logLine { ex.toCompactString() }
+                    log(ex.toCompactString())
                 }
             }
         }
     }
 
-    private fun FixedWidthRenderingLogger.provideImageCopy(config: ImgCstmzrConfig) = with(cache) {
+    private fun provideImageCopy(config: ImgCstmzrConfig) = with(cache) {
         config.os based provideCopy(config.name, reuseLastWorkingCopy) {
             with(downloader) {
-                config.os.download(this@provideImageCopy)
+                config.os.download()
             }
         }
     }

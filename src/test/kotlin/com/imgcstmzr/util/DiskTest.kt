@@ -1,11 +1,11 @@
 package com.imgcstmzr.util
 
+import com.imgcstmzr.ImgCstmzr
 import com.imgcstmzr.ImgCstmzrConfig
-import com.imgcstmzr.Locations
 import koodies.io.path.asPath
-import koodies.logging.InMemoryLogger
 import koodies.test.ThirtyMinutesTimeout
 import koodies.text.ANSI.Text.Companion.ansi
+import koodies.tracing.spanning
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
@@ -16,15 +16,15 @@ class DiskTest {
 
     @Disabled
     @ThirtyMinutesTimeout @Test
-    fun InMemoryLogger.`should mount and unmount listed disks`() {
-        val file = "${Locations.HomeDirectory}/.imgcstmzr/bother-you/2021-01-03T21-28-04--csEt/2020-12-02-raspios-buster-armhf-lite.img".asPath()
+    fun `should mount and unmount listed disks`() {
+        val file = "${ImgCstmzr.HomeDirectory}/.imgcstmzr/bother-you/2021-01-03T21-28-04--csEt/2020-12-02-raspios-buster-armhf-lite.img".asPath()
         val flashDrive: String? = "auto"
 
-        logging("Flashing ${file.toUri()}") {
+        spanning("Flashing ${file.toUri()}") {
             flashDrive?.let { disk ->
                 flash(file, disk.takeUnless { it.equals("auto", ignoreCase = true) })
             } ?: also {
-                logLine {
+                log(
                     """
                         
                     To make use of your image, you have the following options:
@@ -35,7 +35,7 @@ class DiskTest {
                     d) ${"Flash manually".ansi.cyan} using the tool of your choice.
                        ${file.toUri()}
                 """.trimIndent()
-                }
+                )
             }
         }
     }

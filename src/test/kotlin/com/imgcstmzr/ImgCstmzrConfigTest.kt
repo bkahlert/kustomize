@@ -33,12 +33,12 @@ import com.imgcstmzr.patch.booted
 import com.imgcstmzr.test.E2E
 import com.imgcstmzr.test.OS
 import com.typesafe.config.ConfigFactory
-import koodies.logging.InMemoryLogger
-import koodies.logging.expectLogged
 import koodies.net.div
 import koodies.net.ip4Of
 import koodies.shell.ShellScript
+import koodies.test.CapturedOutput
 import koodies.test.Smoke
+import koodies.test.SystemIOExclusive
 import koodies.test.SystemProperties
 import koodies.test.SystemProperty
 import koodies.test.ThirtyMinutesTimeout
@@ -108,7 +108,7 @@ class ImgCstmzrConfigTest {
         expecting { files } that {
             isEqualTo(listOf(
                 FileOperation("line 1\nline 2", null, LinuxRoot.boot / "file-of-lines.txt"),
-                FileOperation(null, Locations.WorkingDirectory / "src" / "test" / "resources" / "BKAHLERT.png", LinuxRoot.home / "FiFi" / "image.png"),
+                FileOperation(null, ImgCstmzr.WorkingDirectory / "src" / "test" / "resources" / "BKAHLERT.png", LinuxRoot.home / "FiFi" / "image.png"),
             )).any { get { append } isEqualTo ("line 1\nline 2") }
         }
         expecting { setup[0].name } that { isEqualTo("the basics") }
@@ -183,8 +183,9 @@ class ImgCstmzrConfigTest {
         }
     }
 
+    @SystemIOExclusive
     @ThirtyMinutesTimeout @E2E @Smoke @Test
-    fun InMemoryLogger.`should apply patches`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+    fun `should apply patches`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
         val imgCstmztn = loadImgCstmztn()
         val patches = imgCstmztn.toOptimizedPatches()
 
@@ -194,15 +195,15 @@ class ImgCstmzrConfigTest {
 
         osImage asserting {
             get { credentials }.isEqualTo("FiFi" withPassword "TRIXIbelle1234")
-            mounted(this@`should apply patches`) {
+            mounted {
                 path("/home/FiFi/first-boot.txt") { not { exists() } }
             }
-            booted(this@`should apply patches`) {
+            booted {
                 command("echo '👏 🤓 👋'");
                 { true }
             }
         }
-        expectLogged.contains("FINALIZING A")
-        expectLogged.contains("FINALIZING B")
+        output.all.contains("FINALIZING A")
+        output.all.contains("FINALIZING B")
     }
 }

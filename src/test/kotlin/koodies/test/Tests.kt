@@ -1,15 +1,16 @@
 package koodies.test
 
+import com.imgcstmzr.ImgCstmzrTest
 import filepeek.LambdaBody
 import koodies.Exceptions.ISE
 import koodies.collections.asStream
 import koodies.debug.trace
 import koodies.exception.toCompactString
 import koodies.io.path.asPath
-import koodies.io.path.deleteOnExit
 import koodies.io.path.readLine
+import koodies.junit.UniqueId
+import koodies.junit.UniqueId.Companion.id
 import koodies.jvm.currentStackTrace
-import koodies.logging.SLF4J
 import koodies.regex.groupValue
 import koodies.runtime.CallStackElement
 import koodies.runtime.getCaller
@@ -24,11 +25,8 @@ import koodies.test.Tester.expectingDisplayName
 import koodies.test.Tester.findCaller
 import koodies.test.Tester.property
 import koodies.test.Tester.throwingDisplayName
-import koodies.test.UniqueId.Companion.id
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.ANSI.ansiRemoved
-import koodies.text.Semantics.BlockDelimiters.TEXT
-import koodies.text.Semantics.Symbols
 import koodies.text.Semantics.formattedAs
 import koodies.text.decapitalize
 import koodies.text.takeUnlessBlank
@@ -37,6 +35,7 @@ import koodies.text.withRandomSuffix
 import koodies.text.wrap
 import koodies.toBaseName
 import koodies.toSimpleString
+import koodies.tracing.rendering.SLF4J
 import org.junit.jupiter.api.DynamicContainer
 import org.junit.jupiter.api.DynamicContainer.dynamicContainer
 import org.junit.jupiter.api.DynamicNode
@@ -45,15 +44,16 @@ import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.extension.AfterEachCallback
-import org.junit.jupiter.api.extension.Extension
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace
 import org.junit.jupiter.api.extension.ExtensionContext.Store
 import strikt.api.Assertion.Builder
+import strikt.api.expectThat
+import strikt.assertions.isGreaterThanOrEqualTo
+import strikt.assertions.size
 import java.net.URI
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
-import kotlin.io.path.createTempDirectory
 import kotlin.io.path.exists
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KCallable
@@ -74,8 +74,6 @@ typealias IdeaWorkaroundTest = Test
  * [IDEA-265284: Add support for JUnit5 composed(meta) annotations annotated with `@ParametrizedTest`](https://youtrack.jetbrains.com/issue/IDEA-265284)
  */
 typealias IdeaWorkaroundTestFactory = TestFactory
-
-private val root by lazy { createTempDirectory("koodies").deleteOnExit(true) }
 
 typealias Assertion<T> = Builder<T>.() -> Unit
 
@@ -123,22 +121,6 @@ object Tester {
     }
 
     /**
-     * Returns the name used to display [transform] applied to [subject].
-     *
-     * If an exception is thrown while computing the display name, the exception is returned instead.
-     */
-    private fun <T, R> valueOf(subject: T, transform: (T) -> R): String =
-        kotlin.runCatching { transform(subject).toCompactString() }.getOrElse { "${Symbols.Error} ${it.toCompactString()}" }
-
-    /**
-     * Returns the name used to display the value returned by [provideSubject].
-     *
-     * If an exception is thrown while computing the display name, the exception is returned instead.
-     */
-    private fun <R> valueOf(provideSubject: () -> R): String =
-        kotlin.runCatching { provideSubject().toCompactString() }.getOrElse { "${Symbols.Error} ${it.toCompactString()}" }
-
-    /**
      * Returns the display name for an asserting test.
      */
     fun <T> CallStackElement.assertingDisplayName(assertion: Assertion<T>): String =
@@ -159,16 +141,16 @@ object Tester {
         }.toString()
 
     /**
-     * Returns the display name for an [subject] expecting test.
+     * Returns the display name for a transforming test.
      */
-    fun <T, R> CallStackElement.expectingDisplayName(subject: T, transform: (T) -> R): String =
-        this.displayName("❔", subject, transform)
+    fun <T, R> CallStackElement.expectingDisplayName(transform: (T) -> R): String =
+        this.displayName("❔", transform)
 
     /**
-     * Returns the display name for an [subject] catching test.
+     * Returns the display name for a catching test.
      */
-    fun <T, R> CallStackElement.catchingDisplayName(subject: T, transform: (T) -> R): String =
-        this.displayName("❓", subject, transform)
+    fun <T, R> CallStackElement.catchingDisplayName(transform: (T) -> R): String =
+        this.displayName("❓", transform)
 
     /**
      * Returns the display name for an [E] throwing test.
@@ -180,16 +162,12 @@ object Tester {
         }.toString()
 
     /**
-     * Returns the display name for a test involving [transform] applied to [subject].
+     * Returns the display name for a test applying [transform].
      */
-    private fun <T, R> CallStackElement.displayName(symbol: String, subject: T, transform: (T) -> R): String =
+    private fun <T, R> CallStackElement.displayName(symbol: String, transform: (T) -> R): String =
         StringBuilder(symbol).apply {
             append(" ")
             append(this@displayName.displayName(transform))
-            append(" ")
-            append(TEXT.first)
-            append(valueOf(subject, transform).ansiRemoved.truncate(20))
-            append(TEXT.second)
             val that = getLambdaBodyOrNull(this@displayName, "that")
             if (that != null) {
                 append(" ")
@@ -217,10 +195,6 @@ object Tester {
         StringBuilder(symbol).apply {
             append(" ")
             append(this@displayName.displayName(provide, null).displayName())
-            append(" ")
-            append(TEXT.first)
-            append(valueOf(provide).ansiRemoved.truncate(20))
-            append(TEXT.second)
             val that = getLambdaBodyOrNull(this@displayName, "that")
             if (that != null) {
                 append(" ")
@@ -330,45 +304,16 @@ class IllegalUsageException(function: String, caller: URI) : IllegalArgumentExce
 /*
  * JUNIT EXTENSIONS
  */
-
 /**
  * Provides an accessor for the [ExtensionContext.Store] that uses
- * `this` [Extension] as the key for the [Namespace] needed to access and scope the store.
+ * the owning class as the key for the [Namespace] needed to access and scope the store.
  *
  * **Usage**
  * ```kotlin
  * class MyExtension: AnyJUnitExtension {
  *
  *     // implementation of an store accessor with name store
- *     val store: ExtensionContext.() -> Store by namespaced
- *
- *     fun anyCallback(context: ExtensionContext) {
- *
- *         // using store (here: with a subsequent get call)
- *         context.store.get(…)
- *     }
- * }
- *
- * ```
- */
-inline val Extension.namespaced: ReadOnlyProperty<Any?, ExtensionContext.() -> Store>
-    get() {
-        val namespace = Namespace.create(this::class.java)
-        return ReadOnlyProperty<Any?, ExtensionContext.() -> Store> { _, _ ->
-            { getStore(namespace) }
-        }
-    }
-
-/**
- * Provides an accessor for the [ExtensionContext.Store] that uses
- * the class of [T] as the key for the [Namespace] needed to access and scope the store.
- *
- * **Usage**
- * ```kotlin
- * class MyExtension: AnyJUnitExtension {
- *
- *     // implementation of an store accessor with name store
- *     val store: ExtensionContext.() -> Store by namespaced<AnyClass>()
+ *     val store: ExtensionContext.() -> Store by storeForNamespace<AnyClass>()
  *
  *     fun anyCallback(context: ExtensionContext) {
  *
@@ -379,24 +324,99 @@ inline val Extension.namespaced: ReadOnlyProperty<Any?, ExtensionContext.() -> S
  *
  * ```
  */
-inline fun <reified T : Any> namespaced(): ReadOnlyProperty<Any?, ExtensionContext.() -> Store> {
-    val namespace = Namespace.create(T::class.java)
-    return ReadOnlyProperty<Any?, ExtensionContext.() -> Store> { _, _ ->
-        { getStore(namespace) }
+fun storeForNamespace(): ReadOnlyProperty<Any, ExtensionContext.() -> Store> =
+    ReadOnlyProperty<Any, ExtensionContext.() -> Store> { thisRef, _ ->
+        { getStore(Namespace.create(thisRef::class.java)) }
     }
-}
+
+/**
+ * Provides an accessor for the [ExtensionContext.Store] that uses
+ * the owning class and the current test as the keys for the [Namespace] needed to access and scope the store.
+ *
+ * An exception is thrown if no test is current.
+ *
+ * **Usage**
+ * ```kotlin
+ * class MyExtension: AnyJUnitExtension {
+ *
+ *     // implementation of an store accessor with name store
+ *     val store: ExtensionContext.() -> Store by storeForNamespaceAndTest()
+ *
+ *     fun anyCallback(context: ExtensionContext) {
+ *
+ *         // using store (here: with a subsequent get call)
+ *         context.store().get(…)
+ *     }
+ * }
+ *
+ * ```
+ */
+fun storeForNamespaceAndTest(): ReadOnlyProperty<Any, ExtensionContext.() -> Store> =
+    ReadOnlyProperty<Any, ExtensionContext.() -> Store> { thisRef, _ ->
+        { getStore(Namespace.create(thisRef::class.java, requiredTestMethod)) }
+    }
 
 /**
  * Returns the [ExtensionContext.Store] that uses
  * the class of [T] as the key for the [Namespace] needed to access and scope the store.
+ *
+ * [additionalParts] can be provided to render the namespace more specific, just keep
+ * in mind that the order is significant and parts are compared with [Object.equals].
  */
-inline fun <reified T> ExtensionContext.store(clazz: Class<T> = T::class.java): Store =
-    getStore(Namespace.create(clazz))
+inline fun <reified T> ExtensionContext.storeForNamespace(
+    clazz: Class<T> = T::class.java,
+    vararg additionalParts: Any,
+): Store = getStore(Namespace.create(clazz, *additionalParts))
+
+/**
+ * Returns the [ExtensionContext.Store] that uses
+ * the class of [T] and the current test as the keys for the [Namespace] needed to access and scope the store.
+ *
+ * An exception is thrown if no test is current.
+ */
+inline fun <reified T> ExtensionContext.storeForNamespaceAndTest(
+    clazz: Class<T> = T::class.java,
+): Store = storeForNamespace(clazz, requiredTestMethod)
 
 
 /*
  * STRIKT EXTENSIONS
  */
+
+/**
+ * Extracts the actual subject from `this` [Builder].
+ *
+ * ***Hint:** Consider refactoring your test instead making us of this extension.*
+ */
+inline val <reified T : Any> Builder<T>.actual: T
+    get() {
+        var actual: T? = null
+        get { actual = this }
+        return actual ?: error("Failed to extract actual from $this")
+    }
+
+/**
+ * Validates the given [assertions] against the elements of the asserted collection
+ * of elements.
+ *
+ * The number of [assertions] determines the number of checked elements, that is,
+ * if the asserted collection contains 5 elements and 2 assertions are provided,
+ * only the first 2 elements are asserted.
+ *
+ * The test fails if more [assertions] are given than there are
+ * assertable elements.
+ */
+fun <T> Builder<out Iterable<T>>.hasElements(vararg assertions: Builder<T>.() -> Unit): Builder<out Iterable<T>> =
+    compose("fulfills ${assertions.size}") {
+        val elements = it.toList()
+        expectThat(elements).size.isGreaterThanOrEqualTo(assertions.size)
+        elements.zip(assertions).forEach { (element, assertion) ->
+            expectThat(element, assertion)
+        }
+    } then {
+        if (allPassed) pass() else fail()
+    }
+
 
 /**
  * JUnit extension that checks if [expecting] or [expectCatching]
@@ -433,9 +453,11 @@ class IllegalUsageCheck : AfterEachCallback {
     }
 
     companion object {
+        private val store by storeForNamespaceAndTest()
+
         var ExtensionContext.illegalUsageExpected: Boolean
-            get() = store<IllegalUsageCheck>().get("expect-illegal-usage-exception") == true
-            set(value) = store<IllegalUsageCheck>().put("expect-illegal-usage-exception", value)
+            get() = store().get<Boolean>() == true
+            set(value) = store().put(value)
 
         val illegalUsages = mutableMapOf<UniqueId, IllegalUsageException>()
     }
@@ -589,15 +611,6 @@ class DynamicTestsWithSubjectBuilder<T>(val subject: T, val callback: (DynamicNo
     }
 
     /**
-     * Builds a [DynamicTest] using an automatically derived name and the specified [executable].
-     */
-    @DynamicTestsDsl
-    @Deprecated("use expecting")
-    fun test(description: String? = null, executable: (T) -> Unit) {
-        callback(dynamicTest(description?.takeUnlessBlank() ?: "test".property(executable), callerSource) { executable(subject) })
-    }
-
-    /**
      * Expects `this` subject to fulfil the given [assertion].
      *
      * ***Note:** The surrounding test subject is ignored.*
@@ -634,7 +647,7 @@ class DynamicTestsWithSubjectBuilder<T>(val subject: T, val callback: (DynamicNo
     fun <R> expecting(description: String? = null, action: T.() -> R): InCompleteExpectationBuilder<R> {
         var additionalAssertion: Assertion<R>? = null
         val caller = findCaller()
-        val test = dynamicTest(description ?: caller.expectingDisplayName(subject, action), caller.callerSource) {
+        val test = dynamicTest(description ?: caller.expectingDisplayName(action), caller.callerSource) {
             strikt.api.expectThat(subject).with(action, additionalAssertion ?: throw IllegalUsageException("expecting", caller.callerSource))
         }
         callback(test)
@@ -652,7 +665,7 @@ class DynamicTestsWithSubjectBuilder<T>(val subject: T, val callback: (DynamicNo
     fun <R> expectCatching(action: T.() -> R): InCompleteExpectationBuilder<Result<R>> {
         var additionalAssertion: Assertion<Result<R>>? = null
         val caller = findCaller()
-        val test = dynamicTest(findCaller().catchingDisplayName(subject, action), caller.callerSource) {
+        val test = dynamicTest(findCaller().catchingDisplayName(action), caller.callerSource) {
             strikt.api.expectCatching { subject.action() }.and(additionalAssertion ?: throw IllegalUsageException("expectCatching", caller.callerSource))
         }
         callback(test)
@@ -851,11 +864,11 @@ class DynamicTestsWithoutSubjectBuilder(val tests: MutableList<DynamicNode>) {
 }
 
 @DynamicTestsDsl
-class DynamicTestBuilder<T>(val subject: T, val buildErrors: MutableList<String>) {
+class DynamicTestBuilder<T>(val subject: T, private val buildErrors: MutableList<String>) {
 
     /**
      * Incomplete builder of an [Strikt](https://strikt.io) assertion
-     * that makes a call to [onCompletion] as soon as building the expectation
+     * that makes a call to [that] as soon as building the expectation
      * is completed.
      *
      * If no callback took place until a certain moment in time
@@ -876,7 +889,7 @@ class DynamicTestBuilder<T>(val subject: T, val buildErrors: MutableList<String>
         val errorMessage = "expecting { … } call was not finished with that { … } at ${getCaller()}".also { buildErrors.add(it) }
         return InCompleteExpectationBuilder { assertion: Assertion<R> ->
             buildErrors.remove(errorMessage)
-            strikt.api.expectThat(subject).with(description?.takeUnlessBlank() ?: "with".property(action) + findCaller().expectingDisplayName(subject,
+            strikt.api.expectThat(subject).with(description?.takeUnlessBlank() ?: "with".property(action) + findCaller().expectingDisplayName(
                 action),
                 action,
                 assertion)
@@ -930,9 +943,9 @@ class DynamicTestBuilder<T>(val subject: T, val buildErrors: MutableList<String>
  * @throws IllegalStateException if called from outside of a test
  */
 fun withTempDir(uniqueId: UniqueId, block: Path.() -> Unit) {
-    val tempDir: Path = root.resolve(uniqueId.value.toBaseName().withRandomSuffix()).createDirectories()
+    val tempDir: Path = ImgCstmzrTest.TestRoot.resolve(uniqueId.value.toBaseName().withRandomSuffix()).createDirectories()
     tempDir.block()
-    check(root.exists()) {
+    check(ImgCstmzrTest.TestRoot.exists()) {
         println("The shared root temp directory was deleted by $uniqueId or a concurrently running test. This must not happen.".ansi.red.toString())
         exitProcess(-1)
     }

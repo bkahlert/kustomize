@@ -1,27 +1,22 @@
 package com.imgcstmzr.os
 
+import com.imgcstmzr.cli.Layouts
 import com.imgcstmzr.libguestfs.GuestfishCommandLine
-import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder.GuestfishCommandsContext
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder.CustomizationsContext
 import com.imgcstmzr.os.OperatingSystem.Credentials
+import koodies.Exceptions.IAE
 import koodies.builder.Init
 import koodies.docker.DockerExec
-import koodies.exec.IO
 import koodies.io.path.duplicate
 import koodies.io.path.getSize
 import koodies.io.path.pathString
-import koodies.logging.FixedWidthRenderingLogger
-import koodies.logging.FixedWidthRenderingLogger.Border.DOTTED
-import koodies.logging.FixedWidthRenderingLogger.Border.SOLID
-import koodies.logging.LoggingContext.Companion.BACKGROUND
-import koodies.logging.MutedRenderingLogger
-import koodies.logging.RenderingLogger
 import koodies.runtime.isDebugging
-import koodies.text.ANSI.Formatter
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.Semantics.formattedAs
+import koodies.tracing.rendering.spanningLine
+import koodies.tracing.spanning
 import koodies.unit.Mega
 import koodies.unit.Size
 import koodies.unit.bytes
@@ -69,9 +64,9 @@ class OperatingSystemImage(
      */
     fun hostPath(diskPath: DiskPath): Path = diskPath.hostPath(exchangeDirectory)
 
-    fun copyOut(path: String, vararg paths: String, logger: FixedWidthRenderingLogger? = BACKGROUND, trace: Boolean = false): Path =
-        (logger ?: MutedRenderingLogger).logging("Copying out ${path.formattedAs.input}" + if (paths.isNotEmpty()) " and ${paths.size} other files" else "") {
-            guestfish(MutedRenderingLogger, trace) {
+    fun copyOut(path: String, vararg paths: String, trace: Boolean = false): Path =
+        spanning("Copying out ${path.formattedAs.input}" + if (paths.isNotEmpty()) " and ${paths.size} other files" else "") {
+            guestfish(trace) {
                 copyOut { LinuxRoot / path }
                 paths.forEach { copyOut { _ -> LinuxRoot / it } }
             }
@@ -82,12 +77,9 @@ class OperatingSystemImage(
      * @see <a href="https://libguestfs.org/">libguestfs—tools for accessing and modifying virtual machine disk images</a>
      */
     fun guestfish(
-        logger: RenderingLogger? = BACKGROUND,
         trace: Boolean = false,
-        caption: (List<GuestfishCommand>.() -> String)? = null,
-        bordered: Boolean = false,
         init: Init<GuestfishCommandsContext>,
-    ): DockerExec = GuestfishCommandLine.build(this) {
+    ): DockerExec = GuestfishCommandLine(this) {
         options {
             readWrite by true
             disk { it.file }
@@ -95,21 +87,12 @@ class OperatingSystemImage(
             verbose by false
         }
         commands(init)
-    }.run {
-        exec.logging(logger ?: MutedRenderingLogger, exchangeDirectory) {
-            block {
-                caption { caption?.let { commands.it() } ?: "Running ${summary} …" }
-                border = if (bordered) SOLID else DOTTED
-                decorationFormatter { Formatter { it.ansi.blue.done } }
-            }
-        }
-    }
+    }.exec.logging(exchangeDirectory, decorationFormatter = { it.toString().ansi.green.done }, layout = Layouts.DESCRIPTION)
 
     /**
      * @see <a href="https://libguestfs.org/">libguestfs—tools for accessing and modifying virtual machine disk images</a>
      */
     fun virtCustomize(
-        logger: RenderingLogger? = BACKGROUND,
         trace: Boolean = false,
         init: Init<CustomizationsContext>,
     ): DockerExec = VirtCustomizeCommandLine.build(this) {
@@ -119,41 +102,30 @@ class OperatingSystemImage(
             if (trace) trace { on }
         }
         customizations(init)
-    }.exec.logging(logger ?: MutedRenderingLogger, exchangeDirectory) {
-        block {
-            caption { "Running ${it.summary} …" }
-            decorationFormatter { Formatter { it.ansi.brightBlue.done } }
-        }
-    }
+    }.exec.logging(exchangeDirectory, decorationFormatter = { it.toString().ansi.green.done }, layout = Layouts.DESCRIPTION)
 
-    fun increaseDiskSpace(size: Size, logger: FixedWidthRenderingLogger? = BACKGROUND): Any =
-        (logger ?: MutedRenderingLogger).logging("Increasing disk space: ${path.getSize()} ➜ ${size.formattedAs.input}", null) {
+    fun increaseDiskSpace(size: Size): Unit =
+        spanningLine("Increasing disk space: ${path.getSize()} ➜ ${size.formattedAs.input}") {
             var missing = size - path.getSize()
-            val bytesPerStep = 200.Mega.bytes
-            val oneHundredMegaBytes = ByteArray(bytesPerStep.wholeBytes.toInt()) { 0 }
-            when {
-                missing < 0.bytes -> {
-                    logStatus { IO.Error typed "Requested disk space is ${-missing} smaller than current size of ${path.fileName} (${path.getSize()})." }
-                    logStatus { IO.Error typed "Decreasing an image's disk space is currently not supported." }
-                }
-                missing == 0.bytes -> {
-                    logStatus { IO.Output typed "${path.fileName} is has already ${path.getSize()}" }
-                }
-                else -> {
-                    compactLogging("Progress:") {
-                        logStatus { IO.Output typed path.getSize().toString() }
-                        while (missing > 0.bytes) {
-                            val write = if (missing < bytesPerStep) ByteArray(missing.wholeBytes.toInt()) { 0 } else oneHundredMegaBytes
-                            path.appendBytes(write)
-                            missing -= write.size
-                            logStatus { IO.Output typed "⥅ ${path.getSize()}" }
-                        }
-                        path.getSize()
-                    }
-
-                    logLine { "Image Disk Space Successfully increased to " + path.getSize().toString() + "." }
-                }
+            require(missing >= Size.ZERO) {
+                throw IAE(
+                    "Requested disk space is ${-missing} smaller than current size of ${path.fileName} (${path.getSize()}).",
+                    "Decreasing an image's disk space is currently not supported.",
+                )
             }
+
+            if (missing == Size.ZERO) return@spanningLine
+
+            val bytesPerStep = 200.Mega.bytes
+            val oneHundredMegaBytes = ByteArray(bytesPerStep.wholeBytes.toInt())
+            log(path.getSize().toString())
+            while (missing > 0.bytes) {
+                val write = if (missing < bytesPerStep) ByteArray(missing.wholeBytes.toInt()) { 0 } else oneHundredMegaBytes
+                path.appendBytes(write)
+                missing -= write.size
+                log(path.getSize().toString())
+            }
+            path.getSize()
         }
 
     override fun toString(): String = fullName

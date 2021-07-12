@@ -13,13 +13,13 @@ import koodies.exec.exited
 import koodies.exec.io
 import koodies.exec.output
 import koodies.exec.runtime
+import koodies.junit.UniqueId
 import koodies.jvm.thread
-import koodies.logging.InMemoryLogger
-import koodies.logging.RenderingLogger
-import koodies.logging.expectLogged
 import koodies.shell.ShellScript
+import koodies.test.CapturedOutput
 import koodies.test.FifteenMinutesTimeout
-import koodies.test.UniqueId
+import koodies.test.Slow
+import koodies.test.SystemIOExclusive
 import koodies.test.expecting
 import koodies.test.withTempDir
 import koodies.text.Banner.banner
@@ -29,8 +29,12 @@ import koodies.text.toStringMatchesCurlyPattern
 import koodies.time.seconds
 import koodies.time.sleep
 import koodies.toBaseName
+import koodies.tracing.rendering.BackgroundPrinter
+import koodies.tracing.rendering.BlockStyles.None
+import koodies.tracing.spanning
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.containsIgnoringCase
 import strikt.assertions.isGreaterThan
@@ -53,8 +57,8 @@ class FirstBootWaitTest {
     }
 
     @Test
-    fun InMemoryLogger.`should use working script`() {
-        val exec = delayScript(3).exec.logging(this)
+    fun `should use working script`() {
+        val exec = delayScript(3).exec.logging()
         expecting { exec } that {
             io.output.ansiRemoved.contains("3") and { contains("FINISHED") }
             exited.runtime.isGreaterThan(3.seconds)
@@ -64,17 +68,17 @@ class FirstBootWaitTest {
     @Nested
     inner class WaitForEmptyDirectoryScript {
 
-        @Test
-        fun `should run until directory is empty`(uniqueId: UniqueId, logger: InMemoryLogger) = withTempDir(uniqueId) {
+        @Slow @Test
+        fun `should run until directory is empty`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             resolve("dir").createDirectory().apply {
                 resolve("${fileName}-file1").createFile()
                 resolve("${fileName}-file2").createFile()
-            }.slowlyDeleteFiles(logger)
+            }.slowlyDeleteFiles()
             resolve("dir2").createDirectory().apply {
                 resolve("${fileName}-file1").createFile()
                 resolve("${fileName}-file2").createFile()
-            }.slowlyDeleteFiles(logger)
-            expecting { ubuntu(logger) { "./${scriptFor("dir", "dir2")}" } } that {
+            }.slowlyDeleteFiles()
+            expecting { ubuntu { "./${scriptFor("dir", "dir2")}" } } that {
                 io.output.ansiRemoved.toStringMatchesCurlyPattern("{{}}CHECKING DIR, DIR2 … {} script(s) to go{{}}")
                 io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR, DIR2 … completed")
                 io.output.ansiRemoved.containsIgnoringCase("ALL SCRIPTS COMPLETED")
@@ -82,29 +86,31 @@ class FirstBootWaitTest {
         }
 
         @Test
-        fun `should return if directory is empty`(uniqueId: UniqueId, logger: InMemoryLogger) = withTempDir(uniqueId) {
+        fun `should return if directory is empty`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             resolve("dir").createDirectory()
-            expecting { ubuntu(logger) { "./${scriptFor("dir")}" } } that {
+            expecting { ubuntu { "./${scriptFor("dir")}" } } that {
                 io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR … completed")
                 io.output.ansiRemoved.containsIgnoringCase("ALL SCRIPTS COMPLETED")
             }
         }
 
         @Test
-        fun `should return if directory does not exist`(uniqueId: UniqueId, logger: InMemoryLogger) = withTempDir(uniqueId) {
-            expecting { ubuntu(logger) { "./${scriptFor("dir")}" } } that {
+        fun `should return if directory does not exist`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+            expecting { ubuntu { "./${scriptFor("dir")}" } } that {
                 io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR … completed")
                 io.output.ansiRemoved.containsIgnoringCase("ALL SCRIPTS COMPLETED")
             }
         }
 
-        private fun Path.slowlyDeleteFiles(logger: RenderingLogger) =
+        private fun Path.slowlyDeleteFiles() =
             thread {
-                while (listDirectoryEntries().isNotEmpty()) {
-                    3.seconds.sleep()
-                    listDirectoryEntries().first().also {
-                        logger.logLine { "Deleting ${it.fileName}" }
-                    }.deleteIfExists()
+                spanning("Slowly deleting files", blockStyle = None, printer = BackgroundPrinter) {
+                    while (listDirectoryEntries().isNotEmpty()) {
+                        3.seconds.sleep()
+                        listDirectoryEntries().first().also {
+                            log("Deleting ${it.fileName}")
+                        }.deleteIfExists()
+                    }
                 }
             }
 
@@ -112,15 +118,16 @@ class FirstBootWaitTest {
             FirstBootWait.waitForEmptyDirectory(*directories.map { DiskDirectory(it) }.toTypedArray()).toFile(resolve("script.sh")).fileName
     }
 
+    @SystemIOExclusive
     @FifteenMinutesTimeout @DockerRequiring([DockerPiImage::class]) @Test
-    fun InMemoryLogger.`should wait for firstboot scripts to finish`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-        osImage.virtCustomize(this) {
+    fun `should wait for firstboot scripts to finish`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
+        osImage.virtCustomize {
             firstBoot(delayScript(30))
         }
-        osImage.boot(uniqueId.value.toBaseName(), this)
-        expectLogged.ansiRemoved.contains("1 SECONDS TO GO") and {
-            contains("FINISHED")
-            contains("raspberrypi login:")
-        }
+        osImage.boot(uniqueId.value.toBaseName())
+        expectThat(output.all).ansiRemoved
+            .contains("1 SECONDS TO GO")
+            .contains("FINISHED")
+            .contains("raspberrypi login:")
     }
 }

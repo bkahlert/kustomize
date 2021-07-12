@@ -2,7 +2,6 @@ package com.imgcstmzr.libguestfs
 
 import com.imgcstmzr.os.OperatingSystemImage
 import koodies.io.path.pathString
-import koodies.text.withoutPrefix
 import java.nio.file.Path
 
 open class LibguestfsOption(open val name: String, open val arguments: List<String>) :
@@ -48,8 +47,8 @@ open class LibguestfsOption(open val name: String, open val arguments: List<Stri
         private fun relativize(disk: Path, potentialPath: String): String {
             val mountRoot = OperatingSystemImage.mountRootForDisk(disk).pathString
             return potentialPath.takeUnless { it.startsWith(mountRoot) } ?: run {
-                val diskAbsolute = potentialPath.withoutPrefix(mountRoot)
-                val diskRelative = diskAbsolute.withoutPrefix("/")
+                val diskAbsolute = potentialPath.removePrefix(mountRoot)
+                val diskRelative = diskAbsolute.removePrefix("/")
                 val sanitized = diskRelative.takeUnless { it.isEmpty() } ?: "."
                 sanitized
             }

@@ -12,10 +12,9 @@ import com.imgcstmzr.test.E2E
 import com.imgcstmzr.test.OS
 import koodies.content
 import koodies.docker.DockerRequiring
-import koodies.logging.InMemoryLogger
+import koodies.junit.UniqueId
 import koodies.test.FiveMinutesTimeout
 import koodies.test.Smoke
-import koodies.test.UniqueId
 import koodies.test.withTempDir
 import koodies.text.Banner.banner
 import koodies.text.LineSeparators.LF
@@ -54,7 +53,7 @@ class ShellScriptPatchTest {
     }
 
     @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @E2E @Smoke @Test
-    fun InMemoryLogger.`should run shell script`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
+    fun `should run shell script`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
 
         shellScriptPatch.patch(osImage)
 

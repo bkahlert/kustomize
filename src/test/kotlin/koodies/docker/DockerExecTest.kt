@@ -4,21 +4,21 @@ import koodies.docker.TestImages.Ubuntu
 import koodies.exec.CommandLine
 import koodies.exec.IO
 import koodies.exec.Processor
-import koodies.exec.Processors.noopProcessor
+import koodies.exec.Processors.spanningProcessor
 import koodies.exec.alive
-import koodies.test.UniqueId
+import koodies.junit.UniqueId
 import koodies.time.poll
-import koodies.unit.milli
 import koodies.time.seconds
+import koodies.unit.milli
 import org.junit.jupiter.api.fail
 import java.nio.file.Path
 import kotlin.time.Duration
 
-private fun Path.createExec(
+fun Path.createExec(
     uniqueId: UniqueId,
     command: String,
     vararg args: String,
-    processor: Processor<DockerExec> = noopProcessor(),
+    processor: Processor<DockerExec> = spanningProcessor(),
 ): DockerExec =
     CommandLine(command, *args)
         .dockerized(Ubuntu) { name { "$uniqueId" } }

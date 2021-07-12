@@ -10,11 +10,10 @@ import com.imgcstmzr.test.OS
 import koodies.content
 import koodies.docker.DockerRequiring
 import koodies.io.path.hasContent
-import koodies.logging.InMemoryLogger
+import koodies.junit.UniqueId
 import koodies.test.FiveMinutesTimeout
 import koodies.test.HtmlFixture
 import koodies.test.TextFixture
-import koodies.test.UniqueId
 import koodies.test.withTempDir
 import koodies.text.LineSeparators.LF
 import koodies.text.LineSeparators.withTrailingLineSeparator
@@ -25,7 +24,7 @@ import strikt.assertions.endsWith
 class AppendToFilesPatchTest {
 
     @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @E2E @Test
-    fun InMemoryLogger.`should create create one append line option for each line`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
+    fun `should create create one append line option for each line`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
         withTempDir(uniqueId) {
             val sampleHtmlDiskPath = LinuxRoot.boot / "sample.html"
             val sampleTxtDiskPath = LinuxRoot.etc / "sample.txt"

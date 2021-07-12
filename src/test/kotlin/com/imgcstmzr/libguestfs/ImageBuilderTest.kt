@@ -7,12 +7,11 @@ import koodies.docker.DockerRequiring
 import koodies.io.compress.TarArchiveGzCompressor.tarGzip
 import koodies.io.path.addExtensions
 import koodies.io.path.deleteOnExit
-import koodies.io.path.randomDirectory
 import koodies.io.path.removeExtensions
 import koodies.io.path.writeText
-import koodies.logging.InMemoryLogger
+import koodies.io.randomDirectory
+import koodies.junit.UniqueId
 import koodies.test.FiveMinutesTimeout
-import koodies.test.UniqueId
 import koodies.test.expectThrows
 import koodies.test.testEach
 import koodies.test.withTempDir
@@ -44,7 +43,7 @@ class ImageBuilderTest {
     inner class BuildFrom {
 
         @Test
-        fun InMemoryLogger.`should only accept tar gzip archive`() {
+        fun `should only accept tar gzip archive`() {
             expectThrows<IllegalArgumentException> { buildFrom(Path.of("archive.zip")) }
         }
 
@@ -52,7 +51,7 @@ class ImageBuilderTest {
         inner class ArchiveBasedImageBuild {
 
             @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
-            fun InMemoryLogger.`should build img from archive`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+            fun `should build img from archive`(uniqueId: UniqueId) = withTempDir(uniqueId) {
                 val archive = randomDirectory().apply {
                     resolve("boot").createDirectories()
                     resolve("boot/cmdline.txt").apply { writeText("console=serial0,115200 console=tty1 …") }
@@ -72,27 +71,27 @@ class ImageBuilderTest {
         inner class UriBasedImageBuild {
 
             @Test
-            fun InMemoryLogger.`should throw on invalid scheme`() {
+            fun `should throw on invalid scheme`() {
                 expectThrows<IllegalArgumentException> { buildFrom(URI.create("invalid://build/?files=classpath:config.txt%3Eboot")) }
             }
 
             @Test
-            fun InMemoryLogger.`should throw on invalid host`() {
+            fun `should throw on invalid host`() {
                 expectThrows<IllegalArgumentException> { buildFrom(URI.create("imgcstmzr://invalid/?files=classpath:config.txt%3Eboot")) }
             }
 
             @Test
-            fun InMemoryLogger.`should throw on missing destination`() {
+            fun `should throw on missing destination`() {
                 expectThrows<IllegalArgumentException> { buildFrom(URI.create("invalid://build/?files=classpath:config.txt")) }
             }
 
             @Test
-            fun InMemoryLogger.`should throw on missing files`() {
+            fun `should throw on missing files`() {
                 expectThrows<IllegalArgumentException> { buildFrom(URI.create("invalid://build/")) }
             }
 
             @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
-            fun InMemoryLogger.`should build img`() {
+            fun `should build img`() {
                 val uri = URI.create(OperatingSystems.ImgCstmzrTestOS.downloadUrl)
 
                 val img = buildFrom(uri)

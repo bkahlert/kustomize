@@ -4,7 +4,7 @@ import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBoot
 import com.imgcstmzr.libguestfs.file
 import com.imgcstmzr.os.OperatingSystemImage
 import koodies.content
-import koodies.test.UniqueId
+import koodies.junit.UniqueId
 import koodies.test.containsAtLeast
 import koodies.test.expecting
 import koodies.test.withTempDir

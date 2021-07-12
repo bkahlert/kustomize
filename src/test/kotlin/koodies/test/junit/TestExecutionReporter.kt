@@ -6,16 +6,16 @@ import koodies.docker.DockerRequiring
 import koodies.test.allContainerJavaClasses
 import koodies.test.allTestJavaMethods
 import koodies.test.withAnnotation
-import koodies.text.ANSI.Formatter.Companion.fromScratch
+import koodies.text.ANSI.FilteringFormatter.Companion.fromScratch
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.ANSI.ansiRemoved
-import koodies.text.LineSeparators.LF
 import koodies.text.Semantics.formattedAs
+import koodies.text.joinLinesToString
 import koodies.text.styling.draw
 import koodies.text.styling.wrapWithBorder
+import koodies.time.seconds
 import koodies.toSimpleString
 import koodies.unit.milli
-import koodies.time.seconds
 import org.junit.jupiter.api.extension.TestWatcher
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
@@ -55,15 +55,15 @@ class TestExecutionReporter : TestExecutionListener, TestWatcher {
                 "Done. All tests passed within ${timeNeeded.formattedAs.debug}.".ansi.bold,
                 "$quantity test containers run concurrently."
             )
-                .joinToString(LF)
-                .wrapWithBorder(padding = 2, margin = 1, formatter = fromScratch { green })
+                .joinLinesToString()
+                .draw.border.rounded(padding = 2, margin = 0, formatter = fromScratch { green })
                 .also { println(it) }
         } else {
             listOf(
                 "Done. BUT $failedTestsCount tests failed!".ansi.bold,
             )
-                .joinToString(LF)
-                .draw.border.spikedOutward(padding = 2, margin = 1, fromScratch { red })
+                .joinLinesToString()
+                .draw.border.rounded(padding = 2, margin = 0, fromScratch { red })
                 .also { println(it) }
         }
     }
@@ -76,7 +76,7 @@ class TestExecutionReporter : TestExecutionListener, TestWatcher {
                 "You are only seeing the results of the ${debugAnnotatedMethods.size} annotated tests.",
                 "Don't forget to remove them.".ansi.bold,
             )
-                .joinToString(LF)
+                .joinLinesToString()
                 .wrapWithBorder(padding = 2, margin = 1, formatter = fromScratch { yellow })
                 .also { println(it) }
         }

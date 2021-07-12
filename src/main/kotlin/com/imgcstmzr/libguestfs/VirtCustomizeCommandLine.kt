@@ -34,6 +34,7 @@ import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemImage.Companion.mountRootForDisk
+import com.imgcstmzr.os.asExtra
 import koodies.builder.BooleanBuilder
 import koodies.builder.BooleanBuilder.BooleanValue
 import koodies.builder.BooleanBuilder.OnOff.Context
@@ -56,7 +57,6 @@ import koodies.io.path.asPath
 import koodies.io.path.pathString
 import koodies.io.path.withDirectoriesCreated
 import koodies.io.text
-import koodies.logging.asStatus
 import koodies.shell.ShellScript
 import koodies.shell.ShellScript.ScriptContext
 import koodies.text.LineSeparators.lines
@@ -133,11 +133,11 @@ class VirtCustomizeCommandLine(
         *options.filter { it !is DiskOption }.flatten().toTypedArray(),
         *customizations.map { it.relativize(disk) }.flatten().toTypedArray())) {
 
-    override val summary: String
+    override val name: CharSequence
         get() = customizations
             .map { option -> "${option.arguments.head}(${option.arguments.tail.joinToString(", ")})" }
             .run { map { it.truncateTo(25).truncate(25).toString() } }
-            .asStatus()
+            .asExtra()
 
     override fun toString(): String = toCommandLine().toString()
 

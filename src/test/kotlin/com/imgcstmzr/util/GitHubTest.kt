@@ -1,9 +1,8 @@
 package com.imgcstmzr.util
 
 import koodies.io.path.getSize
-import koodies.logging.InMemoryLogger
+import koodies.junit.UniqueId
 import koodies.test.Slow
-import koodies.test.UniqueId
 import koodies.test.withTempDir
 import koodies.unit.Mega
 import koodies.unit.bytes
@@ -16,12 +15,12 @@ import kotlin.io.path.exists
 class GitHubTest {
 
     @Test
-    fun InMemoryLogger.`should resolve latest tag`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+    fun `should resolve latest tag`(uniqueId: UniqueId) = withTempDir(uniqueId) {
         expectThat(GitHub.repo("bkahlert/koodies").latestTag).matchesIgnoringCase(Regex("v\\.?\\d+(?:\\.\\d+)*"))
     }
 
     @Slow @Test
-    fun InMemoryLogger.`should download release`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+    fun `should download release`(uniqueId: UniqueId) = withTempDir(uniqueId) {
         val release = GitHub.repo("bkahlert/koodies").latestTag
         val file = GitHub.repo("bkahlert/koodies").downloadRelease(release)
         expectThat(file) {

@@ -96,52 +96,50 @@ class GuestfishCommandLine(
             }
         }
     },
-    private val dockerRunCommandLine: DockerRunCommandLine = DockerRunCommandLine(
-        LibguestfsImage,
-        dockerOptions,
-        ShellScript {
+) : Executable<DockerExec> by DockerRunCommandLine(
+    LibguestfsImage,
+    dockerOptions,
+    ShellScript {
 
-            val nonDiskOptions: List<GuestfishOption> = options.filter { it !is DiskOption } +
-                listOf(
-                    // inspector { on } // does not mount /boot
-                    MountOption("/dev/sda2".asPath(), LinuxRoot),
-                    MountOption("/dev/sda1".asPath(), LinuxRoot.boot),
-                )
-
-            line(
-                COMMAND,
-                *ReadWriteOption.toTypedArray(),
-                *DiskOption("/images/disk.img".asPath()).toTypedArray(),
-                *nonDiskOptions.flatten().toTypedArray(),
-                HereDoc {
-                    commands.forEach { guestfishCommand ->
-                        val relativizedCommand: LibguestfsOption = guestfishCommand.relativize(disk)
-                        add(relativizedCommand.joinToString(" "))
-                    }
-
-                    if (commands.filterIsInstance<MountOption>().isNotEmpty() &&
-                        commands.filterIsInstance<UmountAllCommand>().isEmpty()
-                    ) {
-                        add(UmountAllCommand.joinToString(" "))
-                    }
-
-                    if (commands.filterIsInstance<ExitCommand>().isEmpty()) {
-                        add(ExitCommand.joinToString(" "))
-                    }
-                },
+        val nonDiskOptions: List<GuestfishOption> = options.filter { it !is DiskOption } +
+            listOf(
+                // inspector { on } // does not mount /boot
+                MountOption("/dev/sda2".asPath(), LinuxRoot),
+                MountOption("/dev/sda1".asPath(), LinuxRoot.boot),
             )
-        }
-    ),
-) : Executable<DockerExec> by dockerRunCommandLine {
 
-    override val summary: String
-        get() = when (size) {
-            0 -> "No $COMMAND operations … ${Kaomoji.random().fishing(Kaomoji.EMPTY)}"
-            1 -> "One $COMMAND operation … ${Kaomoji.random().fishing(Fish.`❮°«⠶＞˝`)}"
-            else -> "$size $COMMAND operations … ${
-                Kaomoji.random().fishing(Kaomoji("❮", "°", "⠶".repeat(size floorDiv 3) + "«", "⠶".repeat(size * 2 ceilDiv 3), "＞", "˝"))
-            }"
-        }
+        line(
+            COMMAND,
+            *ReadWriteOption.toTypedArray(),
+            *DiskOption("/images/disk.img".asPath()).toTypedArray(),
+            *nonDiskOptions.flatten().toTypedArray(),
+            HereDoc {
+                commands.forEach { guestfishCommand ->
+                    val relativizedCommand: LibguestfsOption = guestfishCommand.relativize(disk)
+                    add(relativizedCommand.joinToString(" "))
+                }
+
+                if (commands.filterIsInstance<MountOption>().isNotEmpty() &&
+                    commands.filterIsInstance<UmountAllCommand>().isEmpty()
+                ) {
+                    add(UmountAllCommand.joinToString(" "))
+                }
+
+                if (commands.filterIsInstance<ExitCommand>().isEmpty()) {
+                    add(ExitCommand.joinToString(" "))
+                }
+            },
+        )
+    }
+) {
+
+    override val name: CharSequence = when (size) {
+        0 -> "No $COMMAND operations ${Kaomoji.random().fishing(Kaomoji.EMPTY)}"
+        1 -> "One $COMMAND operation ${Kaomoji.random().fishing(Fish.`❮°«⠶＞˝`)}"
+        else -> "$size $COMMAND operations ${
+            Kaomoji.random().fishing(Kaomoji("❮", "°", "⠶".repeat(size floorDiv 3) + "«", "⠶".repeat(size * 2 ceilDiv 3), "＞", "˝"))
+        }"
+    }
 
     override fun toString(): String = toCommandLine().toString()
 
@@ -156,15 +154,18 @@ class GuestfishCommandLine(
             val commands by GuestfishCommandsBuilder default { emptyList<(OperatingSystemImage) -> GuestfishCommand>() }
         }
 
-        override fun BuildContext.build(): (OperatingSystemImage) -> GuestfishCommandLine = ::GuestfishCommandLineContext {
-            { osImage: OperatingSystemImage ->
-                val options: List<(OperatingSystemImage) -> GuestfishOption> = ::options.eval()
-                val commands: List<(OperatingSystemImage) -> GuestfishCommand> = ::commands.eval()
-                GuestfishCommandLine(options.map { it(osImage) }, commands.map { it(osImage) })
+        override fun BuildContext.build(): (OperatingSystemImage) -> GuestfishCommandLine =
+            ::GuestfishCommandLineContext {
+                { osImage: OperatingSystemImage ->
+                    val options: List<(OperatingSystemImage) -> GuestfishOption> = ::options.eval()
+                    val commands: List<(OperatingSystemImage) -> GuestfishCommand> = ::commands.eval()
+                    GuestfishCommandLine(options.map { it(osImage) }, commands.map { it(osImage) })
+                }
             }
-        }
 
         fun build(osImage: OperatingSystemImage, init: Init<GuestfishCommandLineContext>) = build(init)(osImage)
+        operator fun invoke(osImage: OperatingSystemImage, init: Init<GuestfishCommandLineContext>) =
+            build(init)(osImage)
     }
 
 

@@ -1,10 +1,8 @@
 package com.imgcstmzr.os
 
-import com.imgcstmzr.logMeta
-import koodies.exec.alive
-import koodies.logging.RenderingLogger
 import koodies.time.Now
 import koodies.time.seconds
+import koodies.tracing.CurrentSpan
 import koodies.unit.Size
 import koodies.unit.milli
 import kotlin.text.RegexOption.IGNORE_CASE
@@ -135,8 +133,7 @@ interface OperatingSystem {
         var usernameLastEntered = 0L
         fun OperatingSystemProcess.enterUsername() {
             if (Now.passedSince(usernameLastEntered) > 10.seconds) {
-                val values = arrayOf(credentials.username)
-                if (alive) enter(*values) else feedback("Process $this is not alive.")
+                enter(credentials.username)
                 usernameLastEntered = Now.millis
             }
         }
@@ -216,17 +213,17 @@ interface OperatingSystem {
      * Creates a program to shutdown immediately.
      */
     fun shutdownProgram(): Program {
-        class IOWatchDog(private val logger: RenderingLogger, timedOut: RenderingLogger.() -> Any) : Watchdog(
+        class IOWatchDog(private val span: CurrentSpan, timedOut: CurrentSpan.() -> Any) : Watchdog(
             timeout = 5.seconds,
             timedOut = timedOut,
-            logger = logger,
+            span = span,
         ) {
             var lastIO: String? = null
             fun reset(io: String) {
                 if (lastIO != io) {
                     super.reset()
                     lastIO = io
-                } else logger.logMeta("Watchdog reset attempt ignored. Timing out in $remaining.")
+                } else span.log("Watchdog reset attempt ignored. Timing out in $remaining.")
             }
         }
 
@@ -245,7 +242,7 @@ interface OperatingSystem {
         return Program(
             "shutdown",
             {
-                deadMansSwitch = IOWatchDog(logger) { enterShutdown() }
+                deadMansSwitch = IOWatchDog(span) { enterShutdown() }
                 "shutting down"
             },
             "shutting down" to { output ->

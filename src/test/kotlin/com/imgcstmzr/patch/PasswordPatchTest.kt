@@ -17,20 +17,20 @@ import koodies.docker.DockerContainer
 import koodies.docker.DockerRequiring
 import koodies.exec.Process.State.Excepted
 import koodies.exec.rootCause
-import koodies.logging.InMemoryLogger
-import koodies.logging.expectThatLogged
+import koodies.test.CapturedOutput
 import koodies.test.FifteenMinutesTimeout
+import koodies.test.SystemIOExclusive
 import koodies.test.expecting
 import koodies.text.matchesCurlyPattern
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
-import strikt.assertions.contains
 import strikt.assertions.first
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.message
 import kotlin.io.path.readLines
 
+@SystemIOExclusive
 class PasswordPatchTest {
 
     @Test
@@ -41,12 +41,12 @@ class PasswordPatchTest {
     }
 
     @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class]) @E2E @Test
-    fun InMemoryLogger.`should update shadow file correctly`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+    fun `should update shadow file correctly`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val passwordPath = LinuxRoot.etc.shadow
         val username = RaspberryPiLite.defaultCredentials.username
         val newPassword = "on-a-diet"
         val passwordPatch = PasswordPatch(username, newPassword)
-        val userPassword = osImage.guestfish(this, false, null, false) {
+        val userPassword = osImage.guestfish {
             copyOut { passwordPath }
         }.let { osImage.hostPath(passwordPath).readLines().single { it.startsWith(username) } }
         val userPasswordPattern = "$username:{}:{}:0:99999:7:::"
@@ -55,21 +55,21 @@ class PasswordPatchTest {
         passwordPatch.patch(osImage)
 
         expectThat(osImage.credentials).isEqualTo(Credentials(username, newPassword))
-        expectThat(osImage).booted(this) {
+        expectThat(osImage).booted {
             command("echo '👏 🤓 👋'");
             { true }
         }
     }
 
     @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class], ThanksForCleaningUp) @E2E @Test
-    fun InMemoryLogger.`should not be able to use old password`(container: DockerContainer, @OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+    fun `should not be able to use old password`(container: DockerContainer, @OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
         PasswordPatch(RaspberryPiLite.defaultCredentials.username, "po").patch(osImage)
 
         osImage.credentials = Credentials("pi", "wrong password")
-        expecting { osImage.boot(container.name, logger = this) } that {
+        expecting { osImage.boot(container.name) } that {
             isA<Excepted>().rootCause.isA<IncorrectPasswordException>()
                 .message.isEqualTo("The entered password \"wrong password\" is incorrect.")
         }
-        expectThatLogged().contains("Login incorrect")
+        output.all.contains("Login incorrect")
     }
 }

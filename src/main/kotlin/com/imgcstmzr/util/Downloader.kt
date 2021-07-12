@@ -1,10 +1,9 @@
 package com.imgcstmzr.util
 
-import com.imgcstmzr.Locations
+import com.imgcstmzr.ImgCstmzr
 import com.imgcstmzr.os.OperatingSystem
 import koodies.docker.download
-import koodies.io.path.randomDirectory
-import koodies.logging.FixedWidthRenderingLogger
+import koodies.io.randomDirectory
 import java.net.URI
 import java.nio.file.Path
 
@@ -17,7 +16,7 @@ import java.nio.file.Path
  * In case a matching [customHandlerMapping] is found, no download takes place but the
  * corresponding [Handler] is called to retrieve a copy of the requested image.
  */
-class Downloader(private val downloadDirectory: Path = Locations.Temp, vararg customHandlers: Pair<String, Handler>) {
+class Downloader(private val downloadDirectory: Path = ImgCstmzr.Temp, vararg customHandlers: Pair<String, Handler>) {
     private val customHandlerMapping = customHandlers.toMap()
 
     private fun String.findScheme() = kotlin.runCatching { URI.create(this).scheme }.getOrElse { IllegalArgumentException("Invalid URI", it) }
@@ -26,22 +25,20 @@ class Downloader(private val downloadDirectory: Path = Locations.Temp, vararg cu
      * Downloads an image copy containing the [OperatingSystem] and returns the [Path] where the
      * copy can be found after successful download.
      */
-    fun OperatingSystem.download(logger: FixedWidthRenderingLogger): Path = download(downloadUrl, logger = logger)
+    fun OperatingSystem.download(): Path = download(downloadUrl)
 
     /**
      * Downloads the specified [url].
      *
      * Optionally a [filename] can be provided which is used for logging at places where the [url] would otherwise have been used.
      */
-    fun download(url: String, logger: FixedWidthRenderingLogger, filename: String? = null): Path {
+    fun download(url: String, filename: String? = null): Path {
         val handler = customHandlerMapping[url.findScheme()]
-        if (handler != null) return handler(URI.create(url), logger)
+        if (handler != null) return handler(URI.create(url))
 
         val downloadDirectory = downloadDirectory.randomDirectory()
-        return logger.compactLogging("Downloading ${filename ?: url} …") {
-            downloadDirectory.download(url, logger = null)
-        }
+        return downloadDirectory.download(url, filename)
     }
 }
 
-typealias Handler = (URI, FixedWidthRenderingLogger) -> Path
+typealias Handler = (URI) -> Path

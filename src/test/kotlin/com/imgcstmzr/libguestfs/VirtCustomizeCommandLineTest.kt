@@ -67,7 +67,7 @@ class VirtCustomizeCommandLineTest {
             'type=bind,source=${osImage.exchangeDirectory},target=/shared' \
             '--mount' \
             'type=bind,source=${osImage.file},target=/images/disk.img' \
-            'bkahlert/libguestfs@sha256:f466595294e58c1c18efeb2bb56edb5a28a942b5ba82d3c3af70b80a50b4828a' \
+            'bkahlert/libguestfs@sha256:e8fdf16c69a9155b0e30cdc9b2f872232507f5461be2e7dff307f4c1b50faa20' \
             '--add' \
             '/images/disk.img' \
             '--verbose' \

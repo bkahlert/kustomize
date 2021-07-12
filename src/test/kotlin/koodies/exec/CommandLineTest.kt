@@ -1,6 +1,6 @@
 package koodies.exec
 
-import com.imgcstmzr.Locations
+import koodies.io.Locations
 import koodies.time.seconds
 import koodies.time.sleep
 import koodies.unit.milli
@@ -8,12 +8,14 @@ import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
 import strikt.assertions.isEqualTo
 
+
 val <T : CharSequence> Assertion.Builder<T>.continuationsRemoved: DescribeableBuilder<String>
     get() = get("continuation removed %s") { replace("\\s+\\\\.".toRegex(RegexOption.DOT_MATCHES_ALL), " ") }
 
 val Assertion.Builder<CommandLine>.evaluated: Assertion.Builder<Exec>
     get() = get("evaluated %s") {
-        toExec(false, emptyMap(), Locations.Temp, null).process({ sync }, Processors.noopProcessor())
+        toExec(false, emptyMap(), Locations.Temp, null)
+            .process(ProcessingMode { sync }, Processors.spanningProcessor())
     }
 
 fun Assertion.Builder<CommandLine>.evaluated(block: Assertion.Builder<Exec>.() -> Unit) =

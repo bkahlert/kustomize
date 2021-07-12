@@ -8,7 +8,6 @@ import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder
 import com.imgcstmzr.libguestfs.VirtCustomizeDsl
-import com.imgcstmzr.logMeta
 import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
@@ -25,18 +24,18 @@ import koodies.builder.Init
 import koodies.builder.context.CapturesMap
 import koodies.builder.context.CapturingContext
 import koodies.io.path.listDirectoryEntriesRecursively
-import koodies.logging.FixedWidthRenderingLogger
-import koodies.logging.FixedWidthRenderingLogger.Border.DOTTED
-import koodies.logging.FixedWidthRenderingLogger.Border.SOLID
-import koodies.logging.RenderingLogger
-import koodies.logging.ReturnValues
-import koodies.logging.logging
 import koodies.text.ANSI.Formatter
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.Banner.banner
 import koodies.text.LineSeparators
 import koodies.text.Semantics.formattedAs
 import koodies.text.withRandomSuffix
+import koodies.tracing.CurrentSpan
+import koodies.tracing.rendering.BlockStyles.Dotted
+import koodies.tracing.rendering.BlockStyles.Solid
+import koodies.tracing.rendering.ReturnValues
+import koodies.tracing.rendering.spanningLine
+import koodies.tracing.spanning
 import koodies.unit.Size
 import java.nio.file.Path
 import kotlin.io.path.isRegularFile
@@ -96,13 +95,13 @@ interface Patch {
     val osOperations: List<(OperatingSystemImage) -> Program>
 
     /**
-     * Applies this patch to the given [osImage] while logging with `this` [RenderingLogger].
+     * Applies this patch to the given [osImage].
      *
      * Detailed logging can be activated using [trace].
      */
-    fun FixedWidthRenderingLogger.patch(osImage: OperatingSystemImage, trace: Boolean = false): ReturnValues<Throwable> {
+    fun patch(osImage: OperatingSystemImage, trace: Boolean = false): ReturnValues<Throwable> {
         this@Patch.trace = trace
-        return blockLogging(HEADLINE_FORMATTER(name), border = SOLID) {
+        return spanning(name, nameFormatter = NAME_FORMATTER, blockStyle = Solid) {
             applyDiskPreparations(osImage) +
                 applyDiskCustomizations(osImage) +
                 applyDiskAndFileOperations(osImage) +
@@ -112,139 +111,97 @@ interface Patch {
         }
     }
 
-    fun <T, R : Any, L : FixedWidthRenderingLogger> L.runCollecting(
+    fun <T, R : Any> collectingExceptions(
         operations: List<T>,
-        transform: (index: Int, operation: T, logger: L) -> R?,
+        transform: (index: Int, operation: T) -> R?,
     ): ReturnValues<Throwable> =
         operations.mapIndexedNotNull { index, operation: T ->
             runCatching {
-                transform(index, operation, this)
+                transform(index, operation)
             }.exceptionOrNull()
         }.let { ReturnValues(*it.toTypedArray()) }
 
-    fun <R : Any, L : FixedWidthRenderingLogger> L.runCollecting(
-        transform: (logger: L) -> R?,
-    ): ReturnValues<Throwable> = runCatching {
-        transform(this)
-    }.exceptionOrNull()?.let { ReturnValues(it) } ?: ReturnValues()
+    fun collectingExceptions(name: String, transform: CurrentSpan.() -> Unit): ReturnValues<Throwable> =
+        spanning(name, blockStyle = Dotted) { runCatching(transform).fold({ ReturnValues() }, { ReturnValues(it) }) }
 
-    fun FixedWidthRenderingLogger.applyDiskPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-        if (diskPreparations.isEmpty()) ReturnValues<Throwable>().also { logLine { HEADLINE_FORMATTER("Disk Preparation: —") } }
-        else logging(
-            HEADLINE_FORMATTER("Disk Preparation (${diskPreparations.size})"),
-            decorationFormatter = HEADLINE_FORMATTER,
-            border = DOTTED,
-        ) {
-            runCollecting(diskPreparations) { _, preparation, logger -> preparation(osImage, logger) }
+    fun applyDiskPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
+        collectingExceptions("Disk Preparation (${diskPreparations.size})") {
+            collectingExceptions(diskPreparations) { _, preparation -> preparation(osImage) }
         }
 
-    fun FixedWidthRenderingLogger.applyDiskCustomizations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-        if (diskCustomizations.isEmpty()) {
-            logLine { HEADLINE_FORMATTER("Disk Customization: —") }
-            ReturnValues()
-        } else {
-            runCollecting {
-                logging(
-                    HEADLINE_FORMATTER("Disk Customization (${diskCustomizations.size})"),
-                    decorationFormatter = HEADLINE_FORMATTER,
-                    border = DOTTED,
-                ) {
-                    osImage.virtCustomize(this, trace = trace) {
-                        diskCustomizations.forEach { customizationOption(it) }
-                    }
-                }
+    fun applyDiskCustomizations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
+        collectingExceptions("Disk Customization (${diskCustomizations.size})") {
+            osImage.virtCustomize(trace) {
+                diskCustomizations.forEach { customizationOption(it) }
             }
         }
 
-    fun FixedWidthRenderingLogger.applyDiskAndFileOperations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-        if (diskOperations.isEmpty() && fileOperations.isEmpty()) {
-            logLine { HEADLINE_FORMATTER("Disk Operations: —") }
-            logLine { HEADLINE_FORMATTER("File Operations: —") }
-            ReturnValues()
-        } else {
-            val exceptions = ReturnValues<Throwable>()
+    fun applyDiskAndFileOperations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
+        val exceptions = ReturnValues<Throwable>()
 
-            runCollecting {
-                logging(
-                    HEADLINE_FORMATTER("Disk Operations (${diskOperations.size})"),
-                    null,
-                    decorationFormatter = HEADLINE_FORMATTER,
-                    border = DOTTED,
-                ) {
-                    osImage.guestfish(this, trace, {
-                        "Applying ${diskOperations.size} disk and ${fileOperations.size} file operation(s)"
-                    }, false) {
-                        fileOperations.map { it(osImage).target }.forEach { sourcePath ->
-                            copyOut { sourcePath }
-                        }
-                        diskOperations.forEach { command(it) }
-                    }
+        collectingExceptions("Disk Operations (${diskOperations.size})") {
+            osImage.guestfish(trace) {
+                fileOperations.map { it(osImage).target }.forEach { sourcePath ->
+                    copyOut { sourcePath }
                 }
-            }.also { exceptions.addAll(it) }
+                diskOperations.forEach { command(it) }
+            }
+        }.also { exceptions.addAll(it) }
 
-            logging(
-                HEADLINE_FORMATTER("File Operations (${fileOperations.size.coerceAtLeast(1)})"),
-                decorationFormatter = HEADLINE_FORMATTER,
-                border = DOTTED,
-            ) {
-                val filesToPatch = fileOperations.toMutableList()
-                if (filesToPatch.isNotEmpty()) {
-                    runCollecting(filesToPatch) { _, fileOperation, logger ->
-                        val path = fileOperation(osImage).target
-                        fileOperation(osImage).invoke(osImage.hostPath(path), logger)
-                    }.forEach { exceptions.add(it) }
-                }
-
-                val changedFiles = osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().filter { it.isRegularFile() }.size
-                if (changedFiles > 0) {
-                    runCollecting {
-                        osImage.guestfish(this, trace, { "Copying in $changedFiles file(s)" }, false) {
-                            tarIn()
-                        }
-                    }.also { exceptions.addAll(it) }
-                } else {
-                    logMeta("No changed files to copy back.")
-                }
+        collectingExceptions("File Operations (${fileOperations.size.coerceAtLeast(1)})") {
+            val filesToPatch = fileOperations.toMutableList()
+            if (filesToPatch.isNotEmpty()) {
+                collectingExceptions(filesToPatch) { _, fileOperation ->
+                    val path = fileOperation(osImage).target
+                    fileOperation(osImage).invoke(osImage.hostPath(path))
+                }.forEach { exceptions.add(it) }
             }
 
-            exceptions
+            val changedFiles = osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().filter { it.isRegularFile() }.size
+            if (changedFiles > 0) {
+                collectingExceptions("Copying in $changedFiles file(s)") {
+                    osImage.guestfish(trace) {
+                        tarIn()
+                    }
+                }.also { exceptions.addAll(it) }
+            } else {
+                log("No changed files to copy back.")
+            }
         }
 
-    fun FixedWidthRenderingLogger.applyOsPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-        if (osPreparations.isEmpty()) ReturnValues<Throwable>().also { logLine { HEADLINE_FORMATTER("OS Preparation: —") } }
-        else compactLogging(
-            HEADLINE_FORMATTER("OS Preparation (${osPreparations.size})"),
-            decorationFormatter = HEADLINE_FORMATTER,
-        ) {
-            runCollecting(osPreparations) { _, preparation, logger -> preparation(osImage, logger) }
+        return exceptions
+    }
+
+    fun applyOsPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
+        collectingExceptions("OS Preparation (${osPreparations.size})") {
+            collectingExceptions(osPreparations) { _, preparation -> preparation(osImage) }
         }
 
-    fun FixedWidthRenderingLogger.applyOsBoot(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-        if (!osBoot) ReturnValues<Throwable>().also { logLine { HEADLINE_FORMATTER("OS Boot: —") } }
-        else runCollecting {
+    fun applyOsBoot(osImage: OperatingSystemImage): ReturnValues<Throwable> =
+        if (!osBoot) ReturnValues<Throwable>().also { collectingExceptions("OS Boot: —") {} }
+        else runCatching {
             osImage.boot(
                 name.withRandomSuffix(),
-                this@applyOsBoot,
-                headlineFormatter = HEADLINE_FORMATTER,
-                decorationFormatter = HEADLINE_FORMATTER,
+                nameFormatter = NAME_FORMATTER,
+                decorationFormatter = NAME_FORMATTER,
                 autoLogin = false,
                 autoShutdown = false,
-                border = DOTTED,
             )
-        }
+        }.fold({ ReturnValues() }, { ReturnValues(it) })
 
-    fun FixedWidthRenderingLogger.applyOsOperations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-        if (osOperations.isEmpty()) ReturnValues<Throwable>().also { logLine { HEADLINE_FORMATTER("OS Operations: —") } }
-        else runCollecting {
+
+    fun applyOsOperations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
+        if (osOperations.isEmpty()) ReturnValues<Throwable>().also { collectingExceptions("OS Operations: —") {} }
+        else runCatching {
             osImage.boot(
                 name.withRandomSuffix(),
-                this@applyOsOperations,
                 *osOperations.map { it(osImage) }.toTypedArray(),
-                headlineFormatter = HEADLINE_FORMATTER,
-                decorationFormatter = HEADLINE_FORMATTER,
-                border = DOTTED,
+                nameFormatter = NAME_FORMATTER,
+                decorationFormatter = NAME_FORMATTER,
+                autoLogin = false,
+                autoShutdown = false,
             )
-        }
+        }.fold({ ReturnValues() }, { ReturnValues(it) })
 
     val operationCount: Int
 
@@ -253,7 +210,7 @@ interface Patch {
 
     companion object : BuilderTemplate<PatchContext, (String) -> Patch>() {
 
-        private val HEADLINE_FORMATTER = Formatter { it.ansi.cyan }
+        private val NAME_FORMATTER = Formatter { it.toString().ansi.cyan }
 
         @DslMarker
         annotation class PatchDsl
@@ -334,8 +291,8 @@ interface Patch {
                  * Resizes the [OperatingSystemImage] to the specified [size].
                  */
                 fun resize(size: Size) {
-                    diskOperation { osImage: OperatingSystemImage, logger: FixedWidthRenderingLogger ->
-                        osImage.increaseDiskSpace(size, logger)
+                    diskOperation { osImage: OperatingSystemImage ->
+                        osImage.increaseDiskSpace(size)
                     }
                 }
 
@@ -343,9 +300,10 @@ interface Patch {
                  * Changes the username to be used for login from [oldUsername] to [newUsername].
                  */
                 fun updateUsername(oldUsername: String, newUsername: String) {
-                    diskOperation { osImage: OperatingSystemImage, logger: RenderingLogger ->
-                        osImage.credentials = osImage.credentials.copy(username = newUsername)
-                        logger.logMeta("Username of user ${oldUsername.formattedAs.input} updated to ${newUsername.formattedAs.input}.")
+                    diskOperation { osImage: OperatingSystemImage ->
+                        spanning("Updating username of user ${oldUsername.formattedAs.input} to ${newUsername.formattedAs.input}") {
+                            osImage.credentials = osImage.credentials.copy(username = newUsername)
+                        }
                     }
                 }
 
@@ -353,13 +311,10 @@ interface Patch {
                  * Changes the password used to login using the given [username] to [password].
                  */
                 fun updatePassword(username: String, password: String) {
-                    diskOperation { osImage: OperatingSystemImage, logger: RenderingLogger ->
-                        if (osImage.credentials.username == username) {
+                    diskOperation { osImage: OperatingSystemImage ->
+                        if (osImage.credentials.username != username) return@diskOperation
+                        spanning("Updating password of user ${osImage.credentials.username.formattedAs.input}") {
                             osImage.credentials = osImage.credentials.copy(password = password)
-                            logger.logMeta("Password of user ${username.formattedAs.input} updated.")
-                        } else {
-                            logger.logMeta("Password of user ${password.formattedAs.input} updated${"*".ansi.magenta}.")
-                            logger.logMeta("ImgCstmzr will to continue to use user ${osImage.credentials.username.formattedAs.input}.")
                         }
                     }
                 }
@@ -431,18 +386,19 @@ interface Patch {
 }
 
 /**
- * Applies this patch to the given [OperatingSystemImage] while logging with `this` [RenderingLogger].
+ * Applies this patch to the given [OperatingSystemImage].
  */
-inline val FixedWidthRenderingLogger.patch: Patch.(osImage: OperatingSystemImage) -> ReturnValues<Throwable>
+@Deprecated("delete")
+inline val patch: Patch.(osImage: OperatingSystemImage) -> ReturnValues<Throwable>
     get() = { osImage: OperatingSystemImage -> patch(osImage) }
 
-typealias DiskOperation = (osImage: OperatingSystemImage, logger: FixedWidthRenderingLogger) -> Unit
+typealias DiskOperation = (osImage: OperatingSystemImage) -> Unit
 
 /**
- * Applies all patches of this collection to the given [OperatingSystemImage] while logging with `this` [RenderingLogger].
+ * Applies all patches of this collection to the given [OperatingSystemImage].
  */
 fun List<Patch>.patch(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-    logging(banner("Applying $size patches to ${osImage.shortName}")) {
+    spanning(banner("Applying $size patches to ${osImage.shortName}")) {
         ReturnValues(*flatMap { it.patch(osImage) }.toTypedArray())
     }
 
@@ -485,16 +441,16 @@ class CompositePatch(
 
 class FileOperation(val target: DiskPath, val verifier: (Path) -> Unit, val handler: (Path) -> Unit) {
 
-    operator fun invoke(target: Path, logger: FixedWidthRenderingLogger) {
-        logger.compactLogging(target.fileName.toString()) {
-            logLine { "Action needed? …".ansi.yellow }
+    operator fun invoke(target: Path) {
+        spanningLine(target.fileName.toString()) {
+            log("Action needed?")
             val result = runCatching { verifier.invoke(target) }
             if (result.isFailure) {
-                logLine { "Yes …".ansi.yellow.bold }
+                log("Yes".formattedAs.warning)
 
                 handler.invoke(target)
 
-                logLine { "Verifying …".ansi.yellow }
+                log("Verifying")
                 verifier.invoke(target)
             }
         }

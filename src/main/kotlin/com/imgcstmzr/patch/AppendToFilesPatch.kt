@@ -40,7 +40,7 @@ class AppendToFilesPatch(private val contentToDiskMappings: Map<String, DiskPath
                             val lines = line.lines()
                             lines
                         }
-                        val expectedLines = content.lines(ignoreTrailingSeparator = true)
+                        val expectedLines = content.lines()
                         val actualLastLines = actualLines.takeLast(expectedLines.size)
                         require(actualLastLines == expectedLines)
                     }) {

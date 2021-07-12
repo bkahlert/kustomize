@@ -2,7 +2,6 @@ package com.imgcstmzr.cli
 
 import com.imgcstmzr.libguestfs.ImageBuilder.buildFrom
 import com.imgcstmzr.libguestfs.ImageExtractor.extractImage
-import com.imgcstmzr.util.Paths
 import koodies.io.path.FileSizeComparator
 import koodies.io.path.cloneTo
 import koodies.io.path.delete
@@ -12,14 +11,15 @@ import koodies.io.path.getSize
 import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.io.path.pathString
 import koodies.io.path.requireDirectory
-import koodies.logging.FixedWidthRenderingLogger
-import koodies.logging.RenderingLogger
+import koodies.io.path.uriString
 import koodies.text.ANSI.Colors.cyan
 import koodies.text.randomString
 import koodies.time.Now
 import koodies.time.format
 import koodies.time.minutes
 import koodies.time.parseInstant
+import koodies.tracing.rendering.spanningLine
+import koodies.tracing.spanning
 import java.nio.file.Path
 import java.time.Instant
 import java.time.Instant.now
@@ -32,16 +32,10 @@ import kotlin.io.path.isWritable
 import kotlin.io.path.moveTo
 import kotlin.time.Duration
 
-class Cache(dir: Path = DEFAULT, private val maxConcurrentWorkingDirectories: Int = 5) : ManagedDirectory(dir) {
+class Cache(dir: Path, private val maxConcurrentWorkingDirectories: Int = 5) : ManagedDirectory(dir) {
 
-    fun FixedWidthRenderingLogger.provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> Path): Path =
-        with(ProjectDirectory(dir, name, this, reuseLastWorkingCopy, maxConcurrentWorkingDirectories)) {
-            require(provider)
-        }
-
-    companion object {
-        val DEFAULT: Path = Paths.CACHE
-    }
+    fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> Path): Path =
+        ProjectDirectory(dir, name, reuseLastWorkingCopy, maxConcurrentWorkingDirectories).require(provider)
 }
 
 open class ManagedDirectory(val dir: Path) {
@@ -64,11 +58,9 @@ open class ManagedDirectory(val dir: Path) {
 private class ProjectDirectory(
     parentDir: Path,
     dirName: String,
-    private val logger: RenderingLogger,
     private val reuseLastWorkingCopy: Boolean,
     maxConcurrentWorkingDirectories: Int,
-) :
-    ManagedDirectory(parentDir, dirName) {
+) : ManagedDirectory(parentDir, dirName) {
 
     init {
         deleteOldWorkDirs(maxConcurrentWorkingDirectories)
@@ -85,15 +77,18 @@ private class ProjectDirectory(
             .sortedBy { it.age }
     }
 
-    private fun deleteOldWorkDirs(keep: Int) = workDirs()
-        .filter { it.age > 30.minutes }
-        .drop(keep)
-        .forEach {
-            logger.logLine { "Removing ${it.age.toString().cyan()} old $it" }
-            it.delete()
+    private fun deleteOldWorkDirs(keep: Int) =
+        spanning("Deleting old working directories") {
+            workDirs()
+                .filter { it.age > 30.minutes }
+                .drop(keep)
+                .forEach {
+                    log("Removing ${it.age.toString().cyan()} old $it")
+                    it.delete()
+                }
         }
 
-    fun FixedWidthRenderingLogger.require(provider: () -> Path): Path {
+    fun require(provider: () -> Path): Path = spanning("Retrieving image") {
         val workDirs = workDirs()
         val workDir: Path? = if (reuseLastWorkingCopy) {
             workDirs.mapNotNull { workDir ->
@@ -102,16 +97,16 @@ private class ProjectDirectory(
                 }
                 single
             }.firstOrNull().also {
-                if (it != null) logLine { "Re-using last working copy ${it.fileName}" }
-                else logLine { "No working copy exists that could be re-used. Creating a new one." }
+                if (it != null) log("Re-using last working copy ${it.fileName}")
+                else log("No working copy exists that could be re-used. Creating a new one.")
             }
         } else null
 
-        return workDir ?: run {
+        workDir ?: run {
 
-            val img = rawDir.requireSingle(this) {
-                val downloadedFile = downloadDir.requireSingle(this, provider)
-                downloadedFile.extractImage(this) { path -> buildFrom(path) }
+            val img = rawDir.requireSingle {
+                val downloadedFile = downloadDir.requireSingle(provider)
+                downloadedFile.extractImage { path -> buildFrom(path) }
             }
 
             WorkDirectory.from(dir, img).getSingle { it.extensionOrNull.equals("img", ignoreCase = true) } ?: throw NoSuchElementException()
@@ -138,18 +133,18 @@ private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
             .sortedWith(FileSizeComparator)[0]
         else null
 
-    fun requireSingle(logger: FixedWidthRenderingLogger, provider: () -> Path): Path {
+    fun requireSingle(provide: () -> Path): Path {
         val file = getSingle()
         if (file != null) return file
         super.dir.createDirectories()
-        return provider().let { costlyProvidedFile ->
-            val destFile = dir.resolve(costlyProvidedFile.fileName)
+        return provide().let { providedFile ->
+            val destFile = dir.resolve(providedFile.fileName)
             if (destFile.exists()) {
-                costlyProvidedFile.delete()
+                providedFile.delete()
                 destFile
             } else {
-                logger.compactLogging("Moving download to $destFile …") {
-                    costlyProvidedFile.moveTo(destFile)
+                spanningLine("Moving download to ${destFile.uriString}") {
+                    providedFile.moveTo(destFile)
                 }
             }
         }

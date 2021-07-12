@@ -1,17 +1,17 @@
 package koodies.test.output
 
-import koodies.debug.CapturedOutput
 import koodies.exec.IO
 import koodies.exec.IO.Error
 import koodies.exec.IO.Output
+import koodies.test.CapturedOutput
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-class OutputCapture : CapturedOutput {
+class OutputCapture(private val print: Boolean) : CapturedOutput {
 
     private val lock = ReentrantLock()
     private val systemCaptures: ArrayDeque<SystemCapture> = ArrayDeque()
-    fun push() = lock.withLock { systemCaptures.addLast(SystemCapture()) }
+    fun push() = lock.withLock { systemCaptures.addLast(SystemCapture(print)) }
     fun pop() = lock.withLock { systemCaptures.removeLast().release() }
 
     val isCapturing: Boolean get() = systemCaptures.isNotEmpty()
@@ -45,8 +45,5 @@ class OutputCapture : CapturedOutput {
         } else false
     }
 
-    override val length: Int get() = all.length
-    override fun get(index: Int): Char = all[index]
-    override fun subSequence(startIndex: Int, endIndex: Int): CharSequence = all.subSequence(startIndex, endIndex)
     override fun toString(): String = all
 }

@@ -190,7 +190,7 @@ find "${SCRIPTS_DIR}" -type f | while read -r _FILE; do
 done
 _end $_ok
 
-_start "Checking if all went well …"
+_start "Checking if all went well …"
 if [ -z "$(ls -A "${COPIES_DIR}")" ]; then
   rmdir "${COPIES_DIR}"
   _end $_ok

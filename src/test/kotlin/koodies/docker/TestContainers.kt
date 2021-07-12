@@ -8,25 +8,27 @@ import koodies.docker.DockerContainer.State.Existent.Running
 import koodies.docker.TestImages.HelloWorld
 import koodies.docker.TestImages.Ubuntu
 import koodies.exec.CommandLine
-import koodies.logging.FixedWidthRenderingLogger
-import koodies.logging.FixedWidthRenderingLogger.Border.DOTTED
-import koodies.logging.LoggingContext
-import koodies.logging.RenderingLogger
-import koodies.logging.ReturnValues
-import koodies.logging.conditionallyVerboseLogger
+import koodies.exec.RendererProviders
+import koodies.junit.UniqueId
+import koodies.junit.UniqueId.Companion.id
 import koodies.test.Slow
-import koodies.test.UniqueId
-import koodies.test.UniqueId.Companion.id
-import koodies.test.store
+import koodies.test.get
+import koodies.test.put
+import koodies.test.storeForNamespaceAndTest
 import koodies.test.withAnnotation
 import koodies.text.randomString
 import koodies.time.poll
 import koodies.time.seconds
+import koodies.tracing.rendering.BackgroundPrinter
+import koodies.tracing.rendering.BlockStyles.None
+import koodies.tracing.rendering.ReturnValues
+import koodies.tracing.spanning
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.junit.jupiter.api.extension.ExtensionContext.Store
 import org.junit.jupiter.api.extension.Extensions
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
@@ -48,12 +50,12 @@ object TestImages {
     /**
      * [Ubuntu](https://hub.docker.com/_/ubuntu) based [TestContainersProvider]
      */
-    object Ubuntu : DockerImage("ubuntu", emptyList(), null, null), TestContainersProvider {
+    object Ubuntu : DockerImage("ubuntu", emptyList()), TestContainersProvider {
         override val image: DockerImage get() = this
         private val testContainersProvider: TestContainersProvider by lazy { TestContainersProvider.of(this) }
 
-        override fun testContainersFor(uniqueId: UniqueId, logger: FixedWidthRenderingLogger): TestContainers =
-            testContainersProvider.testContainersFor(uniqueId, logger)
+        override fun testContainersFor(uniqueId: UniqueId): TestContainers =
+            testContainersProvider.testContainersFor(uniqueId)
 
         override fun release(uniqueId: UniqueId) =
             testContainersProvider.release(uniqueId)
@@ -62,12 +64,12 @@ object TestImages {
     /**
      * [busybox](https://hub.docker.com/_/busybox) based [TestContainersProvider]
      */
-    object BusyBox : DockerImage("busybox", emptyList(), null, null), TestContainersProvider {
+    object BusyBox : DockerImage("busybox", emptyList()), TestContainersProvider {
         override val image: DockerImage get() = this
         private val testContainersProvider: TestContainersProvider by lazy { TestContainersProvider.of(this) }
 
-        override fun testContainersFor(uniqueId: UniqueId, logger: FixedWidthRenderingLogger): TestContainers =
-            testContainersFor(uniqueId, logger)
+        override fun testContainersFor(uniqueId: UniqueId): TestContainers =
+            testContainersFor(uniqueId)
 
         override fun release(uniqueId: UniqueId) =
             testContainersProvider.release(uniqueId)
@@ -76,11 +78,9 @@ object TestImages {
     /**
      * [Hello World!](https://hub.docker.com/_/hello-world) based [TestImageProvider]
      */
-    object HelloWorld : DockerImage("hello-world", emptyList(), null, null), TestImageProvider {
+    object HelloWorld : DockerImage("hello-world", emptyList()), TestImageProvider {
         override val image: DockerImage get() = this
         override val lock: ReentrantLock by lazy { ReentrantLock() }
-
-        private val imageLock = ReentrantLock()
     }
 }
 
@@ -100,7 +100,6 @@ object TestImages {
 )
 annotation class ContainersTestFactory(
     val provider: KClass<out TestContainersProvider> = Ubuntu::class,
-    val logging: Boolean = false,
 )
 
 /**
@@ -119,7 +118,6 @@ annotation class ContainersTestFactory(
 )
 annotation class ContainersTest(
     val provider: KClass<out TestContainersProvider> = Ubuntu::class,
-    val logging: Boolean = false,
 )
 
 /**
@@ -127,6 +125,7 @@ annotation class ContainersTest(
  * to create containers with a specific state.
  */
 class ContainersTestExtension : TypeBasedParameterResolver<TestContainers>(), AfterEachCallback {
+    private val store: ExtensionContext.() -> Store by storeForNamespaceAndTest()
 
     private val ExtensionContext.provider: TestContainersProvider
         get() = (withAnnotation<ContainersTestFactory, KClass<out TestContainersProvider>> { provider }
@@ -134,16 +133,10 @@ class ContainersTestExtension : TypeBasedParameterResolver<TestContainers>(), Af
             ?.objectInstance
             ?: error("Currently only ${TestContainersProvider::class.simpleName} singletons are supported, that is, implemented as an object.")
 
-    private val ExtensionContext.logger: FixedWidthRenderingLogger
-        get() = conditionallyVerboseLogger(withAnnotation<ContainersTestFactory, Boolean> { logging } ?: withAnnotation<ContainersTest, Boolean> { logging })
-
     override fun resolveParameter(parameterContext: ParameterContext, context: ExtensionContext): TestContainers =
-        context.provider.testContainersFor(context.id, context.logger).also { context.save(it) }
+        context.provider.testContainersFor(context.id).also { context.store().put(it) }
 
-    override fun afterEach(context: ExtensionContext) = context.load()?.release() ?: Unit
-
-    private fun ExtensionContext.load(): TestContainers? = store<ContainersTestExtension>().get(element, TestContainers::class.java)
-    private fun ExtensionContext.save(testContainers: TestContainers): Unit = store<ContainersTestExtension>().put(element, testContainers)
+    override fun afterEach(context: ExtensionContext) = context.store().get<TestContainers>()?.release() ?: Unit
 }
 
 /**
@@ -160,26 +153,26 @@ interface TestContainersProvider {
      *
      * If one already exists, an exception is thrown.
      */
-    fun testContainersFor(uniqueId: UniqueId, logger: FixedWidthRenderingLogger = LoggingContext.BACKGROUND): TestContainers
+    fun testContainersFor(uniqueId: UniqueId): TestContainers
 
     /**
      * Kills and removes all provisioned test containers for the [uniqueId]
      */
-    fun release(uniqueId: UniqueId): Unit
+    fun release(uniqueId: UniqueId)
 
     companion object {
         fun of(image: DockerImage) = object : TestContainersProvider {
             override val image: DockerImage = image
             private val sessions = synchronizedMapOf<UniqueId, TestContainers>()
 
-            override fun testContainersFor(uniqueId: UniqueId, logger: FixedWidthRenderingLogger) =
-                TestContainers(logger, image, uniqueId)
+            override fun testContainersFor(uniqueId: UniqueId) =
+                TestContainers(image, uniqueId)
                     .also {
                         check(!sessions.containsKey(uniqueId)) { "A session for $uniqueId is already provided!" }
                         sessions[uniqueId] = it
                     }
 
-            override fun release(uniqueId: UniqueId): Unit {
+            override fun release(uniqueId: UniqueId) {
                 sessions.remove(uniqueId)?.apply { release() }
             }
         }
@@ -191,7 +184,6 @@ interface TestContainersProvider {
  * are in a specific state to facilitate testing.
  */
 class TestContainers(
-    private val logger: FixedWidthRenderingLogger,
     private val image: DockerImage,
     private val uniqueId: UniqueId,
 ) {
@@ -200,10 +192,10 @@ class TestContainers(
     /**
      * Kills and removes all provisioned test containers.
      */
-    internal fun release(): Unit {
-        val copy = provisioned.toList().also { provisioned.clear() }
-        logger.logging("Releasing ${copy.size} container(s)", border = DOTTED) {
-            ReturnValues(copy.map { kotlin.runCatching { it.remove(force = true, logger = this) }.fold({ it }, { it }) })
+    fun release() {
+        val toBeReleased = provisioned.toList().also { provisioned.clear() }
+        spanning("Releasing ${toBeReleased.size} container(s)", blockStyle = None, printer = BackgroundPrinter) {
+            ReturnValues(toBeReleased.map { container -> kotlin.runCatching { container.remove(force = true) }.fold({ it }, { it }) })
         }
     }
 
@@ -213,11 +205,9 @@ class TestContainers(
         val container = DockerContainer.from(name = "$uniqueId", randomSuffix = true).also { provisioned.add(it) }
         commandLine.dockerized(this@TestContainers.image) {
             name by container.name
-            this.autoCleanup by false
+            autoCleanup { off }
             detached { on }
-        }.exec.logging(logger) {
-            noDetails("running ${commandLine.summary}")
-        }
+        }.exec.logging(renderer = RendererProviders.noDetails())
         return container
     }
 
@@ -230,12 +220,15 @@ class TestContainers(
     private fun newRunningContainer(
         duration: Duration,
     ): DockerContainer =
-        startContainerWithCommandLine(CommandLine("sleep", duration.toIntegerSeconds().toString()))
+        startContainerWithCommandLine(CommandLine("sleep", duration.toIntegerSeconds().toString(), name = "${duration.toIntegerSeconds()} sleep"))
 
     /**
      * Returns a container that does not exist on this system.
      */
-    internal fun newNotExistentContainer() = DockerContainer.from(randomString())
+    internal fun newNotExistentContainer() =
+        spanning("Providing non-existent container", blockStyle = None, printer = BackgroundPrinter) {
+            DockerContainer.from(randomString())
+        }
 
     /**
      * Returns a new container that already terminated with exit code `0`.
@@ -243,18 +236,20 @@ class TestContainers(
      * The next time this container is started it will run for the specified [duration] (default: 30 seconds).
      */
     internal fun newExitedTestContainer(duration: Duration = 30.seconds): DockerContainer =
-        startContainerWithCommandLine(CommandLine("sh", "-c", """
+        spanning("Providing exited container", blockStyle = None, printer = BackgroundPrinter) {
+            startContainerWithCommandLine(CommandLine("sh", "-c", """
                 if [ -f "booted-before" ]; then
                   sleep ${duration.toIntegerSeconds()}
                 else
                   touch "booted-before"
                 fi
                 exit 0
-            """.trimIndent())).also { container ->
-            poll {
-                with(container) { with(logger) { state } } is Exited
-            }.every(.5.seconds).forAtMost(5.seconds) { timeout ->
-                fail { "Could not provide exited test container $container within $timeout." }
+            """.trimIndent(), name = "$duration sleep")).also { container ->
+                poll {
+                    container.containerState is Exited
+                }.every(0.5.seconds).forAtMost(5.seconds) { timeout ->
+                    fail { "Could not provide exited test container $container within $timeout." }
+                }
             }
         }
 
@@ -262,11 +257,13 @@ class TestContainers(
      * Returns a container that is running for the specified [duration] (default: 30 seconds).
      */
     internal fun newRunningTestContainer(duration: Duration = 30.seconds): DockerContainer =
-        newRunningContainer(duration).also { container ->
-            poll {
-                with(container) { with(logger) { state } } is Running
-            }.every(.5.seconds).forAtMost(5.seconds) { duration ->
-                fail { "Could not provide stopped test container $container within $duration." }
+        spanning("Providing running container", blockStyle = None, printer = BackgroundPrinter) {
+            newRunningContainer(duration).also { container ->
+                poll {
+                    container.containerState is Running
+                }.every(0.5.seconds).forAtMost(5.seconds) { duration ->
+                    fail { "Could not provide stopped test container $container within $duration." }
+                }
             }
         }
 
@@ -315,11 +312,8 @@ class ImageTestExtension : TypeBasedParameterResolver<TestImage>() {
             ?.objectInstance
             ?: error("Currently only ${TestImageProvider::class.simpleName} singletons are supported, that is, implemented as an object.")
 
-    private val ExtensionContext.logger: FixedWidthRenderingLogger
-        get() = conditionallyVerboseLogger(withAnnotation<ImageTestFactory, Boolean> { logging } ?: withAnnotation<ImageTest, Boolean> { logging })
-
     override fun resolveParameter(parameterContext: ParameterContext, context: ExtensionContext): TestImage =
-        context.provider.testImageFor(context.logger)
+        context.provider.testImageFor()
 }
 
 /**
@@ -334,8 +328,8 @@ interface TestImageProvider {
     /**
      * Provides a new [TestImage].
      */
-    fun testImageFor(logger: FixedWidthRenderingLogger = LoggingContext.BACKGROUND): TestImage =
-        TestImage(lock, image, logger)
+    fun testImageFor(): TestImage =
+        TestImage(lock, image)
 
     companion object {
         const val RESOURCE: String = "koodies.docker.test-image"
@@ -349,7 +343,6 @@ interface TestImageProvider {
 class TestImage(
     private val lock: ReentrantLock,
     image: DockerImage,
-    private val logger: RenderingLogger,
 ) : DockerImage(
     image.repository,
     image.path,
@@ -358,14 +351,12 @@ class TestImage(
 ) {
 
     private fun <R> runWithLock(pulled: Boolean, block: (DockerImage) -> R): R = lock.withLock {
-        with(logger) {
-            if (pulled && !isPulled) pull(logger = logger)
-            else if (!pulled && isPulled) remove(force = true, logger = logger)
-            poll { isPulled == pulled }.every(.5.seconds).forAtMost(5.seconds) {
-                "Failed to " + (if (pulled) "pull" else "remove") + " $this"
-            }
-            runCatching(block)
+        if (pulled && !isPulled) pull()
+        else if (!pulled && isPulled) remove(force = true)
+        poll { isPulled == pulled }.every(0.5.seconds).forAtMost(5.seconds) {
+            "Failed to " + (if (pulled) "pull" else "remove") + " $this"
         }
+        runCatching(block)
     }.getOrThrow()
 
     /**

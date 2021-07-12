@@ -1,5 +1,7 @@
 com.imgcstmzr.test.FixtureResolverExtension
-koodies.test.UniqueIdResolver
-koodies.test.output.InMemoryLoggerResolver
+com.imgcstmzr.TestSpanWrapper
+koodies.junit.TestNameResolver
+koodies.junit.UniqueIdResolver
 koodies.debug.DebugCondition
 koodies.debug.DebugParameterResolver
+koodies.test.IllegalUsageCheck

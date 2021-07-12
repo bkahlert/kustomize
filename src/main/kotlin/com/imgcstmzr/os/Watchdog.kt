@@ -1,12 +1,11 @@
 package com.imgcstmzr.os
 
-import com.imgcstmzr.logMeta
 import com.imgcstmzr.os.Watchdog.Command.RESET
 import com.imgcstmzr.os.Watchdog.Command.STOP
 import koodies.jvm.thread
-import koodies.logging.RenderingLogger
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.time.Now
+import koodies.tracing.CurrentSpan
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
@@ -29,11 +28,11 @@ open class Watchdog(
     /**
      * Logger that can be accessed in [timedOut].
      */
-    private val logger: RenderingLogger? = null,
+    private val span: CurrentSpan? = null,
     /**
      * Gets called after more time has passed between the start of this watchdog and/or two consecutive [reset] calls.
      */
-    val timedOut: RenderingLogger.() -> Any,
+    val timedOut: CurrentSpan.() -> Any,
 ) {
     private var timeoutStart: Long = -1L
     private val blockingQueue = LinkedBlockingQueue<Command>()
@@ -44,7 +43,7 @@ open class Watchdog(
                 when (blockingQueue.poll(timeout.toLong(MILLISECONDS).also {
                     timeoutStart = System.currentTimeMillis()
                     if (lastEvent == null) {
-                        logger.logMeta("Watchdog started. Timing out in $remaining.")
+                        span?.log("Watchdog started. Timing out in $remaining.")
                         lastEvent = RESET
                     }
                 }, MILLISECONDS)) {
@@ -53,14 +52,14 @@ open class Watchdog(
                         lastEvent = RESET
                     }
                     STOP -> {
-                        logger.logMeta("Watchdog stopped.")
+                        span?.log("Watchdog stopped.")
                         lastEvent = STOP
                         break
                     }
                     null -> {
                         if (lastEvent != null) {
-                            logger.logMeta("Watchdog timed out. Invoking $timedOut.")
-                            logger?.timedOut()
+                            span?.log("Watchdog timed out. Invoking $timedOut.")
+                            span?.timedOut()
                         }
                         lastEvent = null
                         if (!repeating) break

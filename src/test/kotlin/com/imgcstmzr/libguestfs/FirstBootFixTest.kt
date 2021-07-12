@@ -2,12 +2,10 @@ package com.imgcstmzr.libguestfs
 
 import koodies.docker.ubuntu
 import koodies.io.path.executable
-import koodies.logging.InMemoryLogger
-import koodies.logging.RenderingLogger
+import koodies.junit.UniqueId
 import koodies.shell.ShellScript
 import koodies.shell.ShellScript.ScriptContext
 import koodies.test.TwoMinutesTimeout
-import koodies.test.UniqueId
 import koodies.test.withTempDir
 import koodies.time.seconds
 import koodies.time.sleep
@@ -20,7 +18,7 @@ import kotlin.io.path.readText
 
 class FirstBootFixTest {
 
-    private fun Path.runFourScripts(logger: RenderingLogger, customization: Path.() -> Unit = {}): String {
+    private fun Path.runFourScripts(customization: Path.() -> Unit = {}): String {
         val outputFile = "test.txt"
         val scriptFile =
             dir("usr") {
@@ -37,13 +35,13 @@ class FirstBootFixTest {
                     }
                 }
             }
-        ubuntu(logger) { "$scriptFile start" }
+        ubuntu { "$scriptFile start" }
         return resolve(outputFile).readText()
     }
 
     @TwoMinutesTimeout @Test
-    fun `should reproduce incorrect execution order`(uniqueId: UniqueId, logger: InMemoryLogger) = withTempDir(uniqueId) {
-        expectThat(runFourScripts(logger)).isEqualTo("""
+    fun `should reproduce incorrect execution order`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+        expectThat(runFourScripts()).isEqualTo("""
             a
             2
             b
@@ -52,8 +50,8 @@ class FirstBootFixTest {
     }
 
     @TwoMinutesTimeout @Test
-    fun `should fix execution order`(uniqueId: UniqueId, logger: InMemoryLogger) = withTempDir(uniqueId) {
-        expectThat(runFourScripts(logger) { FirstBootFix.copyToDirectory(this).executable = true }).isEqualTo("""
+    fun `should fix execution order`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+        expectThat(runFourScripts { FirstBootFix.copyToDirectory(this).executable = true }).isEqualTo("""
             a
             b
             1
