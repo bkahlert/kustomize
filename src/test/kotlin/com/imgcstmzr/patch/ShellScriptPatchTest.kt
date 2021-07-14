@@ -18,7 +18,7 @@ import koodies.test.Smoke
 import koodies.test.withTempDir
 import koodies.text.Banner.banner
 import koodies.text.LineSeparators.LF
-import koodies.text.quoted
+import koodies.text.singleQuoted
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.contains
@@ -39,7 +39,7 @@ class ShellScriptPatchTest {
     fun `should copy firstboot script`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
         expectThat(shellScriptPatch).customizations(osImage) {
             last().isA<Customization.FirstBootOption>().file.content {
-                contains("echo ${banner("Test").quoted}")
+                contains("echo ${banner("Test").singleQuoted}")
                 contains("touch /root/shell-script-test.txt")
                 contains("echo 'Frank was here; went to get beer.' > /root/shell-script-test.txt")
                 contains(OperatingSystem.DEFAULT_SHUTDOWN_COMMAND)

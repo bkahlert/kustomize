@@ -66,13 +66,11 @@ import koodies.text.truncate
 import koodies.text.truncateTo
 import koodies.text.withRandomSuffix
 import java.nio.file.Path
-import java.nio.file.attribute.PosixFilePermission
 import java.util.Collections
 import java.util.TimeZone
 import kotlin.io.path.exists
 import kotlin.io.path.isReadable
 import kotlin.io.path.isWritable
-import kotlin.io.path.setPosixFilePermissions
 import kotlin.io.path.writeLines
 import com.imgcstmzr.libguestfs.LibguestfsOption as LibguestfsCommandLineOption
 

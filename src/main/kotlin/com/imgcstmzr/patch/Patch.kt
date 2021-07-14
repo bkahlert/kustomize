@@ -24,7 +24,6 @@ import koodies.builder.BuilderTemplate
 import koodies.builder.Init
 import koodies.builder.context.CapturesMap
 import koodies.builder.context.CapturingContext
-import koodies.debug.trace
 import koodies.io.path.deleteDirectoryEntriesRecursively
 import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.text.ANSI.Formatter
@@ -158,7 +157,6 @@ interface Patch {
         if (diskOperationsAndFilePreparationOperations == 0) return none("Disk Operations")
 
         osImage.hostPath(LinuxRoot).deleteDirectoryEntriesRecursively()
-        osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().trace("FILES AFTER DELETION")
         collectingExceptions("Disk Operations (${diskOperationsAndFilePreparationOperations})") {
             if (diskOperationsAndFilePreparationOperations > 0) {
                 osImage.guestfish(this@Patch.trace) {
@@ -171,7 +169,7 @@ interface Patch {
         }.also { exceptions.addAll(it) }
 
         fun countFiles() = osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().filter { it.isRegularFile() }.size
-        osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().trace("FILES BEFORE FILE OPERATIONS")
+        osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively()
         val fileOperationsCount = fileOperations.size + if (countFiles() > 0) 1 else 0
         collectingExceptions("File Operations ($fileOperationsCount)") {
             val filesToPatch = fileOperations.toMutableList()

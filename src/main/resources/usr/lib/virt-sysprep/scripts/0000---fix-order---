@@ -137,11 +137,11 @@ if [ ! -d "${COPIES_DIR}" ]; then
 fi
 
 _start "Copying all firstboot scripts timestamp-prefixed to ${COPIES_DIR}"
-find "${SCRIPTS_DIR}" -type f -printf "%p\n" | sort -n | while read -r _FILE; do
-  _FILE=$(basename "${_FILE}")
-  #  _EPOCH="$(stat -c %Y "${_FILE}")"
-  _EPOCH="$(perl -e 'print +(stat $ARGV[0])[9], "\n"' "${SCRIPTS_DIR}/${_FILE}")"
-  _COPY="${COPIES_DIR}/${_EPOCH}-${_FILE}"
+find "${SCRIPTS_DIR}" -type f -printf "%AY%Am%Ad%AH%AM%AS %p\n" | sort -n | while read -r _FILE; do
+  _TIMESTAMP="$(echo "${_FILE}" | awk '{print $1}')"
+  _FILE="$(echo "${_FILE}" | awk '{print $2}')"
+  _FILE="$(basename "${_FILE}")"
+  _COPY="${COPIES_DIR}/${_TIMESTAMP}-${_FILE}"
 
   # ignore this script itself, non-regular files and all non-executables
   if [ ! "${SCRIPTS_DIR}/${_FILE}" = "${BASENAME}" ] && [ -x "${SCRIPTS_DIR}/${_FILE}" ] && [ -f "${SCRIPTS_DIR}/${_FILE}" ]; then
@@ -159,9 +159,8 @@ done
 _end "$_ok"
 
 _start "Moving back firstboot script copies so that alphabetical order reflects the intended order"
-find "${SCRIPTS_DIR}" -type f -printf "%p\n" | sort -n | while read -r _FILE; do
-  _FILE=$(basename "${_FILE}")
-  _EPOCH="$(perl -e 'print +(stat $ARGV[0])[9], "\n"' "${SCRIPTS_DIR}/${_FILE}")"
+find "${SCRIPTS_DIR}" -type f | while read -r _FILE; do
+  _FILE="$(basename "${_FILE}")"
 
   # ignore this script itself, non-regular files and all non-executables
   if [ ! "${SCRIPTS_DIR}/${_FILE}" = "${BASENAME}" ] && [ -x "${SCRIPTS_DIR}/${_FILE}" ] && [ -f "${SCRIPTS_DIR}/${_FILE}" ]; then
