@@ -1,5 +1,7 @@
 package com.imgcstmzr.cli
 
+import koodies.text.ANSI.Formatter
+import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.Semantics.formattedAs
 import koodies.text.convertCamelCaseToKebabCase
 import koodies.tracing.rendering.ColumnsLayout
@@ -10,6 +12,8 @@ import kotlin.reflect.KProperty
 fun CharSequence.asParam(): String = formattedAs.input
 
 fun KProperty<*>.asParam(nameToUse: String = name.convertCamelCaseToKebabCase()): String = nameToUse.asParam()
+
+val PATCH_DECORATION_FORMATTER: Formatter<CharSequence> = Formatter { it.ansi.green.done }
 
 object Layouts {
 

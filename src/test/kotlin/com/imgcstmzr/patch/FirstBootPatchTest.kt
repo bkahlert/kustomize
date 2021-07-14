@@ -18,7 +18,7 @@ import koodies.test.FifteenMinutesTimeout
 import koodies.test.Smoke
 import koodies.test.withTempDir
 import koodies.text.Banner.banner
-import koodies.text.quoted
+import koodies.text.singleQuoted
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.api.expectThat
@@ -30,7 +30,7 @@ import strikt.assertions.last
 class FirstBootPatchTest {
 
     private val patch = FirstBootPatch("Test") {
-        echo("Type X to …")
+        echo("Type X to …")
         !"startx"
     }
 
@@ -38,8 +38,8 @@ class FirstBootPatchTest {
     fun `should copy firstboot script`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
         expectThat(patch).customizations(osImage) {
             last().isA<Customization.FirstBootOption>().file.content {
-                contains("'echo' ${banner("Test").quoted}")
-                contains("'echo' 'Type X to …'")
+                contains("echo ${banner("Test").singleQuoted}")
+                contains("'echo' 'Type X to …'")
                 contains("startx")
             }
         }

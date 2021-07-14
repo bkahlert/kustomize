@@ -5,6 +5,7 @@ import koodies.test.tests
 import koodies.test.toStringIsEqualTo
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
+import strikt.api.Assertion
 
 class DiskPathTest {
 
@@ -38,3 +39,6 @@ class DiskPathTest {
         expecting { LinuxRoot.etc.systemd / "test" } that { toStringIsEqualTo("/etc/systemd/test") }
     }
 }
+
+val Assertion.Builder<DiskPath>.pathString
+    get() = get("path string") { pathString }

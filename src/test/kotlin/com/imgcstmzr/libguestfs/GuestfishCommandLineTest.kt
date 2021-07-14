@@ -128,7 +128,7 @@ fun Assertion.Builder<OperatingSystemImage>.mounted(init: GuestAssertions.() -> 
         // Copying out of VM
         spanning(
             "╶──╴copying ${paths.size} files out of $fileName for assertions".formattedAs.debug,
-            decorationFormatter = { it.toString().ansi.formattedAs.debug },
+            decorationFormatter = { it.ansi.formattedAs.debug },
         ) {
             // delete to make sure the assertions runs on a file copy from the image
             paths.forEach { path -> hostPath(path).delete() }

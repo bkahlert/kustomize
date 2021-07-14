@@ -1,6 +1,7 @@
 package com.imgcstmzr.libguestfs
 
 import koodies.docker.ubuntu
+import koodies.exec.RendererProviders
 import koodies.io.path.executable
 import koodies.junit.UniqueId
 import koodies.shell.ShellScript
@@ -35,7 +36,7 @@ class FirstBootFixTest {
                     }
                 }
             }
-        ubuntu { "$scriptFile start" }
+        ubuntu(renderer = RendererProviders.block()) { "$scriptFile start" }
         return resolve(outputFile).readText()
     }
 

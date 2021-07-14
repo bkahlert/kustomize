@@ -1,5 +1,6 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.cli.PATCH_DECORATION_FORMATTER
 import com.imgcstmzr.libguestfs.GuestfishCommandLine
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder
@@ -23,6 +24,8 @@ import koodies.builder.BuilderTemplate
 import koodies.builder.Init
 import koodies.builder.context.CapturesMap
 import koodies.builder.context.CapturingContext
+import koodies.debug.trace
+import koodies.io.path.deleteDirectoryEntriesRecursively
 import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.text.ANSI.Formatter
 import koodies.text.ANSI.Text.Companion.ansi
@@ -36,6 +39,7 @@ import koodies.tracing.rendering.BlockStyles.Solid
 import koodies.tracing.rendering.ReturnValues
 import koodies.tracing.rendering.spanningLine
 import koodies.tracing.spanning
+import koodies.tracing.tracing
 import koodies.unit.Size
 import java.nio.file.Path
 import kotlin.io.path.isRegularFile
@@ -124,31 +128,52 @@ interface Patch {
     fun collectingExceptions(name: String, transform: CurrentSpan.() -> Unit): ReturnValues<Throwable> =
         spanning(name, blockStyle = Dotted) { runCatching(transform).fold({ ReturnValues() }, { ReturnValues(it) }) }
 
-    fun applyDiskPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-        collectingExceptions("Disk Preparation (${diskPreparations.size})") {
+    private fun none(operationName: String): ReturnValues<Throwable> {
+        tracing { log("◼ $operationName".ansi.gray) }
+        return ReturnValues()
+    }
+
+    fun applyDiskPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
+        if (diskPreparations.isEmpty()) return none("Disk Preparation")
+        return collectingExceptions("Disk Preparation (${diskPreparations.size})") {
             collectingExceptions(diskPreparations) { _, preparation -> preparation(osImage) }
         }
+    }
 
-    fun applyDiskCustomizations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-        collectingExceptions("Disk Customization (${diskCustomizations.size})") {
-            osImage.virtCustomize(trace) {
-                diskCustomizations.forEach { customizationOption(it) }
+    fun applyDiskCustomizations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
+        if (diskCustomizations.isEmpty()) return none("Disk Customization")
+        return collectingExceptions("Disk Customization (${diskCustomizations.size})") {
+            if (diskCustomizations.isNotEmpty()) {
+                osImage.virtCustomize(this@Patch.trace) {
+                    diskCustomizations.forEach { customizationOption(it) }
+                }
             }
         }
+    }
 
     fun applyDiskAndFileOperations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
         val exceptions = ReturnValues<Throwable>()
 
-        collectingExceptions("Disk Operations (${diskOperations.size})") {
-            osImage.guestfish(trace) {
-                fileOperations.map { it(osImage).target }.forEach { sourcePath ->
-                    copyOut { sourcePath }
+        val diskOperationsAndFilePreparationOperations = diskOperations.size + fileOperations.size
+        if (diskOperationsAndFilePreparationOperations == 0) return none("Disk Operations")
+
+        osImage.hostPath(LinuxRoot).deleteDirectoryEntriesRecursively()
+        osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().trace("FILES AFTER DELETION")
+        collectingExceptions("Disk Operations (${diskOperationsAndFilePreparationOperations})") {
+            if (diskOperationsAndFilePreparationOperations > 0) {
+                osImage.guestfish(this@Patch.trace) {
+                    fileOperations.map { it(osImage).target }.forEach { sourcePath ->
+                        copyOut { sourcePath }
+                    }
+                    diskOperations.forEach { command(it) }
                 }
-                diskOperations.forEach { command(it) }
             }
         }.also { exceptions.addAll(it) }
 
-        collectingExceptions("File Operations (${fileOperations.size.coerceAtLeast(1)})") {
+        fun countFiles() = osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().filter { it.isRegularFile() }.size
+        osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().trace("FILES BEFORE FILE OPERATIONS")
+        val fileOperationsCount = fileOperations.size + if (countFiles() > 0) 1 else 0
+        collectingExceptions("File Operations ($fileOperationsCount)") {
             val filesToPatch = fileOperations.toMutableList()
             if (filesToPatch.isNotEmpty()) {
                 collectingExceptions(filesToPatch) { _, fileOperation ->
@@ -157,51 +182,55 @@ interface Patch {
                 }.forEach { exceptions.add(it) }
             }
 
-            val changedFiles = osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().filter { it.isRegularFile() }.size
+            val changedFiles = countFiles()
             if (changedFiles > 0) {
                 collectingExceptions("Copying in $changedFiles file(s)") {
-                    osImage.guestfish(trace) {
+                    osImage.guestfish(this@Patch.trace) {
                         tarIn()
                     }
                 }.also { exceptions.addAll(it) }
-            } else {
-                log("No changed files to copy back.")
             }
         }
 
         return exceptions
     }
 
-    fun applyOsPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-        collectingExceptions("OS Preparation (${osPreparations.size})") {
+    fun applyOsPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
+        if (osPreparations.isEmpty()) return none("OS Preparation")
+        return collectingExceptions("OS Preparation (${osPreparations.size})") {
             collectingExceptions(osPreparations) { _, preparation -> preparation(osImage) }
         }
+    }
 
-    fun applyOsBoot(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-        if (!osBoot) ReturnValues<Throwable>().also { collectingExceptions("OS Boot: —") {} }
-        else runCatching {
+    fun applyOsBoot(osImage: OperatingSystemImage): ReturnValues<Throwable> {
+        if (!osBoot) return none("OS Boot")
+        else return runCatching {
             osImage.boot(
                 name.withRandomSuffix(),
                 nameFormatter = NAME_FORMATTER,
-                decorationFormatter = NAME_FORMATTER,
+                decorationFormatter = PATCH_DECORATION_FORMATTER,
+                blockStyle = Dotted,
                 autoLogin = false,
                 autoShutdown = false,
             )
         }.fold({ ReturnValues() }, { ReturnValues(it) })
+    }
 
 
-    fun applyOsOperations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-        if (osOperations.isEmpty()) ReturnValues<Throwable>().also { collectingExceptions("OS Operations: —") {} }
-        else runCatching {
+    fun applyOsOperations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
+        if (osOperations.isEmpty()) return none("OS Operations")
+        else return runCatching {
             osImage.boot(
                 name.withRandomSuffix(),
                 *osOperations.map { it(osImage) }.toTypedArray(),
                 nameFormatter = NAME_FORMATTER,
-                decorationFormatter = NAME_FORMATTER,
-                autoLogin = false,
-                autoShutdown = false,
+                decorationFormatter = PATCH_DECORATION_FORMATTER,
+                blockStyle = Dotted,
+                autoLogin = true,
+                autoShutdown = true,
             )
         }.fold({ ReturnValues() }, { ReturnValues(it) })
+    }
 
     val operationCount: Int
 
@@ -210,7 +239,7 @@ interface Patch {
 
     companion object : BuilderTemplate<PatchContext, (String) -> Patch>() {
 
-        private val NAME_FORMATTER = Formatter { it.toString().ansi.cyan }
+        private val NAME_FORMATTER = Formatter<CharSequence> { it.ansi.cyan }
 
         @DslMarker
         annotation class PatchDsl

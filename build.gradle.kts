@@ -3,7 +3,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.5.20"
+    kotlin("jvm") version "1.5.21"
 //    id("se.patrikerdes.use-latest-versions") version "0.2.17"
 //    id("com.github.ben-manes.versions") version "0.39.0"
 //    id("com.github.johnrengelman.shadow") version "6.0.0"
@@ -23,7 +23,7 @@ dependencies {
 
     implementation("com.bkahlert:koodies:1.6.0-SNAPSHOT")
 
-    implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.20") {
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.21") {
         because("filepeek takes 1.3")
     }
 
@@ -39,10 +39,10 @@ dependencies {
     implementation("io.github.config4k:config4k:0.4.2")
     implementation("org.slf4j:slf4j-simple:2.0.0-alpha1")
 
-    implementation("org.apache.commons:commons-compress:1.20")
-    implementation("org.apache.commons:commons-exec:1.3")
-    implementation("org.codehaus.plexus:plexus-utils:3.3.0")
-    implementation("org.jline:jline-reader:3.19.0")
+    implementation("org.apache.commons:commons-compress:1.20") // TODO delete?
+    implementation("org.apache.commons:commons-exec:1.3") // TODO delete?
+    implementation("org.codehaus.plexus:plexus-utils:3.3.0") // TODO delete?
+    implementation("org.jline:jline-reader:3.20.0") // TODO delete?
 
 //    implementation("com.tunnelvisionlabs:antlr4-runtime:4.9.0") // grapheme parsing
 //    implementation("com.tunnelvisionlabs:antlr4-perf-testsuite:4.9.0")

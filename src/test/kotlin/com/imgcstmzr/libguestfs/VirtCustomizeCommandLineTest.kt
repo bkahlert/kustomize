@@ -11,6 +11,7 @@ import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystem
 import com.imgcstmzr.os.OperatingSystemImage
+import com.imgcstmzr.os.pathString
 import koodies.content
 import koodies.docker.DockerExec
 import koodies.docker.asContainerPath
@@ -220,7 +221,7 @@ private fun Executable<DockerExec>.firstbootScript(
 ): Path = toCommandLine(environment, workingDirectory).firstbootScript()
 
 fun Assertion.Builder<List<Customization>>.containsFirstBootScriptFix() {
-    filterIsInstance<MkdirOption>().any { dir.isEqualTo(FirstBootFix.FIRSTBOOT_SCRIPTS) }
+    filterIsInstance<MkdirOption>().any { dir.pathString.isEqualTo(FirstBootFix.FIRSTBOOT_SCRIPTS.pathString) }
     filterIsInstance<CopyInOption>().any { localPath.content.trim().isEqualTo(FirstBootFix.text.trim()) }
     filterIsInstance<ChmodOption>().any { setsPermission("0755", FirstBootFix.FIRSTBOOT_FIX) }
 }

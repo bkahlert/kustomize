@@ -21,6 +21,7 @@ import koodies.exec.Process.State.Exited.Succeeded
 import koodies.exec.output
 import koodies.io.path.hasContent
 import koodies.io.path.touch
+import koodies.io.path.withDirectoriesCreated
 import koodies.io.path.writeLine
 import koodies.io.path.writeText
 import koodies.io.toAsciiArt
@@ -28,11 +29,12 @@ import koodies.regex.groupValue
 import koodies.shell.ScriptInit
 import koodies.shell.ShellScript
 import koodies.test.CapturedOutput
+import koodies.test.FiveMinutesTimeout
 import koodies.test.SvgFixture
 import koodies.test.SystemIOExclusive
 import koodies.test.ThirtyMinutesTimeout
 import koodies.text.LineSeparators.LF
-import koodies.text.Whitespaces
+import koodies.text.Semantics.formattedAs
 import koodies.text.matchesCurlyPattern
 import koodies.time.format
 import koodies.time.parseableInstant
@@ -42,10 +44,12 @@ import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
+import strikt.assertions.contains
 import strikt.assertions.hasSize
 import strikt.assertions.isGreaterThanOrEqualTo
 import java.nio.file.Path
 import java.time.Instant
+import kotlin.io.path.createFile
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.text.RegexOption.DOT_MATCHES_ALL
@@ -74,6 +78,25 @@ class PatchKtTest {
             {}│
             {}╰──╴✔︎
             """.trimIndent())
+    }
+
+    @FiveMinutesTimeout @DockerRequiring([DockerPiImage::class]) @Test
+    fun `should empty exchange directory before file operations`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
+        osImage.hostPath(LinuxRoot / "home/pi/local.txt").withDirectoriesCreated().createFile().writeText("local")
+        val patch = buildPatch("empty exchange") {
+            files {
+                edit(LinuxRoot / "home/pi/file.txt", { require(it.exists()) }) {
+                    it.writeText("content")
+                }
+            }
+        }
+
+        patch.patch(osImage)
+
+        expectThat(output.all) {
+            contains("Copying in 1 file(s)")
+            not { contains("Copying in 2 file(s)") }
+        }
     }
 
     @ThirtyMinutesTimeout @DockerRequiring([DockerPiImage::class]) @E2E @Test
@@ -180,7 +203,7 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
             val asserter: ((String) -> Boolean)? = this.assertion(output)
             if (asserter != null) {
                 val successfullyTested = asserter(output)
-                if (!successfullyTested) " …"
+                if (!successfullyTested) " …"
                 else null
             } else {
                 null
@@ -189,7 +212,10 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
 
         val container = DockerContainer.from(file)
         kotlin.runCatching {
-            boot(container.name, Program("test", { "testing" }, "testing" to verificationStep))
+            boot(
+                container.name, Program("test", { "testing" }, "testing" to verificationStep),
+                decorationFormatter = { it.formattedAs.debug },
+            )
         }.onFailure { container.remove(force = true) }.getOrThrow()
     }
 
@@ -203,7 +229,7 @@ inline fun Assertion.Builder<OperatingSystemImage>.booted(
  * Returns
  */
 inline fun OperatingSystemProcess.script(
-    outputMarker: String = Whitespaces.ZeroWidthWhitespaces.toString().repeat(5),
+    outputMarker: String = "\u200B\uFEFF".repeat(5),
     crossinline script: ScriptInit,
 ): Sequence<String> {
     val snippet = ShellScript {
@@ -211,7 +237,7 @@ inline fun OperatingSystemProcess.script(
             !"printf '$outputMarker'"
             script()
             !"printf '$outputMarker'"
-        })
+        }, true)
     }.toString()
     command(snippet)
     return Sequence {

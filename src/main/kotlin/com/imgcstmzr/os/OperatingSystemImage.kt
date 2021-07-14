@@ -1,6 +1,7 @@
 package com.imgcstmzr.os
 
 import com.imgcstmzr.cli.Layouts
+import com.imgcstmzr.cli.PATCH_DECORATION_FORMATTER
 import com.imgcstmzr.libguestfs.GuestfishCommandLine
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder.GuestfishCommandsContext
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine
@@ -87,7 +88,7 @@ class OperatingSystemImage(
             verbose by false
         }
         commands(init)
-    }.exec.logging(exchangeDirectory, decorationFormatter = { it.toString().ansi.green.done }, layout = Layouts.DESCRIPTION)
+    }.exec.logging(exchangeDirectory, decorationFormatter = PATCH_DECORATION_FORMATTER, layout = Layouts.DESCRIPTION)
 
     /**
      * @see <a href="https://libguestfs.org/">libguestfs—tools for accessing and modifying virtual machine disk images</a>
@@ -102,7 +103,7 @@ class OperatingSystemImage(
             if (trace) trace { on }
         }
         customizations(init)
-    }.exec.logging(exchangeDirectory, decorationFormatter = { it.toString().ansi.green.done }, layout = Layouts.DESCRIPTION)
+    }.exec.logging(exchangeDirectory, decorationFormatter = PATCH_DECORATION_FORMATTER, layout = Layouts.DESCRIPTION)
 
     fun increaseDiskSpace(size: Size): Unit =
         spanningLine("Increasing disk space: ${path.getSize()} ➜ ${size.formattedAs.input}") {

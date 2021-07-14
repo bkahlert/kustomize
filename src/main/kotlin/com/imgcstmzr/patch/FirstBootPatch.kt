@@ -20,7 +20,7 @@ class FirstBootPatch(
 }", {
     customizeDisk {
         firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o First Boot") {
-            shellScripts.forEach { embed(it) }
+            shellScripts.forEach { embed(it, true) }
             ""
         }
     }

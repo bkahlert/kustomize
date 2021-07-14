@@ -47,9 +47,11 @@ import koodies.builder.context.SkippableCapturingBuilderInterface
 import koodies.callableOnce
 import koodies.collections.head
 import koodies.collections.tail
+import koodies.docker.DockerContainer
 import koodies.docker.DockerExec
 import koodies.docker.DockerRunCommandLine
 import koodies.docker.DockerRunCommandLine.Options
+import koodies.docker.MountOptions
 import koodies.docker.asContainerPath
 import koodies.exec.CommandLine
 import koodies.exec.Executable
@@ -64,11 +66,13 @@ import koodies.text.truncate
 import koodies.text.truncateTo
 import koodies.text.withRandomSuffix
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermission
 import java.util.Collections
 import java.util.TimeZone
 import kotlin.io.path.exists
 import kotlin.io.path.isReadable
 import kotlin.io.path.isWritable
+import kotlin.io.path.setPosixFilePermissions
 import kotlin.io.path.writeLines
 import com.imgcstmzr.libguestfs.LibguestfsOption as LibguestfsCommandLineOption
 
@@ -114,16 +118,16 @@ class VirtCustomizeCommandLine(
             check(isReadable()) { "Disk $this is not readable." }
             check(isWritable()) { "Disk $this is not writable." }
         },
-    val dockerOptions: Options = Options {
-        entrypoint { COMMAND }
-        name { COMMAND.withRandomSuffix() }
-        autoCleanup { on }
-        mounts {
+    val dockerOptions: Options = Options(
+        entryPoint = COMMAND,
+        name = DockerContainer.from(COMMAND.withRandomSuffix()),
+        autoCleanup = true,
+        mounts = MountOptions {
             mountRootForDisk(disk) mountAt "/shared"
             disk mountAt "/images/disk.img"
-        }
-        workingDirectory { "/shared".asContainerPath() }
-    },
+        },
+        workingDirectory = "/shared".asContainerPath(),
+    ),
 ) : Executable<DockerExec> by DockerRunCommandLine(
     LibguestfsImage,
     dockerOptions,

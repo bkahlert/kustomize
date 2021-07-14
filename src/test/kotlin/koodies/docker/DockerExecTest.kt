@@ -1,5 +1,6 @@
 package koodies.docker
 
+import koodies.docker.DockerRunCommandLine.Options
 import koodies.docker.TestImages.Ubuntu
 import koodies.exec.CommandLine
 import koodies.exec.IO
@@ -21,7 +22,7 @@ fun Path.createExec(
     processor: Processor<DockerExec> = spanningProcessor(),
 ): DockerExec =
     CommandLine(command, *args)
-        .dockerized(Ubuntu) { name { "$uniqueId" } }
+        .dockerized(Ubuntu, Options(name = DockerContainer.from("$uniqueId")))
         .exec.processing(workingDirectory = this, processor = processor)
 
 private fun DockerExec.waitForCondition(

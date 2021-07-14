@@ -103,22 +103,6 @@ interface OperatingSystem {
     val shutdownCommand: String get() = DEFAULT_SHUTDOWN_COMMAND
 
     /**
-     * Compiles a special script with a [name] that consists itself of multiple scripts
-     * in the form of labeled [commandBlocks].
-     *
-     * A command block starts with a header (e.g. `: label`) followed by a script.
-     *
-     * Example:
-     * ```shell script
-     * : say "Hello\nWorld""
-     * echo "Hello"
-     * echo "World"
-     * ```
-     */
-    fun compileSetupScript(name: String, commandBlocks: String): Array<Program> =
-        Program.fromSetupScript(name = name, readyPattern, commandBlocks)
-
-    /**
      * Compiles a script with a [name] consisting of [commands] to be executed.
      */
     fun compileScript(name: String, vararg commands: String): Program {

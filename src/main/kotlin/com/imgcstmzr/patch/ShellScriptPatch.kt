@@ -16,7 +16,7 @@ class ShellScriptPatch(
 ) : Patch by buildPatch("${shellScripts.size} Shell Script(s):${shellScripts.mapNotNull { it.name }.map { LF + it }.joinToString("")}", {
     customizeDisk {
         firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o Setup") { osImage ->
-            shellScripts.forEach { embed(it) }
+            shellScripts.forEach { embed(it, true) }
             !osImage.shutdownCommand
         }
     }

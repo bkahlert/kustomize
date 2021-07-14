@@ -7,7 +7,7 @@ import koodies.docker.isSuccessful
 import koodies.exec.IO
 import koodies.exec.ProcessingMode
 import koodies.exec.ProcessingMode.Interactivity.Interactive
-import koodies.exec.ProcessingMode.Synchronicity.Sync
+import koodies.exec.ProcessingMode.Synchronicity.Async
 import koodies.exec.mock.JavaProcessMock
 import koodies.exec.mock.JavaProcessMock.Companion.withIndividuallySlowInput
 import koodies.exec.mock.SlowInputStream.Companion.prompt
@@ -29,10 +29,10 @@ import koodies.unit.bytes
 import koodies.unit.milli
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
-import org.junit.jupiter.api.Timeout
+import org.junit.jupiter.api.parallel.Execution
+import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.assertions.isTrue
 import strikt.assertions.matches
-import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.time.Duration
 
 class OperatingSystemTest {
@@ -107,9 +107,9 @@ class OperatingSystemTest {
         "anything else:",
     ) { asserting { not { matches(OperatingSystem.DEFAULT_DEAD_END_PATTERN) } } }
 
-    @Timeout(30, unit = SECONDS)
     @Slow
     @TestFactory
+    @Execution(CONCURRENT)
     fun `should perform log in and terminate`(uniqueId: UniqueId) = testEach(
         LoginSimulation(2.0, "\n"),
         LoginSimulation(0.5, "\n"),
@@ -174,10 +174,10 @@ class OperatingSystemTest {
         }
 
         val runningOS = OperatingSystemProcessMock(uniqueId.value, process.start(uniqueId.value), this)
-        val shutdownProgram = os.shutdownProgram()
+        val shutdownProgram = os.shutdownProgram().logging()
 
         expecting {
-            runningOS.process(ProcessingMode(Sync, Interactive(false))) { _, process ->
+            runningOS.process(ProcessingMode(Async, Interactive(false))) { _, process ->
                 process { io -> shutdownProgram.compute(runningOS, io) }
             }.waitFor()
         } that {
@@ -201,7 +201,7 @@ data class LoginSimulation(val readerTimeout: Duration, val ioDelay: Duration, v
         0.seconds to "\n",
         0.seconds to "\n",
         0.seconds to "stuff\n",
-        0.seconds to "juergen@raspberrypi:~$ \n",
+        0.seconds to "john@raspberrypi:~$ \n",
     )
 
     fun buildProcess(): JavaProcessMock =

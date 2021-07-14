@@ -55,7 +55,7 @@ object FirstBootWait {
               if [ ! -d "$1" ]; then
                 echo "0"
               else
-                find "$1" -type f | wc -l
+                find "$1" -type f -perm -u+x | wc -l
               fi
             }
             
@@ -68,7 +68,7 @@ object FirstBootWait {
               echo ${'$'}sum 
             }
             
-            firstbootRunning() {    
+            firstbootRunning() {
               printf '${banner("Checking " + directories.joinToString(", ") { it.fileName.pathString })} … '
               sum=$(fileCounts ${directories.joinToString(" ") { "'$it'" }})
               caption=$([ "${'$'}sum" = "0" ] && echo "completed" || echo "${'$'}sum script(s) to go") 

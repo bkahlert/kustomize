@@ -29,13 +29,16 @@ import koodies.builder.BooleanBuilder
 import koodies.builder.BuilderTemplate
 import koodies.builder.Init
 import koodies.builder.build
+import koodies.builder.buildList
 import koodies.builder.context.CapturesMap
 import koodies.builder.context.CapturingContext
 import koodies.collections.head
 import koodies.collections.tail
+import koodies.docker.DockerContainer
 import koodies.docker.DockerExec
 import koodies.docker.DockerRunCommandLine
 import koodies.docker.DockerRunCommandLine.Options
+import koodies.docker.MountOptions
 import koodies.docker.asContainerPath
 import koodies.exec.Executable
 import koodies.io.compress.TarArchiver.tar
@@ -77,15 +80,15 @@ class GuestfishCommandLine(
             check(isReadable()) { "Disk $this is not readable." }
             check(isWritable()) { "Disk $this is not writable." }
         },
-    val dockerOptions: Options = Options {
-        name { COMMAND.withRandomSuffix() }
-        autoCleanup { on }
-        mounts {
+    val dockerOptions: Options = Options(
+        name = DockerContainer.from(COMMAND.withRandomSuffix()),
+        autoCleanup = true,
+        mounts = MountOptions {
             mountRootForDisk(disk) mountAt "/shared"
             disk mountAt "/images/disk.img"
-        }
-        workingDirectory { "/shared".asContainerPath() }
-        custom {
+        },
+        workingDirectory = "/shared".asContainerPath(),
+        custom = buildList {
             if (options.filterIsInstance<TraceOption>().isNotEmpty()) {
                 add("--env")
                 add("LIBGUESTFS_TRACE=1")
@@ -95,7 +98,7 @@ class GuestfishCommandLine(
                 add("LIBGUESTFS_DEBUG=1")
             }
         }
-    },
+    ),
 ) : Executable<DockerExec> by DockerRunCommandLine(
     LibguestfsImage,
     dockerOptions,
@@ -407,7 +410,7 @@ class GuestfishCommandLine(
         open class Composite(val guestfishCommands: List<GuestfishCommand>) :
             GuestfishCommand(
                 guestfishCommands.head.name,
-                koodies.builder.buildList {
+                buildList {
                     addAll(guestfishCommands.head.arguments)
                     add(LineSeparators.LF)
                     guestfishCommands.tail.forEach {
@@ -427,6 +430,7 @@ class GuestfishCommandLine(
              *
              * Multiple local files and directories can be specified. Wildcards cannot be used.
              */
+            @Deprecated("avoid; especially when copying executables since the x flag is not copied")
             class CopyIn(val mkDir: Boolean, remoteDir: DiskPath, vararg val localFiles: Path) :
                 Composite(listOfNotNull(
                     if (mkDir) -GuestfishCommand("mkdir-p", remoteDir.pathString) else null,

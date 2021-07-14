@@ -11,7 +11,11 @@ import com.imgcstmzr.cli.Options.os
 import com.imgcstmzr.libguestfs.LibguestfsImage
 import com.imgcstmzr.os.OperatingSystems
 import com.imgcstmzr.util.Downloader
+import koodies.docker.DockerContainer
 import koodies.docker.DockerRunCommandLine
+import koodies.docker.DockerRunCommandLine.Options
+import koodies.docker.MountOptions
+import koodies.exec.CommandLine
 import koodies.io.path.pathString
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.ANSI.colorize
@@ -57,25 +61,23 @@ class DebugCommand : NoOpCliktCommand(
 
             log(script)
 
-            val z = DockerRunCommandLine {
-                image by LibguestfsImage
-                options {
-                    name { "guestfish" }
-                    autoCleanup { off }
-                    mounts {
+            val z = DockerRunCommandLine(
+                image = LibguestfsImage,
+                options = Options(
+                    name = DockerContainer.from("guestfish"),
+                    autoCleanup = false,
+                    mounts = MountOptions {
                         path.resolve(path.fileName) mountAt "/images/disk.img"
                         path.resolve("shared") mountAt "/shared"
-                    }
-                }
-                commandLine {
-                    arguments {
-                        +"--rw"
-                        +"--add /images/disk.img"
-                        +"--mount /dev/sda2:/"
-                        +"--mount /dev/sda1:/boot"
-                    }
-                }
-            }
+                    },
+                ),
+                executable = CommandLine(
+                    "--rw",
+                    "--add /images/disk.img",
+                    "--mount /dev/sda2:/",
+                    "--mount /dev/sda1:/boot",
+                ),
+            )
             log(z.toString())
         }
     }

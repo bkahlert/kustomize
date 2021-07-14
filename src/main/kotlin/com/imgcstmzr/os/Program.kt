@@ -122,36 +122,6 @@ class Program(
             return "${index + 1}/${commands.size}: $command"
         }
 
-        /**
-         * Converts a setup script to an [Array] of [Program]s.
-         *
-         * The following script is an example of such a script that consist of multiple blocks
-         * each with a description precedes by a colon about the purpose of this code block.
-         *
-         * Example:
-         * ```shell script
-         * sudo -i
-         *
-         * : configure SSH port
-         * sed -i 's/^\#Port 22$/Port 1234/g' /etc/ssh/sshd_config
-         *
-         * : configure
-         * systemctl enable serial-getty@ttyGS0.service
-         *
-         * : remove unused DHCP clients
-         * apt-get purge -qq -m isc-dhcp-client
-         * apt-get purge -y -m udhcpd
-         * apt-get autoremove -y -m
-         * ```
-         */
-        @Deprecated("delete")
-        @Suppress("SpellCheckingInspection")
-        fun fromSetupScript(name: String, readyPattern: Regex, labelledScripts: String): Array<Program> {
-            return splitScripts(labelledScripts).map { labelledScript ->
-                splitLabel(labelledScript).let { (label, script) -> fromScript(label ?: "$name—$script", readyPattern, script) }
-            }.toTypedArray()
-        }
-
         private fun splitScripts(commandBlocks: String) = commandBlocks.trimIndent().split("\\r\n:", "\r:", "\n:")
 
         /**

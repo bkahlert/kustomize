@@ -3,15 +3,16 @@ package com.imgcstmzr.patch
 import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
-import koodies.io.path.writeText
 import koodies.text.LineSeparators
+import koodies.text.LineSeparators.LF
 import koodies.text.LineSeparators.hasTrailingLineSeparator
 import koodies.text.LineSeparators.lines
 import koodies.text.LineSeparators.withTrailingLineSeparator
+import koodies.text.joinLinesToString
 import kotlin.io.path.appendText
 import kotlin.io.path.exists
-import kotlin.io.path.readLines
 import kotlin.io.path.readText
+import kotlin.io.path.writeText
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]
@@ -36,13 +37,12 @@ class AppendToFilesPatch(private val contentToDiskMappings: Map<String, DiskPath
             files {
                 contentToDiskMappings.forEach { (content, path) ->
                     edit(path, {
-                        val actualLines = it.readLines().flatMap { line ->
-                            val lines = line.lines()
-                            lines
-                        }
-                        val expectedLines = content.lines()
+                        val actualLines = it.readText().lines().flatMap { line -> line.lines() }
+                        val expectedLines = content.withTrailingLineSeparator().lines()
                         val actualLastLines = actualLines.takeLast(expectedLines.size)
-                        require(actualLastLines == expectedLines)
+                        require(actualLastLines == expectedLines) {
+                            "Expected:$LF${expectedLines.joinLinesToString()}$LF${LF}Actual:$LF${actualLastLines.joinLinesToString()}"
+                        }
                     }) {
                         if (!it.exists()) {
                             // "Also a newline is added to the end of the LINE string automatically."

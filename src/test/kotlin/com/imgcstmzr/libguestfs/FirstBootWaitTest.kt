@@ -8,11 +8,13 @@ import com.imgcstmzr.os.boot
 import com.imgcstmzr.test.OS
 import koodies.docker.DockerRequiring
 import koodies.docker.ubuntu
+import koodies.exec.RendererProviders
 import koodies.exec.ansiRemoved
 import koodies.exec.exited
 import koodies.exec.io
 import koodies.exec.output
 import koodies.exec.runtime
+import koodies.io.path.executable
 import koodies.junit.UniqueId
 import koodies.jvm.thread
 import koodies.shell.ShellScript
@@ -71,16 +73,28 @@ class FirstBootWaitTest {
         @Slow @Test
         fun `should run until directory is empty`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             resolve("dir").createDirectory().apply {
-                resolve("${fileName}-file1").createFile()
-                resolve("${fileName}-file2").createFile()
+                resolve("${fileName}-file1").createFile().also { it.executable = true }
+                resolve("${fileName}-file2").createFile().also { it.executable = true }
             }.slowlyDeleteFiles()
             resolve("dir2").createDirectory().apply {
-                resolve("${fileName}-file1").createFile()
-                resolve("${fileName}-file2").createFile()
+                resolve("${fileName}-file1").createFile().also { it.executable = true }
+                resolve("${fileName}-file2").createFile().also { it.executable = true }
             }.slowlyDeleteFiles()
-            expecting { ubuntu { "./${scriptFor("dir", "dir2")}" } } that {
+            expecting { ubuntu(RendererProviders.block()) { "./${scriptFor("dir", "dir2")}" } } that {
                 io.output.ansiRemoved.toStringMatchesCurlyPattern("{{}}CHECKING DIR, DIR2 … {} script(s) to go{{}}")
                 io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR, DIR2 … completed")
+                io.output.ansiRemoved.containsIgnoringCase("ALL SCRIPTS COMPLETED")
+            }
+        }
+
+        @Slow @Test
+        fun `should return if no executable is found`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+            resolve("dir").createDirectory().apply {
+                resolve("${fileName}-file1").createFile()
+            }
+            expecting { ubuntu(RendererProviders.block()) { "./${scriptFor("dir")}" } } that {
+                io.output.ansiRemoved.not { contains("script(s) to go") }
+                io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR … completed")
                 io.output.ansiRemoved.containsIgnoringCase("ALL SCRIPTS COMPLETED")
             }
         }

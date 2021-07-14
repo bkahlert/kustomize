@@ -6,8 +6,10 @@ import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.UmountAllC
 import com.imgcstmzr.libguestfs.ImageBuilder.FileSystemType.EXT4
 import com.imgcstmzr.libguestfs.ImageBuilder.FileSystemType.FAT
 import com.imgcstmzr.libguestfs.ImageBuilder.PartitionTableType.MasterBootRecord
+import koodies.docker.DockerContainer.Companion
 import koodies.docker.DockerRunCommandLine
 import koodies.docker.DockerRunCommandLine.Options
+import koodies.docker.MountOptions
 import koodies.io.compress.Archiver.archive
 import koodies.io.compress.GzCompressor.gunzip
 import koodies.io.path.asPath
@@ -115,7 +117,7 @@ object ImageBuilder {
         bootSize: Size = 128.Mebi.bytes,
         partitionTableType: PartitionTableType = MasterBootRecord,
     ): Path = spanning("${Now.emoji} Preparing raw image using the content of ${archive.uriString}. This takes a moment …",
-        decorationFormatter = { it.toString().ansi.gray.done },
+        decorationFormatter = { it.ansi.gray.done },
         blockStyle = Dotted) {
         val tarball = if (archive.hasExtensions("gz")) archive.gunzip(overwrite = true).deleteOnExit() else archive
         require(tarball.hasExtensions("tar")) { "Currently only \"tar\" and \"tar.gz\" files are supported." }
@@ -132,10 +134,10 @@ object ImageBuilder {
             "Size: ${formattedTotalSize.ansi.yellow} — ${"/".ansi.cyan} ${formattedRootSize.ansi.brightYellow} — ${"boot".ansi.cyan} ${formattedBootSize.ansi.brightYellow}"
         })
 
-        DockerRunCommandLine(LibguestfsImage, Options {
-            name { "libguestfs-image-preparation---$imgName" }
-            mounts { archiveDirectory mountAt "/shared" }
-        }, ShellScript {
+        DockerRunCommandLine(LibguestfsImage, Options(
+            name = Companion.from("libguestfs-image-preparation---$imgName"),
+            mounts = MountOptions { archiveDirectory mountAt "/shared" },
+        ), ShellScript {
             line(
                 "guestfish",
                 "-N",

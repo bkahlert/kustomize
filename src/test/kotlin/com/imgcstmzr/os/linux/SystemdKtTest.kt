@@ -7,14 +7,17 @@ import com.imgcstmzr.os.boot
 import com.imgcstmzr.test.OS
 import koodies.docker.DockerRequiring
 import koodies.junit.UniqueId
+import koodies.shell.ShellScript
 import koodies.test.CapturedOutput
 import koodies.test.FifteenMinutesTimeout
 import koodies.test.SystemIOExclusive
 import koodies.text.ANSI.ansiRemoved
+import koodies.text.matchesCurlyPattern
 import koodies.toBaseName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
+import strikt.assertions.any
 import strikt.assertions.contains
 
 @SystemIOExclusive

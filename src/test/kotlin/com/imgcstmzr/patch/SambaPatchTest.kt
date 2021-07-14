@@ -22,6 +22,8 @@ import koodies.test.FifteenMinutesTimeout
 import koodies.test.Smoke
 import koodies.test.withTempDir
 import koodies.text.LineSeparators.lineSequence
+import koodies.unit.Gibi
+import koodies.unit.bytes
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.api.expectThat
@@ -34,7 +36,7 @@ import strikt.assertions.isEqualTo
 
 class SambaPatchTest {
 
-    private val sambaPatch = SambaPatch("the-user", "the-password", true, `read-write`)
+    private val sambaPatch = SambaPatch("pi", "the-password", true, `read-write`)
 
     @Test
     fun `should install samba`(osImage: OperatingSystemImage) {
@@ -58,8 +60,8 @@ class SambaPatchTest {
                     #passwd chat = "*New Password:*" %n\n "*Reenter New Password:*" %n\n "*Password changed.*"
                     
                     [home]
-                    comment = Home of the-user
-                    path = /home/the-user
+                    comment = Home of pi
+                    path = /home/pi
                     writeable=Yes
                     create mask=0744
                     directory mask=0744
@@ -90,7 +92,7 @@ class SambaPatchTest {
                         echo "…"
                         echo "…"
                         pass="the-password"
-                        (echo "${'$'}pass"; echo "${'$'}pass") | smbpasswd -s -a "the-user"
+                        (echo "${'$'}pass"; echo "${'$'}pass") | smbpasswd -s -a "pi"
                     """.trimIndent())
             }
         }
@@ -112,6 +114,7 @@ class SambaPatchTest {
         @OS(RaspberryPiLite) osImage: OperatingSystemImage,
     ) = withTempDir(uniqueId) {
 
+        ImgResizePatch(2.Gibi.bytes).patch(osImage)
         sambaPatch.patch(osImage)
 
         expect {
@@ -140,8 +143,8 @@ class SambaPatchTest {
                         #passwd chat = "*New Password:*" %n\n "*Reenter New Password:*" %n\n "*Password changed.*"
                         
                         [home]
-                        comment = Home of the-user
-                        path = /home/the-user
+                        comment = Home of pi
+                        path = /home/pi
                         writeable=Yes
                         create mask=0744
                         directory mask=0744

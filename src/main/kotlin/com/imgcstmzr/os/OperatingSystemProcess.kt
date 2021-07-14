@@ -1,6 +1,7 @@
 package com.imgcstmzr.os
 
 import com.imgcstmzr.cli.Layouts
+import com.imgcstmzr.cli.PATCH_DECORATION_FORMATTER
 import com.imgcstmzr.os.Program.Companion.compute
 import com.imgcstmzr.os.Program.Companion.format
 import koodies.builder.buildList
@@ -21,7 +22,6 @@ import koodies.exec.input
 import koodies.jvm.thread
 import koodies.kaomoji.Kaomoji
 import koodies.text.ANSI.Formatter
-import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.LineSeparators.LF
 import koodies.text.LineSeparators.trailingLineSeparatorRemoved
 import koodies.text.Semantics.formattedAs
@@ -163,10 +163,14 @@ open class OperatingSystemProcess(
 
 fun Collection<Any>.asExtra(): Renderable =
     Renderable.of(this) { columns, _ ->
-        if (columns != null) {
-            joinToTruncatedString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success).truncateByColumns(columns).toString()
-        } else {
-            joinToString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success)
+        when {
+            isEmpty() -> "◼"
+            columns != null -> {
+                joinToTruncatedString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success).truncateByColumns(columns).toString()
+            }
+            else -> {
+                joinToString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success)
+            }
         }
     }
 
@@ -186,8 +190,8 @@ fun CurrentSpan.log(description: CharSequence, extra: Collection<Program>) =
 fun OperatingSystemImage.boot(
     name: String?,
     vararg programs: Program,
-    nameFormatter: Formatter = Formatter.ToCharSequence,
-    decorationFormatter: Formatter = Formatter { it.toString().ansi.green.done },
+    nameFormatter: Formatter<CharSequence> = Formatter.ToCharSequence,
+    decorationFormatter: Formatter<CharSequence> = PATCH_DECORATION_FORMATTER,
     autoLogin: Boolean = true,
     autoShutdown: Boolean = true,
     blockStyle: (ColumnsLayout, Int) -> BlockStyle = BlockStyles.Solid,
