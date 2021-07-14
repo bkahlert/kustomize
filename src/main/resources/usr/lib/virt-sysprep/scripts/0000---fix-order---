@@ -86,7 +86,7 @@ _failure() { _error "$@"; }
 _last_start=''
 _start="${_cyan}…${_reset}"
 _start() {
-  [ -z "${1:-}" ] && _last_start="$_start" || _last_start="$* $_start"
+  [ -z "${1:-}" ] && _last_start="$_start" || _last_start="$* $_start"
   echo "${_last_start}"
 }
 

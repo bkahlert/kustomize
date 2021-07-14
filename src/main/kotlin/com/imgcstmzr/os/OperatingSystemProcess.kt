@@ -143,7 +143,7 @@ open class OperatingSystemProcess(
      * Initiates the systems immediate shutdown.
      */
     fun shutdown() {
-        enter(os.shutdownCommand)
+        enter(os.shutdownCommand.shellCommand)
         shuttingDown = true
     }
 

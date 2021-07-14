@@ -488,7 +488,7 @@ class VirtCustomizeCommandLine(
              * @see firstBootInstall
              */
             fun firstBootShutdownCommand() {
-                firstBoot("Shutdown") { it.shutdownCommand }
+                firstBoot("Shutdown") { it.shutdownCommand.shellCommand }
             }
 
             /**

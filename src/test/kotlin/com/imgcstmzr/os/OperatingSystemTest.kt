@@ -76,7 +76,9 @@ class OperatingSystemTest {
         "root@raspberrypi:/var/local# ",
         "someone@somewhere:/etc$ ",
         "SomeOne@SomewWere:/some/Dir$ ",
-        "FiFi@raspberrypi:~\$",
+        "john.doe@raspberrypi:~$",
+        "john.doe@demo--rx1E:~$",
+        "john.doe@demo--rx1E:~$ ",
     ) { asserting { matches(OperatingSystem.DEFAULT_READY_PATTERN) } }
 
     @TestFactory
@@ -167,7 +169,7 @@ class OperatingSystemTest {
             echoInput = true,
             baseDelayPerInput = 100.milli.seconds,
         ) {
-            while (!outputStream.toString().contains(os.shutdownCommand)) {
+            while (!outputStream.toString().contains(os.shutdownCommand.shellCommand)) {
                 100.milli.seconds.sleep()
             }
             0

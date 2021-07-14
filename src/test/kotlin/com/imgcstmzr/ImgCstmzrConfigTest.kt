@@ -64,8 +64,8 @@ import java.util.TimeZone
 import kotlin.io.path.div
 
 @SystemProperties(
-    SystemProperty("IMG_CSTMZR_USERNAME", "FiFi"),
-    SystemProperty("IMG_CSTMZR_PASSWORD", "TRIXIbelle1234"),
+    SystemProperty("IMG_CSTMZR_USERNAME", "john.doe"),
+    SystemProperty("IMG_CSTMZR_PASSWORD", "Password1234"),
     SystemProperty("IMG_CSTMZR_WPA_SUPPLICANT", "entry1\nentry2"),
     SystemProperty("INDIVIDUAL_KEY", "B{1:Βϊ𝌁\uD834\uDF57"),
 )
@@ -94,7 +94,7 @@ class ImgCstmzrConfigTest {
                 none { containsAtLeast("ssh-", 2) }
             }
         }
-        expecting { defaultUser } that { isEqualTo(DefaultUser(null, "FiFi", "TRIXIbelle1234")) }
+        expecting { defaultUser } that { isEqualTo(DefaultUser(null, "john.doe", "Password1234")) }
         expecting { samba } that { isEqualTo(Samba(true, `read-write`)) }
         expecting { usbGadgets } that {
             containsExactly(Ethernet(
@@ -108,7 +108,7 @@ class ImgCstmzrConfigTest {
         expecting { files } that {
             isEqualTo(listOf(
                 FileOperation("line 1\nline 2", null, LinuxRoot.boot / "file-of-lines.txt"),
-                FileOperation(null, ImgCstmzr.WorkingDirectory / "src" / "test" / "resources" / "BKAHLERT.png", LinuxRoot.home / "FiFi" / "image.png"),
+                FileOperation(null, ImgCstmzr.WorkingDirectory / "src" / "test" / "resources" / "BKAHLERT.png", LinuxRoot.home / "john.doe" / "image.png"),
             )).any { get { append } isEqualTo ("line 1\nline 2") }
         }
         expecting { setup[0].name } that { isEqualTo("the basics") }
@@ -124,7 +124,7 @@ class ImgCstmzrConfigTest {
             containsExactly(
                 ShellScript(
                     name = "Finalizing A",
-                    content = "echo 'Type X to …'>>${'$'}HOME/first-boot.txt"
+                    content = "echo 'Type X to …'>>${'$'}HOME/first-boot.txt"
                 ),
                 ShellScript(
                     name = "Finalizing B",
@@ -194,9 +194,9 @@ class ImgCstmzrConfigTest {
         }
 
         osImage asserting {
-            get { credentials }.isEqualTo("FiFi" withPassword "TRIXIbelle1234")
+            get { credentials }.isEqualTo("john.doe" withPassword "Password1234")
             mounted {
-                path("/home/FiFi/first-boot.txt") { not { exists() } }
+                path("/home/john.doe/first-boot.txt") { not { exists() } }
             }
             booted {
                 command("echo '👏 🤓 👋'");

@@ -228,7 +228,7 @@ fun Assertion.Builder<List<Customization>>.containsFirstBootScriptFix() {
 
 fun Assertion.Builder<List<Customization>>.containsFirstBootShutdownCommand() {
     filterIsInstance<FirstBootOption>().any {
-        file.content.contains(OperatingSystem.DEFAULT_SHUTDOWN_COMMAND)
+        file.content.contains(OperatingSystem.DEFAULT_SHUTDOWN_COMMAND.shellCommand)
     }
 }
 
