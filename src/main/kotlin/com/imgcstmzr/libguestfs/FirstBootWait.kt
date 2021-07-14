@@ -13,10 +13,9 @@ import koodies.text.Banner.banner
 import kotlin.io.path.pathString
 
 /**
- * Script (stored at [ClassPathFileFixture.path]) which fixes the execution
- * order of first boot scripts created using `virt-customize`.
+ * Script that fixes the execution order of first boot scripts created by `virt-customize`.
  *
- * See script file itself and corresponding test for more details.
+ * See script file itself and corresponding tests for more details.
  *
  * @see <a href="https://libguestfs.org/virt-builder.1.html#first-boot-scripts">First Boot Scripts</a>
  * @see <a href="https://libguestfs.org/virt-customize.1.html">virt-customize - Customize a virtual machine</a>

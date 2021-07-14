@@ -4,6 +4,7 @@ import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import koodies.io.path.copyTo
+import koodies.io.path.isSubPathOf
 import koodies.io.path.requireExists
 import java.nio.file.Path
 
@@ -19,6 +20,7 @@ class CopyFilesPatch(private val hostToDiskMappings: Map<Path, DiskPath>) :
             hostToDiskMappings.forEach { (hostPath, diskPath) ->
                 hostPath.requireExists()
                 copyIn {
+                    require(!hostPath.isSubPathOf(it.exchangeDirectory)) { "$hostPath must be located outside of ${it.exchangeDirectory}" }
                     hostPath.copyTo(it.hostPath(diskPath))
                     diskPath
                 }
@@ -26,5 +28,6 @@ class CopyFilesPatch(private val hostToDiskMappings: Map<Path, DiskPath>) :
         }
 
     }) {
+
     constructor(vararg hostToDiskMappings: Pair<Path, DiskPath>) : this(hostToDiskMappings.toMap())
 }

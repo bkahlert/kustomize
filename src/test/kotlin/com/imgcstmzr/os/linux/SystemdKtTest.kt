@@ -45,12 +45,28 @@ class SystemdKtTest {
                     """))
             }
             osImage.boot(uniqueId.value.toBaseName())
-            expectThat(output.all.ansiRemoved)
-                .contains("Copying: etc/systemd/system/custom.service to /etc/systemd/system")
-                .contains("Linking: /etc/systemd/system/multi-user.target.wants/custom.service -> /etc/systemd/system/custom.service")
-                .contains("Starting custom description")
-                .contains("custom service exec")
-                .contains("Started custom description")
+            expectThat(output.all.ansiRemoved) {
+                contains("Copying: etc/systemd/system/custom.service to /etc/systemd/system")
+                contains("Linking: /etc/systemd/system/multi-user.target.wants/custom.service -> /etc/systemd/system/custom.service")
+                contains("Starting custom description")
+                contains("custom service exec")
+                contains("Started custom description")
+            }
+        }
+    }
+
+    @Nested
+    inner class CopyIn {
+
+        @FifteenMinutesTimeout @DockerRequiring([DockerPiImage::class]) @Test
+        fun `should copy-in file and make it executable`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
+            osImage.virtCustomize {
+                copyIn(ServiceScript("service-script.sh", ShellScript { echo("Hello Service!") }))
+            }
+            osImage.boot(uniqueId.value.toBaseName(), osImage.compileScript("ls", "ls -lisa /etc/systemd/scripts/service-script.sh"))
+            expectThat(output.all.ansiRemoved.lines()) {
+                any { matchesCurlyPattern("{}-rwxr-xr-x 1 root root {} /etc/systemd/scripts/service-script.sh{}") }
+            }
         }
     }
 }
