@@ -30,9 +30,9 @@ import koodies.shell.ScriptInit
 import koodies.shell.ShellScript
 import koodies.test.CapturedOutput
 import koodies.test.FiveMinutesTimeout
+import koodies.test.SixtyMinutesTimeout
 import koodies.test.SvgFixture
 import koodies.test.SystemIOExclusive
-import koodies.test.ThirtyMinutesTimeout
 import koodies.text.LineSeparators.LF
 import koodies.text.Semantics.formattedAs
 import koodies.text.matchesCurlyPattern
@@ -40,6 +40,7 @@ import koodies.time.format
 import koodies.time.parseableInstant
 import koodies.unit.Giga
 import koodies.unit.bytes
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
@@ -99,7 +100,7 @@ class PatchKtTest {
         }
     }
 
-    @ThirtyMinutesTimeout @DockerRequiring([DockerPiImage::class]) @E2E @Test
+    @SixtyMinutesTimeout @DockerRequiring([DockerPiImage::class]) @E2E @Test
     fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val timestamp = Instant.now()
 

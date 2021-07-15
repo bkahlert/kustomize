@@ -69,7 +69,7 @@ annotation class FifteenMinutesTimeout
 /**
  * JUnit 5 annotation to denote slow that, which may take up to 30 minutes.
  */
-@Timeout(30, unit = TimeUnit.MINUTES)
+@Timeout(60, unit = TimeUnit.MINUTES)
 @Target(
     AnnotationTarget.ANNOTATION_CLASS,
     AnnotationTarget.FUNCTION,
@@ -78,4 +78,4 @@ annotation class FifteenMinutesTimeout
     AnnotationTarget.CLASS
 )
 @Retention(AnnotationRetention.RUNTIME)
-annotation class ThirtyMinutesTimeout
+annotation class SixtyMinutesTimeout

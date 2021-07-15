@@ -159,12 +159,9 @@ done
 _end "$_ok"
 
 _start "Moving back firstboot script copies so that alphabetical order reflects the intended order"
-find "${SCRIPTS_DIR}" -type f | while read -r _FILE; do
-  _FILE="$(basename "${_FILE}")"
-
-  # ignore this script itself, non-regular files and all non-executables
-  if [ ! "${SCRIPTS_DIR}/${_FILE}" = "${BASENAME}" ] && [ -x "${SCRIPTS_DIR}/${_FILE}" ] && [ -f "${SCRIPTS_DIR}/${_FILE}" ]; then
-
+for _FILE in "${SCRIPTS_DIR}"/*; do # same for loop as in first boot script
+  if test -x "${_FILE}"; then
+    _FILE="$(basename "${_FILE}")"
     _COPY="$(find "${COPIES_DIR}" -type f -printf '%p\n' | sort -n | head -n 1)"
 
     printf "\n  "
@@ -179,12 +176,13 @@ done
 _end "$_ok"
 
 _start "Contents of files swapped but enumeration order kept"
-find "${SCRIPTS_DIR}" -type f | while read -r _FILE; do
-  _FILE=$(basename "${_FILE}")
-  # ignore this script itself, non-regular files and all non-executables
-  if [ ! "${SCRIPTS_DIR}/${_FILE}" = "${BASENAME}" ] && [ -x "${SCRIPTS_DIR}/${_FILE}" ] && [ -f "${SCRIPTS_DIR}/${_FILE}" ]; then
+for _FILE in "${SCRIPTS_DIR}"/*; do # same for loop as in first boot script
+  if test -x "${_FILE}"; then
+    _FILE="$(basename "${_FILE}")"
     printf "\n  "
     _item "${SCRIPTS_DIR}/${_FILE}"
+    printf "\n"
+    sed 's/^/    /' <"${SCRIPTS_DIR}/${_FILE}"
   fi
 done
 _end "$_ok"

@@ -18,8 +18,8 @@ import com.imgcstmzr.test.OS
 import koodies.content
 import koodies.docker.DockerRequiring
 import koodies.junit.UniqueId
+import koodies.test.SixtyMinutesTimeout
 import koodies.test.Smoke
-import koodies.test.ThirtyMinutesTimeout
 import koodies.test.withTempDir
 import koodies.text.LineSeparators.lineSequence
 import koodies.unit.Gibi
@@ -108,7 +108,7 @@ class SambaPatchTest {
         expectThat(sambaPatch).customizations(osImage) { containsFirstBootScriptFix() }
     }
 
-    @ThirtyMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @E2E @Smoke @Test
+    @SixtyMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @E2E @Smoke @Test
     fun `should install samba and set password and shutdown`(
         uniqueId: UniqueId,
         @OS(RaspberryPiLite) osImage: OperatingSystemImage,

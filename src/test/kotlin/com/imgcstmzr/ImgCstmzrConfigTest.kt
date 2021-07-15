@@ -37,11 +37,11 @@ import koodies.net.div
 import koodies.net.ip4Of
 import koodies.shell.ShellScript
 import koodies.test.CapturedOutput
+import koodies.test.SixtyMinutesTimeout
 import koodies.test.Smoke
 import koodies.test.SystemIOExclusive
 import koodies.test.SystemProperties
 import koodies.test.SystemProperty
-import koodies.test.ThirtyMinutesTimeout
 import koodies.test.asserting
 import koodies.test.containsAtLeast
 import koodies.test.test
@@ -116,20 +116,16 @@ class ImgCstmzrConfigTest {
             containsExactly(
                 ShellScript(
                     name = "Configuring SSH port",
-                    content = """sed -i 's/^\#Port 22${'$'}/Port 1234/g' /etc/ssh/sshd_config"""
+                    content = "echo 'setup'"
                 ),
             )
         }
         expecting { firstBoot } that {
             containsExactly(
                 ShellScript(
-                    name = "Finalizing A",
+                    name = "Finalizing",
                     content = "echo 'Type X to …'>>${'$'}HOME/first-boot.txt"
                 ),
-                ShellScript(
-                    name = "Finalizing B",
-                    content = "startx"
-                )
             )
         }
         expecting { flashDisk } that { isEqualTo("auto") }
@@ -140,7 +136,7 @@ class ImgCstmzrConfigTest {
         val imgCstmzrConfig = loadImgCstmzrConfig()
         val patch = imgCstmzrConfig.toPatches()
         expectThat(CompositePatch(patch)) {
-            get { name }.contains("Increase Disk Space to 4 GB").contains("Change Username")
+            get { name }.contains("Increase Disk Space to 4 GiB").contains("Change Username")
             get { diskPreparations }.isNotEmpty()
             get { diskCustomizations }.isNotEmpty()
             get { diskOperations }.isNotEmpty()
@@ -184,7 +180,7 @@ class ImgCstmzrConfigTest {
     }
 
     @SystemIOExclusive
-    @ThirtyMinutesTimeout @E2E @Smoke @Test
+    @SixtyMinutesTimeout @E2E @Smoke @Test
     fun `should apply patches`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
         val imgCstmzrConfig = loadImgCstmzrConfig()
         val patches = imgCstmzrConfig.toOptimizedPatches()
@@ -195,15 +191,14 @@ class ImgCstmzrConfigTest {
 
         osImage asserting {
             get { credentials }.isEqualTo("john.doe" withPassword "Password1234")
-            mounted {
-                path("/home/john.doe/first-boot.txt") { not { exists() } }
-            }
             booted {
                 command("echo '👏 🤓 👋'");
                 { true }
             }
+            mounted {
+                path("/home/john.doe/first-boot.txt") { not { exists() } }
+            }
         }
-        output.all.contains("FINALIZING A")
-        output.all.contains("FINALIZING B")
+        output.all.contains("FINALIZING")
     }
 }

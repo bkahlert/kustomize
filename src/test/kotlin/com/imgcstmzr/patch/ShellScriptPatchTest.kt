@@ -42,7 +42,7 @@ class ShellScriptPatchTest {
                 contains("echo ${banner("Test").singleQuoted}")
                 contains("touch /root/shell-script-test.txt")
                 contains("echo 'Frank was here; went to get beer.' > /root/shell-script-test.txt")
-                contains(OperatingSystem.DEFAULT_SHUTDOWN_COMMAND)
+                contains(OperatingSystem.DEFAULT_SHUTDOWN_COMMAND.shellCommand)
             }
         }
     }
