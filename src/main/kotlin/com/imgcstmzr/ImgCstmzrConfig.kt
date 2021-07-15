@@ -87,7 +87,7 @@ data class ImgCstmzrConfig(
                 .run { fallbacks.fold(this, Config::withFallback) }
                 .resolve()
             val extract = resolve
-                .extract<UnsafeImgCstmzrConfig>("img-cstmztn")
+                .extract<UnsafeImgCstmzrConfig>("img")
             val convert = extract
                 .convert()
             return convert

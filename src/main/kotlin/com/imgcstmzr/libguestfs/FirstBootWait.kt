@@ -1,7 +1,7 @@
 package com.imgcstmzr.libguestfs
 
-import com.imgcstmzr.libguestfs.FirstBootFix.FIRSTBOOT_SCRIPTS
-import com.imgcstmzr.libguestfs.FirstBootFix.FIRSTBOOT_SCRIPTS_DONE
+import com.imgcstmzr.libguestfs.FirstBootOrderFix.FIRSTBOOT_SCRIPTS
+import com.imgcstmzr.libguestfs.FirstBootOrderFix.FIRSTBOOT_SCRIPTS_DONE
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder.CustomizationsContext
 import com.imgcstmzr.os.DiskDirectory
 import com.imgcstmzr.os.linux.ServiceScript

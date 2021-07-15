@@ -320,8 +320,8 @@ class VirtCustomizeCommandLine(
         class CustomizationsContext(override val captures: CapturesMap) : CapturingContext() {
 
             private val fixFirstBootOrder by callableOnce {
-                copyIn(FirstBootFix.FIRSTBOOT_FIX, FirstBootFix.text)
-                chmods { "0755" to FirstBootFix.FIRSTBOOT_FIX }
+                copyIn(FirstBootOrderFix.FIRSTBOOT_FIX, FirstBootOrderFix.text)
+                chmods { "0755" to FirstBootOrderFix.FIRSTBOOT_FIX }
             }
 
             private val waitForFirstBoot by callableOnce { waitForFirstBootToComplete() }

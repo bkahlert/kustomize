@@ -104,9 +104,9 @@ class VirtCustomizeCommandLineTest {
             '--mkdir' \
             '/usr/lib/virt-sysprep/scripts' \
             '--copy-in' \
-            'usr/lib/virt-sysprep/scripts/0000---fix-order---:/usr/lib/virt-sysprep/scripts' \
+            'usr/lib/virt-sysprep/scripts/0000---first-boot-order-fix:/usr/lib/virt-sysprep/scripts' \
             '--chmod' \
-            '0755:/usr/lib/virt-sysprep/scripts/0000---fix-order---' \
+            '0755:/usr/lib/virt-sysprep/scripts/0000---first-boot-order-fix' \
             '--mkdir' \
             '/etc/systemd/system' \
             '--copy-in' \
@@ -158,12 +158,12 @@ class VirtCustomizeCommandLineTest {
 
     @Test
     fun `should store firstboot scripts in absolute guest shared dir`(osImage: OperatingSystemImage) {
-        val scriptLocation = osImage.exchangeDirectory.resolve("usr/lib/virt-sysprep/scripts/0000---fix-order---")
+        val scriptLocation = osImage.exchangeDirectory.resolve("usr/lib/virt-sysprep/scripts/0000---first-boot-order-fix")
         check(!scriptLocation.exists())
 
         createVirtCustomizeCommandLine(osImage)
 
-        expectThat(scriptLocation).hasContent(FirstBootFix.text + LF)
+        expectThat(scriptLocation).hasContent(FirstBootOrderFix.text + LF)
     }
 }
 
@@ -221,9 +221,9 @@ private fun Executable<DockerExec>.firstbootScript(
 ): Path = toCommandLine(environment, workingDirectory).firstbootScript()
 
 fun Assertion.Builder<List<Customization>>.containsFirstBootScriptFix() {
-    filterIsInstance<MkdirOption>().any { dir.pathString.isEqualTo(FirstBootFix.FIRSTBOOT_SCRIPTS.pathString) }
-    filterIsInstance<CopyInOption>().any { localPath.content.trim().isEqualTo(FirstBootFix.text.trim()) }
-    filterIsInstance<ChmodOption>().any { setsPermission("0755", FirstBootFix.FIRSTBOOT_FIX) }
+    filterIsInstance<MkdirOption>().any { dir.pathString.isEqualTo(FirstBootOrderFix.FIRSTBOOT_SCRIPTS.pathString) }
+    filterIsInstance<CopyInOption>().any { localPath.content.trim().isEqualTo(FirstBootOrderFix.text.trim()) }
+    filterIsInstance<ChmodOption>().any { setsPermission("0755", FirstBootOrderFix.FIRSTBOOT_FIX) }
 }
 
 fun Assertion.Builder<List<Customization>>.containsFirstBootShutdownCommand() {

@@ -71,11 +71,11 @@ import kotlin.io.path.div
 )
 class ImgCstmzrConfigTest {
 
-    private fun loadImgCstmztn(): ImgCstmzrConfig =
+    private fun loadImgCstmzrConfig(): ImgCstmzrConfig =
         ImgCstmzrConfig.load(ConfigFactory.parseResources("sample.conf"))
 
     @TestFactory
-    fun `should deserialize`() = test(loadImgCstmztn()) {
+    fun `should deserialize`() = test(loadImgCstmzrConfig()) {
         expecting { trace } that { isTrue() }
         expecting { name } that { isEqualTo("Sample Project") }
         expecting { os } that { isEqualTo(RaspberryPiLite) }
@@ -137,8 +137,8 @@ class ImgCstmzrConfigTest {
 
     @Test
     fun `should create patch`() {
-        val imgCstmztn = loadImgCstmztn()
-        val patch = imgCstmztn.toPatches()
+        val imgCstmzrConfig = loadImgCstmzrConfig()
+        val patch = imgCstmzrConfig.toPatches()
         expectThat(CompositePatch(patch)) {
             get { name }.contains("Increase Disk Space to 4 GB").contains("Change Username")
             get { diskPreparations }.isNotEmpty()
@@ -151,8 +151,8 @@ class ImgCstmzrConfigTest {
 
     @Test
     fun `should optimize patches`() {
-        val imgCstmztn = loadImgCstmztn()
-        val patches = imgCstmztn.toOptimizedPatches()
+        val imgCstmzrConfig = loadImgCstmzrConfig()
+        val patches = imgCstmzrConfig.toOptimizedPatches()
         expectThat(patches) {
             hasSize(5)
             get { get(0) }.isA<CompositePatch>().get { this.patches.map { it::class } }
@@ -186,8 +186,8 @@ class ImgCstmzrConfigTest {
     @SystemIOExclusive
     @ThirtyMinutesTimeout @E2E @Smoke @Test
     fun `should apply patches`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
-        val imgCstmztn = loadImgCstmztn()
-        val patches = imgCstmztn.toOptimizedPatches()
+        val imgCstmzrConfig = loadImgCstmzrConfig()
+        val patches = imgCstmzrConfig.toOptimizedPatches()
 
         patches.forEach {
             with(it) { patch(osImage) }

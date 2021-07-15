@@ -230,7 +230,7 @@ https://github.com/garthvh/ansible-raspi-playbooks/blob/master/playbooks/new-def
 
 ### Demo
 
-- `FirstBootFixTest.kt`
+- `FirstBootOrderFixTest.kt`
 - `Size.kt`
 - `NonBlockingReader.kt`
 - `OperatingSystemTest.kt`

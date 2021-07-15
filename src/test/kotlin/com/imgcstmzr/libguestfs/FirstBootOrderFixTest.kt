@@ -17,7 +17,7 @@ import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.readText
 
-class FirstBootFixTest {
+class FirstBootOrderFixTest {
 
     private fun Path.runFourScripts(customization: Path.() -> Unit = {}): String {
         val outputFile = "test.txt"
@@ -52,7 +52,7 @@ class FirstBootFixTest {
 
     @TwoMinutesTimeout @Test
     fun `should fix execution order`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(runFourScripts { FirstBootFix.copyToDirectory(this).executable = true }).isEqualTo("""
+        expectThat(runFourScripts { FirstBootOrderFix.copyToDirectory(this).executable = true }).isEqualTo("""
             a
             b
             1
