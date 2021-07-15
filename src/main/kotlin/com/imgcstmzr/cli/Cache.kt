@@ -20,6 +20,7 @@ import koodies.time.minutes
 import koodies.time.parseInstant
 import koodies.tracing.rendering.spanningLine
 import koodies.tracing.spanning
+import koodies.unit.BinaryPrefixes
 import java.nio.file.Path
 import java.time.Instant
 import java.time.Instant.now
@@ -169,7 +170,7 @@ private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireVal
 
     override fun toString(): String {
         val files = dir.listDirectoryEntriesRecursively().filter { it.isRegularFile() }
-        return "working directory ${dir.fileName} containing ${files.size} file(s) / ${dir.getSize()}"
+        return "working directory ${dir.fileName} containing ${files.size} file(s) / ${dir.getSize().toString(BinaryPrefixes)}"
     }
 
     companion object {

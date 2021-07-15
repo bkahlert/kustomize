@@ -14,10 +14,10 @@ import koodies.io.path.duplicate
 import koodies.io.path.getSize
 import koodies.io.path.pathString
 import koodies.runtime.isDebugging
-import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.Semantics.formattedAs
 import koodies.tracing.rendering.spanningLine
 import koodies.tracing.spanning
+import koodies.unit.BinaryPrefixes
 import koodies.unit.Mega
 import koodies.unit.Size
 import koodies.unit.bytes
@@ -38,16 +38,14 @@ class OperatingSystemImage(
     private val path: Path,
 ) : OperatingSystem by operatingSystem {
 
-    override val fullName: String get() = "${operatingSystem.fullName}${if (updatedCredentials) "*".ansi.magenta else ""} ／ ${path.toUri()}"
-    val shortName: String get() = "${operatingSystem.fullName}${if (updatedCredentials) "*".ansi.magenta else ""} ／ ${path.fileName}"
+    override val fullName: String get() = "${operatingSystem.fullName} ／ ${path.toUri()}"
+    val shortName: String get() = "${operatingSystem.fullName} ／ ${path.fileName}"
     val fileName: String = path.fileName.pathString
     val readable: Boolean get() = path.isReadable()
     val directory: Path get() = path.parent
     val file: Path get() = path
     val size: Size get() = path.getSize()
     fun duplicate(): OperatingSystemImage = operatingSystem based (path.duplicate())
-
-    private val updatedCredentials: Boolean get() = credentials != defaultCredentials
 
     /**
      * Contains the directory used to exchange with this image.
@@ -106,11 +104,11 @@ class OperatingSystemImage(
     }.exec.logging(exchangeDirectory, decorationFormatter = PATCH_DECORATION_FORMATTER, layout = Layouts.DESCRIPTION)
 
     fun increaseDiskSpace(size: Size): Unit =
-        spanningLine("Increasing disk space: ${path.getSize()} ➜ ${size.formattedAs.input}") {
+        spanningLine("Increasing disk space: ${path.getSize().toString(BinaryPrefixes)} ➜ ${size.toString(BinaryPrefixes).formattedAs.input}") {
             var missing = size - path.getSize()
             require(missing >= Size.ZERO) {
                 throw IAE(
-                    "Requested disk space is ${-missing} smaller than current size of ${path.fileName} (${path.getSize()}).",
+                    "Requested disk space is ${-missing} smaller than current size of ${path.fileName} (${path.getSize().toString(BinaryPrefixes)}).",
                     "Decreasing an image's disk space is currently not supported.",
                 )
             }
@@ -119,12 +117,12 @@ class OperatingSystemImage(
 
             val bytesPerStep = 200.Mega.bytes
             val oneHundredMegaBytes = ByteArray(bytesPerStep.wholeBytes.toInt())
-            log(path.getSize().toString())
+            log(path.getSize().toString(BinaryPrefixes))
             while (missing > 0.bytes) {
                 val write = if (missing < bytesPerStep) ByteArray(missing.wholeBytes.toInt()) { 0 } else oneHundredMegaBytes
                 path.appendBytes(write)
                 missing -= write.size
-                log(path.getSize().toString())
+                log(path.getSize().toString(BinaryPrefixes))
             }
             path.getSize()
         }
