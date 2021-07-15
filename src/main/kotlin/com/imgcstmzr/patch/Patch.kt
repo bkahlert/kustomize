@@ -19,6 +19,7 @@ import com.imgcstmzr.patch.Patch.Companion.FileSystemOperationsCollector.FileSys
 import com.imgcstmzr.patch.Patch.Companion.ImgOperationsCollector.ImgOperationsContext
 import com.imgcstmzr.patch.Patch.Companion.PatchContext
 import com.imgcstmzr.patch.Patch.Companion.ProgramsBuilder.ProgramsContext
+import koodies.asString
 import koodies.builder.BooleanBuilder
 import koodies.builder.BuilderTemplate
 import koodies.builder.Init
@@ -35,6 +36,7 @@ import koodies.text.withRandomSuffix
 import koodies.tracing.CurrentSpan
 import koodies.tracing.rendering.BlockStyles.Dotted
 import koodies.tracing.rendering.BlockStyles.Solid
+import koodies.tracing.rendering.Renderable
 import koodies.tracing.rendering.ReturnValues
 import koodies.tracing.rendering.spanningLine
 import koodies.tracing.spanning
@@ -54,7 +56,7 @@ interface Patch {
     /**
      * Name of the patch.
      */
-    val name: String
+    val name: CharSequence
 
     /**
      * Operations to be applied on the actual raw `.img` file
@@ -104,7 +106,12 @@ interface Patch {
      */
     fun patch(osImage: OperatingSystemImage, trace: Boolean = false): ReturnValues<Throwable> {
         this@Patch.trace = trace
-        return spanning(name, nameFormatter = NAME_FORMATTER, blockStyle = Solid) {
+        return spanning(
+            name,
+            nameFormatter = NAME_FORMATTER,
+            contentFormatter = PATCH_DECORATION_FORMATTER,
+            blockStyle = Solid
+        ) {
             applyDiskPreparations(osImage) +
                 applyDiskCustomizations(osImage) +
                 applyDiskAndFileOperations(osImage) +
@@ -432,7 +439,7 @@ fun List<Patch>.patch(osImage: OperatingSystemImage): ReturnValues<Throwable> =
 
 data class SimplePatch(
     override var trace: Boolean,
-    override val name: String,
+    override val name: CharSequence,
     override val diskPreparations: List<DiskOperation>,
     override val diskCustomizations: List<(OperatingSystemImage) -> Customization>,
     override val diskOperations: List<(OperatingSystemImage) -> GuestfishCommand>,
@@ -455,16 +462,22 @@ data class SimplePatch(
 class CompositePatch(
     val patches: Collection<Patch>,
 ) : Patch by SimplePatch(
-    patches.any { it.trace },
-    patches.joinToString(LineSeparators.LF) { it.name },
-    patches.flatMap { it.diskPreparations }.toList(),
-    patches.flatMap { it.diskCustomizations }.toList(),
-    patches.flatMap { it.diskOperations }.toList(),
-    patches.flatMap { it.fileOperations }.toList(),
-    patches.flatMap { it.osPreparations }.toList(),
-    patches.any { patch -> patch.osBoot },
-    patches.flatMap { it.osOperations }.toList(),
-)
+    trace = patches.any { it.trace },
+    name = Renderable.of(patches.joinToString(LineSeparators.LF) { it.name }) { _, _ -> this },
+    diskPreparations = patches.flatMap { it.diskPreparations }.toList(),
+    diskCustomizations = patches.flatMap { it.diskCustomizations }.toList(),
+    diskOperations = patches.flatMap { it.diskOperations }.toList(),
+    fileOperations = patches.flatMap { it.fileOperations }.toList(),
+    osPreparations = patches.flatMap { it.osPreparations }.toList(),
+    osBoot = patches.any { patch -> patch.osBoot },
+    osOperations = patches.flatMap { it.osOperations }.toList(),
+) {
+    constructor(vararg patches: Patch) : this(patches.toList())
+
+    override fun toString(): String = asString {
+        "patches" to patches
+    }
+}
 
 class FileOperation(val target: DiskPath, val verifier: (Path) -> Unit, val handler: (Path) -> Unit) {
 

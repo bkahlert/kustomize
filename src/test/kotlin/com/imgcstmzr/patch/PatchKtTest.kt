@@ -81,6 +81,29 @@ class PatchKtTest {
             """.trimIndent())
     }
 
+    @Nested
+    inner class CompositePatchTest {
+
+        @Test
+        fun `should show all patch names`(osImage: OperatingSystemImage, output: CapturedOutput) {
+            val patch = CompositePatch(
+                buildPatch("Patch 1") {},
+                buildPatch("Patch 2") {},
+                buildPatch("Patch 3") {},
+                buildPatch("Patch 4") {},
+                buildPatch("Patch 5") {},
+            )
+            patch.patch(osImage)
+            expectThat(output.all) {
+                contains("╭──╴Patch 1")
+                contains("│   Patch 2")
+                contains("│   Patch 3")
+                contains("│   Patch 4")
+                contains("│   Patch 5")
+            }
+        }
+    }
+
     @FiveMinutesTimeout @DockerRequiring([DockerPiImage::class]) @Test
     fun `should empty exchange directory before file operations`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
         osImage.hostPath(LinuxRoot / "home/pi/local.txt").withDirectoriesCreated().createFile().writeText("local")
