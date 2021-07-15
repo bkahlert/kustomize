@@ -186,7 +186,7 @@ fun <T : Patch> Assertion.Builder<T>.matches(
             0
         )
     },
-    fileSystemOperationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> FileOperation>>.() -> Unit = { hasSize(0) },
+    fileSystemOperationsAssertion: Assertion.Builder<List<FileOperation>>.() -> Unit = { hasSize(0) },
     programsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Program>>.() -> Unit = { hasSize(0) },
 ) = compose("matches") {
     diskOperationsAssertion(get { diskPreparations })

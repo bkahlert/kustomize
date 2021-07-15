@@ -51,8 +51,6 @@ import kotlin.io.path.isRegularFile
  */
 interface Patch {
 
-    var trace: Boolean
-
     /**
      * Name of the patch.
      */
@@ -80,7 +78,7 @@ interface Patch {
      * Operations on files of the externally, not immediately
      * accessible file system.
      */
-    val fileOperations: List<(OperatingSystemImage) -> FileOperation>
+    val fileOperations: List<FileOperation>
 
     /**
      * Operations to be applied on the actual raw `.img` file
@@ -105,19 +103,18 @@ interface Patch {
      * Detailed logging can be activated using [trace].
      */
     fun patch(osImage: OperatingSystemImage, trace: Boolean = false): ReturnValues<Throwable> {
-        this@Patch.trace = trace
         return spanning(
             name,
             nameFormatter = NAME_FORMATTER,
             contentFormatter = PATCH_DECORATION_FORMATTER,
             blockStyle = Solid
         ) {
-            applyDiskPreparations(osImage) +
-                applyDiskCustomizations(osImage) +
-                applyDiskAndFileOperations(osImage) +
-                applyOsPreparations(osImage) +
-                applyOsBoot(osImage) +
-                applyOsOperations(osImage)
+            applyDiskPreparations(osImage, trace) +
+                applyDiskCustomizations(osImage, trace) +
+                applyDiskAndFileOperations(osImage, trace) +
+                applyOsPreparations(osImage, trace) +
+                applyOsBoot(osImage, trace) +
+                applyOsOperations(osImage, trace)
         }
     }
 
@@ -139,25 +136,25 @@ interface Patch {
         return ReturnValues()
     }
 
-    fun applyDiskPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
+    fun applyDiskPreparations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
         if (diskPreparations.isEmpty()) return none("Disk Preparation")
         return collectingExceptions("Disk Preparation (${diskPreparations.size})") {
             collectingExceptions(diskPreparations) { _, preparation -> preparation(osImage) }
         }
     }
 
-    fun applyDiskCustomizations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
+    fun applyDiskCustomizations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
         if (diskCustomizations.isEmpty()) return none("Disk Customization")
         return collectingExceptions("Disk Customization (${diskCustomizations.size})") {
             if (diskCustomizations.isNotEmpty()) {
-                osImage.virtCustomize(this@Patch.trace) {
+                osImage.virtCustomize(trace) {
                     diskCustomizations.forEach { customizationOption(it) }
                 }
             }
         }
     }
 
-    fun applyDiskAndFileOperations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
+    fun applyDiskAndFileOperations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
         val exceptions = ReturnValues<Throwable>()
 
         val diskOperationsAndFilePreparationOperations = diskOperations.size + fileOperations.size
@@ -166,8 +163,8 @@ interface Patch {
         osImage.hostPath(LinuxRoot).deleteDirectoryEntriesRecursively()
         collectingExceptions("Disk Operations (${diskOperationsAndFilePreparationOperations})") {
             if (diskOperationsAndFilePreparationOperations > 0) {
-                osImage.guestfish(this@Patch.trace) {
-                    fileOperations.map { it(osImage).target }.forEach { sourcePath ->
+                osImage.guestfish(trace) {
+                    fileOperations.map { it.file }.forEach { sourcePath ->
                         copyOut { sourcePath }
                     }
                     diskOperations.forEach { command(it) }
@@ -182,15 +179,15 @@ interface Patch {
             val filesToPatch = fileOperations.toMutableList()
             if (filesToPatch.isNotEmpty()) {
                 collectingExceptions(filesToPatch) { _, fileOperation ->
-                    val path = fileOperation(osImage).target
-                    fileOperation(osImage).invoke(osImage.hostPath(path))
+                    val path = fileOperation.file
+                    fileOperation(osImage.hostPath(path))
                 }.forEach { exceptions.add(it) }
             }
 
             val changedFiles = countFiles()
             if (changedFiles > 0) {
                 collectingExceptions("Copying in $changedFiles file(s)") {
-                    osImage.guestfish(this@Patch.trace) {
+                    osImage.guestfish(trace) {
                         tarIn()
                     }
                 }.also { exceptions.addAll(it) }
@@ -200,14 +197,14 @@ interface Patch {
         return exceptions
     }
 
-    fun applyOsPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
+    fun applyOsPreparations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
         if (osPreparations.isEmpty()) return none("OS Preparation")
         return collectingExceptions("OS Preparation (${osPreparations.size})") {
             collectingExceptions(osPreparations) { _, preparation -> preparation(osImage) }
         }
     }
 
-    fun applyOsBoot(osImage: OperatingSystemImage): ReturnValues<Throwable> {
+    fun applyOsBoot(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
         if (!osBoot) return none("OS Boot")
         else return runCatching {
             osImage.boot(
@@ -222,7 +219,7 @@ interface Patch {
     }
 
 
-    fun applyOsOperations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
+    fun applyOsOperations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
         if (osOperations.isEmpty()) return none("OS Operations")
         else return runCatching {
             osImage.boot(
@@ -302,8 +299,7 @@ interface Patch {
 
         override fun BuildContext.build() = ::PatchContext {
             { name: String ->
-                SimplePatch(
-                    false,
+                DeprecatedSimplePatch(
                     name,
                     ::prepareDisk.eval(),
                     ::customizeDisk.eval(),
@@ -437,13 +433,12 @@ fun List<Patch>.patch(osImage: OperatingSystemImage): ReturnValues<Throwable> =
     }
 
 
-data class SimplePatch(
-    override var trace: Boolean,
+data class DeprecatedSimplePatch(
     override val name: CharSequence,
     override val diskPreparations: List<DiskOperation>,
     override val diskCustomizations: List<(OperatingSystemImage) -> Customization>,
     override val diskOperations: List<(OperatingSystemImage) -> GuestfishCommand>,
-    override val fileOperations: List<(OperatingSystemImage) -> FileOperation>,
+    override val fileOperations: List<FileOperation>,
     override val osPreparations: List<DiskOperation>,
     override val osBoot: Boolean,
     override val osOperations: List<(OperatingSystemImage) -> Program>,
@@ -461,8 +456,7 @@ data class SimplePatch(
  */
 class CompositePatch(
     val patches: Collection<Patch>,
-) : Patch by SimplePatch(
-    trace = patches.any { it.trace },
+) : Patch by DeprecatedSimplePatch(
     name = Renderable.of(patches.joinToString(LineSeparators.LF) { it.name }) { _, _ -> this },
     diskPreparations = patches.flatMap { it.diskPreparations }.toList(),
     diskCustomizations = patches.flatMap { it.diskCustomizations }.toList(),
@@ -479,20 +473,60 @@ class CompositePatch(
     }
 }
 
-class FileOperation(val target: DiskPath, val verifier: (Path) -> Unit, val handler: (Path) -> Unit) {
+/**
+ * An [operation] that is applied to the specified [file]
+ * if considered necessary by the given [verify].
+ */
+data class FileOperation(
+    /**
+     * The file that needs to be operated on.
+     */
+    val file: DiskPath,
+    /**
+     * Used to check if [file] is in the desired state. If it is not, an
+     * exception describing the problem is expected to be thrown.
+     */
+    val verify: (Path) -> Unit,
+    /**
+     * Used to transition [file] to the desired state.
+     * Only invoked if [verify] throws an exception.
+     */
+    val operation: (Path) -> Unit,
+) {
 
-    operator fun invoke(target: Path) {
-        spanningLine(target.fileName.toString()) {
+    /**
+     * Checks if [localFile] is in the desired state using [verify]
+     * and if not, applies [operation] it and verifies again.
+     *
+     * Throws if the final verification fails.
+     */
+    operator fun invoke(localFile: Path) {
+        spanningLine(localFile.fileName.toString()) {
             log("Action needed?")
-            val result = runCatching { verifier.invoke(target) }
-            if (result.isFailure) {
+            runCatching { verify(localFile) }.recover {
                 log("Yes".formattedAs.warning)
 
-                handler.invoke(target)
+                operation(localFile)
 
                 log("Verifying")
-                verifier.invoke(target)
+                verify(localFile)
             }
         }
+    }
+}
+
+
+data class SimplePatch(
+    override val name: CharSequence,
+    override val diskPreparations: List<(OperatingSystemImage) -> Unit>,
+    override val diskCustomizations: List<(OperatingSystemImage) -> Customization>,
+    override val diskOperations: List<(OperatingSystemImage) -> GuestfishCommand>,
+    override val fileOperations: List<FileOperation>,
+    override val osPreparations: List<(OperatingSystemImage) -> Unit>,
+    override val osBoot: Boolean,
+    override val osOperations: List<(OperatingSystemImage) -> Program>,
+) : Patch {
+    override val operationCount by lazy {
+        diskPreparations.size + diskCustomizations.size + diskOperations.size + fileOperations.size + osOperations.size
     }
 }
