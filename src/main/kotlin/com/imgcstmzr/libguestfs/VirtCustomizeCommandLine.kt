@@ -133,16 +133,16 @@ class VirtCustomizeCommandLine(
         COMMAND,
         *DiskOption("/images/disk.img".asPath()).toTypedArray(),
         *options.filter { it !is DiskOption }.flatten().toTypedArray(),
-        *customizations.map { it.relativize(disk) }.flatten().toTypedArray())) {
-
-    override val name: CharSequence
-        get() = customizations
+        *customizations.map { it.relativize(disk) }.flatten().toTypedArray(),
+        name = customizations
             .map { option -> "${option.arguments.head}(${option.arguments.tail.joinToString(", ")})" }
             .run { map { it.truncateTo(25).truncate(25).toString() } }
-            .asExtra()
+            .asExtra()),
+) {
 
     override fun toString(): String = toCommandLine().toString()
 
+    // TODO remove builder
     companion object : BuilderTemplate<VirtCustomizeCommandLineContext, (OperatingSystemImage) -> VirtCustomizeCommandLine>() {
 
         private const val COMMAND = "virt-customize"

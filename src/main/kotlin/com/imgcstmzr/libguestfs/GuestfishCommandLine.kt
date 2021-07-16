@@ -44,10 +44,6 @@ import koodies.exec.Executable
 import koodies.io.compress.TarArchiver.tar
 import koodies.io.path.asPath
 import koodies.io.path.pathString
-import koodies.kaomoji.Kaomoji
-import koodies.kaomoji.Kaomoji.Companion.Fish
-import koodies.math.ceilDiv
-import koodies.math.floorDiv
 import koodies.shell.HereDoc
 import koodies.shell.ShellScript
 import koodies.text.LineSeparators
@@ -102,7 +98,11 @@ class GuestfishCommandLine(
 ) : Executable<DockerExec> by DockerRunCommandLine(
     LibguestfsImage,
     dockerOptions,
-    ShellScript {
+    ShellScript(when (size) {
+        0 -> "No $COMMAND operations"
+        1 -> "One $COMMAND operation"
+        else -> "$size $COMMAND operations"
+    }) {
 
         val nonDiskOptions: List<GuestfishOption> = options.filter { it !is DiskOption } +
             listOf(
@@ -136,16 +136,9 @@ class GuestfishCommandLine(
     }
 ) {
 
-    override val name: CharSequence = when (size) {
-        0 -> "No $COMMAND operations ${Kaomoji.random().fishing(Kaomoji.EMPTY)}"
-        1 -> "One $COMMAND operation ${Kaomoji.random().fishing(Fish.`❮°«⠶＞˝`)}"
-        else -> "$size $COMMAND operations ${
-            Kaomoji.random().fishing(Kaomoji("❮", "°", "⠶".repeat(size floorDiv 3) + "«", "⠶".repeat(size * 2 ceilDiv 3), "＞", "˝"))
-        }"
-    }
-
     override fun toString(): String = toCommandLine().toString()
 
+    // TODO remove builder
     companion object : BuilderTemplate<GuestfishCommandLineContext, (OperatingSystemImage) -> GuestfishCommandLine>() {
 
         private const val COMMAND = "guestfish"

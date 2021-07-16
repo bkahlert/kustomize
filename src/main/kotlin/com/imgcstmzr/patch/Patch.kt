@@ -161,96 +161,81 @@ data class SimplePhasedPatch(
                 applyOsOperations(osImage)
         }
 
-    private fun <T, R : Any> collectingExceptions(
-        operations: List<T>,
-        transform: (index: Int, operation: T) -> R?,
+    private fun collectingExceptions(
+        name: CharSequence,
+        operationCount: Int,
+        transform: CurrentSpan.((Throwable) -> Unit) -> Unit,
     ): ReturnValues<Throwable> =
-        operations.mapIndexedNotNull { index, operation: T ->
-            runCatching {
-                transform(index, operation)
-            }.exceptionOrNull()
-        }.let { ReturnValues(*it.toTypedArray()) }
-
-    private fun collectingExceptions(name: String, transform: CurrentSpan.() -> Unit): ReturnValues<Throwable> =
-        spanning(name, blockStyle = Dotted) { runCatching(transform).fold({ ReturnValues() }, { ReturnValues(it) }) }
-
-    private fun none(operationName: String): ReturnValues<Throwable> {
-        tracing { log("◼ $operationName".ansi.gray) }
-        return ReturnValues()
-    }
-
-    private fun applyDiskPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
-        if (diskPreparations.isEmpty()) return none("Disk Preparation")
-        return collectingExceptions("Disk Preparation (${diskPreparations.size})") {
-            collectingExceptions(diskPreparations) { _, preparation -> preparation(osImage) }
-        }
-    }
-
-    private fun applyDiskCustomizations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
-        if (diskCustomizations.isEmpty()) return none("Disk Customization")
-        return collectingExceptions("Disk Customization (${diskCustomizations.size})") {
-            if (diskCustomizations.isNotEmpty()) {
-                osImage.virtCustomize(trace) {
-                    diskCustomizations.forEach { customizationOption(it) }
-                }
+        if (operationCount == 0) {
+            tracing { log("◼ $name".ansi.gray) }
+            ReturnValues()
+        } else {
+            spanning("$name ($operationCount)", blockStyle = Dotted) {
+                val exceptions = mutableListOf<Throwable>()
+                runCatching { transform { exceptions.add(it) } }.onFailure { exceptions.add(it) }
+                ReturnValues(*exceptions.toTypedArray())
             }
         }
-    }
+
+    private fun <T> Collection<T>.collectingExceptions(
+        name: CharSequence,
+        transform: CurrentSpan.(index: Int, operation: T) -> Unit,
+    ): ReturnValues<Throwable> =
+        collectingExceptions(name, size) { exceptionCallback ->
+            mapIndexedNotNull { index, operation: T ->
+                runCatching { transform(index, operation) }.exceptionOrNull()?.also(exceptionCallback)
+            }
+        }
+
+    private fun applyDiskPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
+        diskPreparations.collectingExceptions("Disk Preparation") { _, preparation ->
+            preparation(osImage)
+        }
+
+    private fun applyDiskCustomizations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
+        collectingExceptions("Disk Customization", diskCustomizations.size) {
+            osImage.virtCustomize(trace) {
+                diskCustomizations.forEach { customizationOption(it) }
+            }
+        }
 
     private fun applyDiskAndFileOperations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
         val exceptions = ReturnValues<Throwable>()
 
-        val diskOperationsAndFilePreparationOperations = diskOperations.size + fileOperations.size
-        if (diskOperationsAndFilePreparationOperations == 0) return none("Disk Operations")
-
         osImage.hostPath(LinuxRoot).deleteDirectoryEntriesRecursively()
-        collectingExceptions("Disk Operations (${diskOperationsAndFilePreparationOperations})") {
-            if (diskOperationsAndFilePreparationOperations > 0) {
-                osImage.guestfish(trace) {
-                    fileOperations.map { it.file }.forEach { sourcePath ->
-                        copyOut { sourcePath }
-                    }
-                    diskOperations.forEach { command(it) }
-                }
+        collectingExceptions("Disk Operations", diskOperations.size + fileOperations.size) {
+            osImage.guestfish(trace) {
+                fileOperations.forEach { (file) -> copyOut { file } }
+                diskOperations.forEach { command(it) }
             }
         }.also { exceptions.addAll(it) }
 
         fun countFiles() = osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().filter { it.isRegularFile() }.size
-        osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively()
-        val fileOperationsCount = fileOperations.size + if (countFiles() > 0) 1 else 0
-        collectingExceptions("File Operations ($fileOperationsCount)") {
-            val filesToPatch = fileOperations.toMutableList()
-            if (filesToPatch.isNotEmpty()) {
-                @Suppress("Destructure")
-                collectingExceptions(filesToPatch) { _, fileOperation ->
-                    val path = fileOperation.file
-                    fileOperation(osImage.hostPath(path))
-                }.forEach { exceptions.add(it) }
+        val fileOperationsCount = if (countFiles() > 0) fileOperations.size + 1 else fileOperations.size
+        collectingExceptions("File Operations", fileOperationsCount) { exceptionCallback ->
+            @Suppress("Destructure")
+            fileOperations.forEach { fileOperation ->
+                kotlin.runCatching { fileOperation(osImage.hostPath(fileOperation.file)) }.onFailure(exceptionCallback)
             }
 
             val changedFiles = countFiles()
             if (changedFiles > 0) {
-                collectingExceptions("Copying in $changedFiles file(s)") {
-                    osImage.guestfish(trace) {
-                        tarIn()
-                    }
-                }.also { exceptions.addAll(it) }
+                spanningLine("Copying in $changedFiles file(s)") {
+                    osImage.guestfish(trace) { tarIn() }
+                }
             }
-        }
+        }.also { exceptions.addAll(it) }
 
         return exceptions
     }
 
-    private fun applyOsPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
-        if (osPreparations.isEmpty()) return none("OS Preparation")
-        return collectingExceptions("OS Preparation (${osPreparations.size})") {
-            collectingExceptions(osPreparations) { _, preparation -> preparation(osImage) }
+    private fun applyOsPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
+        osPreparations.collectingExceptions("OS Preparations") { _, osPreparation ->
+            osPreparation(osImage)
         }
-    }
 
-    private fun applyOsBoot(osImage: OperatingSystemImage): ReturnValues<Throwable> {
-        if (!osBoot) return none("OS Boot")
-        else return runCatching {
+    private fun applyOsBoot(osImage: OperatingSystemImage): ReturnValues<Throwable> =
+        collectingExceptions("OS Boot", if (osBoot) 1 else 0) {
             osImage.boot(
                 name.withRandomSuffix(),
                 nameFormatter = NAME_FORMATTER,
@@ -259,13 +244,11 @@ data class SimplePhasedPatch(
                 autoLogin = false,
                 autoShutdown = false,
             )
-        }.fold({ ReturnValues() }, { ReturnValues(it) })
-    }
+        }
 
 
-    private fun applyOsOperations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
-        if (osOperations.isEmpty()) return none("OS Operations")
-        else return runCatching {
+    private fun applyOsOperations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
+        collectingExceptions("OS Operations", osOperations.size) {
             osImage.boot(
                 name.withRandomSuffix(),
                 *osOperations.map { it(osImage) }.toTypedArray(),
@@ -275,8 +258,7 @@ data class SimplePhasedPatch(
                 autoLogin = true,
                 autoShutdown = true,
             )
-        }.fold({ ReturnValues() }, { ReturnValues(it) })
-    }
+        }
 
     companion object {
         private val NAME_FORMATTER = Formatter<CharSequence> { it.ansi.cyan }
