@@ -1,6 +1,5 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.cli.PATCH_DECORATION_FORMATTER
 import com.imgcstmzr.libguestfs.GuestfishCommandLine
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder
@@ -22,19 +21,19 @@ import koodies.builder.Init
 import koodies.builder.build
 import koodies.builder.context.CapturesMap
 import koodies.builder.context.CapturingContext
+import koodies.debug.trace
 import koodies.io.path.deleteDirectoryEntriesRecursively
 import koodies.io.path.listDirectoryEntriesRecursively
-import koodies.text.ANSI.Formatter
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.Banner.banner
 import koodies.text.LineSeparators
 import koodies.text.Semantics.formattedAs
 import koodies.text.withRandomSuffix
 import koodies.tracing.CurrentSpan
-import koodies.tracing.rendering.BlockStyles.Dotted
-import koodies.tracing.rendering.BlockStyles.Solid
 import koodies.tracing.rendering.Renderable
 import koodies.tracing.rendering.ReturnValues
+import koodies.tracing.rendering.Styles.Dotted
+import koodies.tracing.rendering.Styles.Solid
 import koodies.tracing.rendering.spanningLine
 import koodies.tracing.spanning
 import koodies.tracing.tracing
@@ -127,7 +126,7 @@ interface PhasedPatch : Patch {
         /**
          * Builds a new [Patch].
          */
-        fun build(name: String, init: Init<PhasedPatchBuilder.Context>): PhasedPatch = PhasedPatchBuilder(name).build(init)
+        fun build(name: String, init: Init<PhasedPatchBuilder.PhasedPatchContext>): PhasedPatch = PhasedPatchBuilder(name).build(init)
     }
 }
 
@@ -147,11 +146,10 @@ data class SimplePhasedPatch(
     override val operationCount: Int = diskPreparations.size + diskCustomizations.size + diskOperations.size + fileOperations.size + osOperations.size
 
     override fun patch(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
-        spanning(
-            name,
-            nameFormatter = NAME_FORMATTER,
-            contentFormatter = PATCH_DECORATION_FORMATTER,
-            blockStyle = Solid
+        spanning(name,
+            nameFormatter = { it.ansi.cyan.done },
+            decorationFormatter = { it.ansi.cyan.done },
+            style = Solid
         ) {
             applyDiskPreparations(osImage) +
                 applyDiskCustomizations(osImage, trace) +
@@ -170,7 +168,10 @@ data class SimplePhasedPatch(
             tracing { log("◼ $name".ansi.gray) }
             ReturnValues()
         } else {
-            spanning("$name ($operationCount)", blockStyle = Dotted) {
+            spanning("$name ($operationCount)",
+                nameFormatter = { it.ansi.brightCyan.done },
+                decorationFormatter = { it.ansi.cyan.done },
+                style = Dotted) {
                 val exceptions = mutableListOf<Throwable>()
                 runCatching { transform { exceptions.add(it) } }.onFailure { exceptions.add(it) }
                 ReturnValues(*exceptions.toTypedArray())
@@ -202,15 +203,19 @@ data class SimplePhasedPatch(
     private fun applyDiskAndFileOperations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
         val exceptions = ReturnValues<Throwable>()
 
+        osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().trace("BEFORE")
+
         osImage.hostPath(LinuxRoot).deleteDirectoryEntriesRecursively()
         collectingExceptions("Disk Operations", diskOperations.size + fileOperations.size) {
             osImage.guestfish(trace) {
-                fileOperations.forEach { (file) -> copyOut { file } }
+                @Suppress("Destructure")
+                fileOperations.forEach { fileOperation -> copyOut { fileOperation.file } }
                 diskOperations.forEach { command(it) }
             }
         }.also { exceptions.addAll(it) }
 
         fun countFiles() = osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().filter { it.isRegularFile() }.size
+        osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().trace("BEFORE COPY")
         val fileOperationsCount = if (countFiles() > 0) fileOperations.size + 1 else fileOperations.size
         collectingExceptions("File Operations", fileOperationsCount) { exceptionCallback ->
             @Suppress("Destructure")
@@ -220,7 +225,7 @@ data class SimplePhasedPatch(
 
             val changedFiles = countFiles()
             if (changedFiles > 0) {
-                spanningLine("Copying in $changedFiles file(s)") {
+                spanning("Copying in $changedFiles file(s)") {
                     osImage.guestfish(trace) { tarIn() }
                 }
             }
@@ -238,9 +243,7 @@ data class SimplePhasedPatch(
         collectingExceptions("OS Boot", if (osBoot) 1 else 0) {
             osImage.boot(
                 name.withRandomSuffix(),
-                nameFormatter = NAME_FORMATTER,
-                decorationFormatter = PATCH_DECORATION_FORMATTER,
-                blockStyle = Dotted,
+                style = Dotted,
                 autoLogin = false,
                 autoShutdown = false,
             )
@@ -252,29 +255,23 @@ data class SimplePhasedPatch(
             osImage.boot(
                 name.withRandomSuffix(),
                 *osOperations.map { it(osImage) }.toTypedArray(),
-                nameFormatter = NAME_FORMATTER,
-                decorationFormatter = PATCH_DECORATION_FORMATTER,
-                blockStyle = Dotted,
+                style = Dotted,
                 autoLogin = true,
                 autoShutdown = true,
             )
         }
-
-    companion object {
-        private val NAME_FORMATTER = Formatter<CharSequence> { it.ansi.cyan }
-    }
 }
 
 /**
  * Builder for instances of [PhasedPatch].
  */
-class PhasedPatchBuilder(private val name: CharSequence) : BuilderTemplate<PhasedPatchBuilder.Context, PhasedPatch>() {
+class PhasedPatchBuilder(private val name: CharSequence) : BuilderTemplate<PhasedPatchBuilder.PhasedPatchContext, PhasedPatch>() {
 
     /** Context for building instances of [PhasedPatch]. */
     @VirtCustomizeDsl
     @GuestfishDsl
     @Suppress("PublicApiImplicitType")
-    class Context(override val captures: CapturesMap) : CapturingContext() {
+    class PhasedPatchContext(override val captures: CapturesMap) : CapturingContext() {
 
         /**
          * Operations to be applied on the actual raw `.img` file
@@ -320,7 +317,7 @@ class PhasedPatchBuilder(private val name: CharSequence) : BuilderTemplate<Phase
         val runPrograms by OsOperationsBuilder default emptyList()
     }
 
-    override fun BuildContext.build(): PhasedPatch = ::Context {
+    override fun BuildContext.build(): PhasedPatch = ::PhasedPatchContext {
         SimplePhasedPatch(
             name,
             ::prepareDisk.eval(),
@@ -334,11 +331,11 @@ class PhasedPatchBuilder(private val name: CharSequence) : BuilderTemplate<Phase
     }
 
     /** Builds image operations. */
-    object ImageOperationsBuilder : BuilderTemplate<ImageOperationsBuilder.Context, List<(OperatingSystemImage) -> Unit>>() {
+    object ImageOperationsBuilder : BuilderTemplate<ImageOperationsBuilder.ImageOperationsContext, List<(OperatingSystemImage) -> Unit>>() {
 
         @Suppress("PublicApiImplicitType")
         /** Context for building image operations. */
-        class Context(override val captures: CapturesMap) : CapturingContext() {
+        class ImageOperationsContext(override val captures: CapturesMap) : CapturingContext() {
 
             /**
              * Operations applied to the given [OperatingSystemImage].
@@ -378,22 +375,17 @@ class PhasedPatchBuilder(private val name: CharSequence) : BuilderTemplate<Phase
             }
         }
 
-        override fun BuildContext.build(): List<(OperatingSystemImage) -> Unit> = ::Context {
+        override fun BuildContext.build(): List<(OperatingSystemImage) -> Unit> = ::ImageOperationsContext {
             ::diskOperation.evalAll()
         }
     }
 
     /** Builder for instances of [FileOperation]. */
-    object FileOperationsBuilder : BuilderTemplate<FileOperationsBuilder.Context, List<(OperatingSystemImage) -> FileOperation>>() {
+    object FileOperationsBuilder : BuilderTemplate<FileOperationsBuilder.FileOperationsContext, List<FileOperation>>() {
 
         /** Context for building instances of [FileOperation]. */
         @Suppress("PublicApiImplicitType")
-        class Context(override val captures: CapturesMap) : CapturingContext() {
-
-            /**
-             * File-based operations to be applied to the [OperatingSystemImage].
-             */
-            val fileOperation by function<(OperatingSystemImage) -> FileOperation>()
+        class FileOperationsContext(private val fileOperations: MutableList<FileOperation>) {
 
             /**
              * Adds a [FileOperation] that edits the given [path] using the given [operations]
@@ -402,20 +394,18 @@ class PhasedPatchBuilder(private val name: CharSequence) : BuilderTemplate<Phase
              * That is, if the [validator] does not throw, [path] is considered already respectively successfully changed.
              */
             fun edit(path: DiskPath, validator: (Path) -> Unit, operations: (Path) -> Unit) =
-                fileOperation { FileOperation(path, validator, operations) }
+                fileOperations.add(FileOperation(path, validator, operations))
         }
 
-        override fun BuildContext.build(): List<(OperatingSystemImage) -> FileOperation> = ::Context {
-            ::fileOperation.evalAll()
-        }
+        override fun BuildContext.build(): List<FileOperation> = mutableListOf<FileOperation>().also { FileOperationsContext(it) }
     }
 
     /** Builder for OS operations. */
-    object OsOperationsBuilder : BuilderTemplate<OsOperationsBuilder.Context, List<(OperatingSystemImage) -> Program>>() {
+    object OsOperationsBuilder : BuilderTemplate<OsOperationsBuilder.OsOperationsContext, List<(OperatingSystemImage) -> Program>>() {
 
         /** Context for building OS operations. */
         @Suppress("PublicApiImplicitType")
-        class Context(override val captures: CapturesMap) : CapturingContext() {
+        class OsOperationsContext(override val captures: CapturesMap) : CapturingContext() {
 
             /**
              * [Program] list to be executed inside of the running [OperatingSystemImage].
@@ -440,7 +430,7 @@ class PhasedPatchBuilder(private val name: CharSequence) : BuilderTemplate<Phase
                 programs { osImage: OperatingSystemImage -> osImage.compileScript(name, *commandLines) }
         }
 
-        override fun BuildContext.build(): List<(OperatingSystemImage) -> Program> = ::Context {
+        override fun BuildContext.build(): List<(OperatingSystemImage) -> Program> = ::OsOperationsContext {
             ::programs.evalAll()
         }
     }

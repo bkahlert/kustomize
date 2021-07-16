@@ -30,7 +30,7 @@ import koodies.text.quoted
 import koodies.text.spaced
 import koodies.time.Now
 import koodies.time.hours
-import koodies.tracing.rendering.BlockStyles.Dotted
+import koodies.tracing.rendering.Styles.Dotted
 import koodies.tracing.rendering.spanningLine
 import koodies.tracing.spanning
 import koodies.unit.BinaryPrefixes
@@ -118,7 +118,7 @@ object ImageBuilder {
         partitionTableType: PartitionTableType = MasterBootRecord,
     ): Path = spanning("${Now.emoji} Preparing raw image using the content of ${archive.uriString}. This takes a moment …",
         decorationFormatter = { it.ansi.gray.done },
-        blockStyle = Dotted) {
+        style = Dotted) {
         val tarball = if (archive.hasExtensions("gz")) archive.gunzip(overwrite = true).deleteOnExit() else archive
         require(tarball.hasExtensions("tar")) { "Currently only \"tar\" and \"tar.gz\" files are supported." }
 

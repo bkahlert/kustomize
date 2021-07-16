@@ -15,7 +15,7 @@ import koodies.io.path.deleteOnExit
 import koodies.io.selfCleaning
 import koodies.text.Semantics.formattedAs
 import koodies.time.hours
-import koodies.tracing.rendering.BlockStyles.Dotted
+import koodies.tracing.rendering.Styles.Dotted
 import koodies.tracing.spanning
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
@@ -44,7 +44,7 @@ open class FixtureResolverExtension : TypeBasedParameterResolver<OperatingSystem
         val autoDelete = annotation?.autoDelete ?: true
         spanning(
             "Provisioning ${operatingSystem.fullName.formattedAs.input}",
-            blockStyle = Dotted,
+            style = Dotted,
         ) {
             operatingSystem.getCopy(extensionContext.uniqueId).apply {
                 if (autoDelete) file.deleteOnExit()

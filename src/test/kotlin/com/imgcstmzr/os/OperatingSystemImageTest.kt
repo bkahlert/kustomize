@@ -144,10 +144,7 @@ class OperatingSystemImageTest {
     inner class VirtCustomize {
 
         @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Smoke @Test
-        fun `should set hostname`(
-            @OS(RaspberryPiLite) osImage: OperatingSystemImage,
-            output: CapturedOutput,
-        ) {
+        fun `should set hostname`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
             osImage.virtCustomize {
                 hostname { "test-machine" }
             }

@@ -1,5 +1,7 @@
 package com.imgcstmzr.libguestfs
 
+import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder
+import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOptions
 import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
@@ -78,12 +80,9 @@ class GuestfishCommandLineTest {
     }
 }
 
-internal fun createGuestfishCommand(osImage: OperatingSystemImage): GuestfishCommandLine = GuestfishCommandLine.build(osImage) {
-    options {
-        disk { it.file }
-    }
-
-    commands {
+internal fun createGuestfishCommand(osImage: OperatingSystemImage): GuestfishCommandLine = GuestfishCommandLine(
+    GuestfishOptions(osImage.file),
+    GuestfishCommandsBuilder {
         custom("!mkdir", "-p")
 
         copyIn { LinuxRoot.home / "pi" / ".ssh" / "known_hosts" }
@@ -98,8 +97,8 @@ internal fun createGuestfishCommand(osImage: OperatingSystemImage): GuestfishCom
         rmDir { LinuxRoot / "rm" / "dir" }
         umountAll()
         exit()
-    }
-}
+    }.map { it(osImage) },
+)
 
 
 class GuestAssertions(private val assertions: MutableList<Pair<DiskPath, Assertion.Builder<Path>.() -> Unit>>) {

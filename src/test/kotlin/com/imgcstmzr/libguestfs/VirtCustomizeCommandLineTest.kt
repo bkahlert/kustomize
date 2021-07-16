@@ -7,8 +7,10 @@ import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBoot
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootInstallOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.MkdirOption
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder
 import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
+import com.imgcstmzr.os.LinuxRoot.etc
 import com.imgcstmzr.os.OperatingSystem
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.pathString
@@ -71,7 +73,7 @@ class VirtCustomizeCommandLineTest {
             'bkahlert/libguestfs@sha256:e8fdf16c69a9155b0e30cdc9b2f872232507f5461be2e7dff307f4c1b50faa20' \
             '--add' \
             '/images/disk.img' \
-            '--verbose' \
+            '--colors' \
             '-x' \
             '--append-line' \
             '/etc/sudoers.d/privacy:Defaults        lecture = never' \
@@ -167,15 +169,15 @@ class VirtCustomizeCommandLineTest {
     }
 }
 
-internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): VirtCustomizeCommandLine = VirtCustomizeCommandLine.build(osImage) {
-    options {
-        disk { it.file }
-        quiet { off }
-        verbose { on }
-        trace { on }
-    }
-    customizations {
-        appendLine { "Defaults        lecture = never" to LinuxRoot.etc / "sudoers.d" / "privacy" }
+internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): VirtCustomizeCommandLine = VirtCustomizeCommandLine(
+    VirtCustomizeCommandLine.Options(
+        osImage.file,
+        quiet = false,
+        verbose = true,
+        trace = true,
+    ),
+    CustomizationsBuilder {
+        appendLine { "Defaults        lecture = never" to etc / "sudoers.d" / "privacy" }
 
         chmods { "0664" to LinuxRoot / "chmod-file" }
         chmods { "0664" to LinuxRoot / "other" / "file" }
@@ -186,7 +188,7 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
         copyIn(LinuxRoot / "some/file")
         delete { LinuxRoot / "delete" / "file1" }
         delete { LinuxRoot / "delete" / "dir" / "2" }
-        edit { LinuxRoot.etc / "dnf" / "dnf.conf" to "s/gpgcheck=1/gpgcheck=0/" }
+        edit { etc / "dnf" / "dnf.conf" to "s/gpgcheck=1/gpgcheck=0/" }
         hostname { "the-machine" }
         firstBoot {
             """
@@ -209,8 +211,8 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
         timeZoneId { "Europe/Berlin" }
         touch { LinuxRoot / "touch" / "file" }
         write { LinuxRoot / "write" / "file" to "write content" }
-    }
-}
+    }.map { it(osImage) },
+)
 
 private fun CommandLine.firstbootScript(): Path =
     commandLineParts.single { it.contains("script-") }.asPath()

@@ -37,7 +37,7 @@ class PasswordPatchTest {
     fun `should provide password change command`(osImage: OperatingSystemImage) {
         val passwordPatch = PasswordPatch("pi", "po")
         val expected = Customization.PasswordOption.byString("pi", "po")
-        expectThat(passwordPatch).matches(customizationsAssertion = { first().get { invoke(osImage) }.isEqualTo(expected) })
+        expectThat(passwordPatch).matches(diskCustomizationsAssertion = { first().get { invoke(osImage) }.isEqualTo(expected) })
     }
 
     @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class]) @E2E @Test

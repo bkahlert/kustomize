@@ -2,7 +2,6 @@ package com.imgcstmzr.libguestfs
 
 import com.imgcstmzr.libguestfs.FirstBootWait.waitForFirstBootToComplete
 import com.imgcstmzr.libguestfs.LibguestfsOption.Companion.relativize
-import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Companion.VirtCustomizeCommandLineContext
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.AppendLineOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.ChmodOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.CommandsFromFileOption
@@ -29,24 +28,14 @@ import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Option.DiskOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Option.QuietOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Option.TraceOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Option.VerboseOption
-import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.OptionsBuilder.VirtCustomizeOptionsContext
 import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemImage.Companion.mountRootForDisk
-import com.imgcstmzr.os.asExtra
-import koodies.builder.BooleanBuilder
-import koodies.builder.BooleanBuilder.BooleanValue
-import koodies.builder.BooleanBuilder.OnOff.Context
 import koodies.builder.BuilderTemplate
-import koodies.builder.SkippableBuilder
-import koodies.builder.build
 import koodies.builder.context.CapturesMap
 import koodies.builder.context.CapturingContext
-import koodies.builder.context.SkippableCapturingBuilderInterface
 import koodies.callableOnce
-import koodies.collections.head
-import koodies.collections.tail
 import koodies.docker.DockerContainer
 import koodies.docker.DockerExec
 import koodies.docker.DockerRunCommandLine
@@ -62,8 +51,6 @@ import koodies.io.text
 import koodies.shell.ShellScript
 import koodies.shell.ShellScript.ScriptContext
 import koodies.text.LineSeparators.lines
-import koodies.text.truncate
-import koodies.text.truncateTo
 import koodies.text.withRandomSuffix
 import java.nio.file.Path
 import java.util.Collections
@@ -107,22 +94,15 @@ annotation class VirtCustomizeDsl
  * @see <a href="https://libguestfs.org/virt-customize.1.html">virt-customize - Customize a virtual machine</a>
  */
 class VirtCustomizeCommandLine(
-    val options: List<Option>,
+    val options: Options,
     val customizations: List<Customization>,
-    val disk: Path = options.filterIsInstance<DiskOption>().map { it.disk }
-        .also { disks -> check(disks.size == 1) { "The $COMMAND command must add exactly one disk. ${disks.size} found: ${disks.joinToString(", ")}." } }
-        .single().apply {
-            check(exists()) { "Disk $this does no exist." }
-            check(isReadable()) { "Disk $this is not readable." }
-            check(isWritable()) { "Disk $this is not writable." }
-        },
-    val dockerOptions: Options = Options(
+    val dockerOptions: DockerRunCommandLine.Options = Options(
         entryPoint = COMMAND,
         name = DockerContainer.from(COMMAND.withRandomSuffix()),
         autoCleanup = true,
         mounts = MountOptions {
-            mountRootForDisk(disk) mountAt "/shared"
-            disk mountAt "/images/disk.img"
+            mountRootForDisk(options.disk) mountAt "/shared"
+            options.disk mountAt "/images/disk.img"
         },
         workingDirectory = "/shared".asContainerPath(),
     ),
@@ -133,97 +113,57 @@ class VirtCustomizeCommandLine(
         COMMAND,
         *DiskOption("/images/disk.img".asPath()).toTypedArray(),
         *options.filter { it !is DiskOption }.flatten().toTypedArray(),
-        *customizations.map { it.relativize(disk) }.flatten().toTypedArray(),
-        name = customizations
-            .map { option -> "${option.arguments.head}(${option.arguments.tail.joinToString(", ")})" }
-            .run { map { it.truncateTo(25).truncate(25).toString() } }
-            .asExtra()),
+        *customizations.map { it.relativize(options.disk) }.flatten().toTypedArray(),
+        name = when (customizations.size) {
+            0 -> "No $COMMAND operations"
+            1 -> "One $COMMAND operation"
+            else -> "${customizations.size} $COMMAND operations"
+        }),
 ) {
 
     override fun toString(): String = toCommandLine().toString()
 
-    // TODO remove builder
-    companion object : BuilderTemplate<VirtCustomizeCommandLineContext, (OperatingSystemImage) -> VirtCustomizeCommandLine>() {
-
+    companion object {
         private const val COMMAND = "virt-customize"
+    }
 
-        @VirtCustomizeDsl
-        class VirtCustomizeCommandLineContext(override val captures: CapturesMap) : CapturingContext() {
-            val options: SkippableCapturingBuilderInterface<VirtCustomizeOptionsContext.() -> Unit, List<(OperatingSystemImage) -> Option>?> by OptionsBuilder
-            val customizations: SkippableCapturingBuilderInterface<CustomizationsContext.() -> Unit, List<(OperatingSystemImage) -> Customization>?> by CustomizationsBuilder
-        }
+    data class Options(
+        val colors: Boolean,
+        val quiet: Boolean,
+        val verbose: Boolean,
+        val trace: Boolean,
+        val disks: List<Path>,
+    ) : List<Option> by (koodies.builder.buildList {
+        if (colors) add(ColorsOption)
+        if (quiet) add(QuietOption)
+        if (verbose) add(VerboseOption)
+        if (trace) add(TraceOption)
+        disks.forEach { add(DiskOption(it)) }
+    }) {
+        constructor(
+            vararg disks: Path,
+            colors: Boolean = true,
+            quiet: Boolean = false,
+            verbose: Boolean = false,
+            trace: Boolean = true,
+        ) : this(colors, quiet, verbose, trace, disks.toList())
 
-        override fun BuildContext.build(): (OperatingSystemImage) -> VirtCustomizeCommandLine = ::VirtCustomizeCommandLineContext {
-            { osImage: OperatingSystemImage ->
-                val options: List<(OperatingSystemImage) -> Option> = ::options.eval()
-                val customizations: List<(OperatingSystemImage) -> Customization> = ::customizations.eval()
-                VirtCustomizeCommandLine(options.map { it(osImage) }, customizations.map { it(osImage) })
+        val disk: Path = filterIsInstance<DiskOption>().map { it.disk }
+            .also { disks -> check(disks.size == 1) { "The $COMMAND command must add exactly one disk. ${disks.size} found: ${disks.joinToString(", ")}." } }
+            .single().apply {
+                check(exists()) { "Disk $this does no exist." }
+                check(isReadable()) { "Disk $this is not readable." }
+                check(isWritable()) { "Disk $this is not writable." }
             }
-        }
-
-        @VirtCustomizeDsl
-        fun build(osImage: OperatingSystemImage, init: VirtCustomizeCommandLineContext.() -> Unit): VirtCustomizeCommandLine = build(init)(osImage)
     }
 
     open class Option(name: String, arguments: List<String>) : LibguestfsCommandLineOption(name, arguments) {
 
         class DiskOption(override val disk: Path) : Option("--add", listOf(disk.pathString)), LibguestfsCommandLineOption.DiskOption
-        class ColorsOption : Option("--colors", emptyList())
-        class QuietOption : Option("--quiet", emptyList())
+        object ColorsOption : Option("--colors", emptyList())
+        object QuietOption : Option("--quiet", emptyList())
         object VerboseOption : Option("--verbose", emptyList())
         object TraceOption : Option("-x", emptyList())
-    }
-
-    object OptionsBuilder : BuilderTemplate<VirtCustomizeOptionsContext, List<(OperatingSystemImage) -> Option>>() {
-
-        @VirtCustomizeDsl
-        class VirtCustomizeOptionsContext(override val captures: CapturesMap) : CapturingContext() {
-            val option: ((OperatingSystemImage) -> Option) -> Unit by function<(OperatingSystemImage) -> Option>()
-
-            /**
-             * Add file which should be a disk image from a virtual machine.
-             *
-             * The format of the disk image is auto-detected.
-             */
-            fun disk(init: (OperatingSystemImage) -> Path) {
-                option { init(it).run { DiskOption(this) } }
-            }
-
-            /**
-             * Use ANSI colour sequences to colourize messages.
-             * This is the default when the output is a tty.
-             *
-             * If the output of the program is redirected to a file, ANSI colour sequences are disabled unless you use this option.
-             */
-            val colors: SkippableBuilder<Context.() -> BooleanValue, Boolean, Unit> by BooleanBuilder.OnOff then {
-                if (it) option { ColorsOption() }
-            }
-
-            /**
-             * Don’t print log messages.
-             *
-             * To enable detailed logging of individual file operations, use -x.
-             */
-            val quiet: SkippableBuilder<Context.() -> BooleanValue, Boolean, Unit> by BooleanBuilder.OnOff then {
-                if (it) option { QuietOption() }
-            }
-
-            /**
-             * Display version number and exit.
-             */
-            val verbose: SkippableBuilder<Context.() -> BooleanValue, Boolean, Unit> by BooleanBuilder.OnOff then {
-                if (it) option { VerboseOption }
-            }
-
-            /**
-             * Enable tracing of libguestfs API calls.
-             */
-            val trace: SkippableBuilder<Context.() -> BooleanValue, Boolean, Unit> by BooleanBuilder.OnOff then {
-                if (it) option { TraceOption }
-            }
-        }
-
-        override fun BuildContext.build(): List<(OperatingSystemImage) -> Option> = ::VirtCustomizeOptionsContext { evalAll() }
     }
 
     open class Customization(override val name: String, override val arguments: List<String>) :

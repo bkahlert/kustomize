@@ -32,7 +32,7 @@ import koodies.time.seconds
 import koodies.time.sleep
 import koodies.toBaseName
 import koodies.tracing.rendering.BackgroundPrinter
-import koodies.tracing.rendering.BlockStyles.None
+import koodies.tracing.rendering.Styles.None
 import koodies.tracing.spanning
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -118,7 +118,7 @@ class FirstBootWaitTest {
 
         private fun Path.slowlyDeleteFiles() =
             thread {
-                spanning("Slowly deleting files", blockStyle = None, printer = BackgroundPrinter) {
+                spanning("Slowly deleting files", style = None, printer = BackgroundPrinter) {
                     while (listDirectoryEntries().isNotEmpty()) {
                         3.seconds.sleep()
                         listDirectoryEntries().first().also {

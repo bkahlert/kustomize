@@ -1,6 +1,5 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.GuestAssertions
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization
 import com.imgcstmzr.os.LinuxRoot
@@ -46,6 +45,7 @@ import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.hasSize
+import strikt.assertions.isFalse
 import strikt.assertions.isGreaterThanOrEqualTo
 import java.nio.file.Path
 import java.time.Instant
@@ -174,17 +174,21 @@ class SimplePhasedPatchTest {
 }
 
 fun <T : PhasedPatch> Assertion.Builder<T>.matches(
-    diskOperationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Unit>>.() -> Unit = { hasSize(0) },
-    customizationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Customization>>.() -> Unit = { hasSize(0) },
-    guestfishCommandsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> GuestfishCommand>>.() -> Unit = { hasSize(0) },
-    fileSystemOperationsAssertion: Assertion.Builder<List<FileOperation>>.() -> Unit = { hasSize(0) },
-    programsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Program>>.() -> Unit = { hasSize(0) },
+    diskPreparationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Unit>>.() -> Unit = { hasSize(0) },
+    diskCustomizationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Customization>>.() -> Unit = { hasSize(0) },
+    diskOperationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> GuestfishCommand>>.() -> Unit = { hasSize(0) },
+    fileOperationsAssertion: Assertion.Builder<List<FileOperation>>.() -> Unit = { hasSize(0) },
+    osPreparationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Unit>>.() -> Unit = { hasSize(0) },
+    osBootAssertion: Assertion.Builder<Boolean>.() -> Unit = { isFalse() },
+    osOperationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Program>>.() -> Unit = { hasSize(0) },
 ) = compose("matches") {
-    diskOperationsAssertion(get { diskPreparations })
-    customizationsAssertion(get { diskCustomizations })
-    guestfishCommandsAssertion(get { diskOperations })
-    fileSystemOperationsAssertion(get { fileOperations })
-    programsAssertion(get { osOperations })
+    diskPreparationsAssertion(get { diskPreparations })
+    diskCustomizationsAssertion(get { diskCustomizations })
+    diskOperationsAssertion(get { diskOperations })
+    fileOperationsAssertion(get { fileOperations })
+    osPreparationsAssertion(get { osPreparations })
+    osBootAssertion(get { osBoot })
+    osOperationsAssertion(get { osOperations })
 }.then { if (allPassed) pass() else fail() }
 
 
@@ -197,14 +201,6 @@ fun <T : PhasedPatch> Assertion.Builder<T>.guestfishCommands(
     osImage: OperatingSystemImage,
     block: Assertion.Builder<List<GuestfishCommand>>.() -> Unit,
 ) = get("guestfish commands") { diskOperations.map { it(osImage) } }.block()
-
-
-/**
- * Returns callable that mounts `this` [OperatingSystemImage]
- * and runs the specified [GuestAssertions].
- */
-inline val booted: Assertion.Builder<OperatingSystemImage>.(assertion: OperatingSystemProcess.(String) -> ((String) -> Boolean)?) -> Unit
-    get() = { assertion: OperatingSystemProcess.(String) -> ((String) -> Boolean)? -> booted(assertion) }
 
 inline fun Assertion.Builder<OperatingSystemImage>.booted(
     crossinline assertion: OperatingSystemProcess.(String) -> ((String) -> Boolean)?,
@@ -269,7 +265,11 @@ fun Assertion.Builder<OperatingSystemImage>.booted(
     vararg states: ProgramState,
 ): Assertion.Builder<OperatingSystemImage> =
     assert("booted ${this.get { operatingSystem }}") {
-        when (val exitState = it.boot(DockerContainer.from("Assertion Boot of $this").name, Program("check", initialState, *states))) {
+        when (val exitState = it.boot(
+            DockerContainer.from("Assertion Boot of $this").name,
+            Program("check", initialState, *states),
+            decorationFormatter = { it.formattedAs.debug }
+        )) {
             is Succeeded -> pass()
             else -> fail(exitState)
         }

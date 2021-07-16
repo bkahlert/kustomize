@@ -9,11 +9,11 @@ import strikt.assertions.matches
 class HostnamePatchTest {
 
     private val hostnameRegex = Regex("test-machine--[0-9a-zA-Z]{4}")
-    
+
     @Test
     fun `should provide hostname changing command`(osImage: OperatingSystemImage) {
         val patch = HostnamePatch("test-machine", true)
-        expectThat(patch).matches(customizationsAssertion = {
+        expectThat(patch).matches(diskCustomizationsAssertion = {
             first().get { invoke(osImage) }.get { get(1) }.matches(hostnameRegex)
         })
     }

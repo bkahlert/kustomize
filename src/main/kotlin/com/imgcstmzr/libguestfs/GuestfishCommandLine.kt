@@ -1,6 +1,5 @@
 package com.imgcstmzr.libguestfs
 
-import com.imgcstmzr.libguestfs.GuestfishCommandLine.Companion.GuestfishCommandLineContext
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.Composite.CopyIn
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.Composite.CopyOut
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.Composite.TarIn
@@ -12,23 +11,18 @@ import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.TouchComma
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.UmountAllCommand
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder.GuestfishCommandsContext
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOption.DiskOption
-import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOption.InspectorOption
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOption.MountOption
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOption.ReadOnlyOption
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOption.ReadWriteOption
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOption.TraceOption
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOption.VerboseOption
-import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOptionsBuilder.GuestfishOptionsContext
 import com.imgcstmzr.libguestfs.LibguestfsOption.Companion.relativize
 import com.imgcstmzr.os.DiskDirectory
 import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemImage.Companion.mountRootForDisk
-import koodies.builder.BooleanBuilder
 import koodies.builder.BuilderTemplate
-import koodies.builder.Init
-import koodies.builder.build
 import koodies.builder.buildList
 import koodies.builder.context.CapturesMap
 import koodies.builder.context.CapturingContext
@@ -57,7 +51,6 @@ import kotlin.io.path.isReadable
 import kotlin.io.path.isWritable
 import kotlin.io.path.moveTo
 
-
 @DslMarker
 annotation class GuestfishDsl
 
@@ -67,21 +60,14 @@ annotation class GuestfishDsl
  * It uses [Libguestfs] and exposes all of the functionality of the [guestfs API](https://libguestfs.org/guestfs.3.html).
  */
 class GuestfishCommandLine(
-    val options: List<GuestfishOption>,
+    val options: GuestfishOptions,
     val commands: List<GuestfishCommand>,
-    val disk: Path = options.filterIsInstance<DiskOption>().map { it.disk }
-        .also { disks -> check(disks.size == 1) { "The $COMMAND command must add exactly one disk. ${disks.size} found: ${disks.joinToString(", ")}." } }
-        .single().apply {
-            check(exists()) { "Disk $this does no exist." }
-            check(isReadable()) { "Disk $this is not readable." }
-            check(isWritable()) { "Disk $this is not writable." }
-        },
     val dockerOptions: Options = Options(
         name = DockerContainer.from(COMMAND.withRandomSuffix()),
         autoCleanup = true,
         mounts = MountOptions {
-            mountRootForDisk(disk) mountAt "/shared"
-            disk mountAt "/images/disk.img"
+            mountRootForDisk(options.disk) mountAt "/shared"
+            options.disk mountAt "/images/disk.img"
         },
         workingDirectory = "/shared".asContainerPath(),
         custom = buildList {
@@ -104,21 +90,12 @@ class GuestfishCommandLine(
         else -> "$size $COMMAND operations"
     }) {
 
-        val nonDiskOptions: List<GuestfishOption> = options.filter { it !is DiskOption } +
-            listOf(
-                // inspector { on } // does not mount /boot
-                MountOption("/dev/sda2".asPath(), LinuxRoot),
-                MountOption("/dev/sda1".asPath(), LinuxRoot.boot),
-            )
-
         line(
             COMMAND,
-            *ReadWriteOption.toTypedArray(),
-            *DiskOption("/images/disk.img".asPath()).toTypedArray(),
-            *nonDiskOptions.flatten().toTypedArray(),
+            *options.map { (it as? DiskOption)?.let { DiskOption("/images/disk.img".asPath()) } ?: it }.flatten().toTypedArray(),
             HereDoc {
                 commands.forEach { guestfishCommand ->
-                    val relativizedCommand: LibguestfsOption = guestfishCommand.relativize(disk)
+                    val relativizedCommand: LibguestfsOption = guestfishCommand.relativize(options.disk)
                     add(relativizedCommand.joinToString(" "))
                 }
 
@@ -138,30 +115,41 @@ class GuestfishCommandLine(
 
     override fun toString(): String = toCommandLine().toString()
 
-    // TODO remove builder
-    companion object : BuilderTemplate<GuestfishCommandLineContext, (OperatingSystemImage) -> GuestfishCommandLine>() {
-
+    companion object {
         private const val COMMAND = "guestfish"
+    }
 
-        @GuestfishDsl
-        class GuestfishCommandLineContext(override val captures: CapturesMap) : CapturingContext() {
+    data class GuestfishOptions(
+        val readOnly: Boolean,
+        val readWrite: Boolean,
+        val verbose: Boolean,
+        val trace: Boolean,
+        val disks: List<Path>,
+    ) : List<GuestfishOption> by (buildList {
+        if (readOnly) add(ReadOnlyOption)
+        if (readWrite) add(ReadWriteOption)
+        disks.forEach { add(DiskOption(it)) }
+        // inspector does not seem to mount `/boot`; therefore mount options are manually added
+        add(MountOption("/dev/sda2".asPath(), LinuxRoot))
+        add(MountOption("/dev/sda1".asPath(), LinuxRoot.boot))
+        if (verbose) add(VerboseOption)
+        if (trace) add(TraceOption)
+    }) {
+        constructor(
+            vararg disks: Path,
+            readOnly: Boolean = false,
+            readWrite: Boolean = true,
+            verbose: Boolean = false,
+            trace: Boolean = false,
+        ) : this(readOnly, readWrite, verbose, trace, disks.toList())
 
-            val options by GuestfishOptionsBuilder default { emptyList<(OperatingSystemImage) -> GuestfishOption>() }
-            val commands by GuestfishCommandsBuilder default { emptyList<(OperatingSystemImage) -> GuestfishCommand>() }
-        }
-
-        override fun BuildContext.build(): (OperatingSystemImage) -> GuestfishCommandLine =
-            ::GuestfishCommandLineContext {
-                { osImage: OperatingSystemImage ->
-                    val options: List<(OperatingSystemImage) -> GuestfishOption> = ::options.eval()
-                    val commands: List<(OperatingSystemImage) -> GuestfishCommand> = ::commands.eval()
-                    GuestfishCommandLine(options.map { it(osImage) }, commands.map { it(osImage) })
-                }
+        val disk: Path = filterIsInstance<DiskOption>().map { it.disk }
+            .also { disks -> check(disks.size == 1) { "The $COMMAND command must add exactly one disk. ${disks.size} found: ${disks.joinToString(", ")}." } }
+            .single().apply {
+                check(exists()) { "Disk $this does no exist." }
+                check(isReadable()) { "Disk $this is not readable." }
+                check(isWritable()) { "Disk $this is not writable." }
             }
-
-        fun build(osImage: OperatingSystemImage, init: Init<GuestfishCommandLineContext>) = build(init)(osImage)
-        operator fun invoke(osImage: OperatingSystemImage, init: Init<GuestfishCommandLineContext>) =
-            build(init)(osImage)
     }
 
 
@@ -198,7 +186,7 @@ class GuestfishCommandLine(
          * inspects the disks looking for an operating system and mounts filesystems
          * as they would be mounted on the real virtual machine.
          */
-        class InspectorOption : GuestfishOption("--inspector", emptyList())
+        object InspectorOption : GuestfishOption("--inspector", emptyList())
 
         /**
          * Mount the named partition or logical volume on the given [mountPoint].
@@ -253,73 +241,6 @@ class GuestfishCommandLine(
          * Echo each command before executing it.
          */
         object TraceOption : GuestfishOption("-x", emptyList())
-    }
-
-
-    object GuestfishOptionsBuilder : BuilderTemplate<GuestfishOptionsContext, List<(OperatingSystemImage) -> GuestfishOption>>() {
-
-        @GuestfishDsl
-        class GuestfishOptionsContext(override val captures: CapturesMap) : CapturingContext() {
-
-            val option by function<(OperatingSystemImage) -> GuestfishOption>()
-
-            /**
-             * Use the this option to use guestfish safely if the disk image or virtual machine might be live.
-             */
-            val readOnly by BooleanBuilder.OnOff then {
-                if (it) option { ReadOnlyOption }
-            }
-
-            /**
-             * Use the this option to explicitly allow write access. In future guestfish releases
-             * [readOnly] might become the default setting.
-             */
-            val readWrite by BooleanBuilder.OnOff then {
-                if (it) option { ReadWriteOption }
-            }
-
-            /**
-             * Add file which should be a disk image from a virtual machine.
-             *
-             * The format of the disk image is auto-detected.
-             */
-            fun disk(path: (OperatingSystemImage) -> Path) {
-                option { DiskOption(path(it)) }
-            }
-
-            /**
-             * Add file which should be a disk image from a virtual machine.
-             *
-             * The format of the disk image is auto-detected.
-             */
-            val inspector by BooleanBuilder.OnOff then {
-                if (it) option { InspectorOption() }
-            }
-
-            /**
-             * Mount the named partition or logical volume on the given mount point,
-             * e.g. `Path.of("/dev/sda1") to Path.of("/")`
-             */
-            fun mount(init: (OperatingSystemImage) -> Pair<Path, DiskPath>) {
-                option { init(it).run { MountOption(first, second) } }
-            }
-
-            /**
-             * Enable very verbose messages.
-             */
-            val verbose by BooleanBuilder.OnOff then {
-                if (it) option { VerboseOption }
-            }
-
-            /**
-             * Echo each command before executing it.
-             */
-            val trace by BooleanBuilder.OnOff then {
-                if (it) option { TraceOption }
-            }
-        }
-
-        override fun BuildContext.build() = ::GuestfishOptionsContext { ::option.evalAll() }
     }
 
 

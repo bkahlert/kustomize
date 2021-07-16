@@ -4,8 +4,11 @@ import com.imgcstmzr.cli.Layouts
 import com.imgcstmzr.cli.PATCH_DECORATION_FORMATTER
 import com.imgcstmzr.libguestfs.GuestfishCommandLine
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder.GuestfishCommandsContext
+import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOptions
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder.CustomizationsContext
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Options
 import com.imgcstmzr.os.OperatingSystem.Credentials
 import koodies.Exceptions.IAE
 import koodies.builder.Init
@@ -14,6 +17,7 @@ import koodies.io.path.duplicate
 import koodies.io.path.getSize
 import koodies.io.path.pathString
 import koodies.runtime.isDebugging
+import koodies.text.ANSI.Formatter
 import koodies.text.Semantics.formattedAs
 import koodies.tracing.rendering.spanningLine
 import koodies.tracing.spanning
@@ -78,15 +82,10 @@ class OperatingSystemImage(
     fun guestfish(
         trace: Boolean = false,
         init: Init<GuestfishCommandsContext>,
-    ): DockerExec = GuestfishCommandLine(this) {
-        options {
-            readWrite by true
-            disk { it.file }
-            this.trace by trace
-            verbose by false
-        }
-        commands(init)
-    }.exec.logging(exchangeDirectory, decorationFormatter = PATCH_DECORATION_FORMATTER, layout = Layouts.DESCRIPTION)
+    ): DockerExec = GuestfishCommandLine(
+        GuestfishOptions(file, trace = trace),
+        GuestfishCommandLine.GuestfishCommandsBuilder(init).map { it(this) },
+    ).exec.logging(exchangeDirectory, nameFormatter = Formatter.ToCharSequence, decorationFormatter = PATCH_DECORATION_FORMATTER, layout = Layouts.DESCRIPTION)
 
     /**
      * @see <a href="https://libguestfs.org/">libguestfs—tools for accessing and modifying virtual machine disk images</a>
@@ -94,17 +93,13 @@ class OperatingSystemImage(
     fun virtCustomize(
         trace: Boolean = false,
         init: Init<CustomizationsContext>,
-    ): DockerExec = VirtCustomizeCommandLine.build(this) {
-        options {
-            disk { it.file }
-            if (!isDebugging) colors { on }
-            if (trace) trace { on }
-        }
-        customizations(init)
-    }.exec.logging(exchangeDirectory, decorationFormatter = PATCH_DECORATION_FORMATTER, layout = Layouts.DESCRIPTION)
+    ): DockerExec = VirtCustomizeCommandLine(
+        Options(file, colors = !isDebugging, trace = trace),
+        CustomizationsBuilder(init).map { it(this) },
+    ).exec.logging(exchangeDirectory, nameFormatter = Formatter.ToCharSequence, decorationFormatter = PATCH_DECORATION_FORMATTER, layout = Layouts.DESCRIPTION)
 
     fun increaseDiskSpace(size: Size): Unit =
-        spanningLine("Increasing disk space: ${path.getSize().toString(BinaryPrefixes)} ➜ ${size.toString(BinaryPrefixes).formattedAs.input}") {
+        spanningLine("Increasing disk space") {
             var missing = size - path.getSize()
             require(missing >= Size.ZERO) {
                 throw IAE(

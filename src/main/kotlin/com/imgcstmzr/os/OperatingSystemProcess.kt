@@ -31,10 +31,10 @@ import koodies.text.truncateByColumns
 import koodies.time.seconds
 import koodies.tracing.CurrentSpan
 import koodies.tracing.Tracer
-import koodies.tracing.rendering.BlockStyle
-import koodies.tracing.rendering.BlockStyles
 import koodies.tracing.rendering.ColumnsLayout
 import koodies.tracing.rendering.Renderable
+import koodies.tracing.rendering.Style
+import koodies.tracing.rendering.Styles
 import koodies.tracing.spanning
 import koodies.unit.milli
 import kotlin.properties.Delegates
@@ -194,7 +194,7 @@ fun OperatingSystemImage.boot(
     decorationFormatter: Formatter<CharSequence> = PATCH_DECORATION_FORMATTER,
     autoLogin: Boolean = true,
     autoShutdown: Boolean = true,
-    blockStyle: (ColumnsLayout, Int) -> BlockStyle = BlockStyles.Solid,
+    style: (ColumnsLayout, Int) -> Style = Styles.Solid,
 ): State {
     val unfinished: MutableList<Program> = buildList {
         if (autoLogin) +loginProgram(credentials)
@@ -208,7 +208,7 @@ fun OperatingSystemImage.boot(
             nameFormatter = nameFormatter,
             decorationFormatter = decorationFormatter,
             layout = Layouts.DESCRIPTION_AND_EXTRA,
-            blockStyle = blockStyle,
+            style = style,
             tracer = Tracer,
             block = {
                 var operatingSystemProcess: OperatingSystemProcess? = null
