@@ -1,7 +1,6 @@
 package com.imgcstmzr.patch
 
 import com.imgcstmzr.os.OperatingSystemImage
-import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import koodies.shell.ScriptInit
 import koodies.shell.ShellScript
 import koodies.text.LineSeparators
@@ -15,7 +14,7 @@ import koodies.text.LineSeparators
  */
 class FirstBootPatch(
     shellScripts: List<ShellScript>,
-) : Patch by buildPatch("Add ${shellScripts.size} First Boot Script(s): ${
+) : PhasedPatch by PhasedPatch.build("Add ${shellScripts.size} First Boot Script(s): ${
     shellScripts.mapNotNull { it.name }.map { LineSeparators.LF + it }.joinToString("")
 }", {
     customizeDisk {

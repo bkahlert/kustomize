@@ -2,7 +2,6 @@ package com.imgcstmzr.patch
 
 import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.OperatingSystemImage
-import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import koodies.text.LineSeparators
 import koodies.text.LineSeparators.LF
 import koodies.text.LineSeparators.hasTrailingLineSeparator
@@ -20,7 +19,8 @@ import kotlin.io.path.writeText
  * into the disk images under each [contentToDiskMappings]'s [DiskPath].
  */
 class AppendToFilesPatch(private val contentToDiskMappings: Map<String, DiskPath>) :
-    Patch by buildPatch("Append Lines: " + contentToDiskMappings.map { (content, to) -> "${content.lines().size} line(s) ➜ ${to.fileName}" }.joinToString(", "),
+    PhasedPatch by PhasedPatch.build("Append Lines: " + contentToDiskMappings.map { (content, to) -> "${content.lines().size} line(s) ➜ ${to.fileName}" }
+        .joinToString(", "),
         {
 
             // no obvious way to pass non-trivial text like HTML tags or even binary data to virt-customize
@@ -34,7 +34,7 @@ class AppendToFilesPatch(private val contentToDiskMappings: Map<String, DiskPath
 //        }
 
             // ... therefore files are manipulated on the host
-            files {
+            modifyFiles {
                 contentToDiskMappings.forEach { (content, path) ->
                     edit(path, {
                         val actualLines = it.readText().lines().flatMap { line -> line.lines() }

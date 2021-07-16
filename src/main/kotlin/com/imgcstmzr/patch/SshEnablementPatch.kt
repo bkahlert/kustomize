@@ -2,7 +2,6 @@ package com.imgcstmzr.patch
 
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
-import com.imgcstmzr.patch.Patch.Companion.buildPatch
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]
@@ -12,8 +11,8 @@ import com.imgcstmzr.patch.Patch.Companion.buildPatch
  * @see SshPortPatch
  */
 class SshEnablementPatch :
-    Patch by buildPatch("Enable SSH", {
-        guestfish {
+    PhasedPatch by PhasedPatch.build("Enable SSH", {
+        modifyDisk {
             touch { LinuxRoot.boot / "ssh" }
         }
     })

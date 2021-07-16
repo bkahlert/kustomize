@@ -44,6 +44,7 @@ import koodies.test.SystemProperties
 import koodies.test.SystemProperty
 import koodies.test.asserting
 import koodies.test.containsAtLeast
+import koodies.test.hasElements
 import koodies.test.test
 import koodies.unit.Giga
 import koodies.unit.bytes
@@ -53,7 +54,6 @@ import strikt.api.expectThat
 import strikt.assertions.any
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
-import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
@@ -133,8 +133,8 @@ class ImgCstmzrConfigTest {
 
     @Test
     fun `should create patch`() {
-        val imgCstmzrConfig = loadImgCstmzrConfig()
-        val patch = imgCstmzrConfig.toPatches()
+        val config = loadImgCstmzrConfig()
+        val patch = config.toPatches()
         expectThat(CompositePatch(patch)) {
             get { name }.contains("Increase Disk Space to 4 GiB").contains("Change Username")
             get { diskPreparations }.isNotEmpty()
@@ -147,43 +147,48 @@ class ImgCstmzrConfigTest {
 
     @Test
     fun `should optimize patches`() {
-        val imgCstmzrConfig = loadImgCstmzrConfig()
-        val patches = imgCstmzrConfig.toOptimizedPatches()
-        expectThat(patches) {
-            hasSize(5)
-            get { get(0) }.isA<CompositePatch>().get { this.patches.map { it::class } }
-                .contains(
-                    TweaksPatch::class,
-                    TimeZonePatch::class,
-                    HostnamePatch::class,
-                    ImgResizePatch::class,
-                    UsernamePatch::class,
-                    SshEnablementPatch::class,
-                    WpaSupplicantPatch::class,
-                )
-            get { get(1) }.isA<CompositePatch>().get { this.patches.map { it::class } }
-                .contains(
-                    SambaPatch::class,
-                    WifiAutoReconnectPatch::class,
-                    WifiPowerSafeModePatch::class,
-                )
-            get { get(2) }.isA<CompositePatch>().get { this.patches.map { it::class } }
-                .contains(
-                    PasswordPatch::class,
-                    SshAuthorizationPatch::class,
-                    SshPortPatch::class,
-                    UsbEthernetGadgetPatch::class,
-                )
-            get { get(3) }.isA<ShellScriptPatch>()
-            get { get(4) }.isA<FirstBootPatch>()
-        }
+        val config = loadImgCstmzrConfig()
+        val patches = config.toOptimizedPatches()
+        expectThat(patches).hasElements(
+            {
+                isA<CompositePatch>().get { this.patches.map { it::class } }
+                    .contains(
+                        TweaksPatch::class,
+                        TimeZonePatch::class,
+                        HostnamePatch::class,
+                        ImgResizePatch::class,
+                        UsernamePatch::class,
+                        SshEnablementPatch::class,
+                        WpaSupplicantPatch::class,
+                    )
+            },
+            {
+                isA<CompositePatch>().get { this.patches.map { it::class } }
+                    .contains(
+                        SambaPatch::class,
+                        WifiAutoReconnectPatch::class,
+                        WifiPowerSafeModePatch::class,
+                    )
+            },
+            {
+                isA<CompositePatch>().get { this.patches.map { it::class } }
+                    .contains(
+                        PasswordPatch::class,
+                        SshAuthorizationPatch::class,
+                        SshPortPatch::class,
+                        UsbEthernetGadgetPatch::class,
+                    )
+            },
+            { isA<ShellScriptPatch>() },
+            { isA<FirstBootPatch>() },
+        )
     }
 
     @SystemIOExclusive
     @SixtyMinutesTimeout @E2E @Smoke @Test
     fun `should apply patches`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
-        val imgCstmzrConfig = loadImgCstmzrConfig()
-        val patches = imgCstmzrConfig.toOptimizedPatches()
+        val config = loadImgCstmzrConfig()
+        val patches = config.toOptimizedPatches()
 
         patches.forEach {
             with(it) { patch(osImage) }

@@ -15,14 +15,11 @@ import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemProcess
 import com.imgcstmzr.os.Program
 import com.imgcstmzr.os.boot
-import com.imgcstmzr.patch.Patch.Companion.FileSystemOperationsCollector.FileSystemOperationsContext
-import com.imgcstmzr.patch.Patch.Companion.ImgOperationsCollector.ImgOperationsContext
-import com.imgcstmzr.patch.Patch.Companion.PatchContext
-import com.imgcstmzr.patch.Patch.Companion.ProgramsBuilder.ProgramsContext
 import koodies.asString
 import koodies.builder.BooleanBuilder
 import koodies.builder.BuilderTemplate
 import koodies.builder.Init
+import koodies.builder.build
 import koodies.builder.context.CapturesMap
 import koodies.builder.context.CapturingContext
 import koodies.io.path.deleteDirectoryEntriesRecursively
@@ -57,10 +54,38 @@ interface Patch {
     val name: CharSequence
 
     /**
+     * Number of operations this patch encompassed.
+     */
+    val operationCount: Int
+
+    /**
+     * Whether this patch has no operations.
+     */
+    val isEmpty: Boolean get() = operationCount == 0
+
+    /**
+     * Whether this patch has at least one operation.
+     */
+    val isNotEmpty: Boolean get() = !isEmpty
+
+    /**
+     * Applies this patch to the given [osImage].
+     *
+     * Detailed logging can be activated using [trace].
+     */
+    fun patch(osImage: OperatingSystemImage, trace: Boolean = false): ReturnValues<Throwable>
+}
+
+/**
+ * A patch with different phases.
+ */
+interface PhasedPatch : Patch {
+
+    /**
      * Operations to be applied on the actual raw `.img` file
      * before operations "inside" the `.img` file take place.
      */
-    val diskPreparations: List<DiskOperation>
+    val diskPreparations: List<(OperatingSystemImage) -> Unit>
 
     /**
      * Options to be applied on the img file
@@ -84,7 +109,7 @@ interface Patch {
      * Operations to be applied on the actual raw `.img` file
      * after operations "inside" the `.img` file take place.
      */
-    val osPreparations: List<DiskOperation>
+    val osPreparations: List<(OperatingSystemImage) -> Unit>
 
     /**
      * Whether to boot the operating system.
@@ -92,33 +117,51 @@ interface Patch {
     val osBoot: Boolean
 
     /**
-     * Operations (in the form of [osOperations]) to be applied
+     * Operations to be applied
      * on the booted operating system.
      */
     val osOperations: List<(OperatingSystemImage) -> Program>
 
-    /**
-     * Applies this patch to the given [osImage].
-     *
-     * Detailed logging can be activated using [trace].
-     */
-    fun patch(osImage: OperatingSystemImage, trace: Boolean = false): ReturnValues<Throwable> {
-        return spanning(
+    companion object {
+
+        /**
+         * Builds a new [Patch].
+         */
+        fun build(name: String, init: Init<PhasedPatchBuilder.Context>): PhasedPatch = PhasedPatchBuilder(name).build(init)
+    }
+}
+
+/**
+ * Simple [PhasedPatch] implementation.
+ */
+data class SimplePhasedPatch(
+    override val name: CharSequence,
+    override val diskPreparations: List<(OperatingSystemImage) -> Unit>,
+    override val diskCustomizations: List<(OperatingSystemImage) -> Customization>,
+    override val diskOperations: List<(OperatingSystemImage) -> GuestfishCommand>,
+    override val fileOperations: List<FileOperation>,
+    override val osPreparations: List<(OperatingSystemImage) -> Unit>,
+    override val osBoot: Boolean,
+    override val osOperations: List<(OperatingSystemImage) -> Program>,
+) : PhasedPatch {
+    override val operationCount: Int = diskPreparations.size + diskCustomizations.size + diskOperations.size + fileOperations.size + osOperations.size
+
+    override fun patch(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
+        spanning(
             name,
             nameFormatter = NAME_FORMATTER,
             contentFormatter = PATCH_DECORATION_FORMATTER,
             blockStyle = Solid
         ) {
-            applyDiskPreparations(osImage, trace) +
+            applyDiskPreparations(osImage) +
                 applyDiskCustomizations(osImage, trace) +
                 applyDiskAndFileOperations(osImage, trace) +
-                applyOsPreparations(osImage, trace) +
-                applyOsBoot(osImage, trace) +
-                applyOsOperations(osImage, trace)
+                applyOsPreparations(osImage) +
+                applyOsBoot(osImage) +
+                applyOsOperations(osImage)
         }
-    }
 
-    fun <T, R : Any> collectingExceptions(
+    private fun <T, R : Any> collectingExceptions(
         operations: List<T>,
         transform: (index: Int, operation: T) -> R?,
     ): ReturnValues<Throwable> =
@@ -128,7 +171,7 @@ interface Patch {
             }.exceptionOrNull()
         }.let { ReturnValues(*it.toTypedArray()) }
 
-    fun collectingExceptions(name: String, transform: CurrentSpan.() -> Unit): ReturnValues<Throwable> =
+    private fun collectingExceptions(name: String, transform: CurrentSpan.() -> Unit): ReturnValues<Throwable> =
         spanning(name, blockStyle = Dotted) { runCatching(transform).fold({ ReturnValues() }, { ReturnValues(it) }) }
 
     private fun none(operationName: String): ReturnValues<Throwable> {
@@ -136,14 +179,14 @@ interface Patch {
         return ReturnValues()
     }
 
-    fun applyDiskPreparations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
+    private fun applyDiskPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
         if (diskPreparations.isEmpty()) return none("Disk Preparation")
         return collectingExceptions("Disk Preparation (${diskPreparations.size})") {
             collectingExceptions(diskPreparations) { _, preparation -> preparation(osImage) }
         }
     }
 
-    fun applyDiskCustomizations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
+    private fun applyDiskCustomizations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
         if (diskCustomizations.isEmpty()) return none("Disk Customization")
         return collectingExceptions("Disk Customization (${diskCustomizations.size})") {
             if (diskCustomizations.isNotEmpty()) {
@@ -154,7 +197,7 @@ interface Patch {
         }
     }
 
-    fun applyDiskAndFileOperations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
+    private fun applyDiskAndFileOperations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
         val exceptions = ReturnValues<Throwable>()
 
         val diskOperationsAndFilePreparationOperations = diskOperations.size + fileOperations.size
@@ -178,6 +221,7 @@ interface Patch {
         collectingExceptions("File Operations ($fileOperationsCount)") {
             val filesToPatch = fileOperations.toMutableList()
             if (filesToPatch.isNotEmpty()) {
+                @Suppress("Destructure")
                 collectingExceptions(filesToPatch) { _, fileOperation ->
                     val path = fileOperation.file
                     fileOperation(osImage.hostPath(path))
@@ -197,14 +241,14 @@ interface Patch {
         return exceptions
     }
 
-    fun applyOsPreparations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
+    private fun applyOsPreparations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
         if (osPreparations.isEmpty()) return none("OS Preparation")
         return collectingExceptions("OS Preparation (${osPreparations.size})") {
             collectingExceptions(osPreparations) { _, preparation -> preparation(osImage) }
         }
     }
 
-    fun applyOsBoot(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
+    private fun applyOsBoot(osImage: OperatingSystemImage): ReturnValues<Throwable> {
         if (!osBoot) return none("OS Boot")
         else return runCatching {
             osImage.boot(
@@ -219,7 +263,7 @@ interface Patch {
     }
 
 
-    fun applyOsOperations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
+    private fun applyOsOperations(osImage: OperatingSystemImage): ReturnValues<Throwable> {
         if (osOperations.isEmpty()) return none("OS Operations")
         else return runCatching {
             osImage.boot(
@@ -234,183 +278,188 @@ interface Patch {
         }.fold({ ReturnValues() }, { ReturnValues(it) })
     }
 
-    val operationCount: Int
-
-    val isEmpty: Boolean get() = operationCount == 0
-    val isNotEmpty: Boolean get() = !isEmpty
-
-    companion object : BuilderTemplate<PatchContext, (String) -> Patch>() {
-
+    companion object {
         private val NAME_FORMATTER = Formatter<CharSequence> { it.ansi.cyan }
+    }
+}
 
-        @DslMarker
-        annotation class PatchDsl
+/**
+ * Builder for instances of [PhasedPatch].
+ */
+class PhasedPatchBuilder(private val name: CharSequence) : BuilderTemplate<PhasedPatchBuilder.Context, PhasedPatch>() {
 
-        fun buildPatch(name: String, init: Init<PatchContext>): Patch = invoke(init)(name)
+    /** Context for building instances of [PhasedPatch]. */
+    @VirtCustomizeDsl
+    @GuestfishDsl
+    @Suppress("PublicApiImplicitType")
+    class Context(override val captures: CapturesMap) : CapturingContext() {
 
-        @PatchDsl
+        /**
+         * Operations to be applied on the actual raw `.img` file
+         * before operations "inside" the `.img` file take place.
+         */
+        val prepareDisk by ImageOperationsBuilder default emptyList()
+
+        /**
+         * Options to be applied on the img file
+         * using the [VirtCustomizeCommandLine].
+         */
         @VirtCustomizeDsl
+        val customizeDisk by CustomizationsBuilder default emptyList()
+
+        /**
+         * Operations to be applied on the mounted file system
+         * using the [GuestfishCommandLine] tool.
+         */
         @GuestfishDsl
-        class PatchContext(override val captures: CapturesMap) : CapturingContext() {
+        val modifyDisk by GuestfishCommandsBuilder default emptyList()
+
+        /**
+         * Operations on files of the externally, not immediately
+         * accessible file system.
+         */
+        val modifyFiles by FileOperationsBuilder default emptyList()
+
+        /**
+         * Operations to be applied on the actual raw `.img` file
+         * after operations "inside" the `.img` file take place.
+         */
+        val prepareOs by ImageOperationsBuilder default emptyList()
+
+        /**
+         * Whether to boot the operating system.
+         */
+        val bootOs by BooleanBuilder.YesNo default { no }
+
+        /**
+         * Operations to be applied
+         * on the booted operating system.
+         */
+        val runPrograms by OsOperationsBuilder default emptyList()
+    }
+
+    override fun BuildContext.build(): PhasedPatch = ::Context {
+        SimplePhasedPatch(
+            name,
+            ::prepareDisk.eval(),
+            ::customizeDisk.eval(),
+            ::modifyDisk.eval(),
+            ::modifyFiles.eval(),
+            ::prepareOs.eval(),
+            ::bootOs.eval(),
+            ::runPrograms.eval(),
+        )
+    }
+
+    /** Builds image operations. */
+    object ImageOperationsBuilder : BuilderTemplate<ImageOperationsBuilder.Context, List<(OperatingSystemImage) -> Unit>>() {
+
+        @Suppress("PublicApiImplicitType")
+        /** Context for building image operations. */
+        class Context(override val captures: CapturesMap) : CapturingContext() {
 
             /**
-             * Operations to be applied on the actual raw `.img` file
-             * before operations "inside" the `.img` file take place.
+             * Operations applied to the given [OperatingSystemImage].
              */
-            val prepareDisk by ImgOperationsCollector default emptyList()
+            val diskOperation by function<(OperatingSystemImage) -> Unit>()
 
             /**
-             * Options to be applied on the img file
-             * using the [VirtCustomizeCommandLine].
+             * Resizes the [OperatingSystemImage] to the specified [size].
              */
-            @VirtCustomizeDsl
-            val customizeDisk by CustomizationsBuilder default emptyList()
-
-            /**
-             * Operations to be applied on the mounted file system
-             * using the [GuestfishCommandLine] tool.
-             */
-            @GuestfishDsl
-            val guestfish by GuestfishCommandsBuilder default emptyList()
-
-            /**
-             * Operations on files of the externally, not immediately
-             * accessible file system.
-             */
-            val files by FileSystemOperationsCollector default emptyList()
-
-            /**
-             * Operations to be applied on the actual raw `.img` file
-             * after operations "inside" the `.img` file take place.
-             */
-            val osPrepare by ImgOperationsCollector default emptyList()
-
-            /**
-             * Whether to boot the operating system.
-             */
-            val boot by BooleanBuilder.YesNo default { no }
-
-            /**
-             * Operations (in the form of [osOperations]) to be applied
-             * on the booted operating system.
-             */
-            val os by ProgramsBuilder default emptyList()
-        }
-
-        override fun BuildContext.build() = ::PatchContext {
-            { name: String ->
-                DeprecatedSimplePatch(
-                    name,
-                    ::prepareDisk.eval(),
-                    ::customizeDisk.eval(),
-                    ::guestfish.eval(),
-                    ::files.eval(),
-                    ::osPrepare.eval(),
-                    ::boot.eval(),
-                    ::os.eval(),
-                )
+            fun resize(size: Size) {
+                diskOperation { osImage: OperatingSystemImage ->
+                    osImage.increaseDiskSpace(size)
+                }
             }
-        }
 
-        object ImgOperationsCollector : BuilderTemplate<ImgOperationsContext, List<DiskOperation>>() {
-            @PatchDsl
-            class ImgOperationsContext(override val captures: CapturesMap) : CapturingContext() {
-                val diskOperation by function<DiskOperation>()
-
-                /**
-                 * Resizes the [OperatingSystemImage] to the specified [size].
-                 */
-                fun resize(size: Size) {
-                    diskOperation { osImage: OperatingSystemImage ->
-                        osImage.increaseDiskSpace(size)
-                    }
-                }
-
-                /**
-                 * Changes the username to be used for login from [oldUsername] to [newUsername].
-                 */
-                fun updateUsername(oldUsername: String, newUsername: String) {
-                    diskOperation { osImage: OperatingSystemImage ->
-                        spanning("Updating username of user ${oldUsername.formattedAs.input} to ${newUsername.formattedAs.input}") {
-                            osImage.credentials = osImage.credentials.copy(username = newUsername)
-                        }
-                    }
-                }
-
-                /**
-                 * Changes the password used to login using the given [username] to [password].
-                 */
-                fun updatePassword(username: String, password: String) {
-                    diskOperation { osImage: OperatingSystemImage ->
-                        if (osImage.credentials.username != username) return@diskOperation
-                        spanning("Updating password of user ${osImage.credentials.username.formattedAs.input}") {
-                            osImage.credentials = osImage.credentials.copy(password = password)
-                        }
+            /**
+             * Changes the username to be used for login from [oldUsername] to [newUsername].
+             */
+            fun updateUsername(oldUsername: String, newUsername: String) {
+                diskOperation { osImage: OperatingSystemImage ->
+                    spanning("Updating username of user ${oldUsername.formattedAs.input} to ${newUsername.formattedAs.input}") {
+                        osImage.credentials = osImage.credentials.copy(username = newUsername)
                     }
                 }
             }
 
-            override fun BuildContext.build(): List<DiskOperation> = ::ImgOperationsContext {
-                ::diskOperation.evalAll()
+            /**
+             * Changes the password used to login using the given [username] to [password].
+             */
+            fun updatePassword(username: String, password: String) {
+                diskOperation { osImage: OperatingSystemImage ->
+                    if (osImage.credentials.username != username) return@diskOperation
+                    spanning("Updating password of user ${osImage.credentials.username.formattedAs.input}") {
+                        osImage.credentials = osImage.credentials.copy(password = password)
+                    }
+                }
             }
         }
 
-        object FileSystemOperationsCollector : BuilderTemplate<FileSystemOperationsContext, List<(OperatingSystemImage) -> FileOperation>>() {
+        override fun BuildContext.build(): List<(OperatingSystemImage) -> Unit> = ::Context {
+            ::diskOperation.evalAll()
+        }
+    }
 
-            @PatchDsl
-            class FileSystemOperationsContext(override val captures: CapturesMap) : CapturingContext() {
+    /** Builder for instances of [FileOperation]. */
+    object FileOperationsBuilder : BuilderTemplate<FileOperationsBuilder.Context, List<(OperatingSystemImage) -> FileOperation>>() {
 
-                /**
-                 * File-based operations to be applied to the [OperatingSystemImage].
-                 */
-                val fileOperation by function<(OperatingSystemImage) -> FileOperation>()
+        /** Context for building instances of [FileOperation]. */
+        @Suppress("PublicApiImplicitType")
+        class Context(override val captures: CapturesMap) : CapturingContext() {
 
-                /**
-                 * Adds a [FileOperation] that edits the given [path] using the given [operations]
-                 * in order to satisfy the provided [validator].
-                 *
-                 * That is, if the [validator] does not throw, [path] is considered already respectively successfully changed.
-                 */
-                fun edit(path: DiskPath, validator: (Path) -> Unit, operations: (Path) -> Unit) =
-                    fileOperation { FileOperation(path, validator, operations) }
-            }
+            /**
+             * File-based operations to be applied to the [OperatingSystemImage].
+             */
+            val fileOperation by function<(OperatingSystemImage) -> FileOperation>()
 
-            override fun BuildContext.build(): List<(OperatingSystemImage) -> FileOperation> = ::FileSystemOperationsContext {
-                ::fileOperation.evalAll()
-            }
+            /**
+             * Adds a [FileOperation] that edits the given [path] using the given [operations]
+             * in order to satisfy the provided [validator].
+             *
+             * That is, if the [validator] does not throw, [path] is considered already respectively successfully changed.
+             */
+            fun edit(path: DiskPath, validator: (Path) -> Unit, operations: (Path) -> Unit) =
+                fileOperation { FileOperation(path, validator, operations) }
         }
 
-        object ProgramsBuilder : BuilderTemplate<ProgramsContext, List<(OperatingSystemImage) -> Program>>() {
+        override fun BuildContext.build(): List<(OperatingSystemImage) -> FileOperation> = ::Context {
+            ::fileOperation.evalAll()
+        }
+    }
 
-            @PatchDsl
-            class ProgramsContext(override val captures: CapturesMap) : CapturingContext() {
+    /** Builder for OS operations. */
+    object OsOperationsBuilder : BuilderTemplate<OsOperationsBuilder.Context, List<(OperatingSystemImage) -> Program>>() {
 
-                /**
-                 * [Program] list to be executed inside of the running [OperatingSystemImage].
-                 */
-                val programs by function<(OperatingSystemImage) -> Program>()
+        /** Context for building OS operations. */
+        @Suppress("PublicApiImplicitType")
+        class Context(override val captures: CapturesMap) : CapturingContext() {
 
-                /**
-                 * Adds a [Program] to be executed inside of the running [OperatingSystemImage]
-                 * for the given [purpose] and instructions defined by [initialState] and [states].
-                 */
-                fun program(
-                    purpose: String,
-                    initialState: OperatingSystemProcess.() -> String?,
-                    vararg states: Pair<String, OperatingSystemProcess.(String) -> String?>,
-                ) = programs { Program(purpose, initialState, *states) }
+            /**
+             * [Program] list to be executed inside of the running [OperatingSystemImage].
+             */
+            val programs by function<(OperatingSystemImage) -> Program>()
 
-                /**
-                 * Adds a [Program] to be executed inside of the running [OperatingSystemImage]
-                 * that runs the given [commandLines].
-                 */
-                fun script(name: String, vararg commandLines: String) =
-                    programs { osImage: OperatingSystemImage -> osImage.compileScript(name, *commandLines) }
-            }
+            /**
+             * Adds a [Program] to be executed inside of the running [OperatingSystemImage]
+             * for the given [purpose] and instructions defined by [initialState] and [states].
+             */
+            fun program(
+                purpose: String,
+                initialState: OperatingSystemProcess.() -> String?,
+                vararg states: Pair<String, OperatingSystemProcess.(String) -> String?>,
+            ) = programs { Program(purpose, initialState, *states) }
 
-            override fun BuildContext.build(): List<(OperatingSystemImage) -> Program> = ::ProgramsContext {
-                ::programs.evalAll()
-            }
+            /**
+             * Adds a [Program] to be executed inside of the running [OperatingSystemImage]
+             * that runs the given [commandLines].
+             */
+            fun script(name: String, vararg commandLines: String) =
+                programs { osImage: OperatingSystemImage -> osImage.compileScript(name, *commandLines) }
+        }
+
+        override fun BuildContext.build(): List<(OperatingSystemImage) -> Program> = ::Context {
+            ::programs.evalAll()
         }
     }
 }
@@ -422,8 +471,6 @@ interface Patch {
 inline val patch: Patch.(osImage: OperatingSystemImage) -> ReturnValues<Throwable>
     get() = { osImage: OperatingSystemImage -> patch(osImage) }
 
-typealias DiskOperation = (osImage: OperatingSystemImage) -> Unit
-
 /**
  * Applies all patches of this collection to the given [OperatingSystemImage].
  */
@@ -432,22 +479,6 @@ fun List<Patch>.patch(osImage: OperatingSystemImage): ReturnValues<Throwable> =
         ReturnValues(*flatMap { it.patch(osImage) }.toTypedArray())
     }
 
-
-data class DeprecatedSimplePatch(
-    override val name: CharSequence,
-    override val diskPreparations: List<DiskOperation>,
-    override val diskCustomizations: List<(OperatingSystemImage) -> Customization>,
-    override val diskOperations: List<(OperatingSystemImage) -> GuestfishCommand>,
-    override val fileOperations: List<FileOperation>,
-    override val osPreparations: List<DiskOperation>,
-    override val osBoot: Boolean,
-    override val osOperations: List<(OperatingSystemImage) -> Program>,
-) : Patch {
-    override val operationCount by lazy {
-        diskPreparations.size + diskCustomizations.size + diskOperations.size + fileOperations.size + osOperations.size
-    }
-}
-
 /**
  * A patch that combines the specified [patches].
  *
@@ -455,8 +486,11 @@ data class DeprecatedSimplePatch(
  * as less reboots are necessary.
  */
 class CompositePatch(
-    val patches: Collection<Patch>,
-) : Patch by DeprecatedSimplePatch(
+    /**
+     * Patches encompassed by this composite patch.
+     */
+    val patches: Collection<PhasedPatch>,
+) : PhasedPatch by SimplePhasedPatch(
     name = Renderable.of(patches.joinToString(LineSeparators.LF) { it.name }) { _, _ -> this },
     diskPreparations = patches.flatMap { it.diskPreparations }.toList(),
     diskCustomizations = patches.flatMap { it.diskCustomizations }.toList(),
@@ -466,7 +500,7 @@ class CompositePatch(
     osBoot = patches.any { patch -> patch.osBoot },
     osOperations = patches.flatMap { it.osOperations }.toList(),
 ) {
-    constructor(vararg patches: Patch) : this(patches.toList())
+    constructor(vararg patches: PhasedPatch) : this(patches.toList())
 
     override fun toString(): String = asString {
         "patches" to patches
@@ -512,21 +546,5 @@ data class FileOperation(
                 verify(localFile)
             }
         }
-    }
-}
-
-
-data class SimplePatch(
-    override val name: CharSequence,
-    override val diskPreparations: List<(OperatingSystemImage) -> Unit>,
-    override val diskCustomizations: List<(OperatingSystemImage) -> Customization>,
-    override val diskOperations: List<(OperatingSystemImage) -> GuestfishCommand>,
-    override val fileOperations: List<FileOperation>,
-    override val osPreparations: List<(OperatingSystemImage) -> Unit>,
-    override val osBoot: Boolean,
-    override val osOperations: List<(OperatingSystemImage) -> Program>,
-) : Patch {
-    override val operationCount by lazy {
-        diskPreparations.size + diskCustomizations.size + diskOperations.size + fileOperations.size + osOperations.size
     }
 }

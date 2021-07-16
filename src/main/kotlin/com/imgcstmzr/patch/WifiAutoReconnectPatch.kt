@@ -3,7 +3,6 @@ package com.imgcstmzr.patch
 import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
-import com.imgcstmzr.patch.Patch.Companion.buildPatch
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]
@@ -11,7 +10,7 @@ import com.imgcstmzr.patch.Patch.Companion.buildPatch
  * on port `443`. If no connection to any host can be established
  * the wifi connection will be re-established.
  */
-class WifiAutoReconnectPatch(vararg hosts: String = arrayOf("google.com", "amazon.com")) : Patch by buildPatch(NAME, {
+class WifiAutoReconnectPatch(vararg hosts: String = arrayOf("google.com", "amazon.com")) : PhasedPatch by PhasedPatch.build(NAME, {
 
     val printChecking = "printf 'Periodic internet connection check … '"
     val checkHosts = "(${hosts.map { netcat(it) }.or()})"
@@ -32,7 +31,7 @@ class WifiAutoReconnectPatch(vararg hosts: String = arrayOf("google.com", "amazo
         }
     }
 
-    boot { yes }
+    bootOs { yes }
 
 }) {
     companion object {

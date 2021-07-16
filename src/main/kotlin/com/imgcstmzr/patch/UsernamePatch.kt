@@ -2,7 +2,6 @@ package com.imgcstmzr.patch
 
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
-import com.imgcstmzr.patch.Patch.Companion.buildPatch
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]
@@ -11,7 +10,7 @@ import com.imgcstmzr.patch.Patch.Companion.buildPatch
 class UsernamePatch(
     private val oldUsername: String,
     private val newUsername: String,
-) : Patch by buildPatch("Change Username $oldUsername to $newUsername", {
+) : PhasedPatch by PhasedPatch.build("Change Username $oldUsername to $newUsername", {
 
     @Suppress("SpellCheckingInspection")
     customizeDisk {
@@ -28,11 +27,11 @@ class UsernamePatch(
         firstBootCommand { "usermod -d /home/$newUsername -m $newUsername" }
     }
 
-    osPrepare {
+    prepareOs {
         updateUsername(oldUsername, newUsername)
     }
 
-    os {
+    runPrograms {
         script("finish rename", "ls /home", "id $oldUsername", "id $newUsername")
     }
 })

@@ -3,7 +3,6 @@ package com.imgcstmzr.patch
 import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
-import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import koodies.io.path.withDirectoriesCreated
 import kotlin.io.path.writeLines
 
@@ -24,7 +23,7 @@ class SambaPatch(
     private val password: String,
     private val homeShare: Boolean,
     private val rootShare: RootShare,
-) : Patch by buildPatch("Configure CIFS/SMB/Samba", {
+) : PhasedPatch by PhasedPatch.build("Configure CIFS/SMB/Samba", {
 
     val config = StringBuilder().apply {
         appendLine("""
@@ -97,7 +96,7 @@ class SambaPatch(
         firstBootShutdownCommand()
     }
 
-    boot { yes }
+    bootOs { yes }
 
 }) {
     companion object {

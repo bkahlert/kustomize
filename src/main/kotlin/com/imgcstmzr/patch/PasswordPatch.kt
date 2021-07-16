@@ -2,7 +2,6 @@ package com.imgcstmzr.patch
 
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.PasswordOption
 import com.imgcstmzr.os.OperatingSystemImage
-import com.imgcstmzr.patch.Patch.Companion.buildPatch
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]
@@ -11,13 +10,13 @@ import com.imgcstmzr.patch.Patch.Companion.buildPatch
 class PasswordPatch(
     private val username: String,
     private val password: String,
-) : Patch by buildPatch("Set Password of $username", {
+) : PhasedPatch by PhasedPatch.build("Set Password of $username", {
 
     customizeDisk {
         password(PasswordOption.byString(username, password))
     }
 
-    osPrepare {
+    prepareOs {
         updatePassword(username, password)
     }
 })

@@ -1,14 +1,13 @@
 package com.imgcstmzr.patch
 
 import com.imgcstmzr.os.OperatingSystemImage
-import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import java.nio.file.Path
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]
  * disables the power-safe mode for the wifi adapter.
  */
-class WifiPowerSafeModePatch : Patch by buildPatch(NAME, {
+class WifiPowerSafeModePatch : PhasedPatch by PhasedPatch.build(NAME, {
 
     customizeDisk {
         firstBoot(NAME) {
@@ -20,7 +19,7 @@ class WifiPowerSafeModePatch : Patch by buildPatch(NAME, {
         }
     }
 
-    boot { yes }
+    bootOs { yes }
 
 }) {
     companion object {

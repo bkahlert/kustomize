@@ -12,7 +12,6 @@ import com.imgcstmzr.os.Program
 import com.imgcstmzr.os.ProgramState
 import com.imgcstmzr.os.boot
 import com.imgcstmzr.os.size
-import com.imgcstmzr.patch.Patch.Companion.buildPatch
 import com.imgcstmzr.test.E2E
 import com.imgcstmzr.test.OS
 import koodies.docker.DockerContainer
@@ -35,12 +34,10 @@ import koodies.test.SvgFixture
 import koodies.test.SystemIOExclusive
 import koodies.text.LineSeparators.LF
 import koodies.text.Semantics.formattedAs
-import koodies.text.matchesCurlyPattern
 import koodies.time.format
 import koodies.time.parseableInstant
 import koodies.unit.Giga
 import koodies.unit.bytes
-import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.DescribeableBuilder
@@ -59,56 +56,11 @@ import kotlin.text.RegexOption.MULTILINE
 @SystemIOExclusive
 class PatchKtTest {
 
-    private val nullPatch = buildPatch("No-Op Patch") {}
-
-    @Test
-    fun `should log not bordered if specified`(osImage: OperatingSystemImage, output: CapturedOutput) {
-        nullPatch.patch(osImage)
-
-        output.all.matchesCurlyPattern("""
-            {{}}
-            {}╭──╴No-Op Patch
-            {}│   
-            {}│   Disk Preparation: —
-            {}│   Disk Customization: —
-            {}│   Disk Operations: —
-            {}│   File Operations: —
-            {}│   OS Preparation: —
-            {}│   OS Boot: —
-            {}│   OS Operations: —
-            {}│
-            {}╰──╴✔︎
-            """.trimIndent())
-    }
-
-    @Nested
-    inner class CompositePatchTest {
-
-        @Test
-        fun `should show all patch names`(osImage: OperatingSystemImage, output: CapturedOutput) {
-            val patch = CompositePatch(
-                buildPatch("Patch 1") {},
-                buildPatch("Patch 2") {},
-                buildPatch("Patch 3") {},
-                buildPatch("Patch 4") {},
-                buildPatch("Patch 5") {},
-            )
-            patch.patch(osImage)
-            expectThat(output.all) {
-                contains("╭──╴Patch 1")
-                contains("│   Patch 2")
-                contains("│   Patch 3")
-                contains("│   Patch 4")
-                contains("│   Patch 5")
-            }
-        }
-    }
-
     @FiveMinutesTimeout @DockerRequiring([DockerPiImage::class]) @Test
     fun `should empty exchange directory before file operations`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
         osImage.hostPath(LinuxRoot / "home/pi/local.txt").withDirectoriesCreated().createFile().writeText("local")
-        val patch = buildPatch("empty exchange") {
-            files {
+        val patch = PhasedPatch.build("empty exchange") {
+            modifyFiles {
                 edit(LinuxRoot / "home/pi/file.txt", { require(it.exists()) }) {
                     it.writeText("content")
                 }
@@ -127,17 +79,17 @@ class PatchKtTest {
     fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val timestamp = Instant.now()
 
-        buildPatch("Try Everything Patch") {
+        PhasedPatch.build("Try Everything Patch") {
             prepareDisk {
                 resize(2.Giga.bytes)
             }
             customizeDisk {
                 hostname { "test-machine" }
             }
-            guestfish {
+            modifyDisk {
                 copyOut { LinuxRoot.etc / "hostname" }
             }
-            files {
+            modifyFiles {
                 edit(LinuxRoot.root / ".imgcstmzr.created", {
                     require(it.readText().trim().parseableInstant<Any>())
                 }) {
@@ -150,7 +102,7 @@ class PatchKtTest {
                     it.writeText(SvgFixture.toAsciiArt())
                 }
             }
-            os {
+            runPrograms {
                 script("demo", "sudo cat /root/.imgcstmzr.created", "cat /home/pi/demo.ansi")
             }
         }.patch(osImage)
@@ -174,18 +126,10 @@ class PatchKtTest {
 }
 
 
-fun <T : Patch> Assertion.Builder<T>.matches(
-    diskOperationsAssertion: Assertion.Builder<List<DiskOperation>>.() -> Unit = { hasSize(0) },
-    customizationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Customization>>.() -> Unit = {
-        hasSize(
-            0
-        )
-    },
-    guestfishCommandsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> GuestfishCommand>>.() -> Unit = {
-        hasSize(
-            0
-        )
-    },
+fun <T : PhasedPatch> Assertion.Builder<T>.matches(
+    diskOperationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Unit>>.() -> Unit = { hasSize(0) },
+    customizationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Customization>>.() -> Unit = { hasSize(0) },
+    guestfishCommandsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> GuestfishCommand>>.() -> Unit = { hasSize(0) },
     fileSystemOperationsAssertion: Assertion.Builder<List<FileOperation>>.() -> Unit = { hasSize(0) },
     programsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Program>>.() -> Unit = { hasSize(0) },
 ) = compose("matches") {
@@ -197,15 +141,12 @@ fun <T : Patch> Assertion.Builder<T>.matches(
 }.then { if (allPassed) pass() else fail() }
 
 
-fun <T : Patch> Assertion.Builder<T>.customizations(
+fun <T : PhasedPatch> Assertion.Builder<T>.customizations(
     osImage: OperatingSystemImage,
     block: Assertion.Builder<List<Customization>>.() -> Unit,
 ) = get("virt-customizations") { diskCustomizations.map { it(osImage) } }.block()
 
-fun <T : Patch> Assertion.Builder<T>.getCustomizations(osImage: OperatingSystemImage, index: Int) =
-    get("${index}th virt-customizations") { diskCustomizations[index].let { it(osImage) } }
-
-fun <T : Patch> Assertion.Builder<T>.guestfishCommands(
+fun <T : PhasedPatch> Assertion.Builder<T>.guestfishCommands(
     osImage: OperatingSystemImage,
     block: Assertion.Builder<List<GuestfishCommand>>.() -> Unit,
 ) = get("guestfish commands") { diskOperations.map { it(osImage) } }.block()

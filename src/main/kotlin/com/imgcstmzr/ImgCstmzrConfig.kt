@@ -13,7 +13,7 @@ import com.imgcstmzr.patch.FirstBootPatch
 import com.imgcstmzr.patch.HostnamePatch
 import com.imgcstmzr.patch.ImgResizePatch
 import com.imgcstmzr.patch.PasswordPatch
-import com.imgcstmzr.patch.Patch
+import com.imgcstmzr.patch.PhasedPatch
 import com.imgcstmzr.patch.RootShare
 import com.imgcstmzr.patch.SambaPatch
 import com.imgcstmzr.patch.ShellScriptPatch
@@ -125,7 +125,7 @@ data class ImgCstmzrConfig(
         scripts: List<ShellScript>,
     ) : List<ShellScript> by scripts
 
-    fun toPatches(): List<Patch> = buildList {
+    fun toPatches(): List<PhasedPatch> = buildList {
         size?.apply { +ImgResizePatch(this) }
 
         hostname?.apply { +HostnamePatch(name, randomSuffix) }
@@ -183,7 +183,7 @@ data class ImgCstmzrConfig(
         firstBoot.also { +FirstBootPatch(it) }
     }
 
-    fun toOptimizedPatches(): List<Patch> = with(toPatches().toMutableList()) {
+    fun toOptimizedPatches(): List<PhasedPatch> = with(toPatches().toMutableList()) {
         listOf(
             CompositePatch(extract<TweaksPatch>()
                 + extract<HostnamePatch>()
@@ -205,7 +205,7 @@ data class ImgCstmzrConfig(
         ).filter { it.isNotEmpty }
     }
 
-    private inline fun <reified T : Patch> MutableList<Patch>.extract(): List<T> =
+    private inline fun <reified T : PhasedPatch> MutableList<PhasedPatch>.extract(): List<T> =
         filterIsInstance<T>().also { this.removeAll(it) }
 }
 
