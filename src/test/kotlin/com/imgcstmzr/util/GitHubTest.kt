@@ -14,7 +14,7 @@ import kotlin.io.path.exists
 
 class GitHubTest {
 
-    @Test
+    @Slow @Test
     fun `should resolve latest tag`(uniqueId: UniqueId) = withTempDir(uniqueId) {
         expectThat(GitHub.repo("bkahlert/koodies").latestTag).matchesIgnoringCase(Regex("v\\.?\\d+(?:\\.\\d+)*"))
     }

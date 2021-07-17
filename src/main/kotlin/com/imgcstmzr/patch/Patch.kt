@@ -17,7 +17,6 @@ import com.imgcstmzr.os.boot
 import koodies.asString
 import koodies.builder.Init
 import koodies.io.path.deleteDirectoryEntriesRecursively
-import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.Banner.banner
 import koodies.text.LineSeparators
@@ -33,7 +32,7 @@ import koodies.tracing.spanning
 import koodies.tracing.tracing
 import koodies.unit.Size
 import java.nio.file.Path
-import kotlin.io.path.isRegularFile
+import kotlin.io.path.isDirectory
 
 /**
  * A patch to customize an [OperatingSystemImage]
@@ -196,7 +195,7 @@ data class SimplePhasedPatch(
     private fun applyDiskAndFileOperations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
         val exceptions = ReturnValues<Throwable>()
 
-        osImage.hostPath(LinuxRoot).deleteDirectoryEntriesRecursively()
+        // copy-in `CopyIn` files and copy out file operation files
         collectingExceptions("Disk Operations", diskOperations.size + fileOperations.size) {
             osImage.guestfish(trace, *diskOperations.toTypedArray()) {
                 @Suppress("Destructure")
@@ -204,15 +203,19 @@ data class SimplePhasedPatch(
             }
         }.also { exceptions.addAll(it) }
 
-        fun countFiles() = osImage.hostPath(LinuxRoot).listDirectoryEntriesRecursively().filter { it.isRegularFile() }.size
-        val fileOperationsCount = if (countFiles() > 0) fileOperations.size + 1 else fileOperations.size
-        collectingExceptions("File Operations", fileOperationsCount) { exceptionCallback ->
+        // delete all but relevant files to avoid copying in files with incorrect attributes (i.e. executable flag)
+        val fileOperationFiles = fileOperations.map { osImage.hostPath(it.file) }
+        osImage.hostPath(LinuxRoot).deleteDirectoryEntriesRecursively { file ->
+            !file.isDirectory() && file !in fileOperationFiles
+        }
+
+        collectingExceptions("File Operations", fileOperationFiles.size) { exceptionCallback ->
             @Suppress("Destructure")
             fileOperations.forEach { fileOperation ->
                 kotlin.runCatching { fileOperation(osImage.hostPath(fileOperation.file)) }.onFailure(exceptionCallback)
             }
 
-            if (countFiles() > 0) osImage.guestfish(trace) { tarIn() }
+            if (fileOperationFiles.isNotEmpty()) osImage.guestfish(trace) { tarIn() }
         }.also { exceptions.addAll(it) }
 
         return exceptions

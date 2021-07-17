@@ -91,8 +91,9 @@ class UsbEthernetGadgetPatch(
             dhcp-rapid-commit
             no-ping
             interface=usb0 
-            dhcp-range=${dhcpRange.firstUsableHost},${dhcpRange.lastUsableHost},1h 
-            dhcp-option=3 # no gateway / routing
+            dhcp-range=${dhcpRange.firstUsableHost},${dhcpRange.lastUsableHost},1h
+            # no gateway / routing
+            dhcp-option=3
             #dhcp-option=option:dns-server,192.168.168.192
             ${if (hostAsDefaultGateway) "dhcp-script=$DHCP_SCRIPT" else ""}
             leasefile-ro

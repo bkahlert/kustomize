@@ -340,7 +340,6 @@ class GuestfishCommandLine(
              *
              * Multiple local files and directories can be specified. Wildcards cannot be used.
              */
-            @Deprecated("avoid; especially when copying executables since the x flag is not copied")
             class CopyIn(val mkDir: Boolean, remoteDir: DiskPath, vararg val localFiles: Path) :
                 Composite(listOfNotNull(
                     if (mkDir) -GuestfishCommand("mkdir-p", remoteDir.pathString) else null,

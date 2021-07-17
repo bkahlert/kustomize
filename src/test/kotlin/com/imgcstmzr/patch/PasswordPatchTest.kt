@@ -25,6 +25,7 @@ import koodies.text.matchesCurlyPattern
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.first
+import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.message
@@ -37,7 +38,10 @@ class PasswordPatchTest {
     fun `should provide password change command`(osImage: OperatingSystemImage) {
         val passwordPatch = PasswordPatch("pi", "po")
         val expected = Customization.PasswordOption.byString("pi", "po")
-        expectThat(passwordPatch(osImage)).matches(diskCustomizationsAssertion = { first().isEqualTo(expected) })
+        expectThat(passwordPatch(osImage)).matches(
+            diskCustomizationsAssertion = { first().isEqualTo(expected) },
+            osPreparationsAssertion = { hasSize(1) }
+        )
     }
 
     @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class]) @E2E @Test

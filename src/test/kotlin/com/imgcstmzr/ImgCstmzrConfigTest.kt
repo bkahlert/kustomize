@@ -47,7 +47,7 @@ import koodies.test.asserting
 import koodies.test.containsAtLeast
 import koodies.test.hasElements
 import koodies.test.test
-import koodies.unit.Giga
+import koodies.unit.Gibi
 import koodies.unit.bytes
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
@@ -83,7 +83,7 @@ class ImgCstmzrConfigTest {
         expecting { timeZone } that { isEqualTo(TimeZone.getTimeZone("Europe/Berlin")) }
         expecting { hostname } that { isEqualTo(Hostname("demo", true)) }
         expecting { wifi } that { isEqualTo(Wifi("entry1\nentry2", autoReconnect = true, powerSafeMode = false)) }
-        expecting { size } that { isEqualTo(4.Giga.bytes) }
+        expecting { size } that { isEqualTo(4.Gibi.bytes) }
         with { ssh!! }.then {
             expecting { enabled } that { isTrue() }
             expecting { port } that { isEqualTo(1234) }

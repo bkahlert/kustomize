@@ -137,7 +137,7 @@ data class ImgCstmzrConfig(
             wpaSupplicant?.also { add(WpaSupplicantPatch(it)) }
             autoReconnect?.takeIf { it }?.also { add(WifiAutoReconnectPatch()) }
             powerSafeMode?.takeIf { !it }
-                ?.also { add(WifiPowerSafeModePatch()) } // TODO check why power applied although false; then username patch zum warten auf ende von firstboot script
+                ?.also { add(WifiPowerSafeModePatch()) }
         }
 
         defaultUser?.apply {
@@ -179,7 +179,7 @@ data class ImgCstmzrConfig(
         tweaks?.aptRetries?.apply { add(TweaksPatch(this)) }
 
         files.forEach {
-            it.hostPath?.apply { add(CopyFilesPatch(this to it.diskPath)) }
+            it.hostPath?.apply { add(CopyFilesPatch({ this } to it.diskPath)) }
             it.append?.apply { add(AppendToFilesPatch(this to it.diskPath)) }
         }
 

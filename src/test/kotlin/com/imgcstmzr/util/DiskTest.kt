@@ -8,10 +8,7 @@ import koodies.text.ANSI.Text.Companion.ansi
 import koodies.tracing.spanning
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 
-@Execution(CONCURRENT)
 class DiskTest {
 
     @Disabled

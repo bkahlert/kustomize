@@ -2,10 +2,12 @@ package com.imgcstmzr.patch
 
 import com.imgcstmzr.os.OperatingSystemImage
 import koodies.test.CapturedOutput
+import koodies.test.SystemIOExclusive
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.contains
 
+@SystemIOExclusive
 class CompositePatchTest {
 
     @Test

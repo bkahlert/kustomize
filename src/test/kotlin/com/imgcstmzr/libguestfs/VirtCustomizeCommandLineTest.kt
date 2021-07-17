@@ -74,6 +74,7 @@ class VirtCustomizeCommandLineTest {
             '--add' \
             '/images/disk.img' \
             '--colors' \
+            '--verbose' \
             '-x' \
             '--append-line' \
             '/etc/sudoers.d/privacy:Defaults        lecture = never' \

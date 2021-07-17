@@ -55,6 +55,7 @@ class OperatingSystemTest {
         "ignoreCASE login:",
         "trailingWhiteSpaces login: \t",
         "raspberry login: user input",
+        "wifi3--pUiy login:",
     ) { asserting { matches(OperatingSystem.DEFAULT_LOGIN_PATTERN) } }
 
     @TestFactory

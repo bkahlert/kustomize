@@ -54,7 +54,7 @@ class DownloaderTest {
         expectThat(path.fileName).toStringIsEqualTo("example.png")
     }
 
-    @Test
+    @Slow @Test
     fun `should throw on error`(uniqueId: UniqueId) = withTempDir(uniqueId) {
         expectThrows<FileNotFoundException> { getDownloader().download("#+ü protocol--------/uploads/2017/10/file_example_JPG_100kB.jpg") }
     }
