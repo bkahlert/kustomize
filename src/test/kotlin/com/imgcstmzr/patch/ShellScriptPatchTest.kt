@@ -37,7 +37,7 @@ class ShellScriptPatchTest {
 
     @Test
     fun `should copy firstboot script`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(shellScriptPatch).customizations(osImage) {
+        expectThat(shellScriptPatch(osImage)).customizations {
             last().isA<Customization.FirstBootOption>().file.content {
                 contains("echo ${banner("Test").singleQuoted}")
                 contains("touch /root/shell-script-test.txt")
@@ -49,13 +49,13 @@ class ShellScriptPatchTest {
 
     @Test
     fun `should copy firstboot script order fix`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(shellScriptPatch).customizations(osImage) { containsFirstBootScriptFix() }
+        expectThat(shellScriptPatch(osImage)).customizations { containsFirstBootScriptFix() }
     }
 
     @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @E2E @Smoke @Test
     fun `should run shell script`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
 
-        shellScriptPatch.patch(osImage)
+        osImage.patch(shellScriptPatch)
 
         expectThat(osImage).mounted {
             path("/root/shell-script-test.txt") {

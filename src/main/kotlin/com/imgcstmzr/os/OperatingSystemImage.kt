@@ -3,15 +3,19 @@ package com.imgcstmzr.os
 import com.imgcstmzr.cli.Layouts
 import com.imgcstmzr.cli.PATCH_DECORATION_FORMATTER
 import com.imgcstmzr.libguestfs.GuestfishCommandLine
+import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand
+import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder.GuestfishCommandsContext
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOptions
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder.CustomizationsContext
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Options
 import com.imgcstmzr.os.OperatingSystem.Credentials
 import koodies.Exceptions.IAE
 import koodies.builder.Init
+import koodies.builder.buildList
 import koodies.docker.DockerExec
 import koodies.io.path.duplicate
 import koodies.io.path.getSize
@@ -22,7 +26,7 @@ import koodies.text.Semantics.formattedAs
 import koodies.tracing.rendering.spanningLine
 import koodies.tracing.spanning
 import koodies.unit.BinaryPrefixes
-import koodies.unit.Mega
+import koodies.unit.Mebi
 import koodies.unit.Size
 import koodies.unit.bytes
 import java.nio.file.Path
@@ -81,10 +85,14 @@ class OperatingSystemImage(
      */
     fun guestfish(
         trace: Boolean = false,
-        init: Init<GuestfishCommandsContext>,
+        vararg guestfishCommands: GuestfishCommand,
+        init: Init<GuestfishCommandsContext> = {},
     ): DockerExec = GuestfishCommandLine(
         GuestfishOptions(file, trace = trace),
-        GuestfishCommandLine.GuestfishCommandsBuilder(init).map { it(this) },
+        buildList {
+            addAll(GuestfishCommandsBuilder(this@OperatingSystemImage).build(init))
+            addAll(guestfishCommands)
+        }
     ).exec.logging(exchangeDirectory, nameFormatter = Formatter.ToCharSequence, decorationFormatter = PATCH_DECORATION_FORMATTER, layout = Layouts.DESCRIPTION)
 
     /**
@@ -92,10 +100,14 @@ class OperatingSystemImage(
      */
     fun virtCustomize(
         trace: Boolean = false,
-        init: Init<CustomizationsContext>,
+        vararg customizations: Customization,
+        init: Init<CustomizationsContext> = {},
     ): DockerExec = VirtCustomizeCommandLine(
         Options(file, colors = !isDebugging, trace = trace),
-        CustomizationsBuilder(init).map { it(this) },
+        buildList {
+            addAll(CustomizationsBuilder(this@OperatingSystemImage).build(init))
+            addAll(customizations)
+        }
     ).exec.logging(exchangeDirectory, nameFormatter = Formatter.ToCharSequence, decorationFormatter = PATCH_DECORATION_FORMATTER, layout = Layouts.DESCRIPTION)
 
     fun increaseDiskSpace(size: Size): Unit =
@@ -110,7 +122,7 @@ class OperatingSystemImage(
 
             if (missing == Size.ZERO) return@spanningLine
 
-            val bytesPerStep = 200.Mega.bytes
+            val bytesPerStep = 200.Mebi.bytes
             val oneHundredMegaBytes = ByteArray(bytesPerStep.wholeBytes.toInt())
             log(path.getSize().toString(BinaryPrefixes))
             while (missing > 0.bytes) {

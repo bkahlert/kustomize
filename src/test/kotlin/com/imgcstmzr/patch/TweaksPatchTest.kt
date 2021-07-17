@@ -11,10 +11,10 @@ class TweaksPatchTest {
 
     @Test
     fun `should provide tweaks conf copying command`(osImage: OperatingSystemImage) {
-        val patch = TweaksPatch(9)
+        val patch = TweaksPatch(9).invoke(osImage)
 
         expect {
-            that(patch).customizations(osImage) {
+            that(patch).customizations {
                 containsExactly(listOf(AppendLineOption(APT_CONF_RETRIES, """APT::Acquire::Retries "9";""")))
             }
         }

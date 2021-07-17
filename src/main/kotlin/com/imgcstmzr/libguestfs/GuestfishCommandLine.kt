@@ -9,7 +9,6 @@ import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.RmDirComma
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.TarOutCommand
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.TouchCommand
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.UmountAllCommand
-import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder.GuestfishCommandsContext
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOption.DiskOption
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOption.MountOption
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishOption.ReadOnlyOption
@@ -22,10 +21,7 @@ import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemImage.Companion.mountRootForDisk
-import koodies.builder.BuilderTemplate
 import koodies.builder.buildList
-import koodies.builder.context.CapturesMap
-import koodies.builder.context.CapturingContext
 import koodies.collections.head
 import koodies.collections.tail
 import koodies.docker.DockerContainer
@@ -387,39 +383,40 @@ class GuestfishCommandLine(
         }
     }
 
-    object GuestfishCommandsBuilder : BuilderTemplate<GuestfishCommandsContext, List<(OperatingSystemImage) -> GuestfishCommand>>() {
+    class GuestfishCommandsBuilder(private val osImage: OperatingSystemImage) {
+
+        fun build(init: GuestfishCommandsContext.() -> Unit): List<GuestfishCommand> =
+            mutableListOf<GuestfishCommand>().also { GuestfishCommandsContext(it).init() }
 
         @GuestfishDsl
-        class GuestfishCommandsContext(override val captures: CapturesMap) : CapturingContext() {
-
-            val command by function<(OperatingSystemImage) -> GuestfishCommand>()
+        inner class GuestfishCommandsContext(private val guestfishCommands: MutableList<GuestfishCommand>) {
 
             /**
              * This creates a raw command that calls [name] and passes [arguments].
              */
             fun custom(name: String, vararg arguments: String) {
-                command { GuestfishCommand(name, *arguments) }
+                guestfishCommands.add(GuestfishCommand(name, *arguments))
             }
 
             /**
              * This command copies local files or directories recursively into the disk image.
              */
             fun copyIn(mkDir: Boolean = true, remoteDir: (OperatingSystemImage) -> DiskPath) {
-                command { remoteDir(it).run { CopyIn(mkDir, parentOrNull ?: this, it.hostPath(this)) } }
+                guestfishCommands.add(remoteDir(osImage).run { CopyIn(mkDir, parentOrNull ?: this, osImage.hostPath(this)) })
             }
 
             /**
              * This command copies remote files or directories recursively out of the disk image.
              */
             fun copyOut(mkDir: Boolean = true, remoteFile: (OperatingSystemImage) -> DiskPath) {
-                command { remoteFile(it).run { CopyOut(mkDir, it.hostPath(this).parent ?: it.hostPath(this), this) } }
+                guestfishCommands.add(remoteFile(osImage).run { CopyOut(mkDir, osImage.hostPath(this).parent ?: osImage.hostPath(this), this) })
             }
 
             /**
              * This command uploads and unpacks the local host share to the guest VMs root `/`.
              */
             fun tarIn(diskPath: (OperatingSystemImage) -> DiskPath = { LinuxRoot }) {
-                command { diskPath(it).run { TarIn(true, tar(it), this) } }
+                guestfishCommands.add(diskPath(osImage).run { TarIn(true, tar(osImage), this) })
             }
 
             /**
@@ -432,7 +429,7 @@ class GuestfishCommandLine(
              * * This command packs the guest VMs root `/` and downloads it to the local host share.
              */
             fun tarOut() {
-                command { TarOutCommand(LinuxRoot, it.hostPath(LinuxRoot / "archive.tar")) }
+                guestfishCommands.add(TarOutCommand(LinuxRoot, osImage.hostPath(LinuxRoot / "archive.tar")))
             }
 
             /**
@@ -442,7 +439,7 @@ class GuestfishCommandLine(
              * This command only works on regular files, and will fail on other file types such as directories, symbolic links, block special etc.
              */
             fun touch(init: () -> DiskPath) {
-                command { TouchCommand(init()) }
+                guestfishCommands.add(TouchCommand(init()))
             }
 
             /**
@@ -453,14 +450,14 @@ class GuestfishCommandLine(
              * This call cannot remove directories. Use [RmDirCommand] to remove an empty directory, or set [recursive] to remove directories recursively.
              */
             fun rm(force: Boolean = false, recursive: Boolean = false, file: () -> DiskPath) {
-                command { RmCommand(file().pathString, force, recursive) }
+                guestfishCommands.add(RmCommand(file().pathString, force, recursive))
             }
 
             /**
              * Remove the single [directory].
              */
             fun rmDir(directory: () -> DiskPath) {
-                command { RmDirCommand(directory()) }
+                guestfishCommands.add(RmDirCommand(directory()))
             }
 
             /**
@@ -469,17 +466,15 @@ class GuestfishCommandLine(
              * Some internal mounts are not unmounted by this call.
              */
             fun umountAll() {
-                command { UmountAllCommand }
+                guestfishCommands.add(UmountAllCommand)
             }
 
             /**
              * This exits guestfish.
              */
             fun exit() {
-                command { ExitCommand }
+                guestfishCommands.add(ExitCommand)
             }
         }
-
-        override fun BuildContext.build() = ::GuestfishCommandsContext{ ::command.evalAll() }
     }
 }

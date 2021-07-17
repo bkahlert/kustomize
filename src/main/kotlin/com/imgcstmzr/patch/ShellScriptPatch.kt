@@ -11,17 +11,25 @@ import koodies.text.LineSeparators.LF
  * when done shuts down.
  */
 class ShellScriptPatch(
-    shellScripts: List<ShellScript>,
-) : PhasedPatch by PhasedPatch.build("${shellScripts.size} Shell Script(s):${shellScripts.mapNotNull { it.name }.map { LF + it }.joinToString("")}", {
-    customizeDisk {
-        firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o Setup") { osImage ->
-            shellScripts.forEach { embed(it, true) }
-            !osImage.shutdownCommand
-        }
-    }
+    private val shellScripts: List<ShellScript>,
+) : (OperatingSystemImage) -> PhasedPatch {
 
-    bootOs { yes }
-}) {
     constructor(vararg shellScripts: ShellScript) : this(shellScripts.toList())
     constructor(name: String? = null, init: ScriptInit) : this(ShellScript(name, init))
+
+    override fun invoke(osImage: OperatingSystemImage): PhasedPatch =
+        PhasedPatch.build(
+            "${shellScripts.size} Shell Script(s):${shellScripts.mapNotNull { it.name }.map { LF + it }.joinToString("")}",
+            osImage,
+        ) {
+
+            customizeDisk {
+                firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o Setup") { osImage ->
+                    shellScripts.forEach { embed(it, true) }
+                    !osImage.shutdownCommand
+                }
+            }
+
+            bootOs = true
+        }
 }

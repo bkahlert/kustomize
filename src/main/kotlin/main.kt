@@ -96,7 +96,7 @@ class CliCommand : NoOpCliktCommand(
         listOf(LibguestfsImage, DockerPiImage).subtract(Docker.images.list()).forEach { it.pull() }
 
         val patches = config.toOptimizedPatches()
-        val exceptions: ReturnValues<Throwable> = patches.patch(osImage)
+        val exceptions: ReturnValues<Throwable> = osImage.patch(*patches.toTypedArray())
 
         val flashDisk: Disk? = spanning(banner("Flashing $osImage")) {
             config.flashDisk?.let { disk ->

@@ -37,7 +37,7 @@ class PasswordPatchTest {
     fun `should provide password change command`(osImage: OperatingSystemImage) {
         val passwordPatch = PasswordPatch("pi", "po")
         val expected = Customization.PasswordOption.byString("pi", "po")
-        expectThat(passwordPatch).matches(diskCustomizationsAssertion = { first().get { invoke(osImage) }.isEqualTo(expected) })
+        expectThat(passwordPatch(osImage)).matches(diskCustomizationsAssertion = { first().isEqualTo(expected) })
     }
 
     @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class]) @E2E @Test
@@ -52,7 +52,7 @@ class PasswordPatchTest {
         val userPasswordPattern = "$username:{}:{}:0:99999:7:::"
         check(userPassword.matchesCurlyPattern(userPasswordPattern)) { "${userPassword.debug} does not match ${userPasswordPattern.debug}" }
 
-        passwordPatch.patch(osImage)
+        osImage.patch(passwordPatch)
 
         expectThat(osImage.credentials).isEqualTo(Credentials(username, newPassword))
         expectThat(osImage).booted {
@@ -63,7 +63,7 @@ class PasswordPatchTest {
 
     @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class], ThanksForCleaningUp) @E2E @Test
     fun `should not be able to use old password`(container: DockerContainer, @OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
-        PasswordPatch(RaspberryPiLite.defaultCredentials.username, "po").patch(osImage)
+        osImage.patch(PasswordPatch(RaspberryPiLite.defaultCredentials.username, "po"))
 
         osImage.credentials = Credentials("pi", "wrong password")
         expecting { osImage.boot(container.name) } that {

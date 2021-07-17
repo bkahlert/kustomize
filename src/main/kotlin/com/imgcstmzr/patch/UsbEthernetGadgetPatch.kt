@@ -63,26 +63,30 @@ class UsbEthernetGadgetPatch(
      * Whether to activate the serial console.
      */
     val enableSerialConsole: Boolean = false,
-) : PhasedPatch by PhasedPatch.build("Configure USB Gadget with DHCP Address Range $dhcpRange", {
+) : (OperatingSystemImage) -> PhasedPatch {
+    override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build(
+        "Configure USB Gadget with DHCP Address Range $dhcpRange",
+        osImage,
+    ) {
 
-    require(deviceAddress in dhcpRange.firstUsableHost..dhcpRange.lastUsableHost) { "$deviceAddress must be in range ${dhcpRange.usable}" }
+        require(deviceAddress in dhcpRange.firstUsableHost..dhcpRange.lastUsableHost) { "$deviceAddress must be in range ${dhcpRange.usable}" }
 
-    customizeDisk {
+        customizeDisk {
 
-        firstBootInstall { listOf("dnsmasq") }
+            firstBootInstall { listOf("dnsmasq") }
 
-        /**
-         * server=8.8.8.8
-         * server=1.1.1.1
-         * server=8.8.4.4
-         * server=1.0.0.1
-         * expand-hosts
-         * domain=bother-you
-         * address=/host/192.168.168.192
-         * dhcp-range=192.168.168.168,192.168.168.189,24h
-         * dhcp-option=option:dns-server,192.168.168.192
-         */
-        copyIn(USB0_DNSMASQD, """
+            /**
+             * server=8.8.8.8
+             * server=1.1.1.1
+             * server=8.8.4.4
+             * server=1.0.0.1
+             * expand-hosts
+             * domain=bother-you
+             * address=/host/192.168.168.192
+             * dhcp-range=192.168.168.168,192.168.168.189,24h
+             * dhcp-option=option:dns-server,192.168.168.192
+             */
+            copyIn(USB0_DNSMASQD, """
             dhcp-authoritative 
             dhcp-rapid-commit
             no-ping
@@ -94,8 +98,8 @@ class UsbEthernetGadgetPatch(
             leasefile-ro
         """.trimIndent())
 
-        if (hostAsDefaultGateway) {
-            copyIn(DHCP_SCRIPT, """
+            if (hostAsDefaultGateway) {
+                copyIn(DHCP_SCRIPT, """
                 #!/bin/bash
                 op="${'$'}{1:-op}"
                 mac="${'$'}{2:-mac}"
@@ -111,35 +115,35 @@ class UsbEthernetGadgetPatch(
                 fi
                 
             """.trimIndent())
-            chmods { "0755" to DHCP_SCRIPT }
-        }
+                chmods { "0755" to DHCP_SCRIPT }
+            }
 
-        /**
-         * interface usb0
-         * static ip_address=192.168.168.192/24
-         * static routers=192.168.168.168
-         * static domain_name_servers=192.168.168.168
-         * metric 999
-         * fallback usb0
-         *
-         * auto lo usb0
-         * auth usb0
-         * address 192.168.168.192
-         * netmask 255.255.255.0
-         * network 192.168.168.0
-         * broadcast 192.168.168.255
-         * gateway 192.168.168.168
-         * metric 999
-         * dns-nameservers 192.168.168.168
-         */
-        copyIn(USB0_NETWORK, """
+            /**
+             * interface usb0
+             * static ip_address=192.168.168.192/24
+             * static routers=192.168.168.168
+             * static domain_name_servers=192.168.168.168
+             * metric 999
+             * fallback usb0
+             *
+             * auto lo usb0
+             * auth usb0
+             * address 192.168.168.192
+             * netmask 255.255.255.0
+             * network 192.168.168.0
+             * broadcast 192.168.168.255
+             * gateway 192.168.168.168
+             * metric 999
+             * dns-nameservers 192.168.168.168
+             */
+            copyIn(USB0_NETWORK, """
             auto usb0
             allow-hotplug usb0
             iface usb0 inet static
               address $deviceAddress/${dhcpRange.prefixLength}
         """.trimIndent())
 
-        copyIn(USB_GADGET, """
+            copyIn(USB_GADGET, """
             #!/bin/bash
 
             cd /sys/kernel/config/usb_gadget/
@@ -186,9 +190,9 @@ class UsbEthernetGadgetPatch(
             
             ifup usb0
         """.trimIndent())
-        chmods { "0755" to USB_GADGET }
+            chmods { "0755" to USB_GADGET }
 
-        copyIn(USBGADGET_SERVICE, """
+            copyIn(USBGADGET_SERVICE, """
             [Unit]
             Description=My USB gadget
             After=network-online.target
@@ -203,15 +207,16 @@ class UsbEthernetGadgetPatch(
             [Install]
             WantedBy=sysinit.target
         """.trimIndent())
-        firstBoot("enable ${USBGADGET_SERVICE.fileName}") { "systemctl enable ${USBGADGET_SERVICE.fileName}" }
+            firstBoot("enable ${USBGADGET_SERVICE.fileName}") { "systemctl enable ${USBGADGET_SERVICE.fileName}" }
 
-        firstBoot("update ${CONFIG_TXT.fileName}") { "echo 'dtoverlay=dwc2' >> $CONFIG_TXT" }
-        firstBoot("update ${CMDLINE_TXT.fileName}") { "sed -i 's/\$/ modules-load=dwc2/' $CMDLINE_TXT" }
-        firstBoot("update ${MODULES.fileName}") { "echo 'libcomposite' >> $MODULES" }
-        firstBoot("update ${DHCPCD_CONF.fileName}") { "echo 'denyinterfaces usb0' >> $DHCPCD_CONF" }
-        if (enableSerialConsole) firstBoot("enable serial-getty@ttyGS0.service") { "systemctl enable serial-getty@ttyGS0.service" }
+            firstBoot("update ${CONFIG_TXT.fileName}") { "echo 'dtoverlay=dwc2' >> $CONFIG_TXT" }
+            firstBoot("update ${CMDLINE_TXT.fileName}") { "sed -i 's/\$/ modules-load=dwc2/' $CMDLINE_TXT" }
+            firstBoot("update ${MODULES.fileName}") { "echo 'libcomposite' >> $MODULES" }
+            firstBoot("update ${DHCPCD_CONF.fileName}") { "echo 'denyinterfaces usb0' >> $DHCPCD_CONF" }
+            if (enableSerialConsole) firstBoot("enable serial-getty@ttyGS0.service") { "systemctl enable serial-getty@ttyGS0.service" }
+        }
     }
-}) {
+
     companion object {
         val USB0_DNSMASQD = LinuxRoot.etc / "dnsmasq.d" / "usb0"
         val DHCP_SCRIPT = LinuxRoot.root / "route.sh"

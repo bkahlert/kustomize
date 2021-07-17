@@ -82,7 +82,7 @@ class GuestfishCommandLineTest {
 
 internal fun createGuestfishCommand(osImage: OperatingSystemImage): GuestfishCommandLine = GuestfishCommandLine(
     GuestfishOptions(osImage.file),
-    GuestfishCommandsBuilder {
+    GuestfishCommandsBuilder(osImage).build {
         custom("!mkdir", "-p")
 
         copyIn { LinuxRoot.home / "pi" / ".ssh" / "known_hosts" }
@@ -97,7 +97,7 @@ internal fun createGuestfishCommand(osImage: OperatingSystemImage): GuestfishCom
         rmDir { LinuxRoot / "rm" / "dir" }
         umountAll()
         exit()
-    }.map { it(osImage) },
+    },
 )
 
 

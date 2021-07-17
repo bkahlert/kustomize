@@ -18,9 +18,7 @@ import koodies.docker.DockerRequiring
 import koodies.exec.Process.State.Exited.Succeeded
 import koodies.exec.output
 import koodies.io.path.hasContent
-import koodies.io.path.touch
 import koodies.io.path.withDirectoriesCreated
-import koodies.io.path.writeLine
 import koodies.io.path.writeText
 import koodies.io.toAsciiArt
 import koodies.regex.groupValue
@@ -34,8 +32,6 @@ import koodies.test.SvgFixture
 import koodies.test.SystemIOExclusive
 import koodies.text.LineSeparators.LF
 import koodies.text.Semantics.formattedAs
-import koodies.time.format
-import koodies.time.parseableInstant
 import koodies.tracing.spanning
 import koodies.unit.Gibi
 import koodies.unit.bytes
@@ -48,10 +44,8 @@ import strikt.assertions.hasSize
 import strikt.assertions.isFalse
 import strikt.assertions.isGreaterThanOrEqualTo
 import java.nio.file.Path
-import java.time.Instant
 import kotlin.io.path.createFile
 import kotlin.io.path.exists
-import kotlin.io.path.readText
 import kotlin.text.RegexOption.DOT_MATCHES_ALL
 import kotlin.text.RegexOption.MULTILINE
 
@@ -63,12 +57,12 @@ class SimplePhasedPatchTest {
         val patch = SimplePhasedPatch(
             name = "patch",
             diskPreparations = emptyList(),
-            diskCustomizations = listOf {
+            diskCustomizations = listOf(
                 Customization("command", "argument")
-            },
+            ),
             diskOperations = listOf(
-                { GuestfishCommand("command1", "argument2") },
-                { GuestfishCommand("command2", "argument2") },
+                GuestfishCommand("command1", "argument2"),
+                GuestfishCommand("command2", "argument2"),
             ),
             fileOperations = listOf(
                 FileOperation(LinuxRoot / "file1", {}, {}),
@@ -83,19 +77,19 @@ class SimplePhasedPatchTest {
             ),
             osBoot = false,
             osOperations = listOf(
-                { it.compileScript("program1", "command1") },
-                { it.compileScript("program2", "command2") },
-                { it.compileScript("program3", "command3") },
-                { it.compileScript("program4", "command4") },
-                { it.compileScript("program5", "command5") },
+                osImage.compileScript("program1", "command1"),
+                osImage.compileScript("program2", "command2"),
+                osImage.compileScript("program3", "command3"),
+                osImage.compileScript("program4", "command4"),
+                osImage.compileScript("program5", "command5"),
             ),
         )
 
         patch.patch(osImage)
 
         expectThat(output.all) {
-            contains("◼ Disk Preparation")
-            contains("▶ Disk Customization (1)")
+            contains("◼ Disk Preparations")
+            contains("▶ Disk Customizations (1)")
             contains("▶ Disk Operations (5)")
             contains("▶ File Operations (4)")
             contains("▶ OS Preparations (4)")
@@ -107,7 +101,7 @@ class SimplePhasedPatchTest {
     @FiveMinutesTimeout @DockerRequiring([DockerPiImage::class]) @Test
     fun `should empty exchange directory before file operations`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
         osImage.hostPath(LinuxRoot / "home/pi/local.txt").withDirectoriesCreated().createFile().writeText("local")
-        val patch = PhasedPatch.build("empty exchange") {
+        val patch = PhasedPatch.build("empty exchange", osImage) {
             modifyFiles {
                 edit(LinuxRoot / "home/pi/file.txt", { require(it.exists()) }) {
                     it.writeText("content")
@@ -125,9 +119,8 @@ class SimplePhasedPatchTest {
 
     @SixtyMinutesTimeout @DockerRequiring([DockerPiImage::class]) @E2E @Test
     fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-        val timestamp = Instant.now()
 
-        PhasedPatch.build("Try Everything Patch") {
+        val patch = PhasedPatch.build("Try Everything Patch", osImage) {
             prepareDisk {
                 resize(2.Gibi.bytes)
             }
@@ -138,12 +131,6 @@ class SimplePhasedPatchTest {
                 copyOut { LinuxRoot.etc / "hostname" }
             }
             modifyFiles {
-                edit(LinuxRoot.root / ".imgcstmzr.created", {
-                    require(it.readText().trim().parseableInstant<Any>())
-                }) {
-                    it.touch().writeLine(timestamp.format())
-                }
-
                 edit(LinuxRoot / "home/pi/demo.ansi", {
                     require(it.exists())
                 }) {
@@ -151,9 +138,11 @@ class SimplePhasedPatchTest {
                 }
             }
             runPrograms {
-                script("demo", "sudo cat /root/.imgcstmzr.created", "cat /home/pi/demo.ansi")
+                script("demo", "cat /home/pi/demo.ansi")
             }
-        }.patch(osImage)
+        }
+
+        patch.patch(osImage)
 
         expectThat(osImage) {
             hostPath("/etc/hostname").hasContent("test-machine$LF")
@@ -161,11 +150,10 @@ class SimplePhasedPatchTest {
             booted({ "init" },
                 "init" to {
                     enter("sudo cat /etc/hostname")
-                    enter("sudo cat /root/.imgcstmzr.created")
                     "validate"
                 },
                 "validate" to {
-                    if (it != timestamp.format()) "validate"
+                    if (it != "test-machine") "validate"
                     else null
                 }
             )
@@ -174,13 +162,13 @@ class SimplePhasedPatchTest {
 }
 
 fun <T : PhasedPatch> Assertion.Builder<T>.matches(
-    diskPreparationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Unit>>.() -> Unit = { hasSize(0) },
-    diskCustomizationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Customization>>.() -> Unit = { hasSize(0) },
-    diskOperationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> GuestfishCommand>>.() -> Unit = { hasSize(0) },
+    diskPreparationsAssertion: Assertion.Builder<List<() -> Unit>>.() -> Unit = { hasSize(0) },
+    diskCustomizationsAssertion: Assertion.Builder<List<Customization>>.() -> Unit = { hasSize(0) },
+    diskOperationsAssertion: Assertion.Builder<List<GuestfishCommand>>.() -> Unit = { hasSize(0) },
     fileOperationsAssertion: Assertion.Builder<List<FileOperation>>.() -> Unit = { hasSize(0) },
-    osPreparationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Unit>>.() -> Unit = { hasSize(0) },
+    osPreparationsAssertion: Assertion.Builder<List<() -> Unit>>.() -> Unit = { hasSize(0) },
     osBootAssertion: Assertion.Builder<Boolean>.() -> Unit = { isFalse() },
-    osOperationsAssertion: Assertion.Builder<List<(OperatingSystemImage) -> Program>>.() -> Unit = { hasSize(0) },
+    osOperationsAssertion: Assertion.Builder<List<Program>>.() -> Unit = { hasSize(0) },
 ) = compose("matches") {
     diskPreparationsAssertion(get { diskPreparations })
     diskCustomizationsAssertion(get { diskCustomizations })
@@ -193,14 +181,12 @@ fun <T : PhasedPatch> Assertion.Builder<T>.matches(
 
 
 fun <T : PhasedPatch> Assertion.Builder<T>.customizations(
-    osImage: OperatingSystemImage,
     block: Assertion.Builder<List<Customization>>.() -> Unit,
-) = get("virt-customizations") { diskCustomizations.map { it(osImage) } }.block()
+) = get("virt-customizations") { diskCustomizations }.block()
 
 fun <T : PhasedPatch> Assertion.Builder<T>.guestfishCommands(
-    osImage: OperatingSystemImage,
     block: Assertion.Builder<List<GuestfishCommand>>.() -> Unit,
-) = get("guestfish commands") { diskOperations.map { it(osImage) } }.block()
+) = get("guestfish commands") { diskOperations }.block()
 
 inline fun Assertion.Builder<OperatingSystemImage>.booted(
     crossinline assertion: OperatingSystemProcess.(String) -> ((String) -> Boolean)?,

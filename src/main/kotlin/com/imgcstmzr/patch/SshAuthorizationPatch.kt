@@ -15,9 +15,13 @@ import com.imgcstmzr.os.OperatingSystemImage
 class SshAuthorizationPatch(
     private val username: String,
     private val authorizedKeys: List<String>,
-) : PhasedPatch by PhasedPatch.build("Add ${authorizedKeys.size} SSH Key(s) for $username", {
-
-    customizeDisk {
-        authorizedKeys.forEach { password -> sshInject { username to password } }
+) : (OperatingSystemImage) -> PhasedPatch {
+    override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build(
+        "Add ${authorizedKeys.size} SSH Key(s) for $username",
+        osImage,
+    ) {
+        customizeDisk {
+            authorizedKeys.forEach { password -> sshInject { username to password } }
+        }
     }
-})
+}

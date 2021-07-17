@@ -11,9 +11,10 @@ import com.imgcstmzr.os.OperatingSystemImage
  */
 class SshPortPatch(
     private val port: Int,
-) : PhasedPatch by PhasedPatch.build("Set SSH port to $port", {
-
-    customizeDisk {
-        firstBootCommand { "sed -i 's/^\\#Port 22\$/Port $port/g' /etc/ssh/sshd_config" }
+) : (OperatingSystemImage) -> PhasedPatch {
+    override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build("Set SSH port to $port", osImage) {
+        customizeDisk {
+            firstBootCommand { "sed -i 's/^\\#Port 22\$/Port $port/g' /etc/ssh/sshd_config" }
+        }
     }
-})
+}

@@ -12,11 +12,16 @@ import koodies.text.withRandomSuffix
 class HostnamePatch(
     private val hostname: String,
     private val randomSuffix: Boolean,
-) : PhasedPatch by PhasedPatch.build("Set Hostname to $hostname", {
-    customizeDisk {
-        hostname {
-            if (randomSuffix) hostname.withRandomSuffix()
-            else hostname
+) : (OperatingSystemImage) -> PhasedPatch {
+    override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build(
+        "Set Hostname to $hostname",
+        osImage,
+    ) {
+        customizeDisk {
+            hostname {
+                if (randomSuffix) hostname.withRandomSuffix()
+                else hostname
+            }
         }
     }
-})
+}

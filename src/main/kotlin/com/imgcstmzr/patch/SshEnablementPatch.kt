@@ -10,9 +10,13 @@ import com.imgcstmzr.os.OperatingSystemImage
  * @see SshAuthorizationPatch
  * @see SshPortPatch
  */
-class SshEnablementPatch :
-    PhasedPatch by PhasedPatch.build("Enable SSH", {
+class SshEnablementPatch : (OperatingSystemImage) -> PhasedPatch {
+    override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build(
+        "Enable SSH",
+        osImage,
+    ) {
         modifyDisk {
             touch { LinuxRoot.boot / "ssh" }
         }
-    })
+    }
+}

@@ -13,17 +13,21 @@ import koodies.text.LineSeparators
  * This allows for scripts intended to be executed in the presence of the user.
  */
 class FirstBootPatch(
-    shellScripts: List<ShellScript>,
-) : PhasedPatch by PhasedPatch.build("Add ${shellScripts.size} First Boot Script(s): ${
-    shellScripts.mapNotNull { it.name }.map { LineSeparators.LF + it }.joinToString("")
-}", {
-    customizeDisk {
-        firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o First Boot") {
-            shellScripts.forEach { embed(it, true) }
-            ""
-        }
-    }
-}) {
+    private val shellScripts: List<ShellScript>,
+) : (OperatingSystemImage) -> PhasedPatch {
+
     constructor(vararg shellScripts: ShellScript) : this(shellScripts.toList())
     constructor(name: String? = null, init: ScriptInit) : this(ShellScript(name, init))
+
+    override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build(
+        "Add ${shellScripts.size} First Boot Script(s): ${shellScripts.mapNotNull { it.name }.map { LineSeparators.LF + it }.joinToString("")}",
+        osImage,
+    ) {
+        customizeDisk {
+            firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o First Boot") {
+                shellScripts.forEach { embed(it, true) }
+                ""
+            }
+        }
+    }
 }

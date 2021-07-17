@@ -11,13 +11,18 @@ import com.imgcstmzr.os.OperatingSystemImage
  */
 class TweaksPatch(
     val aptRetries: Int,
-) : PhasedPatch by PhasedPatch.build("Tweaks (APT Retries)", {
+) : (OperatingSystemImage) -> PhasedPatch {
+    override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build(
+        "Tweaks (APT Retries)",
+        osImage
+    ) {
 
-    customizeDisk {
-        appendLine { """APT::Acquire::Retries "$aptRetries";""" to APT_CONF_RETRIES }
+        customizeDisk {
+            appendLine { """APT::Acquire::Retries "$aptRetries";""" to APT_CONF_RETRIES }
+        }
+
     }
 
-}) {
     companion object {
         val APT_CONF_RETRIES: DiskPath = LinuxRoot.etc / "apt" / "apt.conf.d" / "80-retries"
     }

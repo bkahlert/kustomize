@@ -5,6 +5,7 @@ import com.imgcstmzr.cli.asParam
 import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystem
+import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystems
 import com.imgcstmzr.patch.AppendToFilesPatch
 import com.imgcstmzr.patch.CompositePatch
@@ -125,65 +126,68 @@ data class ImgCstmzrConfig(
         scripts: List<ShellScript>,
     ) : List<ShellScript> by scripts
 
-    fun toPatches(): List<PhasedPatch> = buildList {
-        size?.apply { +ImgResizePatch(this) }
+    fun toPatches(): List<(OperatingSystemImage) -> PhasedPatch> = buildList {
+        size?.apply { add(ImgResizePatch(this)) }
 
-        hostname?.apply { +HostnamePatch(name, randomSuffix) }
+        hostname?.apply { add(HostnamePatch(name, randomSuffix)) }
 
-        timeZone?.apply { +TimeZonePatch(this) }
+        timeZone?.apply { add(TimeZonePatch(this)) }
 
         wifi?.apply {
-            wpaSupplicant?.also { +WpaSupplicantPatch(it) }
-            autoReconnect?.takeIf { it }?.also { +WifiAutoReconnectPatch() }
+            wpaSupplicant?.also { add(WpaSupplicantPatch(it)) }
+            autoReconnect?.takeIf { it }?.also { add(WifiAutoReconnectPatch()) }
             powerSafeMode?.takeIf { !it }
-                ?.also { +WifiPowerSafeModePatch() } // TODO check why power applied although false; then username patch zum warten auf ende von firstboot script
+                ?.also { add(WifiPowerSafeModePatch()) } // TODO check why power applied although false; then username patch zum warten auf ende von firstboot script
         }
 
         defaultUser?.apply {
             val username = username ?: os.defaultCredentials.username
-            if (newUsername != null) +UsernamePatch(username, newUsername)
-            if (newPassword != null) +PasswordPatch(newUsername ?: username, newPassword)
+            if (newUsername != null) add(UsernamePatch(username, newUsername))
+            if (newPassword != null) add(PasswordPatch(newUsername ?: username, newPassword))
         }
 
         ssh?.apply {
-            enabled?.takeIf { it }.apply { +SshEnablementPatch() }
-            port?.apply { +SshPortPatch(this) }
+            enabled?.takeIf { it }.apply { add(SshEnablementPatch()) }
+            port?.apply { add(SshPortPatch(this)) }
             if (authorizedKeys.isNotEmpty()) {
-                val sshKeyUser = defaultUser?.newUsername
+                val sshKeyUser = defaultUser
+                    ?.newUsername
                     ?: os.defaultCredentials.takeUnless { it == OperatingSystem.Credentials.empty }?.username ?: "root"
-                +SshAuthorizationPatch(sshKeyUser, authorizedKeys)
+                add(SshAuthorizationPatch(sshKeyUser, authorizedKeys))
             }
         }
 
         samba?.apply {
-            val sambdaPassword = defaultUser?.newPassword
-            require(sambdaPassword != null) { "Samba configuration requires a set password." }
+            val sambaPassword = defaultUser?.newPassword
+            require(sambaPassword != null) { "Samba configuration requires a set password." }
             val sambaUsername = defaultUser?.newUsername ?: defaultUser?.username ?: os.defaultCredentials.username
-            +SambaPatch(sambaUsername, sambdaPassword, homeShare, rootShare)
+            add(SambaPatch(sambaUsername, sambaPassword, homeShare, rootShare))
         }
 
         usbGadgets.forEach {
-            +when (it) {
-                is UsbGadget.Ethernet -> UsbEthernetGadgetPatch(
-                    dhcpRange = it.dhcpRange,
-                    deviceAddress = it.deviceAddress ?: it.dhcpRange.firstUsableHost,
-                    hostAsDefaultGateway = it.hostAsDefaultGateway ?: false,
-                    enableSerialConsole = it.enableSerialConsole ?: false)
+            when (it) {
+                is UsbGadget.Ethernet -> add(
+                    UsbEthernetGadgetPatch(
+                        dhcpRange = it.dhcpRange,
+                        deviceAddress = it.deviceAddress ?: it.dhcpRange.firstUsableHost,
+                        hostAsDefaultGateway = it.hostAsDefaultGateway ?: false,
+                        enableSerialConsole = it.enableSerialConsole ?: false)
+                )
             }
         }
 
-        tweaks?.aptRetries?.apply { +TweaksPatch(this) }
+        tweaks?.aptRetries?.apply { add(TweaksPatch(this)) }
 
         files.forEach {
-            it.hostPath?.apply { +CopyFilesPatch(this to it.diskPath) }
-            it.append?.apply { +AppendToFilesPatch(this to it.diskPath) }
+            it.hostPath?.apply { add(CopyFilesPatch(this to it.diskPath)) }
+            it.append?.apply { add(AppendToFilesPatch(this to it.diskPath)) }
         }
 
         setup.forEach { +ShellScriptPatch(it) }
         firstBoot.also { +FirstBootPatch(it) }
     }
 
-    fun toOptimizedPatches(): List<PhasedPatch> = with(toPatches().toMutableList()) {
+    fun toOptimizedPatches(): List<(OperatingSystemImage) -> PhasedPatch> = with(toPatches().toMutableList()) {
         listOf(
             CompositePatch(extract<TweaksPatch>()
                 + extract<HostnamePatch>()
@@ -202,11 +206,11 @@ data class ImgCstmzrConfig(
                 + extract<SshPortPatch>()
                 + extract<UsbEthernetGadgetPatch>()),
             *toTypedArray()
-        ).filter { it.isNotEmpty }
+        )
     }
 
-    private inline fun <reified T : PhasedPatch> MutableList<PhasedPatch>.extract(): List<T> =
-        filterIsInstance<T>().also { this.removeAll(it) }
+    private inline fun <reified T : (OperatingSystemImage) -> PhasedPatch> MutableList<(OperatingSystemImage) -> PhasedPatch>.extract(): List<T> =
+        filterIsInstance<T>().also { removeAll(it) }
 }
 
 

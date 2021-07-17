@@ -36,7 +36,7 @@ class FirstBootPatchTest {
 
     @Test
     fun `should copy firstboot script`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(patch).customizations(osImage) {
+        expectThat(patch(osImage)).customizations {
             last().isA<Customization.FirstBootOption>().file.content {
                 contains("echo ${banner("Test").singleQuoted}")
                 contains("'echo' 'Type X to …'")
@@ -47,23 +47,23 @@ class FirstBootPatchTest {
 
     @Test
     fun `should copy firstboot script order fix`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(patch).customizations(osImage) { containsFirstBootScriptFix() }
+        expectThat(patch(osImage)).customizations { containsFirstBootScriptFix() }
     }
 
     @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class]) @E2E @Smoke @Test
     fun `should run firstboot scripts in correct order`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
         withTempDir(uniqueId) {
 
-            FirstBootPatch(
-                ShellScript("writing 'a'") { "echo 'a' > /home/file" },
-                ShellScript("appending 'b'") { "echo 'b' >> /home/file" },
-            ).patch(osImage)
-
-            FirstBootPatch(
-                ShellScript("appending 'c'") { "echo 'c' >> /home/file" },
-                ShellScript("appending 'd'") { "echo 'd' >> /home/file" },
-            ).patch(osImage)
-
+            osImage.patch(
+                FirstBootPatch(
+                    ShellScript("writing 'a'") { "echo 'a' > /home/file" },
+                    ShellScript("appending 'b'") { "echo 'b' >> /home/file" },
+                ),
+                FirstBootPatch(
+                    ShellScript("appending 'c'") { "echo 'c' >> /home/file" },
+                    ShellScript("appending 'd'") { "echo 'd' >> /home/file" },
+                ),
+            )
 
             expect {
                 that(osImage).booted {

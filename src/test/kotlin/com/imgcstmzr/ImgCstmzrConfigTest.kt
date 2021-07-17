@@ -30,6 +30,7 @@ import com.imgcstmzr.patch.WifiAutoReconnectPatch
 import com.imgcstmzr.patch.WifiPowerSafeModePatch
 import com.imgcstmzr.patch.WpaSupplicantPatch
 import com.imgcstmzr.patch.booted
+import com.imgcstmzr.patch.patch
 import com.imgcstmzr.test.E2E
 import com.imgcstmzr.test.OS
 import com.typesafe.config.ConfigFactory
@@ -132,10 +133,10 @@ class ImgCstmzrConfigTest {
     }
 
     @Test
-    fun `should create patch`() {
+    fun `should create patch`(osImage: OperatingSystemImage) {
         val config = loadImgCstmzrConfig()
         val patch = config.toPatches()
-        expectThat(CompositePatch(patch)) {
+        expectThat(CompositePatch(patch).invoke(osImage)) {
             get { name }.contains("Increase Disk Space to 4 GiB").contains("Change Username")
             get { diskPreparations }.isNotEmpty()
             get { diskCustomizations }.isNotEmpty()
@@ -190,9 +191,7 @@ class ImgCstmzrConfigTest {
         val config = loadImgCstmzrConfig()
         val patches = config.toOptimizedPatches()
 
-        patches.forEach {
-            with(it) { patch(osImage) }
-        }
+        osImage.patch(*patches.toTypedArray())
 
         osImage asserting {
             get { credentials }.isEqualTo("john.doe" withPassword "Password1234")

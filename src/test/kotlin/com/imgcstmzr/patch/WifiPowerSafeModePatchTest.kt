@@ -17,8 +17,10 @@ class WifiPowerSafeModePatchTest {
 
     @Test
     fun `should disable power-safe mode`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
-        expecting { WifiPowerSafeModePatch() } that {
-            customizations(osImage) {
+        val patch = WifiPowerSafeModePatch().invoke(osImage)
+
+        expecting { patch } that {
+            customizations {
                 last().isA<FirstBootOption>().file.content {
                     contains("/sbin/iw dev wlan0 set power_save off")
                     containsAtLeast("echo 0", 2)

@@ -11,13 +11,13 @@ class CompositePatchTest {
     @Test
     fun `should show all patch names`(osImage: OperatingSystemImage, output: CapturedOutput) {
         val patch = CompositePatch(
-            PhasedPatch.build("Patch 1") {},
-            PhasedPatch.build("Patch 2") {},
-            PhasedPatch.build("Patch 3") {},
-            PhasedPatch.build("Patch 4") {},
-            PhasedPatch.build("Patch 5") {},
+            { PhasedPatch.build("Patch 1", it) {} },
+            { PhasedPatch.build("Patch 2", it) {} },
+            { PhasedPatch.build("Patch 3", it) {} },
+            { PhasedPatch.build("Patch 4", it) {} },
+            { PhasedPatch.build("Patch 5", it) {} },
         )
-        patch.patch(osImage)
+        osImage.patch(patch)
         expectThat(output.all) {
             contains("╭──╴Patch 1")
             contains("│   Patch 2")

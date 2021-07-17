@@ -43,7 +43,7 @@ class CopyFilesPatchTest {
             resolve(configTxtDiskPath.fileName).writeText("new file") to configTxtDiskPath
         )
 
-        copyFilesPatch.patch(osImage)
+        osImage.patch(copyFilesPatch)
 
         expect {
             that(osImage).mounted {
@@ -57,7 +57,7 @@ class CopyFilesPatchTest {
     @Test
     fun `should throw if file is located in exchange dir`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         val copyFilesPatch = CopyFilesPatch(osImage.hostPath(LinuxRoot / "test.txt").also { it.createFile() } to LinuxRoot / "test.txt")
-        expectThat(copyFilesPatch.patch(osImage)).isA<ReturnValues<Throwable>>().hasElements(
+        expectThat(osImage.patch(copyFilesPatch)).isA<ReturnValues<Throwable>>().hasElements(
             { isA<IllegalArgumentException>() }
         )
     }

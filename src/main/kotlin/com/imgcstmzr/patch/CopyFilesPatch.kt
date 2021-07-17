@@ -12,9 +12,16 @@ import java.nio.file.Path
  * copies all files and directories (specified by the [hostToDiskMappings]'s [HostPath] instances)
  * into the disk images under each [hostToDiskMappings]'s [DiskPath].
  */
-class CopyFilesPatch(private val hostToDiskMappings: Map<Path, DiskPath>) :
-    PhasedPatch by PhasedPatch.build("Copy Files: " + hostToDiskMappings.map { (from, to) -> "${from.fileName} ➜ ${to.fileName}" }.joinToString(", "), {
+class CopyFilesPatch(
+    private val hostToDiskMappings: Map<Path, DiskPath>,
+) : (OperatingSystemImage) -> PhasedPatch {
 
+    constructor(vararg hostToDiskMappings: Pair<Path, DiskPath>) : this(hostToDiskMappings.toMap())
+
+    override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build(
+        "Copy Files: " + hostToDiskMappings.map { (from, to) -> "${from.fileName} ➜ ${to.fileName}" }.joinToString(", "),
+        osImage,
+    ) {
         modifyDisk {
             hostToDiskMappings.forEach { (hostPath, diskPath) ->
                 hostPath.requireExists()
@@ -25,8 +32,5 @@ class CopyFilesPatch(private val hostToDiskMappings: Map<Path, DiskPath>) :
                 }
             }
         }
-
-    }) {
-
-    constructor(vararg hostToDiskMappings: Pair<Path, DiskPath>) : this(hostToDiskMappings.toMap())
+    }
 }

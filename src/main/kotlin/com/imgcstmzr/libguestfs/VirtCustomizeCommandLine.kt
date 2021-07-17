@@ -22,7 +22,6 @@ import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.SshInject
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.TimeZoneOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.TouchOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.WriteOption
-import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder.CustomizationsContext
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Option.ColorsOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Option.DiskOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Option.QuietOption
@@ -32,9 +31,6 @@ import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemImage.Companion.mountRootForDisk
-import koodies.builder.BuilderTemplate
-import koodies.builder.context.CapturesMap
-import koodies.builder.context.CapturingContext
 import koodies.callableOnce
 import koodies.docker.DockerContainer
 import koodies.docker.DockerExec
@@ -158,7 +154,6 @@ class VirtCustomizeCommandLine(
     }
 
     open class Option(name: String, arguments: List<String>) : LibguestfsCommandLineOption(name, arguments) {
-
         class DiskOption(override val disk: Path) : Option("--add", listOf(disk.pathString)), LibguestfsCommandLineOption.DiskOption
         object ColorsOption : Option("--colors", emptyList())
         object QuietOption : Option("--quiet", emptyList())
@@ -166,8 +161,7 @@ class VirtCustomizeCommandLine(
         object TraceOption : Option("-x", emptyList())
     }
 
-    open class Customization(override val name: String, override val arguments: List<String>) :
-        com.imgcstmzr.libguestfs.LibguestfsOption(name, arguments) {
+    open class Customization(override val name: String, override val arguments: List<String>) : LibguestfsCommandLineOption(name, arguments) {
         constructor(name: String, argument: String) : this(name, Collections.singletonList(argument))
 
         /**
@@ -254,10 +248,13 @@ class VirtCustomizeCommandLine(
         class WriteOption(val file: DiskPath, val content: String) : Customization("--write", "$file:$content")
     }
 
-    object CustomizationsBuilder : BuilderTemplate<CustomizationsContext, List<(OperatingSystemImage) -> Customization>>() {
+    class CustomizationsBuilder(private val osImage: OperatingSystemImage) {
+
+        fun build(init: CustomizationsContext.() -> Unit): List<Customization> =
+            mutableListOf<Customization>().also { CustomizationsContext(it).init() }
 
         @VirtCustomizeDsl
-        class CustomizationsContext(override val captures: CapturesMap) : CapturingContext() {
+        inner class CustomizationsContext(private val customizations: MutableList<Customization>) {
 
             private val fixFirstBootOrder by callableOnce {
                 copyIn(FirstBootOrderFix.FIRSTBOOT_FIX, FirstBootOrderFix.text)
@@ -266,8 +263,6 @@ class VirtCustomizeCommandLine(
 
             private val waitForFirstBoot by callableOnce { waitForFirstBootToComplete() }
 
-            val customizationOption: ((OperatingSystemImage) -> Customization) -> Unit by function<(OperatingSystemImage) -> Customization>()
-
             /**
              * Append a single line of text to the specified [DiskPath].
              *
@@ -275,7 +270,7 @@ class VirtCustomizeCommandLine(
              * Also a newline is added to the end of the specified line automatically.
              */
             fun appendLine(init: (OperatingSystemImage) -> Pair<String, DiskPath>) {
-                customizationOption { init(it).run { AppendLineOption(second, first) } }
+                customizations.add(init(osImage).run { AppendLineOption(second, first) })
             }
 
             /**
@@ -284,7 +279,7 @@ class VirtCustomizeCommandLine(
              * *Note:* PERMISSIONS by default would be decimal, unless you prefix it with 0 to get octal, ie. use 0700 not 700.
              */
             fun chmods(init: (OperatingSystemImage) -> Pair<String, DiskPath>) {
-                customizationOption { init(it).run { ChmodOption(first, second) } }
+                customizations.add(init(osImage).run { ChmodOption(first, second) })
             }
 
             /**
@@ -293,7 +288,7 @@ class VirtCustomizeCommandLine(
              * Each line contains a single customization command and its arguments
              */
             fun commandsFromFiles(init: (OperatingSystemImage) -> Path) {
-                customizationOption { init(it).run { CommandsFromFileOption(this) } }
+                customizations.add(init(osImage).run { CommandsFromFileOption(this) })
             }
 
             /**
@@ -302,7 +297,7 @@ class VirtCustomizeCommandLine(
              * Wildcards cannot be used.
              */
             fun copy(init: (OperatingSystemImage) -> Pair<DiskPath, DiskPath>) {
-                customizationOption { init(it).run { CopyOption(first, second) } }
+                customizations.add(init(osImage).run { CopyOption(first, second) })
             }
 
             /**
@@ -312,8 +307,8 @@ class VirtCustomizeCommandLine(
              * Wildcards cannot be used.
              */
             fun copyIn(init: (OperatingSystemImage) -> Pair<Path, DiskPath>) {
-                customizationOption { init(it).run { MkdirOption(second) } }
-                customizationOption { init(it).run { CopyInOption(first, second) } }
+                customizations.add(init(osImage).run { MkdirOption(second) })
+                customizations.add(init(osImage).run { CopyInOption(first, second) })
             }
 
             /**
@@ -347,21 +342,21 @@ class VirtCustomizeCommandLine(
              * Delete a file from the guest. Or delete a directory (and all its contents, recursively).
              */
             fun delete(init: (OperatingSystemImage) -> DiskPath) {
-                customizationOption { init(it).run { DeleteOption(this) } }
+                customizations.add(init(osImage).run { DeleteOption(this) })
             }
 
             /**
              * Edit FILE using the Perl expression EXPR.
              */
             fun edit(init: (OperatingSystemImage) -> Pair<DiskPath, String>) {
-                customizationOption { init(it).run { EditOption(first, second) } }
+                customizations.add(init(osImage).run { EditOption(first, second) })
             }
 
             /**
              * Set the hostname of the guest to HOSTNAME. You can use a dotted hostname.domainname (FQDN) if you want.
              */
             fun hostname(init: (OperatingSystemImage) -> String) {
-                customizationOption { init(it).run { HostnameOption(this) } }
+                customizations.add(init(osImage).run { HostnameOption(this) })
             }
 
             /**
@@ -370,12 +365,12 @@ class VirtCustomizeCommandLine(
             fun firstBoot(shellScript: ShellScript) {
                 fixFirstBootOrder()
                 waitForFirstBoot()
-                customizationOption { osImage: OperatingSystemImage ->
+                customizations.add(run {
                     val diskPath = LinuxRoot / "script".withRandomSuffix().plus(".sh")
                     val hostPath = osImage.hostPath(diskPath)
                     val scriptFile = shellScript.toFile(hostPath)
                     FirstBootOption(scriptFile)
-                }
+                })
             }
 
             /**
@@ -384,12 +379,12 @@ class VirtCustomizeCommandLine(
             fun firstBoot(name: String? = null, init: ScriptContext.(OperatingSystemImage) -> CharSequence) {
                 fixFirstBootOrder()
                 waitForFirstBoot()
-                customizationOption { osImage: OperatingSystemImage ->
+                customizations.add(run {
                     val diskPath = LinuxRoot / "script".withRandomSuffix().plus(".sh")
                     val hostPath = osImage.hostPath(diskPath)
                     val scriptFile = ShellScript(name) { init(osImage) }.toFile(hostPath)
                     FirstBootOption(scriptFile)
-                }
+                })
             }
 
             /**
@@ -398,7 +393,7 @@ class VirtCustomizeCommandLine(
             fun firstBootCommand(init: (OperatingSystemImage) -> String) {
                 fixFirstBootOrder()
                 waitForFirstBoot()
-                customizationOption { init(it).run { FirstBootCommandOption(this) } }
+                customizations.add(init(osImage).run { FirstBootCommandOption(this) })
             }
 
             /**
@@ -410,7 +405,7 @@ class VirtCustomizeCommandLine(
             fun firstBootInstall(init: (OperatingSystemImage) -> List<String>) {
                 fixFirstBootOrder()
                 waitForFirstBoot()
-                customizationOption { init(it).run { FirstBootInstallOption(this) } }
+                customizations.add(init(osImage).run { FirstBootInstallOption(this) })
             }
 
             /**
@@ -437,7 +432,7 @@ class VirtCustomizeCommandLine(
              * This uses mkdir -p so any intermediate directories are created, and it also works if the directory already exists.
              */
             fun link(init: (OperatingSystemImage) -> Pair<DiskPath, DiskPath>) {
-                customizationOption { init(it).run { LinkOption(first, second) } }
+                customizations.add(init(osImage).run { LinkOption(first, second) })
             }
 
             /**
@@ -446,7 +441,7 @@ class VirtCustomizeCommandLine(
              * This uses mkdir -p so any intermediate directories are created, and it also works if the directory already exists.
              */
             fun mkdir(init: (OperatingSystemImage) -> DiskPath) {
-                customizationOption { init(it).run { MkdirOption(this) } }
+                customizations.add(init(osImage).run { MkdirOption(this) })
             }
 
             /**
@@ -455,7 +450,7 @@ class VirtCustomizeCommandLine(
              * Wildcards cannot be used.
              */
             fun move(init: (OperatingSystemImage) -> Pair<DiskPath, DiskPath>) {
-                customizationOption { init(it).run { MoveOption(first, second) } }
+                customizations.add(init(osImage).run { MoveOption(first, second) })
             }
 
             /**
@@ -463,14 +458,14 @@ class VirtCustomizeCommandLine(
              */
 
             fun password(passwordOption: PasswordOption) {
-                customizationOption { passwordOption }
+                customizations.add(passwordOption)
             }
 
             /**
              * Set the root password.
              */
             fun rootPassword(rootPasswordOption: RootPasswordOption) {
-                customizationOption { rootPasswordOption }
+                customizations.add(rootPasswordOption)
             }
 
             /**
@@ -479,7 +474,7 @@ class VirtCustomizeCommandLine(
              * The USER must exist already in the guest.
              */
             fun sshInjectFile(init: (OperatingSystemImage) -> Pair<String, Path>) {
-                customizationOption { init(it).run { SshInjectOption(first, second) } }
+                customizations.add(init(osImage).run { SshInjectOption(first, second) })
             }
 
             /**
@@ -489,7 +484,7 @@ class VirtCustomizeCommandLine(
              */
 
             fun sshInject(init: (OperatingSystemImage) -> Pair<String, String>) {
-                customizationOption { init(it).run { SshInjectOption(first, second) } }
+                customizations.add(init(osImage).run { SshInjectOption(first, second) })
             }
 
             /**
@@ -498,7 +493,7 @@ class VirtCustomizeCommandLine(
              * Example: `Europe/Berlin`
              */
             fun timeZone(init: (OperatingSystemImage) -> TimeZone) {
-                customizationOption { init(it).run { TimeZoneOption(this) } }
+                customizations.add(init(osImage).run { TimeZoneOption(this) })
             }
 
             /**
@@ -507,25 +502,22 @@ class VirtCustomizeCommandLine(
              * Example: `Europe/Berlin`
              */
             fun timeZoneId(init: (OperatingSystemImage) -> String) {
-                customizationOption { init(it).run { TimeZoneOption(this) } }
+                customizations.add(init(osImage).run { TimeZoneOption(this) })
             }
 
             /**
              * This command performs a touch(1)-like operation on FILE.
              */
             fun touch(init: (OperatingSystemImage) -> DiskPath) {
-                customizationOption { init(it).run { TouchOption(this) } }
+                customizations.add(init(osImage).run { TouchOption(this) })
             }
 
             /**
              * Write CONTENT to FILE.
              */
             fun write(init: (OperatingSystemImage) -> Pair<DiskPath, String>) {
-                customizationOption { init(it).run { WriteOption(first, second) } }
+                customizations.add(init(osImage).run { WriteOption(first, second) })
             }
         }
-
-        override fun BuildContext.build(): List<(OperatingSystemImage) -> Customization> =
-            ::CustomizationsContext { ::customizationOption.evalAll() }
     }
 }

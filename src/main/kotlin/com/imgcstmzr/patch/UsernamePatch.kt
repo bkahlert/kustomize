@@ -10,28 +10,30 @@ import com.imgcstmzr.os.OperatingSystemImage
 class UsernamePatch(
     private val oldUsername: String,
     private val newUsername: String,
-) : PhasedPatch by PhasedPatch.build("Change Username $oldUsername to $newUsername", {
+) : (OperatingSystemImage) -> PhasedPatch {
+    override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build("Change Username $oldUsername to $newUsername", osImage) {
 
-    @Suppress("SpellCheckingInspection")
-    customizeDisk {
-        appendLine {
-            val privacyFile = LinuxRoot.etc / "sudoers.d" / "privacy"
-            "Defaults        lecture = never" to privacyFile
+        @Suppress("SpellCheckingInspection")
+        customizeDisk {
+            appendLine {
+                val privacyFile = LinuxRoot.etc / "sudoers.d" / "privacy"
+                "Defaults        lecture = never" to privacyFile
+            }
+            appendLine {
+                val sudoersFile = LinuxRoot.etc / "sudoers"
+                "$newUsername ALL=(ALL) NOPASSWD:ALL" to sudoersFile
+            }
+            firstBootCommand { "usermod -l $newUsername $oldUsername" }
+            firstBootCommand { "groupmod -n $newUsername $oldUsername" }
+            firstBootCommand { "usermod -d /home/$newUsername -m $newUsername" }
         }
-        appendLine {
-            val sudoersFile = LinuxRoot.etc / "sudoers"
-            "$newUsername ALL=(ALL) NOPASSWD:ALL" to sudoersFile
+
+        prepareOs {
+            updateUsername(oldUsername, newUsername)
         }
-        firstBootCommand { "usermod -l $newUsername $oldUsername" }
-        firstBootCommand { "groupmod -n $newUsername $oldUsername" }
-        firstBootCommand { "usermod -d /home/$newUsername -m $newUsername" }
-    }
 
-    prepareOs {
-        updateUsername(oldUsername, newUsername)
+        runPrograms {
+            script("finish rename", "ls /home", "id $oldUsername", "id $newUsername")
+        }
     }
-
-    runPrograms {
-        script("finish rename", "ls /home", "id $oldUsername", "id $newUsername")
-    }
-})
+}

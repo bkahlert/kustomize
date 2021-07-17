@@ -35,7 +35,7 @@ class AppendToFilesPatchTest {
                 "some text" to configTxtDiskPath,
             )
 
-            appendToFilesPatch.patch(osImage)
+            osImage.patch(appendToFilesPatch)
 
             expect {
                 that(osImage).mounted {

@@ -13,10 +13,11 @@ class WpaSupplicantPatchTest {
 
     @Test
     fun `should provide wpasupplicant conf copying command`(osImage: OperatingSystemImage) {
-        val patch = WpaSupplicantPatch("entry1\nentry2")
+
+        val patch = WpaSupplicantPatch("entry1\nentry2").invoke(osImage)
 
         expect {
-            that(patch).customizations(osImage) {
+            that(patch).customizations {
                 containsExactly(
                     MkdirOption(LinuxRoot.etc / "wpa_supplicant"),
                     CopyInOption(

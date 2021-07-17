@@ -176,7 +176,7 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
         verbose = true,
         trace = true,
     ),
-    CustomizationsBuilder {
+    CustomizationsBuilder(osImage).build {
         appendLine { "Defaults        lecture = never" to etc / "sudoers.d" / "privacy" }
 
         chmods { "0664" to LinuxRoot / "chmod-file" }
@@ -211,7 +211,7 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
         timeZoneId { "Europe/Berlin" }
         touch { LinuxRoot / "touch" / "file" }
         write { LinuxRoot / "write" / "file" to "write content" }
-    }.map { it(osImage) },
+    },
 )
 
 private fun CommandLine.firstbootScript(): Path =

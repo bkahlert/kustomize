@@ -22,7 +22,7 @@ class SshAuthorizationPatchTest {
     @FiveMinutesTimeout @DockerRequiring([DockerPiImage::class]) @E2E @Test
     fun `should add ssh key`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
 
-        SshAuthorizationPatch("pi", listOf("123")).patch(osImage)
+        osImage.patch(SshAuthorizationPatch("pi", listOf("123")))
 
         output.all.contains("SSH key inject: pi")
         expectThat(osImage).mounted {

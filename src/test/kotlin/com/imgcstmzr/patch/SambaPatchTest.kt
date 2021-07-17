@@ -40,14 +40,14 @@ class SambaPatchTest {
 
     @Test
     fun `should install samba`(osImage: OperatingSystemImage) {
-        expectThat(sambaPatch).customizations(osImage) {
+        expectThat(sambaPatch(osImage)).customizations {
             filterIsInstance<FirstBootInstallOption>().first().packages.containsExactlyInAnyOrder("samba", "cifs-utils")
         }
     }
 
     @Test
     fun `should build samba conf`(osImage: OperatingSystemImage) {
-        expectThat(sambaPatch).customizations(osImage) {
+        expectThat(sambaPatch(osImage)).customizations {
             filterIsInstance<CopyInOption>().any {
                 localPath.content.isEqualTo(
                     """
@@ -84,7 +84,7 @@ class SambaPatchTest {
 
     @Test
     fun `should set samba password`(osImage: OperatingSystemImage) {
-        expectThat(sambaPatch).customizations(osImage) {
+        expectThat(sambaPatch(osImage)).customizations {
             filterIsInstance<FirstBootOption>().any {
                 file.content.contains(
                     """
@@ -100,12 +100,12 @@ class SambaPatchTest {
 
     @Test
     fun `should shutdown`(osImage: OperatingSystemImage) {
-        expectThat(sambaPatch).customizations(osImage) { containsFirstBootShutdownCommand() }
+        expectThat(sambaPatch(osImage)).customizations { containsFirstBootShutdownCommand() }
     }
 
     @Test
     fun `should copy firstboot script order fix`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(sambaPatch).customizations(osImage) { containsFirstBootScriptFix() }
+        expectThat(sambaPatch(osImage)).customizations { containsFirstBootScriptFix() }
     }
 
     @SixtyMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @E2E @Smoke @Test
@@ -114,8 +114,7 @@ class SambaPatchTest {
         @OS(RaspberryPiLite) osImage: OperatingSystemImage,
     ) = withTempDir(uniqueId) {
 
-        ImgResizePatch(2.Gibi.bytes).patch(osImage)
-        sambaPatch.patch(osImage)
+        osImage.patch(ImgResizePatch(2.Gibi.bytes), sambaPatch)
 
         expect {
             lateinit var output: Sequence<String>

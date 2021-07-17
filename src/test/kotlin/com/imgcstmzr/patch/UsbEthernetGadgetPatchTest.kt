@@ -40,14 +40,14 @@ class UsbEthernetGadgetPatchTest {
     )
 
     @Test
-    fun `should have name`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(patch.name).isEqualTo("Configure USB Gadget with DHCP Address Range 192.168.168.160/28")
+    fun `should have name`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
+        expectThat(patch(osImage).name).isEqualTo("Configure USB Gadget with DHCP Address Range 192.168.168.160/28")
     }
 
     @Test
     fun `should configure dnsmasq for usb0`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(patch).customizations(osImage) {
+            that(patch(osImage)).customizations {
                 contains(
                     MkdirOption(USB0_DNSMASQD.parent),
                     CopyInOption(osImage.hostPath(USB0_DNSMASQD), USB0_DNSMASQD.parent),
@@ -74,7 +74,7 @@ class UsbEthernetGadgetPatchTest {
     @Test
     fun `should configure DHCP script`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(patch).customizations(osImage) {
+            that(patch(osImage)).customizations {
                 contains(
                     MkdirOption(DHCP_SCRIPT.parent),
                     CopyInOption(osImage.hostPath(DHCP_SCRIPT), DHCP_SCRIPT.parent),
@@ -106,7 +106,7 @@ class UsbEthernetGadgetPatchTest {
     @Test
     fun `should configure network interface for usb0`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(patch).customizations(osImage) {
+            that(patch(osImage)).customizations {
                 contains(
                     MkdirOption(USB0_NETWORK.parent),
                     CopyInOption(osImage.hostPath(USB0_NETWORK), USB0_NETWORK.parent))
@@ -126,7 +126,7 @@ class UsbEthernetGadgetPatchTest {
     @Test
     fun `should configure USB gadget`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(patch).customizations(osImage) {
+            that(patch(osImage)).customizations {
                 contains(
                     MkdirOption(USB_GADGET.parent),
                     CopyInOption(osImage.hostPath(USB_GADGET), USB_GADGET.parent),
@@ -189,8 +189,9 @@ class UsbEthernetGadgetPatchTest {
 
     @Test
     fun `should configure USB gadget service`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
+        val patch = patch(osImage)
         expect {
-            that(patch).customizations(osImage) {
+            that(patch).customizations {
                 contains(
                     MkdirOption(USBGADGET_SERVICE.parent),
                     CopyInOption(osImage.hostPath(USBGADGET_SERVICE), USBGADGET_SERVICE.parent),
@@ -214,7 +215,7 @@ class UsbEthernetGadgetPatchTest {
                     
                 """.trimIndent())
             }
-            that(patch).customizations(osImage) {
+            that(patch).customizations {
                 filterIsInstance<FirstBootOption>().apply {
                     any { file.content.contains("systemctl enable usbgadget.service") }
                 }
@@ -225,7 +226,7 @@ class UsbEthernetGadgetPatchTest {
     @Test
     fun `should update various files`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(patch).customizations(osImage) {
+            that(patch(osImage)).customizations {
                 filterIsInstance<FirstBootOption>().apply {
                     any { file.content.contains("echo 'dtoverlay=dwc2' >> $CONFIG_TXT") }
                     any { file.content.contains("sed -i 's/${'$'}/ modules-load=dwc2/' $CMDLINE_TXT") }

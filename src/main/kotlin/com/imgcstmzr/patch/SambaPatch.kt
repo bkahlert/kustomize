@@ -23,10 +23,14 @@ class SambaPatch(
     private val password: String,
     private val homeShare: Boolean,
     private val rootShare: RootShare,
-) : PhasedPatch by PhasedPatch.build("Configure CIFS/SMB/Samba", {
+) : (OperatingSystemImage) -> PhasedPatch {
+    override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build(
+        "Configure CIFS/SMB/Samba",
+        osImage,
+    ) {
 
-    val config = StringBuilder().apply {
-        appendLine("""
+        val config = StringBuilder().apply {
+            appendLine("""
             [global]
             workgroup = smb
             security = user
@@ -37,8 +41,8 @@ class SambaPatch(
             
         """.trimIndent())
 
-        if (homeShare) {
-            appendLine("""
+            if (homeShare) {
+                appendLine("""
                 [home]
                 comment = Home of $username
                 path = /home/$username
@@ -49,10 +53,10 @@ class SambaPatch(
                 guest ok=no
                 
             """.trimIndent())
-        }
+            }
 
-        when (rootShare) {
-            RootShare.`read-only` -> append("""
+            when (rootShare) {
+                RootShare.`read-only` -> append("""
                 [/]
                 comment = Home of $username
                 path = /
@@ -62,7 +66,7 @@ class SambaPatch(
                 
             """.trimIndent())
 
-            RootShare.`read-write` -> append("""
+                RootShare.`read-write` -> append("""
                 [/]
                 path = /
                 writeable=Yes
@@ -73,32 +77,33 @@ class SambaPatch(
                 
             """.trimIndent())
 
-            else -> {
-                // no root share
+                else -> {
+                    // no root share
+                }
             }
-        }
-    }.toString()
+        }.toString()
 
-    customizeDisk {
-        firstBootInstall { listOf("samba", "cifs-utils") }
-        copyIn(SAMBA_CONF) {
-            withDirectoriesCreated().writeLines(config.lines())
-        }
-        firstBoot("Change SMB Password for $username") {
-            """
+        customizeDisk {
+            firstBootInstall { listOf("samba", "cifs-utils") }
+            copyIn(SAMBA_CONF) {
+                withDirectoriesCreated().writeLines(config.lines())
+            }
+            firstBoot("Change SMB Password for $username") {
+                """
             echo "…"
             echo "…"
             echo "…"
             pass="$password"
             (echo "${'$'}pass"; echo "${'$'}pass") | smbpasswd -s -a "$username"
             """
+            }
+            firstBootShutdownCommand()
         }
-        firstBootShutdownCommand()
+
+        bootOs = true
+
     }
 
-    bootOs { yes }
-
-}) {
     companion object {
         val SAMBA_CONF: DiskPath = LinuxRoot.etc / "samba" / "smb.conf"
     }

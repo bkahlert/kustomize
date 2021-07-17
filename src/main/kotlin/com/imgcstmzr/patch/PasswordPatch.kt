@@ -10,13 +10,18 @@ import com.imgcstmzr.os.OperatingSystemImage
 class PasswordPatch(
     private val username: String,
     private val password: String,
-) : PhasedPatch by PhasedPatch.build("Set Password of $username", {
+) : (OperatingSystemImage) -> PhasedPatch {
+    override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build(
+        "Set Password of $username",
+        osImage,
+    ) {
 
-    customizeDisk {
-        password(PasswordOption.byString(username, password))
-    }
+        customizeDisk {
+            password(PasswordOption.byString(username, password))
+        }
 
-    prepareOs {
-        updatePassword(username, password)
+        prepareOs {
+            updatePassword(username, password)
+        }
     }
-})
+}
