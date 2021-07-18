@@ -111,8 +111,8 @@ class VirtCustomizeCommandLine(
         *options.filter { it !is DiskOption }.flatten().toTypedArray(),
         *customizations.map { it.relativize(options.disk) }.flatten().toTypedArray(),
         name = when (customizations.size) {
-            0 -> "No $COMMAND operations"
-            1 -> "One $COMMAND operation"
+            0 -> "0 $COMMAND operations"
+            1 -> "1 $COMMAND operation"
             else -> "${customizations.size} $COMMAND operations"
         }),
 ) {

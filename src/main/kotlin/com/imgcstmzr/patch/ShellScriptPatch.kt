@@ -19,7 +19,7 @@ class ShellScriptPatch(
 
     override fun invoke(osImage: OperatingSystemImage): PhasedPatch =
         PhasedPatch.build(
-            "${shellScripts.size} Shell Script(s):${shellScripts.mapNotNull { it.name }.map { LF + it }.joinToString("")}",
+            "${shellScripts.size} Shell Script(s):${shellScripts.mapNotNull { it.name }.joinToString("") { LF + it }}",
             osImage,
         ) {
 

@@ -1,14 +1,13 @@
-package com.imgcstmzr.test
+package com.imgcstmzr.os
 
 import com.imgcstmzr.ImgCstmzr
-import com.imgcstmzr.ImgCstmzrTest
+import com.imgcstmzr.TestImgCstmzr
 import com.imgcstmzr.cli.Cache
+import com.imgcstmzr.cli.Layouts
 import com.imgcstmzr.libguestfs.ImageBuilder
 import com.imgcstmzr.libguestfs.ImageBuilder.buildFrom
-import com.imgcstmzr.os.OperatingSystem
-import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemImage.Companion.based
-import com.imgcstmzr.os.OperatingSystems
+import com.imgcstmzr.test.ImageFixtures
 import com.imgcstmzr.util.Downloader
 import koodies.collections.addElement
 import koodies.io.path.deleteOnExit
@@ -33,7 +32,7 @@ annotation class OS(
     val autoDelete: Boolean = true,
 )
 
-open class FixtureResolverExtension : TypeBasedParameterResolver<OperatingSystemImage>() {
+open class OperatingSystemImageProviderExtension : TypeBasedParameterResolver<OperatingSystemImage>() {
 
     override fun resolveParameter(
         parameterContext: ParameterContext,
@@ -45,6 +44,7 @@ open class FixtureResolverExtension : TypeBasedParameterResolver<OperatingSystem
         spanning(
             "Provisioning ${operatingSystem.fullName.formattedAs.input}",
             style = Dotted,
+            layout = Layouts.DESCRIPTION,
         ) {
             operatingSystem.getCopy(extensionContext.uniqueId).apply {
                 if (autoDelete) file.deleteOnExit()
@@ -63,7 +63,7 @@ open class FixtureResolverExtension : TypeBasedParameterResolver<OperatingSystem
         private val copiesPerTest = mutableMapOf<String, List<Path>>()
         fun cacheDir(uniqueId: String): Path? = copiesPerTest[uniqueId]?.firstOrNull()
 
-        private val cache = Cache(ImgCstmzrTest.TestCache)
+        private val cache = Cache(TestImgCstmzr.TestCache)
         private fun OperatingSystem.getCopy(uniqueId: String): OperatingSystemImage =
             lock.withLock {
                 this@getCopy based with(cache) {
@@ -75,6 +75,6 @@ open class FixtureResolverExtension : TypeBasedParameterResolver<OperatingSystem
                 }
             }
 
-        fun Path.prepareSharedDirectory(): Path = ImgClassPathFixture.copyTo(resolve("shared").createDirectories())
+        fun Path.prepareSharedDirectory(): Path = ImageFixtures.copyTo(resolve("shared").createDirectories())
     }
 }

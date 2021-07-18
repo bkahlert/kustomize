@@ -1,37 +1,34 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.expectRendered
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization
+import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
+import com.imgcstmzr.os.OS
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemProcess
-import com.imgcstmzr.os.OperatingSystemProcess.Companion.DockerPiImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.os.Program
 import com.imgcstmzr.os.ProgramState
 import com.imgcstmzr.os.boot
 import com.imgcstmzr.os.size
 import com.imgcstmzr.test.E2E
-import com.imgcstmzr.test.OS
 import koodies.docker.DockerContainer
-import koodies.docker.DockerRequiring
 import koodies.exec.Process.State.Exited.Succeeded
 import koodies.exec.output
 import koodies.io.path.hasContent
+import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.io.path.withDirectoriesCreated
 import koodies.io.path.writeText
 import koodies.io.toAsciiArt
 import koodies.regex.groupValue
 import koodies.shell.ScriptInit
 import koodies.shell.ShellScript
-import koodies.test.CapturedOutput
-import koodies.test.FiveMinutesTimeout
-import koodies.test.SixtyMinutesTimeout
-import koodies.test.Slow
 import koodies.test.SvgFixture
-import koodies.test.SystemIOExclusive
 import koodies.text.LineSeparators.LF
 import koodies.text.Semantics.formattedAs
+import koodies.text.ansiRemoved
 import koodies.tracing.spanning
 import koodies.unit.Gibi
 import koodies.unit.bytes
@@ -41,19 +38,20 @@ import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.hasSize
+import strikt.assertions.isEmpty
 import strikt.assertions.isFalse
 import strikt.assertions.isGreaterThanOrEqualTo
 import java.nio.file.Path
 import kotlin.io.path.createFile
 import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
 import kotlin.text.RegexOption.DOT_MATCHES_ALL
 import kotlin.text.RegexOption.MULTILINE
 
-@SystemIOExclusive
 class SimplePhasedPatchTest {
 
-    @FiveMinutesTimeout @Slow @Test
-    fun `should render`(osImage: OperatingSystemImage, output: CapturedOutput) {
+    @E2E @Test
+    fun `should render`(osImage: OperatingSystemImage) {
         val patch = SimplePhasedPatch(
             name = "patch",
             diskPreparations = emptyList(),
@@ -87,23 +85,27 @@ class SimplePhasedPatchTest {
 
         patch.patch(osImage)
 
-        expectThat(output.all) {
+        expectRendered().ansiRemoved {
             contains("◼ Disk Preparations")
             contains("▶ Disk Customizations (1)")
             contains("▶ Disk Operations (5)")
-            contains("▶ File Operations (4)")
+            contains("▶ File Operations (3)")
             contains("▶ OS Preparations (4)")
             contains("◼ OS Boot")
             contains("▶ OS Operations (5)")
         }
     }
 
-    @FiveMinutesTimeout @DockerRequiring([DockerPiImage::class]) @Test
-    fun `should empty exchange directory before file operations`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
-        osImage.hostPath(LinuxRoot / "home/pi/local.txt").withDirectoriesCreated().createFile().writeText("local")
-        val patch = PhasedPatch.build("empty exchange", osImage) {
+    @E2E @Test
+    fun `should remove irrelevant files from exchange directory before file operations`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+        osImage.hostPath(LinuxRoot.home / "pi" / "local.txt").withDirectoriesCreated().createFile().writeText("local")
+        expectThat(osImage.exchangeDirectory.listDirectoryEntriesRecursively().filter { !it.isDirectory() }).hasSize(1)
+
+        lateinit var existingFiles: List<Path>
+        val patch = PhasedPatch.build("test", osImage) {
             modifyFiles {
-                edit(LinuxRoot / "home/pi/file.txt", { require(it.exists()) }) {
+                edit(LinuxRoot.home / "pi" / "file.txt", { require(it.exists()) }) {
+                    existingFiles = osImage.exchangeDirectory.listDirectoryEntriesRecursively().filter { !it.isDirectory() }
                     it.writeText("content")
                 }
             }
@@ -111,16 +113,13 @@ class SimplePhasedPatchTest {
 
         patch.patch(osImage)
 
-        expectThat(output.all) {
-            contains("Copying in 1 file(s)")
-            not { contains("Copying in 2 file(s)") }
-        }
+        expectThat(existingFiles).isEmpty()
     }
 
-    @SixtyMinutesTimeout @DockerRequiring([DockerPiImage::class]) @E2E @Test
+    @E2E @Test
     fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
 
-        val patch = PhasedPatch.build("Try Everything Patch", osImage) {
+        val patch = PhasedPatch.build("All Phases Patch", osImage) {
             prepareDisk {
                 resize(2.Gibi.bytes)
             }
@@ -128,28 +127,28 @@ class SimplePhasedPatchTest {
                 hostname { "test-machine" }
             }
             modifyDisk {
-                copyOut { LinuxRoot.etc / "hostname" }
+                copyOut { LinuxRoot.etc.hostname }
             }
             modifyFiles {
-                edit(LinuxRoot / "home/pi/demo.ansi", {
+                edit(LinuxRoot.home / "pi" / "demo.ansi", {
                     require(it.exists())
                 }) {
-                    it.writeText(SvgFixture.toAsciiArt())
+                    it.writeText(SvgFixture.toAsciiArt() + LF)
                 }
             }
             runPrograms {
-                script("demo", "cat /home/pi/demo.ansi")
+                script("demo", "cat ${LinuxRoot.home / "pi" / "demo.ansi"}")
             }
         }
 
         patch.patch(osImage)
 
         expectThat(osImage) {
-            hostPath("/etc/hostname").hasContent("test-machine$LF")
+            hostPath(LinuxRoot.etc.hostname).hasContent("test-machine$LF")
             size.isGreaterThanOrEqualTo(2.Gibi.bytes)
             booted({ "init" },
                 "init" to {
-                    enter("sudo cat /etc/hostname")
+                    enter("sudo cat ${LinuxRoot.etc.hostname}")
                     "validate"
                 },
                 "validate" to {
@@ -243,15 +242,15 @@ inline fun OperatingSystemProcess.script(
 /**
  * Assertions on the directory used to share files with the [OperatingSystemImage].
  */
-fun Assertion.Builder<OperatingSystemImage>.hostPath(path: String): DescribeableBuilder<Path> =
-    get("shared directory %s") { hostPath(LinuxRoot / path) }
+fun Assertion.Builder<OperatingSystemImage>.hostPath(diskPath: DiskPath): DescribeableBuilder<Path> =
+    get("shared directory %s") { hostPath(diskPath) }
 
 fun Assertion.Builder<OperatingSystemImage>.booted(
     initialState: OperatingSystemProcess.() -> String?,
     vararg states: ProgramState,
 ): Assertion.Builder<OperatingSystemImage> =
-    assert("booted ${this.get { operatingSystem }}") {
-        when (val exitState = it.boot(
+    assert("booted ${this.get { operatingSystem }}") { osImage ->
+        when (val exitState = osImage.boot(
             DockerContainer.from("Assertion Boot of $this").name,
             Program("check", initialState, *states),
             decorationFormatter = { it.formattedAs.debug }

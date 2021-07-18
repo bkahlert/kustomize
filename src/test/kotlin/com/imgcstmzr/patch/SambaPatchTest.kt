@@ -1,6 +1,5 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.LibguestfsImage
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.CopyInOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootInstallOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootOption
@@ -10,15 +9,14 @@ import com.imgcstmzr.libguestfs.file
 import com.imgcstmzr.libguestfs.localPath
 import com.imgcstmzr.libguestfs.mounted
 import com.imgcstmzr.libguestfs.packages
+import com.imgcstmzr.os.LinuxRoot
+import com.imgcstmzr.os.OS
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.patch.RootShare.`read-write`
 import com.imgcstmzr.test.E2E
-import com.imgcstmzr.test.OS
 import koodies.content
-import koodies.docker.DockerRequiring
 import koodies.junit.UniqueId
-import koodies.test.SixtyMinutesTimeout
 import koodies.test.Smoke
 import koodies.test.withTempDir
 import koodies.text.LineSeparators.lineSequence
@@ -56,12 +54,12 @@ class SambaPatchTest {
                     security = user
                     map to guest = never
                     #unix password sync = yes
-                    #passwd program = /usr/bin/passwd %u
+                    #passwd program = ${LinuxRoot.usr.bin.passwd} %u
                     #passwd chat = "*New Password:*" %n\n "*Reenter New Password:*" %n\n "*Password changed.*"
                     
                     [home]
                     comment = Home of pi
-                    path = /home/pi
+                    path = ${LinuxRoot.home / "pi"}
                     writeable=Yes
                     create mask=0744
                     directory mask=0744
@@ -108,7 +106,7 @@ class SambaPatchTest {
         expectThat(sambaPatch(osImage)).customizations { containsFirstBootScriptFix() }
     }
 
-    @SixtyMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @E2E @Smoke @Test
+    @E2E @Smoke @Test
     fun `should install samba and set password and shutdown`(
         uniqueId: UniqueId,
         @OS(RaspberryPiLite) osImage: OperatingSystemImage,
@@ -138,12 +136,12 @@ class SambaPatchTest {
                         security = user
                         map to guest = never
                         #unix password sync = yes
-                        #passwd program = /usr/bin/passwd %u
+                        #passwd program = ${LinuxRoot.usr.bin.passwd} %u
                         #passwd chat = "*New Password:*" %n\n "*Reenter New Password:*" %n\n "*Password changed.*"
                         
                         [home]
                         comment = Home of pi
-                        path = /home/pi
+                        path = ${LinuxRoot.home / "pi"}
                         writeable=Yes
                         create mask=0744
                         directory mask=0744

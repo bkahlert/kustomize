@@ -2,10 +2,10 @@ package koodies.text
 
 import koodies.text.ANSI.ansiRemoved
 import koodies.text.ANSI.containsAnsi
-import strikt.api.Assertion
+import strikt.api.Assertion.Builder
 import strikt.api.DescribeableBuilder
 
-fun <T : CharSequence> Assertion.Builder<T>.containsAnsi(): Assertion.Builder<T> =
+fun <T : CharSequence> Builder<T>.containsAnsi(): Builder<T> =
     assert("contains ANSI escape sequences") {
         when (val actual = it.toString().containsAnsi) {
             true -> pass()
@@ -13,5 +13,8 @@ fun <T : CharSequence> Assertion.Builder<T>.containsAnsi(): Assertion.Builder<T>
         }
     }
 
-inline val <reified T : CharSequence> Assertion.Builder<T>.ansiRemoved: DescribeableBuilder<String>
+inline val <reified T : CharSequence> Builder<T>.ansiRemoved: DescribeableBuilder<String>
     get() = get("escape sequences removed") { ansiRemoved }
+
+inline fun <reified T : CharSequence> Builder<T>.ansiRemoved(noinline assertions: Builder<String>.() -> Unit): Builder<T> =
+    with("escape sequences removed", { ansiRemoved }, assertions)

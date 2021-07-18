@@ -17,32 +17,28 @@ import io.opentelemetry.sdk.trace.SpanProcessor
 import io.opentelemetry.sdk.trace.data.SpanData
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 import koodies.collections.synchronizedMapOf
-import koodies.junit.TestName.Companion.testName
 import koodies.tracing.Jaeger
 import koodies.tracing.OpenTelemetry
 import koodies.tracing.SpanId
 import koodies.tracing.TraceId
-import koodies.tracing.spanning
 import koodies.tracing.traceId
-import org.junit.jupiter.api.extension.ExtensionContext
-import org.junit.jupiter.api.extension.InvocationInterceptor
-import org.junit.jupiter.api.extension.InvocationInterceptor.Invocation
-import org.junit.jupiter.api.extension.ReflectiveInvocationContext
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestPlan
 import strikt.api.Assertion.Builder
 import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
-import java.lang.reflect.Method
+import kotlin.time.ExperimentalTime
 
 /**
  * [OpenTelemetry] integration in JUnit that runs OpenTelemetry
  * along a [TestPlan] execution and provides [InMemoryStoringSpanProcessor] and [expectTraced] to assess recorded data.
  */
+@ExperimentalTime
 class TestTelemetry : TestExecutionListener {
 
     private lateinit var batchExporter: BatchSpanProcessor
 
+    @ExperimentalTime
     override fun testPlanExecutionStarted(testPlan: TestPlan) {
         if (ENABLED) {
             val jaegerExporter = JaegerGrpcSpanExporter.builder()
@@ -89,6 +85,7 @@ class TestTelemetry : TestExecutionListener {
         private object InMemoryStoringSpanProcessor : SpanProcessor {
             override fun isStartRequired(): Boolean = false
             override fun onStart(parentContext: Context, span: ReadWriteSpan): Unit = Unit
+
             override fun isEndRequired(): Boolean = true
             override fun onEnd(span: ReadableSpan) {
                 val spanData = span.toSpanData()
@@ -127,15 +124,3 @@ fun endAndExpect(): DescribeableBuilder<List<SpanData>> = Span.current().run { e
 
 /** Ends this spans and runs the specified [assertions] on the recorded [SpanData]. */
 fun endAndExpect(assertions: Builder<List<SpanData>>.() -> Unit): Unit = Span.current().run { end(); expectThat(TestTelemetry[TraceId.current], assertions) }
-
-class TestSpanWrapper : InvocationInterceptor {
-    override fun interceptTestMethod(
-        invocation: Invocation<Void>,
-        invocationContext: ReflectiveInvocationContext<Method>,
-        extensionContext: ExtensionContext,
-    ) {
-        spanning(extensionContext.testName) {
-            invocation.proceed()
-        }
-    }
-}

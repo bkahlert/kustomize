@@ -1,8 +1,8 @@
 package com.imgcstmzr.patch
 
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.AppendLineOption
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
-import com.imgcstmzr.patch.TweaksPatch.Companion.APT_CONF_RETRIES
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.assertions.containsExactly
@@ -15,7 +15,7 @@ class TweaksPatchTest {
 
         expect {
             that(patch).customizations {
-                containsExactly(listOf(AppendLineOption(APT_CONF_RETRIES, """APT::Acquire::Retries "9";""")))
+                containsExactly(listOf(AppendLineOption(LinuxRoot.etc.apt.apt_conf_d.`80_retries`, """APT::Acquire::Retries "9";""")))
             }
         }
     }

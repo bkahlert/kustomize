@@ -36,7 +36,7 @@ class SambaPatch(
             security = user
             map to guest = never
             #unix password sync = yes
-            #passwd program = /usr/bin/passwd %u
+            #passwd program = ${LinuxRoot.usr.bin.passwd} %u
             #passwd chat = "*New Password:*" %n\n "*Reenter New Password:*" %n\n "*Password changed.*"
             
         """.trimIndent())
@@ -45,7 +45,7 @@ class SambaPatch(
                 appendLine("""
                 [home]
                 comment = Home of $username
-                path = /home/$username
+                path = ${LinuxRoot.home / username}
                 writeable=Yes
                 create mask=0744
                 directory mask=0744

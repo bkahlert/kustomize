@@ -1,7 +1,7 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
-import java.nio.file.Path
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]
@@ -9,12 +9,12 @@ import java.nio.file.Path
  */
 class WifiPowerSafeModePatch : (OperatingSystemImage) -> PhasedPatch {
     override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build(
-        NAME,
+        "Disable Wifi Power-Safe Mode",
         osImage
     ) {
         customizeDisk {
-            firstBoot(NAME) {
-                file(RC_LOCAL) {
+            firstBoot("Disable Wifi Power-Safe Mode") {
+                file(osImage.hostPath(LinuxRoot.etc.rc_local)) {
                     removeLine("echo 0")
                     appendLine("/sbin/iw dev wlan0 set power_save off")
                     appendLine("echo 0")
@@ -22,10 +22,5 @@ class WifiPowerSafeModePatch : (OperatingSystemImage) -> PhasedPatch {
             }
         }
         bootOs = true
-    }
-
-    companion object {
-        val RC_LOCAL: Path = Path.of("/etc/rc.local")
-        private val NAME = "Disable Wifi Power-Safe Mode"
     }
 }

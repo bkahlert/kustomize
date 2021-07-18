@@ -9,14 +9,12 @@ import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder
 import com.imgcstmzr.libguestfs.VirtCustomizeDsl
 import com.imgcstmzr.os.DiskPath
-import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemProcess
 import com.imgcstmzr.os.Program
 import com.imgcstmzr.os.boot
 import koodies.asString
 import koodies.builder.Init
-import koodies.io.path.deleteDirectoryEntriesRecursively
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.Banner.banner
 import koodies.text.LineSeparators
@@ -32,7 +30,6 @@ import koodies.tracing.spanning
 import koodies.tracing.tracing
 import koodies.unit.Size
 import java.nio.file.Path
-import kotlin.io.path.isDirectory
 
 /**
  * A patch to customize an [OperatingSystemImage]
@@ -162,8 +159,8 @@ data class SimplePhasedPatch(
             tracing { log("◼ $name".ansi.gray) }
             ReturnValues()
         } else {
-            spanning("$name ($operationCount)",
-                nameFormatter = { it.ansi.brightCyan.done },
+            spanning("$name",
+                nameFormatter = { "${it.ansi.brightCyan} (${operationCount.toString().ansi.brightCyan})" },
                 decorationFormatter = { it.ansi.cyan.done },
                 style = Dotted) {
                 val exceptions = mutableListOf<Throwable>()
@@ -203,19 +200,17 @@ data class SimplePhasedPatch(
             }
         }.also { exceptions.addAll(it) }
 
-        // delete all but relevant files to avoid copying in files with incorrect attributes (i.e. executable flag)
-        val fileOperationFiles = fileOperations.map { osImage.hostPath(it.file) }
-        osImage.hostPath(LinuxRoot).deleteDirectoryEntriesRecursively { file ->
-            !file.isDirectory() && file !in fileOperationFiles
-        }
-
+        val fileOperationFiles: List<Path> = fileOperations.map { osImage.hostPath(it.file) }
         collectingExceptions("File Operations", fileOperationFiles.size) { exceptionCallback ->
             @Suppress("Destructure")
             fileOperations.forEach { fileOperation ->
                 kotlin.runCatching { fileOperation(osImage.hostPath(fileOperation.file)) }.onFailure(exceptionCallback)
             }
 
-            if (fileOperationFiles.isNotEmpty()) osImage.guestfish(trace) { tarIn() }
+            if (fileOperationFiles.isNotEmpty()) osImage.guestfish(trace) {
+                // tar-in only relevant files to avoid corrupting incorrect attributes (i.e. executable flag)
+                tarIn { it in fileOperationFiles }
+            }
         }.also { exceptions.addAll(it) }
 
         return exceptions
@@ -254,6 +249,9 @@ data class SimplePhasedPatch(
  */
 class PhasedPatchBuilder(private val name: CharSequence, private val osImage: OperatingSystemImage) {
 
+    /**
+     * Builds a new [PhasedPatch].
+     */
     fun build(init: PhasedPatchContext.() -> Unit): PhasedPatch {
         val diskPreparations: MutableList<() -> Unit> = mutableListOf()
         val diskCustomizations: MutableList<Customization> = mutableListOf()
@@ -362,6 +360,9 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
     /** Builds image operations. */
     class ImageOperationsBuilder(private val osImage: OperatingSystemImage) {
 
+        /**
+         * Builds a new image operation.
+         */
         fun build(init: ImageOperationsContext.() -> Unit): List<() -> Unit> =
             mutableListOf<() -> Unit>().also { ImageOperationsContext(it).init() }
 
@@ -403,6 +404,9 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
     /** Builder for instances of [FileOperation]. */
     object FileOperationsBuilder {
 
+        /**
+         * Builds a new [FileOperation].
+         */
         fun build(init: FileOperationsContext.() -> Unit): List<FileOperation> =
             mutableListOf<FileOperation>().also { FileOperationsContext(it).init() }
 
@@ -415,14 +419,18 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
              *
              * That is, if the [validator] does not throw, [path] is considered already respectively successfully changed.
              */
-            fun edit(path: DiskPath, validator: (Path) -> Unit, operations: (Path) -> Unit) =
+            fun edit(path: DiskPath, validator: (Path) -> Unit, operations: (Path) -> Unit) {
                 fileOperations.add(FileOperation(path, validator, operations))
+            }
         }
     }
 
     /** Builder for OS operations. */
     class OsOperationsBuilder(private val osImage: OperatingSystemImage) {
 
+        /**
+         * Builds a new [Program] list.
+         */
         fun build(init: OsOperationsContext.() -> Unit): List<Program> =
             mutableListOf<Program>().also { OsOperationsContext(it).init() }
 
@@ -437,14 +445,17 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
                 purpose: String,
                 initialState: OperatingSystemProcess.() -> String?,
                 vararg states: Pair<String, OperatingSystemProcess.(String) -> String?>,
-            ) = programs.add(Program(purpose, initialState, *states))
+            ) {
+                programs.add(Program(purpose, initialState, *states))
+            }
 
             /**
              * Adds a [Program] to be executed inside of the running [OperatingSystemImage]
              * that runs the given [commandLines].
              */
-            fun script(name: String, vararg commandLines: String) =
+            fun script(name: String, vararg commandLines: String) {
                 programs.add(osImage.compileScript(name, *commandLines))
+            }
         }
     }
 }
@@ -472,6 +483,9 @@ class CompositePatch(
 
     constructor(vararg patches: (OperatingSystemImage) -> PhasedPatch) : this(patches.toList())
 
+    /**
+     * Applies this patch to the given [osImage].
+     */
     override fun invoke(osImage: OperatingSystemImage): PhasedPatch = patches.map { it(osImage) }.run {
         SimplePhasedPatch(
             name = Renderable.of(joinToString(LineSeparators.LF) { it.name }) { _, _ -> this },

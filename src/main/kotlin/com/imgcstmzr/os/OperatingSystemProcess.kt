@@ -1,6 +1,5 @@
 package com.imgcstmzr.os
 
-import com.imgcstmzr.cli.Layouts
 import com.imgcstmzr.cli.PATCH_DECORATION_FORMATTER
 import com.imgcstmzr.os.Program.Companion.compute
 import com.imgcstmzr.os.Program.Companion.format
@@ -22,6 +21,7 @@ import koodies.exec.input
 import koodies.jvm.thread
 import koodies.kaomoji.Kaomoji
 import koodies.text.ANSI.Formatter
+import koodies.text.ANSI.ansiRemoved
 import koodies.text.LineSeparators.LF
 import koodies.text.LineSeparators.trailingLineSeparatorRemoved
 import koodies.text.Semantics.formattedAs
@@ -30,9 +30,12 @@ import koodies.text.quoted
 import koodies.text.truncateByColumns
 import koodies.time.seconds
 import koodies.tracing.CurrentSpan
+import koodies.tracing.Key
 import koodies.tracing.Tracer
 import koodies.tracing.rendering.ColumnsLayout
+import koodies.tracing.rendering.ColumnsLayout.Companion.columns
 import koodies.tracing.rendering.Renderable
+import koodies.tracing.rendering.RenderingAttributes
 import koodies.tracing.rendering.Style
 import koodies.tracing.rendering.Styles
 import koodies.tracing.spanning
@@ -112,16 +115,14 @@ open class OperatingSystemProcess(
         span.log(LF + kaomoji.thinking(message.formattedAs.error) + LF)
     }
 
-    val shuttingDownStatus: String = "shutting down"
-
     /**
      * Logs the current execution status given the [io] and [unfinished].
      */
     fun status(io: IO, unfinished: List<Program>) {
         if (shuttingDown) {
-            span.log(io, shuttingDownStatus)
+            span.ioEvent(io, emptyList())
         } else {
-            span.log(io, unfinished)
+            span.ioEvent(io, unfinished)
         }
     }
 
@@ -161,22 +162,6 @@ open class OperatingSystemProcess(
     }
 }
 
-fun Collection<Any>.asExtra(): Renderable =
-    Renderable.of(this) { columns, _ ->
-        when {
-            isEmpty() -> "◼"
-            columns != null -> {
-                joinToTruncatedString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success).truncateByColumns(columns).toString()
-            }
-            else -> {
-                joinToString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success)
-            }
-        }
-    }
-
-fun CurrentSpan.log(description: CharSequence, extra: Collection<Program>) =
-    log(description, extra.asExtra())
-
 /**
  * Starts a [dockerPi] with [name] that boots the [this@run] and
  * runs all provided [programs].
@@ -207,7 +192,7 @@ fun OperatingSystemImage.boot(
             "Running ${shortName.formattedAs.input} with ${programs.format()}",
             nameFormatter = nameFormatter,
             decorationFormatter = decorationFormatter,
-            layout = Layouts.DESCRIPTION_AND_EXTRA,
+            layout = OS_BOOT_LAYOUT,
             style = style,
             tracer = Tracer,
             block = {
@@ -219,8 +204,8 @@ fun OperatingSystemImage.boot(
                     val osProcessor = operatingSystemProcessor ?: stuckCheckingProcessor { io ->
                         when (io) {
                             is Meta -> feedback(io.ansiRemoved.trim())
-                            is Input -> log(io, unfinished)
-                            is Output -> log(io, unfinished)
+                            is Input -> ioEvent(io, unfinished)
+                            is Output -> ioEvent(io, unfinished)
                             is Error -> negativeFeedback(io.ansiRemoved.trim())
                         }
                         if ((io is Output || io is Error) && !unfinished.compute(this, io)) {
@@ -240,3 +225,42 @@ fun OperatingSystemImage.boot(
         )
     }.waitFor()
 }
+
+val STATUS: Key<List<String>, Collection<Program>> =
+    Key.stringArrayKey("imgcstmzr.os.program.status") { programs ->
+        programs.map { program -> program.toString().ansiRemoved }
+    }
+
+val OS_BOOT_LAYOUT = ColumnsLayout(
+    RenderingAttributes.DESCRIPTION columns 120,
+    STATUS columns 40,
+    maxColumns = 160,
+)
+
+fun Collection<Any>.asExtra(): Renderable =
+    Renderable.of(this) { columns, _ ->
+        when {
+            isEmpty() -> "◼"
+            columns != null -> {
+                joinToTruncatedString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success).truncateByColumns(columns).toString()
+            }
+            else -> {
+                joinToString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success)
+            }
+        }
+    }
+
+class RenderablePrograms(programs: Collection<Program>) : Collection<Program> by programs, Renderable by Renderable.of(programs, { columns, _ ->
+    when {
+        isEmpty() -> "◼"
+        columns != null -> {
+            joinToTruncatedString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success).truncateByColumns(columns).toString()
+        }
+        else -> {
+            joinToString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success)
+        }
+    }
+})
+
+fun CurrentSpan.ioEvent(io: IO, programs: Collection<Program>) =
+    event("io", *io.attributes.toTypedArray(), STATUS to RenderablePrograms(programs))

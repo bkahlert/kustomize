@@ -81,8 +81,8 @@ class GuestfishCommandLine(
     LibguestfsImage,
     dockerOptions,
     ShellScript(when (size) {
-        0 -> "No $COMMAND operations"
-        1 -> "One $COMMAND operation"
+        0 -> "0 $COMMAND operations"
+        1 -> "1 $COMMAND operation"
         else -> "$size $COMMAND operations"
     }) {
 
@@ -414,15 +414,15 @@ class GuestfishCommandLine(
             /**
              * This command uploads and unpacks the local host share to the guest VMs root `/`.
              */
-            fun tarIn(diskPath: (OperatingSystemImage) -> DiskPath = { LinuxRoot }) {
-                guestfishCommands.add(diskPath(osImage).run { TarIn(true, tar(osImage), this) })
+            fun tarIn(diskPath: (OperatingSystemImage) -> DiskPath = { LinuxRoot }, predicate: (Path) -> Boolean = { true }) {
+                guestfishCommands.add(diskPath(osImage).run { TarIn(true, tar(osImage, predicate = predicate), this) })
             }
 
             /**
              * Creates a tar archive of `this` [DiskPath] and places the archive inside of this path.
              */
-            private fun DiskPath.tar(osImage: OperatingSystemImage, archiveName: String = "archive.tar"): Path =
-                osImage.hostPath(this).run { resolve(archiveName).also { target -> tar(parent / archiveName).moveTo(target) } }
+            private fun DiskPath.tar(osImage: OperatingSystemImage, archiveName: String = "archive.tar", predicate: (Path) -> Boolean = { true }): Path =
+                osImage.hostPath(this).run { resolve(archiveName).also { target -> tar(parent / archiveName, predicate = predicate).moveTo(target) } }
 
             /**
              * * This command packs the guest VMs root `/` and downloads it to the local host share.

@@ -1,6 +1,5 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage
 
@@ -18,12 +17,8 @@ class TweaksPatch(
     ) {
 
         customizeDisk {
-            appendLine { """APT::Acquire::Retries "$aptRetries";""" to APT_CONF_RETRIES }
+            appendLine { """APT::Acquire::Retries "$aptRetries";""" to LinuxRoot.etc.apt.apt_conf_d.`80_retries` }
         }
 
-    }
-
-    companion object {
-        val APT_CONF_RETRIES: DiskPath = LinuxRoot.etc / "apt" / "apt.conf.d" / "80-retries"
     }
 }

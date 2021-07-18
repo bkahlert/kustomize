@@ -2,7 +2,7 @@ package com.imgcstmzr.test
 
 import koodies.io.ClassPathDirectory
 
-object ImgClassPathFixture : ClassPathDirectory("img") {
+object ImageFixtures : ClassPathDirectory("img") {
     object Boot : Dir("boot") {
         object CmdlineTxt : File("cmdline.txt")
         object ConfigTxt : File("config.txt")

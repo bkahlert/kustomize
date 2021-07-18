@@ -9,8 +9,7 @@ import java.nio.file.Path
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]
- * copies all files and directories (specified by the [hostToDiskMappings]'s [HostPath] instances)
- * into the disk images under each [hostToDiskMappings]'s [DiskPath].
+ * copies all files and directories as specified by [hostToDiskMappings].
  */
 class CopyFilesPatch(
     private val hostToDiskMappings: Map<() -> Path, DiskPath>,
@@ -21,7 +20,7 @@ class CopyFilesPatch(
     override fun invoke(osImage: OperatingSystemImage): PhasedPatch {
         val files = hostToDiskMappings.map { (from, to) -> from() to to }
         return PhasedPatch.build(
-            "Copy Files: " + files.map { (from, to) -> "${from.fileName} ➜ ${to.fileName}" }.joinToString(", "),
+            "Copy Files: " + files.joinToString { (from, to) -> "${from.fileName} ➜ ${to.fileName}" },
             osImage,
         ) {
             modifyDisk {

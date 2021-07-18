@@ -6,12 +6,12 @@ import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBoot
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.MkdirOption
 import com.imgcstmzr.libguestfs.file
+import com.imgcstmzr.os.LinuxRoot.boot.cmdline_txt
+import com.imgcstmzr.os.LinuxRoot.boot.config_txt
+import com.imgcstmzr.os.LinuxRoot.etc.dhcpcd_conf
+import com.imgcstmzr.os.LinuxRoot.etc.modules
 import com.imgcstmzr.os.OperatingSystemImage
-import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.CMDLINE_TXT
-import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.CONFIG_TXT
-import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.DHCPCD_CONF
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.DHCP_SCRIPT
-import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.MODULES
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USB0_DNSMASQD
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USB0_NETWORK
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USBGADGET_SERVICE
@@ -55,13 +55,15 @@ class UsbEthernetGadgetPatchTest {
                 )
             }
             that(osImage.hostPath(USB0_DNSMASQD)) {
+                @Suppress("SpellCheckingInspection")
                 content.matchesCurlyPattern("""
                     dhcp-authoritative 
                     dhcp-rapid-commit
                     no-ping
                     interface=usb0 
-                    dhcp-range=192.168.168.161,192.168.168.174,1h 
-                    dhcp-option=3 # no gateway / routing
+                    dhcp-range=192.168.168.161,192.168.168.174,1h
+                    # no gateway / routing
+                    dhcp-option=3
                     #dhcp-option=option:dns-server,192.168.168.192
                     dhcp-script=$DHCP_SCRIPT
                     leasefile-ro
@@ -82,12 +84,13 @@ class UsbEthernetGadgetPatchTest {
                 )
             }
             that(osImage.hostPath(DHCP_SCRIPT)) {
+                @Suppress("SpellCheckingInspection")
                 content.matchesCurlyPattern("""
                     #!/bin/bash
                     op="${'$'}{1:-op}"
                     mac="${'$'}{2:-mac}"
                     ip="${'$'}{3:-ip}"
-                    host="${'$'}{4}"
+                    host="${'$'}{4:-}"
                     
                     if [[ ${'$'}op == "init" ]]; then
                         exit 0
@@ -112,6 +115,7 @@ class UsbEthernetGadgetPatchTest {
                     CopyInOption(osImage.hostPath(USB0_NETWORK), USB0_NETWORK.parent))
             }
             that(osImage.hostPath(USB0_NETWORK)) {
+                @Suppress("SpellCheckingInspection")
                 content.isEqualTo("""
                     auto usb0
                     allow-hotplug usb0
@@ -134,6 +138,7 @@ class UsbEthernetGadgetPatchTest {
                 )
             }
             that(osImage.hostPath(USB_GADGET)) {
+                @Suppress("SpellCheckingInspection")
                 content.isEqualTo("""
                     #!/bin/bash
 
@@ -198,6 +203,7 @@ class UsbEthernetGadgetPatchTest {
                 )
             }
             that(osImage.hostPath(USBGADGET_SERVICE)) {
+                @Suppress("SpellCheckingInspection")
                 content.isEqualTo("""
                     [Unit]
                     Description=My USB gadget
@@ -217,6 +223,7 @@ class UsbEthernetGadgetPatchTest {
             }
             that(patch).customizations {
                 filterIsInstance<FirstBootOption>().apply {
+                    @Suppress("SpellCheckingInspection")
                     any { file.content.contains("systemctl enable usbgadget.service") }
                 }
             }
@@ -228,10 +235,12 @@ class UsbEthernetGadgetPatchTest {
         expect {
             that(patch(osImage)).customizations {
                 filterIsInstance<FirstBootOption>().apply {
-                    any { file.content.contains("echo 'dtoverlay=dwc2' >> $CONFIG_TXT") }
-                    any { file.content.contains("sed -i 's/${'$'}/ modules-load=dwc2/' $CMDLINE_TXT") }
-                    any { file.content.contains("echo 'libcomposite' >> $MODULES") }
-                    any { file.content.contains("echo 'denyinterfaces usb0' >> $DHCPCD_CONF") }
+                    any { file.content.contains("echo 'dtoverlay=dwc2' >> $config_txt") }
+                    any { file.content.contains("sed -i 's/${'$'}/ modules-load=dwc2/' $cmdline_txt") }
+                    @Suppress("SpellCheckingInspection")
+                    any { file.content.contains("echo 'libcomposite' >> $modules") }
+                    @Suppress("SpellCheckingInspection")
+                    any { file.content.contains("echo 'denyinterfaces usb0' >> $dhcpcd_conf") }
                     any { file.content.contains("systemctl enable serial-getty@ttyGS0.service") }
                 }
             }

@@ -16,7 +16,7 @@ class SshEnablementPatch : (OperatingSystemImage) -> PhasedPatch {
         osImage,
     ) {
         modifyDisk {
-            touch { LinuxRoot.boot / "ssh" }
+            touch { LinuxRoot.boot.ssh }
         }
     }
 }

@@ -1,11 +1,11 @@
 package com.imgcstmzr.os
 
 import com.imgcstmzr.ImgCstmzr
+import com.imgcstmzr.expectRendered
 import com.imgcstmzr.libguestfs.LibguestfsImage
 import com.imgcstmzr.libguestfs.mounted
 import com.imgcstmzr.os.OperatingSystemImage.Companion.based
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
-import com.imgcstmzr.test.OS
 import koodies.content
 import koodies.docker.DockerRequiring
 import koodies.io.path.hasContent
@@ -18,11 +18,9 @@ import koodies.io.path.writeText
 import koodies.io.randomDirectory
 import koodies.io.randomFile
 import koodies.junit.UniqueId
-import koodies.test.CapturedOutput
 import koodies.test.FifteenMinutesTimeout
 import koodies.test.FiveMinutesTimeout
 import koodies.test.Smoke
-import koodies.test.SystemIOExclusive
 import koodies.test.toStringContainsAll
 import koodies.test.withTempDir
 import org.junit.jupiter.api.Nested
@@ -37,7 +35,6 @@ import kotlin.io.path.div
 import kotlin.io.path.isWritable
 import kotlin.io.path.readLines
 
-@SystemIOExclusive
 class OperatingSystemImageTest {
 
     @Test
@@ -52,12 +49,14 @@ class OperatingSystemImageTest {
 
     @Test
     fun `should have full name`() {
+        @Suppress("SpellCheckingInspection")
         expectThat((OperatingSystemMock("full-name-test") based Path.of("foo/bar")).fullName)
             .isEqualTo("ImgCstmzr Test OS ／ file://${ImgCstmzr.WorkingDirectory}/foo/bar")
     }
 
     @Test
     fun `should have short name`() {
+        @Suppress("SpellCheckingInspection")
         expectThat((OperatingSystemMock("short-name-test") based Path.of("foo/bar")).shortName)
             .isEqualTo("ImgCstmzr Test OS ／ bar")
     }
@@ -75,6 +74,7 @@ class OperatingSystemImageTest {
         fun `should copy-out existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
             osImage.copyOut("/boot/cmdline.txt")
 
+            @Suppress("SpellCheckingInspection")
             expectThat(osImage.exchangeDirectory.resolve("boot/cmdline.txt"))
                 .content.toStringContainsAll("console=serial", "console=tty", "rootfstype=ext4")
         }
@@ -84,13 +84,9 @@ class OperatingSystemImageTest {
     inner class Guestfish {
 
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
-        fun `should trace if specified`(
-            @OS(RaspberryPiLite) osImage: OperatingSystemImage,
-            output: CapturedOutput,
-        ) {
+        fun `should trace if specified`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
             osImage.guestfish(true) {}
-
-            expectThat(output.all).contains("libguestfs: trace: launch")
+            expectRendered().contains("libguestfs: trace: launch")
         }
 
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
@@ -99,6 +95,7 @@ class OperatingSystemImageTest {
                 copyOut { LinuxRoot.boot / "cmdline.txt" }
             }
 
+            @Suppress("SpellCheckingInspection")
             expectThat(osImage.exchangeDirectory.resolve("boot/cmdline.txt"))
                 .content.toStringContainsAll("console=serial", "console=tty", "rootfstype=ext4")
         }
@@ -149,7 +146,7 @@ class OperatingSystemImageTest {
                 hostname { "test-machine" }
             }
             expectThat(osImage).mounted {
-                path("/etc/hostname") {
+                path(LinuxRoot.etc.hostname) {
                     exists()
                     hasContent("test-machine\n")
                 }

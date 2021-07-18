@@ -3,7 +3,7 @@ package com.imgcstmzr.util
 import com.imgcstmzr.ImgCstmzr
 import com.imgcstmzr.ImgCstmzrConfig
 import koodies.io.path.asPath
-import koodies.test.SixtyMinutesTimeout
+import koodies.test.ThirtyMinutesTimeout
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.tracing.spanning
 import org.junit.jupiter.api.Disabled
@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 class DiskTest {
 
     @Disabled
-    @SixtyMinutesTimeout @Test
+    @ThirtyMinutesTimeout @Test
     fun `should mount and unmount listed disks`() {
         val file = "${ImgCstmzr.HomeDirectory}/.imgcstmzr/bother-you/2021-01-03T21-28-04--csEt/2020-12-02-raspios-buster-armhf-lite.img".asPath()
         val flashDrive: String? = "auto"

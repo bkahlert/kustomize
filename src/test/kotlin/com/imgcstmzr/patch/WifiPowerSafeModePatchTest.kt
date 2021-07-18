@@ -6,9 +6,9 @@ import com.imgcstmzr.os.OperatingSystemImage
 import koodies.content
 import koodies.junit.UniqueId
 import koodies.test.containsAtLeast
-import koodies.test.expecting
 import koodies.test.withTempDir
 import org.junit.jupiter.api.Test
+import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.isA
 import strikt.assertions.last
@@ -19,12 +19,10 @@ class WifiPowerSafeModePatchTest {
     fun `should disable power-safe mode`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         val patch = WifiPowerSafeModePatch().invoke(osImage)
 
-        expecting { patch } that {
-            customizations {
-                last().isA<FirstBootOption>().file.content {
-                    contains("/sbin/iw dev wlan0 set power_save off")
-                    containsAtLeast("echo 0", 2)
-                }
+        expectThat(patch).customizations {
+            last().isA<FirstBootOption>().file.content {
+                contains("/sbin/iw dev wlan0 set power_save off")
+                containsAtLeast("echo 0", 2)
             }
         }
     }

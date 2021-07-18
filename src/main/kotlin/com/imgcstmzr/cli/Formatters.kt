@@ -13,28 +13,15 @@ fun CharSequence.asParam(): String = formattedAs.input
 
 fun KProperty<*>.asParam(nameToUse: String = name.convertCamelCaseToKebabCase()): String = nameToUse.asParam()
 
-val PATCH_NAME_FORMATTER: Formatter<CharSequence> = Formatter { it.ansi.brightGreen.done }
 val PATCH_DECORATION_FORMATTER: Formatter<CharSequence> = Formatter { it.ansi.green.done }
 
 object Layouts {
 
     /**
-     * Two columns layout consisting of:
-     * - one column that renders [RenderingAttributes.DESCRIPTION]`/160`
+     * One column layout that renders [RenderingAttributes.DESCRIPTION]`/160`
      */
     val DESCRIPTION: ColumnsLayout = ColumnsLayout(
         RenderingAttributes.DESCRIPTION columns 160,
-        maxColumns = 160,
-    )
-
-    /**
-     * Two columns layout consisting of:
-     * - one column that renders [RenderingAttributes.DESCRIPTION]`/120`
-     * - one column that renders [RenderingAttributes.EXTRA]`/40`.
-     */
-    val DESCRIPTION_AND_EXTRA: ColumnsLayout = ColumnsLayout(
-        RenderingAttributes.DESCRIPTION columns 120,
-        RenderingAttributes.EXTRA columns 40,
         maxColumns = 160,
     )
 }

@@ -2,8 +2,8 @@ package com.imgcstmzr.patch//import static org.assertj.core.api.Assertions.asser
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.CopyInOption
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.MkdirOption
 import com.imgcstmzr.os.LinuxRoot
+import com.imgcstmzr.os.LinuxRoot.etc.wpa_supplicant.wpa_supplicant_conf
 import com.imgcstmzr.os.OperatingSystemImage
-import com.imgcstmzr.patch.WpaSupplicantPatch.Companion.WPA_SUPPLICANT
 import koodies.io.path.hasContent
 import org.junit.jupiter.api.Test
 import strikt.api.expect
@@ -12,6 +12,7 @@ import strikt.assertions.containsExactly
 class WpaSupplicantPatchTest {
 
     @Test
+    @Suppress("SpellCheckingInspection")
     fun `should provide wpasupplicant conf copying command`(osImage: OperatingSystemImage) {
 
         val patch = WpaSupplicantPatch("entry1\nentry2").invoke(osImage)
@@ -19,13 +20,13 @@ class WpaSupplicantPatchTest {
         expect {
             that(patch).customizations {
                 containsExactly(
-                    MkdirOption(LinuxRoot.etc / "wpa_supplicant"),
+                    MkdirOption(LinuxRoot.etc.wpa_supplicant),
                     CopyInOption(
-                        osImage.hostPath(WPA_SUPPLICANT),
+                        osImage.hostPath(wpa_supplicant_conf),
                         LinuxRoot.etc / "wpa_supplicant"
                     ))
             }
-            that(osImage.hostPath(WPA_SUPPLICANT)) {
+            that(osImage.hostPath(wpa_supplicant_conf)) {
                 hasContent("entry1\nentry2\n")
             }
         }

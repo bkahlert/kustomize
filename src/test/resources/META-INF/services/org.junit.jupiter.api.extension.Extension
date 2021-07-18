@@ -1,7 +1,5 @@
-com.imgcstmzr.test.FixtureResolverExtension
-com.imgcstmzr.TestSpanWrapper
+com.imgcstmzr.os.OperatingSystemImageProviderExtension
+com.imgcstmzr.TestSpanOutputExtension
 koodies.junit.TestNameResolver
 koodies.junit.UniqueIdResolver
-koodies.debug.DebugCondition
-koodies.debug.DebugParameterResolver
 koodies.test.IllegalUsageCheck

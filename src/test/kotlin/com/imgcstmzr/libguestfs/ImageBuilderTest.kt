@@ -72,11 +72,13 @@ class ImageBuilderTest {
 
             @Test
             fun `should throw on invalid scheme`() {
+                @Suppress("SpellCheckingInspection")
                 expectThrows<IllegalArgumentException> { buildFrom(URI.create("invalid://build/?files=classpath:config.txt%3Eboot")) }
             }
 
             @Test
             fun `should throw on invalid host`() {
+                @Suppress("SpellCheckingInspection")
                 expectThrows<IllegalArgumentException> { buildFrom(URI.create("imgcstmzr://invalid/?files=classpath:config.txt%3Eboot")) }
             }
 

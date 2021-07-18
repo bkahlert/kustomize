@@ -19,7 +19,7 @@ class ImageExtractorTest {
 
     @Test
     fun `should return already extracted image`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-        val img = randomFile(extension = ".img").apply { writeText("Dummy image") }
+        val img = randomFile(extension = ".img")
         expectThat(img.extractImage { it }).isEqualTo(img)
     }
 

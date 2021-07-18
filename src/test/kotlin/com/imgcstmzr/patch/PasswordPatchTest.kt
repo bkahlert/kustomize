@@ -1,29 +1,30 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.expectRendered
 import com.imgcstmzr.libguestfs.LibguestfsImage
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization
 import com.imgcstmzr.os.IncorrectPasswordException
 import com.imgcstmzr.os.LinuxRoot
+import com.imgcstmzr.os.OS
 import com.imgcstmzr.os.OperatingSystem.Credentials
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemProcess.Companion.DockerPiImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.os.boot
 import com.imgcstmzr.test.E2E
-import com.imgcstmzr.test.OS
 import koodies.debug.debug
 import koodies.docker.CleanUpMode.ThanksForCleaningUp
 import koodies.docker.DockerContainer
 import koodies.docker.DockerRequiring
 import koodies.exec.Process.State.Excepted
 import koodies.exec.rootCause
-import koodies.test.CapturedOutput
 import koodies.test.FifteenMinutesTimeout
-import koodies.test.SystemIOExclusive
 import koodies.test.expecting
+import koodies.text.ansiRemoved
 import koodies.text.matchesCurlyPattern
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
+import strikt.assertions.contains
 import strikt.assertions.first
 import strikt.assertions.hasSize
 import strikt.assertions.isA
@@ -31,7 +32,6 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.message
 import kotlin.io.path.readLines
 
-@SystemIOExclusive
 class PasswordPatchTest {
 
     @Test
@@ -44,7 +44,7 @@ class PasswordPatchTest {
         )
     }
 
-    @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class]) @E2E @Test
+    @E2E @Test
     fun `should update shadow file correctly`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val passwordPath = LinuxRoot.etc.shadow
         val username = RaspberryPiLite.defaultCredentials.username
@@ -66,7 +66,7 @@ class PasswordPatchTest {
     }
 
     @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class], ThanksForCleaningUp) @E2E @Test
-    fun `should not be able to use old password`(container: DockerContainer, @OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
+    fun `should not be able to use old password`(container: DockerContainer, @OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         osImage.patch(PasswordPatch(RaspberryPiLite.defaultCredentials.username, "po"))
 
         osImage.credentials = Credentials("pi", "wrong password")
@@ -74,6 +74,8 @@ class PasswordPatchTest {
             isA<Excepted>().rootCause.isA<IncorrectPasswordException>()
                 .message.isEqualTo("The entered password \"wrong password\" is incorrect.")
         }
-        output.all.contains("Login incorrect")
+        expectRendered().ansiRemoved {
+            contains("Login incorrect")
+        }
     }
 }

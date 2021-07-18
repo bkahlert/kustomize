@@ -78,4 +78,4 @@ annotation class FifteenMinutesTimeout
     AnnotationTarget.CLASS
 )
 @Retention(AnnotationRetention.RUNTIME)
-annotation class SixtyMinutesTimeout
+annotation class ThirtyMinutesTimeout

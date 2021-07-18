@@ -1,19 +1,17 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.LibguestfsImage
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization
 import com.imgcstmzr.libguestfs.containsFirstBootScriptFix
 import com.imgcstmzr.libguestfs.file
 import com.imgcstmzr.libguestfs.mounted
+import com.imgcstmzr.os.LinuxRoot
+import com.imgcstmzr.os.OS
 import com.imgcstmzr.os.OperatingSystem
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.test.E2E
-import com.imgcstmzr.test.OS
 import koodies.content
-import koodies.docker.DockerRequiring
 import koodies.junit.UniqueId
-import koodies.test.FiveMinutesTimeout
 import koodies.test.Smoke
 import koodies.test.withTempDir
 import koodies.text.Banner.banner
@@ -28,10 +26,12 @@ import strikt.assertions.last
 
 class ShellScriptPatchTest {
 
+    private val testFile = LinuxRoot.root / "shell-script-test.txt"
+
     private val shellScriptPatch = ShellScriptPatch("Test") {
         """
-        touch /root/shell-script-test.txt
-        echo 'Frank was here; went to get beer.' > /root/shell-script-test.txt
+        touch $testFile
+        echo 'Frank was here; went to get beer.' > $testFile
         """
     }
 
@@ -40,8 +40,8 @@ class ShellScriptPatchTest {
         expectThat(shellScriptPatch(osImage)).customizations {
             last().isA<Customization.FirstBootOption>().file.content {
                 contains("echo ${banner("Test").singleQuoted}")
-                contains("touch /root/shell-script-test.txt")
-                contains("echo 'Frank was here; went to get beer.' > /root/shell-script-test.txt")
+                contains("touch $testFile")
+                contains("echo 'Frank was here; went to get beer.' > $testFile")
                 contains(OperatingSystem.DEFAULT_SHUTDOWN_COMMAND.shellCommand)
             }
         }
@@ -52,13 +52,13 @@ class ShellScriptPatchTest {
         expectThat(shellScriptPatch(osImage)).customizations { containsFirstBootScriptFix() }
     }
 
-    @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @E2E @Smoke @Test
+    @E2E @Smoke @Test
     fun `should run shell script`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
 
         osImage.patch(shellScriptPatch)
 
         expectThat(osImage).mounted {
-            path("/root/shell-script-test.txt") {
+            path(testFile) {
                 content.isEqualTo("Frank was here; went to get beer.$LF")
             }
         }

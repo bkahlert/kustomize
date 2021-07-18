@@ -44,7 +44,7 @@ class GuestfishCommandLineTest {
             '--entrypoint' \
             '/bin/sh' \
             '--name' \
-            'guestfish--${cmdLine.dockerOptions.name!!.name.takeLast(4)}' \
+            'guestfish--${(cmdLine.dockerOptions.name ?: error("Missing name")).name.takeLast(4)}' \
             '--workdir' \
             '/shared' \
             '--rm' \
@@ -114,8 +114,7 @@ inline val mounted: Assertion.Builder<OperatingSystemImage>.(init: GuestAssertio
     get() = { init: GuestAssertions.() -> Unit -> mounted(init) }
 
 /**
- * Returns callable that mounts `this` [OperatingSystemImage] while logging with the specified [logger]
- * and runs the specified [GuestAssertions].
+ * Returns callable that mounts `this` [OperatingSystemImage] and runs the specified [GuestAssertions].
  */
 fun Assertion.Builder<OperatingSystemImage>.mounted(init: GuestAssertions.() -> Unit) =
     get("mounted") {

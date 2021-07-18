@@ -29,8 +29,6 @@ import koodies.unit.bytes
 import koodies.unit.milli
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
-import org.junit.jupiter.api.parallel.Execution
-import org.junit.jupiter.api.parallel.ExecutionMode.CONCURRENT
 import strikt.assertions.isTrue
 import strikt.assertions.matches
 import kotlin.time.Duration
@@ -95,6 +93,7 @@ class OperatingSystemTest {
     ) { asserting { not { matches(OperatingSystem.DEFAULT_READY_PATTERN) } } }
 
     @TestFactory
+    @Suppress("SpellCheckingInspection")
     fun `should detect dead end line`() = testEach(
         "You are in emergency mode. After logging in, type \"journalctl -xb\" to view",
         "You are in EMERGENCY MODE. After logging in, type \"journalctl -xb\" to view",
@@ -112,7 +111,6 @@ class OperatingSystemTest {
 
     @Slow
     @TestFactory
-    @Execution(CONCURRENT)
     fun `should perform log in and terminate`(uniqueId: UniqueId) = testEach(
         LoginSimulation(2.0, "\n"),
         LoginSimulation(0.5, "\n"),
@@ -162,6 +160,7 @@ class OperatingSystemTest {
     }
 
     @Slow @Test
+    @Suppress("SpellCheckingInspection")
     fun `should invoke shutdown even if not ready`(testName: TestName, uniqueId: UniqueId) = spanning(testName) {
         val process = withIndividuallySlowInput(
             0.milli.seconds to "[  OK  ] Started Update UTMP about System Runlevel Changes.\n",

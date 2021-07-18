@@ -9,7 +9,7 @@ import kotlin.time.Duration
 /**
  * Entrypoint for library-internal functionality.
  */
-object ImgCstmzrTest : Locations {
+object TestImgCstmzr : Locations {
 
     /**
      * Directory in which all artifacts of a test run are stored.

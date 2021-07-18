@@ -78,12 +78,6 @@ private fun <R> Path.dir(name: String, block: Path.() -> R): R =
 private fun Path.script(name: String, shellScript: ScriptContext.(Path) -> CharSequence): Path =
     ShellScript(name) { shellScript(this@script) }.toFile(resolve(name))
 
-/**
- * Create the given [shellScript] using the given [name] in `this` directory,
- * makes sure it has a proper [ShellScript.shebang] returns its path with
- * 1 second delay to make sure that subsequent calls will have sufficiently
- * different timestamps.
- */
 private fun Path.sh(name: String) = ScriptStub(this, name)
 private data class ScriptStub(val dir: Path, val name: String) {
     operator fun compareTo(content: String): Int {
@@ -97,7 +91,8 @@ private data class ScriptStub(val dir: Path, val name: String) {
 
 
 /**
- * Create the given the **[libguestfs firstboot script](https://github.com/raspbian-packages/libguestfs/blob/5dd450eaf5dad56b8539a2d324ad1cb5b1277ffa/customize/firstboot.ml)**
+ * Create the given the
+ * **[libguestfs firstboot script](https://github.com/raspbian-packages/libguestfs/blob/5dd450eaf5dad56b8539a2d324ad1cb5b1277ffa/customize/firstboot.ml)**
  * in `this` directory and returns its relative path.
  */
 private fun Path.libguestfsFirstBootScript(root: Path) = script("firstboot.sh") { absDir ->
@@ -127,4 +122,5 @@ private fun Path.libguestfsFirstBootScript(root: Path) = script("firstboot.sh") 
     """
 }.let { root.relativize(it) }
 
-private val `$` = "$"
+@Suppress("ObjectPropertyName")
+private const val `$` = "$"

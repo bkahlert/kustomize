@@ -1,12 +1,12 @@
 package com.imgcstmzr.libguestfs
 
+import com.imgcstmzr.expectRendered
 import com.imgcstmzr.os.DiskDirectory
+import com.imgcstmzr.os.OS
 import com.imgcstmzr.os.OperatingSystemImage
-import com.imgcstmzr.os.OperatingSystemProcess.Companion.DockerPiImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.os.boot
-import com.imgcstmzr.test.OS
-import koodies.docker.DockerRequiring
+import com.imgcstmzr.test.E2E
 import koodies.docker.ubuntu
 import koodies.exec.RendererProviders
 import koodies.exec.ansiRemoved
@@ -18,10 +18,7 @@ import koodies.io.path.executable
 import koodies.junit.UniqueId
 import koodies.jvm.thread
 import koodies.shell.ShellScript
-import koodies.test.CapturedOutput
-import koodies.test.FifteenMinutesTimeout
 import koodies.test.Slow
-import koodies.test.SystemIOExclusive
 import koodies.test.expecting
 import koodies.test.withTempDir
 import koodies.text.Banner.banner
@@ -36,7 +33,6 @@ import koodies.tracing.rendering.Styles.None
 import koodies.tracing.spanning
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.containsIgnoringCase
 import strikt.assertions.isGreaterThan
@@ -128,20 +124,21 @@ class FirstBootWaitTest {
                 }
             }
 
+        @Suppress("SameParameterValue")
         private fun Path.scriptFor(vararg directories: String): Path? =
             FirstBootWait.waitForEmptyDirectory(*directories.map { DiskDirectory(it) }.toTypedArray()).toFile(resolve("script.sh")).fileName
     }
 
-    @SystemIOExclusive
-    @FifteenMinutesTimeout @DockerRequiring([DockerPiImage::class]) @Test
-    fun `should wait for firstboot scripts to finish`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
+    @E2E @Test
+    fun `should wait for firstboot scripts to finish`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         osImage.virtCustomize {
             firstBoot(delayScript(30))
         }
         osImage.boot(uniqueId.value.toBaseName())
-        expectThat(output.all).ansiRemoved
-            .contains("1 SECONDS TO GO")
-            .contains("FINISHED")
-            .contains("raspberrypi login:")
+        expectRendered().ansiRemoved {
+            contains("1 SECONDS TO GO")
+            contains("FINISHED")
+            contains("raspberrypi login:")
+        }
     }
 }

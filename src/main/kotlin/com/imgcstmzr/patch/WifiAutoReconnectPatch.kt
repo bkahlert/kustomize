@@ -41,7 +41,7 @@ class WifiAutoReconnectPatch(private vararg val hosts: String = arrayOf("google.
 
     companion object {
         fun netcat(host: String) = "nc -4z -w5 $host 443 1>/dev/null 2>&1"
-        val CRONTAB: DiskPath = LinuxRoot.etc / "crontab"
+        val CRONTAB: DiskPath = LinuxRoot.etc.crontab
 
         private val NAME = "Enable Wifi Auto-Reconnect"
         private fun Iterable<String>.and() = joinToString(" && ")

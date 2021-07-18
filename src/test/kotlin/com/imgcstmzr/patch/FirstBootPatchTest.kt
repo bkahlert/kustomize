@@ -1,20 +1,17 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.libguestfs.LibguestfsImage
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization
 import com.imgcstmzr.libguestfs.containsFirstBootScriptFix
 import com.imgcstmzr.libguestfs.file
 import com.imgcstmzr.libguestfs.mounted
+import com.imgcstmzr.os.LinuxRoot
+import com.imgcstmzr.os.OS
 import com.imgcstmzr.os.OperatingSystemImage
-import com.imgcstmzr.os.OperatingSystemProcess.Companion.DockerPiImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.test.E2E
-import com.imgcstmzr.test.OS
 import koodies.content
-import koodies.docker.DockerRequiring
 import koodies.junit.UniqueId
 import koodies.shell.ShellScript
-import koodies.test.FifteenMinutesTimeout
 import koodies.test.Smoke
 import koodies.test.withTempDir
 import koodies.text.Banner.banner
@@ -50,17 +47,17 @@ class FirstBootPatchTest {
         expectThat(patch(osImage)).customizations { containsFirstBootScriptFix() }
     }
 
-    @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class, DockerPiImage::class]) @E2E @Smoke @Test
+    @E2E @Smoke @Test
     fun `should run firstboot scripts in correct order`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
         withTempDir(uniqueId) {
 
             osImage.patch(
                 FirstBootPatch(
-                    ShellScript("writing 'a'") { "echo 'a' > /home/file" },
-                    ShellScript("appending 'b'") { "echo 'b' >> /home/file" },
+                    ShellScript("writing 'a'") { "echo 'a' > ${LinuxRoot.home / "file"}" },
+                    ShellScript("appending 'b'") { "echo 'b' >> ${LinuxRoot.home / "file"}" },
                 ),
                 FirstBootPatch(
-                    ShellScript("appending 'c'") { "echo 'c' >> /home/file" },
+                    ShellScript("appending 'c'") { "echo 'c' >> ${LinuxRoot.home / "file"}" },
                     ShellScript("appending 'd'") { "echo 'd' >> /home/file" },
                 ),
             )
@@ -71,7 +68,7 @@ class FirstBootPatchTest {
                     { true }
                 }
                 that(osImage).mounted {
-                    path("/home/file") {
+                    path(LinuxRoot.home / "file") {
                         content.isEqualTo("""
                             a
                             b

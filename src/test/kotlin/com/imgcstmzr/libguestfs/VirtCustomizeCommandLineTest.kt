@@ -55,13 +55,14 @@ class VirtCustomizeCommandLineTest {
     @Test
     fun `should have correctly mapped arguments`(osImage: OperatingSystemImage) {
         val cmdLine = createVirtCustomizeCommandLine(osImage)
+        @Suppress("SpellCheckingInspection")
         expectThat(cmdLine).toStringIsEqualTo("""
             'docker' \
             'run' \
             '--entrypoint' \
             'virt-customize' \
             '--name' \
-            'virt-customize--${cmdLine.dockerOptions.name!!.name.takeLast(4)}' \
+            'virt-customize--${(cmdLine.dockerOptions.name ?: error("Missing name")).name.takeLast(4)}' \
             '--workdir' \
             '/shared' \
             '--rm' \
@@ -189,6 +190,7 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
         copyIn(LinuxRoot / "some/file")
         delete { LinuxRoot / "delete" / "file1" }
         delete { LinuxRoot / "delete" / "dir" / "2" }
+        @Suppress("SpellCheckingInspection")
         edit { etc / "dnf" / "dnf.conf" to "s/gpgcheck=1/gpgcheck=0/" }
         hostname { "the-machine" }
         firstBoot {

@@ -28,7 +28,9 @@ import koodies.text.ANSI.colorize
 import koodies.text.Banner.banner
 import koodies.text.Semantics.formattedAs
 import koodies.tracing.rendering.ReturnValues
+import koodies.tracing.rendering.Styles.None
 import koodies.tracing.spanning
+import koodies.unit.BinaryPrefixes
 import java.nio.file.Path
 
 val debug = true
@@ -72,38 +74,38 @@ class CliCommand : NoOpCliktCommand(
 
     override fun run() {
         echo(banner("ImgCstmzr"))
-        echo()
+        spanning("customize image", style = None) {
 
-        lateinit var config: ImgCstmzrConfig
-        lateinit var osImage: OperatingSystemImage
-        spanning(banner("Configuration")) {
-            config = configFile.let {
-                log("File: ${it.pathString}".ansi.cyan.bold)
-                log("Size: ${it.getSize()}".ansi.cyan.bold)
-                ImgCstmzrConfig.load(it, envFile)
-            }.apply {
-                log("Name: $name".ansi.cyan.bold)
-                log("Env: $envFile".ansi.cyan.bold)
-                log("Cache: $cacheDir".ansi.cyan.bold)
+            lateinit var config: ImgCstmzrConfig
+            lateinit var osImage: OperatingSystemImage
+            spanning(banner("Configuration")) {
+                config = configFile.let {
+                    log("File: ${it.pathString}".ansi.cyan.bold)
+                    log("Size: ${it.getSize().toString(BinaryPrefixes)}".ansi.cyan.bold)
+                    ImgCstmzrConfig.load(it, envFile)
+                }.apply {
+                    log("Name: $name".ansi.cyan.bold)
+                    log("Env: $envFile".ansi.cyan.bold)
+                    log("Cache: $cacheDir".ansi.cyan.bold)
 
-                osImage = provideImageCopy(this)
-                log("OS: $osImage".ansi.cyan.bold)
+                    osImage = provideImageCopy(this)
+                    log("OS: $osImage".ansi.cyan.bold)
+                }
             }
-        }
 
-        require(Docker.engineRunning) { "Docker is required to be running but could not be found." }
-        // TODO get complete id for Docker.images
-        listOf(LibguestfsImage, DockerPiImage).subtract(Docker.images.list()).forEach { it.pull() }
+            require(Docker.engineRunning) { "Docker is required to be running but could not be found." }
+            // TODO get complete id for Docker.images
+            listOf(LibguestfsImage, DockerPiImage).subtract(Docker.images.list()).forEach { it.pull() }
 
-        val patches = config.toOptimizedPatches()
-        val exceptions: ReturnValues<Throwable> = osImage.patch(*patches.toTypedArray())
+            val patches = config.toOptimizedPatches()
+            val exceptions: ReturnValues<Throwable> = osImage.patch(*patches.toTypedArray())
 
-        val flashDisk: Disk? = spanning(banner("Flashing $osImage")) {
-            config.flashDisk?.let { disk ->
-                flash(osImage.file, disk.takeUnless { it.equals("auto", ignoreCase = true) })
-            } ?: run {
-                log(
-                    """
+            val flashDisk: Disk? = spanning(banner("Flashing $osImage")) {
+                config.flashDisk?.let { disk ->
+                    flash(osImage.file, disk.takeUnless { it.equals("auto", ignoreCase = true) })
+                } ?: run {
+                    log(
+                        """
                         
                     To make use of your image, you have the following options:
                     a) Check you actually inserted an SD card. 
@@ -113,23 +115,24 @@ class CliCommand : NoOpCliktCommand(
                     d) ${"Flash manually".formattedAs.input} using the tool of your choice.
                        ${osImage.file.toUri()}
                 """.trimIndent()
-                )
-                null
+                    )
+                    null
+                }
             }
-        }
 
-        echo()
+            echo()
 
-        spanning(banner("Summary")) {
-            log("Image flashed to: " + (flashDisk?.run { toString() } ?: "—"))
-            log("Run scripts: " + osImage.copyOut("/usr/lib/virt-sysprep").toUri())
-            log("Run scripts log: " + osImage.copyOut("/root/virt-sysprep-firstboot.log").toUri())
+            spanning(banner("Summary")) {
+                log("Image flashed to: " + (flashDisk?.run { toString() } ?: "—"))
+                log("Run scripts: " + osImage.copyOut("/usr/lib/virt-sysprep").toUri())
+                log("Run scripts log: " + osImage.copyOut("/root/virt-sysprep-firstboot.log").toUri())
 
-            if (exceptions.isEmpty()) Kaomoji.Magical.random().toString() + " ${osImage.file.toUri()}"
-            else Kaomoji.BadMood.random().also {
-                log("The following problems occurred during image customization:")
-                exceptions.forEach { ex ->
-                    log(ex.toCompactString())
+                if (exceptions.isEmpty()) Kaomoji.Magical.random().toString() + " ${osImage.file.toUri()}"
+                else Kaomoji.BadMood.random().also {
+                    log("The following problems occurred during image customization:")
+                    exceptions.forEach { ex ->
+                        log(ex.toCompactString())
+                    }
                 }
             }
         }

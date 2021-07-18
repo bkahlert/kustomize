@@ -8,6 +8,7 @@ import com.imgcstmzr.ImgCstmzrConfig.UsbGadget.Ethernet
 import com.imgcstmzr.ImgCstmzrConfig.Wifi
 import com.imgcstmzr.libguestfs.mounted
 import com.imgcstmzr.os.LinuxRoot
+import com.imgcstmzr.os.OS
 import com.imgcstmzr.os.OperatingSystem.Credentials.Companion.withPassword
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
@@ -32,21 +33,18 @@ import com.imgcstmzr.patch.WpaSupplicantPatch
 import com.imgcstmzr.patch.booted
 import com.imgcstmzr.patch.patch
 import com.imgcstmzr.test.E2E
-import com.imgcstmzr.test.OS
 import com.typesafe.config.ConfigFactory
 import koodies.net.div
 import koodies.net.ip4Of
 import koodies.shell.ShellScript
-import koodies.test.CapturedOutput
-import koodies.test.SixtyMinutesTimeout
 import koodies.test.Smoke
-import koodies.test.SystemIOExclusive
 import koodies.test.SystemProperties
 import koodies.test.SystemProperty
 import koodies.test.asserting
 import koodies.test.containsAtLeast
 import koodies.test.hasElements
 import koodies.test.test
+import koodies.text.ansiRemoved
 import koodies.unit.Gibi
 import koodies.unit.bytes
 import org.junit.jupiter.api.Test
@@ -64,6 +62,7 @@ import strikt.java.exists
 import java.util.TimeZone
 import kotlin.io.path.div
 
+@Suppress("SpellCheckingInspection")
 @SystemProperties(
     SystemProperty("IMG_CSTMZR_USERNAME", "john.doe"),
     SystemProperty("IMG_CSTMZR_PASSWORD", "Password1234"),
@@ -116,7 +115,7 @@ class ImgCstmzrConfigTest {
         expecting { setup[0] } that {
             containsExactly(
                 ShellScript(
-                    name = "Configuring SSH port",
+                    name = "Echoing setup",
                     content = "echo 'setup'"
                 ),
             )
@@ -185,9 +184,8 @@ class ImgCstmzrConfigTest {
         )
     }
 
-    @SystemIOExclusive
-    @SixtyMinutesTimeout @E2E @Smoke @Test
-    fun `should apply patches`(@OS(RaspberryPiLite) osImage: OperatingSystemImage, output: CapturedOutput) {
+    @E2E @Smoke @Test
+    fun `should apply patches`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val config = loadImgCstmzrConfig()
         val patches = config.toOptimizedPatches()
 
@@ -200,9 +198,9 @@ class ImgCstmzrConfigTest {
                 { true }
             }
             mounted {
-                path("/home/john.doe/first-boot.txt") { not { exists() } }
+                path(LinuxRoot.home / "john.doe" / "first-boot.txt") { not { exists() } }
             }
         }
-        output.all.contains("FINALIZING")
+        expectRendered().ansiRemoved.contains("FINALIZING")
     }
 }

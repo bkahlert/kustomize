@@ -1,10 +1,12 @@
 package com.imgcstmzr.patch
 
-import com.imgcstmzr.os.DiskPath
-import com.imgcstmzr.os.LinuxRoot
+import com.imgcstmzr.os.LinuxRoot.etc.wpa_supplicant.wpa_supplicant_conf
 import com.imgcstmzr.os.OperatingSystemImage
 import koodies.text.LineSeparators.lines
 
+/**
+ * Sets the `wpa_supplicant.conf` to the specified [fileContent].
+ */
 class WpaSupplicantPatch(
     private val fileContent: String,
 ) : (OperatingSystemImage) -> PhasedPatch {
@@ -13,11 +15,7 @@ class WpaSupplicantPatch(
         osImage,
     ) {
         customizeDisk {
-            copyIn(WPA_SUPPLICANT, fileContent)
+            copyIn(wpa_supplicant_conf, fileContent)
         }
-    }
-
-    companion object {
-        val WPA_SUPPLICANT: DiskPath = LinuxRoot.etc / "wpa_supplicant" / "wpa_supplicant.conf"
     }
 }

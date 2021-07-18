@@ -29,7 +29,7 @@ class PatchKtTest {
                 hostname { "test-machine" }
             }
             modifyDisk {
-                copyOut { LinuxRoot.etc / "hostname" }
+                copyOut { LinuxRoot.etc.hostname }
             }
             modifyFiles {
                 edit(LinuxRoot / "test.txt", {
