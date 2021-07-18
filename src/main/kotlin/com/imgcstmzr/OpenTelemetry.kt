@@ -3,6 +3,7 @@ package com.imgcstmzr
 import com.imgcstmzr.OpenTelemetry.NOOP
 import io.opentelemetry.api.GlobalOpenTelemetry
 
+// TODO set event limit
 /**
  * [OpenTelemetry](https://opentelemetry.io) instance used.
  *

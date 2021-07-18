@@ -45,7 +45,7 @@ import kotlin.math.ceil
 
 object ImageBuilder {
 
-    private val temp by ImgCstmzr.Temp.selfCleaning("image-build", 1.hours, 5)
+    private val temp by ImgCstmzr.Temp.resolve("image-build").selfCleaning(1.hours, 5)
 
     private fun Size.round(): Size {
         val toString = toString(BinaryPrefixes.Mebi, 1)

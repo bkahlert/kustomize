@@ -8,7 +8,7 @@ import koodies.text.Banner
 import koodies.text.LineSeparators.LF
 import koodies.tracing.SpanId
 import koodies.tracing.TraceId
-import koodies.tracing.rendering.BlockRenderer
+import koodies.tracing.rendering.CompactRenderer
 import koodies.tracing.rendering.InMemoryPrinter
 import koodies.tracing.rendering.Printer
 import koodies.tracing.rendering.RenderableAttributes
@@ -53,7 +53,7 @@ class TestSpanOutputExtension : InvocationInterceptor {
                         if (linkedToTrace == null) linkedToTrace = TraceId.current.takeIf { it.valid }?.also { traceId -> outputs[traceId] = capture }
                         capture(message)
                         print(message)
-                    }) { BlockRenderer(it) }
+                    }) { CompactRenderer(it) }
 
                     override fun printChild(text: CharSequence): Unit = Unit
                 }

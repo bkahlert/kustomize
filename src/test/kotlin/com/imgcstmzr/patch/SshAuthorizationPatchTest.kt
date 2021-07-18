@@ -9,7 +9,7 @@ import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import koodies.docker.DockerRequiring
 import koodies.io.path.hasContent
-import koodies.test.FiveMinutesTimeout
+import koodies.test.FifteenMinutesTimeout
 import koodies.text.LineSeparators.LF
 import koodies.text.LineSeparators.contains
 import koodies.text.ansiRemoved
@@ -19,7 +19,7 @@ import strikt.java.exists
 
 class SshAuthorizationPatchTest {
 
-    @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
+    @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
     fun `should add ssh key`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
 
         osImage.patch(SshAuthorizationPatch("pi", listOf("123")))

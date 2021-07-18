@@ -3,6 +3,7 @@ package com.imgcstmzr.patch
 import com.imgcstmzr.expectRendered
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand
 import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization
+import com.imgcstmzr.libguestfs.mounted
 import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OS
@@ -38,13 +39,13 @@ import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.hasSize
-import strikt.assertions.isEmpty
 import strikt.assertions.isFalse
 import strikt.assertions.isGreaterThanOrEqualTo
+import strikt.java.exists
+import strikt.java.resolve
 import java.nio.file.Path
 import kotlin.io.path.createFile
 import kotlin.io.path.exists
-import kotlin.io.path.isDirectory
 import kotlin.text.RegexOption.DOT_MATCHES_ALL
 import kotlin.text.RegexOption.MULTILINE
 
@@ -97,23 +98,24 @@ class SimplePhasedPatchTest {
     }
 
     @E2E @Test
-    fun `should remove irrelevant files from exchange directory before file operations`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+    fun `should copy-in only relevant files`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         osImage.hostPath(LinuxRoot.home / "pi" / "local.txt").withDirectoriesCreated().createFile().writeText("local")
-        expectThat(osImage.exchangeDirectory.listDirectoryEntriesRecursively().filter { !it.isDirectory() }).hasSize(1)
 
-        lateinit var existingFiles: List<Path>
         val patch = PhasedPatch.build("test", osImage) {
             modifyFiles {
-                edit(LinuxRoot.home / "pi" / "file.txt", { require(it.exists()) }) {
-                    existingFiles = osImage.exchangeDirectory.listDirectoryEntriesRecursively().filter { !it.isDirectory() }
-                    it.writeText("content")
-                }
+                edit(LinuxRoot.home / "pi" / "file.txt", { require(it.exists()) }) { it.writeText("content") }
             }
         }
 
         patch.patch(osImage)
 
-        expectThat(existingFiles).isEmpty()
+        osImage.exchangeDirectory.listDirectoryEntriesRecursively()
+        expectThat(osImage).mounted {
+            path(LinuxRoot.home / "pi") {
+                resolve("local.txt").not { exists() }
+                resolve("file.txt").exists()
+            }
+        }
     }
 
     @E2E @Test

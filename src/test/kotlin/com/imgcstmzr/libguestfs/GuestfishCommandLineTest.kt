@@ -8,7 +8,7 @@ import com.imgcstmzr.os.OperatingSystemImage
 import koodies.collections.head
 import koodies.collections.tail
 import koodies.docker.asContainerPath
-import koodies.io.path.delete
+import koodies.io.path.deleteRecursively
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.Semantics.formattedAs
 import koodies.text.toStringMatchesCurlyPattern
@@ -125,11 +125,11 @@ fun Assertion.Builder<OperatingSystemImage>.mounted(init: GuestAssertions.() -> 
 
         // Copying out of VM
         spanning(
-            "╶──╴copying ${paths.size} files out of $fileName for assertions".formattedAs.debug,
+            "copying ${paths.size} files out of $fileName for assertions".formattedAs.debug,
             decorationFormatter = { it.ansi.formattedAs.debug },
         ) {
             // delete to make sure the assertions runs on a file copy from the image
-            paths.forEach { path -> hostPath(path).delete() }
+            paths.forEach { path -> hostPath(path).deleteRecursively() }
             copyOut(paths.head.pathString, *paths.tail.map { it.pathString }.toTypedArray())
         }
 

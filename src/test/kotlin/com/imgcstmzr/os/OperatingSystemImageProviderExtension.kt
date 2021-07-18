@@ -54,7 +54,7 @@ open class OperatingSystemImageProviderExtension : TypeBasedParameterResolver<Op
 
     companion object {
 
-        private val temp by ImgCstmzr.Temp.selfCleaning("download", 1.hours, 5)
+        private val temp by ImgCstmzr.Temp.resolve("download").selfCleaning(1.hours, 5)
 
         private val lock: ReentrantLock = ReentrantLock()
 

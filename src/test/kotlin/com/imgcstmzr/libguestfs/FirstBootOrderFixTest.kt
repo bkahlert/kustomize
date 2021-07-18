@@ -1,5 +1,6 @@
 package com.imgcstmzr.libguestfs
 
+import com.imgcstmzr.expectRendered
 import koodies.docker.ubuntu
 import koodies.exec.RendererProviders
 import koodies.io.path.executable
@@ -8,6 +9,7 @@ import koodies.shell.ShellScript
 import koodies.shell.ShellScript.ScriptContext
 import koodies.test.TwoMinutesTimeout
 import koodies.test.withTempDir
+import koodies.text.matchesCurlyPattern
 import koodies.time.seconds
 import koodies.time.sleep
 import org.junit.jupiter.api.Test
@@ -59,6 +61,42 @@ class FirstBootOrderFixTest {
             2
             
         """.trimIndent())
+    }
+
+    @TwoMinutesTimeout @Test
+    fun `should preview up to three lines of each script`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+        runFourScripts {
+            FirstBootOrderFix.copyToDirectory(this).executable = true
+            sh("1234-long-script") < """
+                echo "line 1"
+                echo "line 2"
+                echo "line 3"
+                echo "line 4"
+                echo "line 5"
+            """.trimIndent()
+        }
+        expectRendered {
+            matchesCurlyPattern("""
+                {{}}
+                {}▪ usr/lib/virt-sysprep/scripts/0002-script-b
+                {}
+                {}  #!/bin/sh
+                {}  echo '2' >> 'test.txt'
+                {}
+                {{}}
+            """.trimIndent())
+            matchesCurlyPattern("""
+                {{}}
+                {}▪ usr/lib/virt-sysprep/scripts/1234-long-script
+                {}
+                {}  #!/bin/sh
+                {}  echo "line 1"
+                {}  echo "line 2"
+                {}  -- truncated --
+                {}
+                {{}}
+            """.trimIndent())
+        }
     }
 }
 

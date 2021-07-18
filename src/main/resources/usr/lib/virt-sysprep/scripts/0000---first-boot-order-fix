@@ -182,7 +182,7 @@ for _FILE in "${SCRIPTS_DIR}"/*; do # same for loop as in first boot script
     printf "\n  "
     _item "${SCRIPTS_DIR}/${_FILE}"
     printf "\n"
-    sed 's/^/    /' <"${SCRIPTS_DIR}/${_FILE}"
+    awk 'FNR <= 4' "${SCRIPTS_DIR}/${_FILE}" | awk '/.*/ { if (FNR < 4) { print } else { print "-- truncated --" } }' | sed 's/^/    /'
   fi
 done
 _end "$_ok"

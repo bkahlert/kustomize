@@ -16,7 +16,7 @@ import java.nio.file.Path
 
 object ImageExtractor {
 
-    private val temp by ImgCstmzr.Temp.selfCleaning("image-extract", 1.hours, 5)
+    private val temp by ImgCstmzr.Temp.resolve("image-extract").selfCleaning(1.hours, 5)
 
     val imgFilter: (Path) -> Boolean = { path ->
         path.extensionOrNull.equals("img", ignoreCase = true)
