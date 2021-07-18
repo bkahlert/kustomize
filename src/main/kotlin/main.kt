@@ -73,12 +73,11 @@ class CliCommand : NoOpCliktCommand(
     private val cache: Cache by lazy { Cache(cacheDir) }
 
     override fun run() {
-        echo(banner("ImgCstmzr"))
-        spanning("customize image", style = None) {
+        spanning("customize image", nameFormatter = { banner("ImgCstmzr") }, style = None) {
 
             lateinit var config: ImgCstmzrConfig
             lateinit var osImage: OperatingSystemImage
-            spanning(banner("Configuration")) {
+            spanning("Configuration", nameFormatter = { banner(it, prefix = "") }) {
                 config = configFile.let {
                     log("File: ${it.pathString}".ansi.cyan.bold)
                     log("Size: ${it.getSize().toString(BinaryPrefixes)}".ansi.cyan.bold)
@@ -100,7 +99,7 @@ class CliCommand : NoOpCliktCommand(
             val patches = config.toOptimizedPatches()
             val exceptions: ReturnValues<Throwable> = osImage.patch(*patches.toTypedArray())
 
-            val flashDisk: Disk? = spanning(banner("Flashing $osImage")) {
+            val flashDisk: Disk? = spanning("Flashing $osImage", nameFormatter = { banner(it, prefix = "") }) {
                 config.flashDisk?.let { disk ->
                     flash(osImage.file, disk.takeUnless { it.equals("auto", ignoreCase = true) })
                 } ?: run {
@@ -122,7 +121,7 @@ class CliCommand : NoOpCliktCommand(
 
             echo()
 
-            spanning(banner("Summary")) {
+            spanning("Summary", nameFormatter = { banner(it, prefix = "") }) {
                 log("Image flashed to: " + (flashDisk?.run { toString() } ?: "—"))
                 log("Run scripts: " + osImage.copyOut("/usr/lib/virt-sysprep").toUri())
                 log("Run scripts log: " + osImage.copyOut("/root/virt-sysprep-firstboot.log").toUri())

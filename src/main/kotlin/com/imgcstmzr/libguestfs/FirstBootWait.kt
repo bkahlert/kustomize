@@ -8,9 +8,10 @@ import com.imgcstmzr.os.linux.ServiceScript
 import com.imgcstmzr.os.linux.ServiceUnit
 import com.imgcstmzr.os.linux.copyIn
 import com.imgcstmzr.os.linux.installService
+import koodies.io.path.pathString
 import koodies.shell.ShellScript
+import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.Banner.banner
-import kotlin.io.path.pathString
 
 /**
  * Script that fixes the execution order of first boot scripts created by `virt-customize`.
@@ -23,7 +24,7 @@ import kotlin.io.path.pathString
 object FirstBootWait {
 
     val serviceName = "firstboot-wait"
-    val serviceScript = ServiceScript("$serviceName.sh", waitForEmptyDirectory(FIRSTBOOT_SCRIPTS, FIRSTBOOT_SCRIPTS_DONE))
+    val serviceScript = ServiceScript("$serviceName.sh", trackProgress(FIRSTBOOT_SCRIPTS, FIRSTBOOT_SCRIPTS_DONE))
     val serviceUnit = ServiceUnit("$serviceName.service", """
         [Unit]
         Description=libguestfs firstboot service completion
@@ -46,7 +47,9 @@ object FirstBootWait {
         copyIn(serviceScript)
     }
 
-    fun waitForEmptyDirectory(vararg directories: DiskDirectory): ShellScript = ShellScript {
+    fun trackProgress(scripts: DiskDirectory, done: DiskDirectory): ShellScript = ShellScript {
+        val scriptsToGo = "\$diff SCRIPT(S) TO GO".ansi.yellow
+        val completed = "COMPLETED".ansi.green
         shebang
         //language=Shell Script
         """
@@ -58,27 +61,30 @@ object FirstBootWait {
               fi
             }
             
-            fileCounts() {
-              sum=0
-              for dir in "$@"; do
-                count=$(fileCount "${'$'}dir")
-                sum=${'$'}((sum + count))
-              done
-              echo ${'$'}sum 
-            }
+            _total=$(fileCount '$scripts')
             
             firstbootRunning() {
-              printf '${banner("Checking " + directories.joinToString(", ") { it.fileName.pathString })} … '
-              sum=$(fileCounts ${directories.joinToString(" ") { "'$it'" }})
-              caption=$([ "${'$'}sum" = "0" ] && echo "completed" || echo "${'$'}sum script(s) to go") 
+              printf '${banner("Checking ${scripts.fileName.pathString} ⮕ ${done.fileName.pathString}", prefix = "")} … '
+              
+              scripts=$(fileCount '$scripts')
+              done=$(fileCount '$done')
+              if [ "${'$'}scripts" = "0" ]; then
+                if [ "${'$'}done" = "0" ]; then
+                  done=${'$'}_total
+                else
+                  done=${'$'}((_total - 1))
+                fi
+              fi
+              
+              diff=${'$'}((_total - done))
+              caption=$([ "${'$'}diff" = "0" ] && echo "$completed" || echo "$scriptsToGo") 
               printf '%s\n' "${'$'}caption"
-              [ ! "${'$'}sum" = "0" ]
+              [ ! "${'$'}diff" = "0" ]
             }
 
             while firstbootRunning; do
                 sleep 3
             done
-            echo '${banner("All scripts completed. Quitting.")}'
         """.trimIndent()
     }
 }

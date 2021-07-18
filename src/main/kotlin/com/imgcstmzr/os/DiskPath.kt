@@ -69,7 +69,7 @@ object LinuxRoot : DiskDirectory("/") {
         object cmdline_txt : File("cmdline.txt")
         object config_txt : File("config.txt")
 
-        /** Marker file to tell Raspberian to activate SSH. */
+        /** Marker file to tell Raspberry Pi OS to activate SSH. */
         object ssh : File("ssh")
     }
 
@@ -144,6 +144,8 @@ object LinuxRoot : DiskDirectory("/") {
              */
             object passwd : File("passwd")
         }
+
+        object lib : Directory("lib")
 
         object local : Directory("local") {
 

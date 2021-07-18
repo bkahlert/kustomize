@@ -14,7 +14,9 @@ import koodies.exec.exited
 import koodies.exec.io
 import koodies.exec.output
 import koodies.exec.runtime
+import koodies.io.path.deleteDirectoryEntriesRecursively
 import koodies.io.path.executable
+import koodies.io.path.moveToDirectory
 import koodies.junit.UniqueId
 import koodies.jvm.thread
 import koodies.shell.ShellScript
@@ -27,6 +29,7 @@ import koodies.text.ansiRemoved
 import koodies.text.toStringMatchesCurlyPattern
 import koodies.time.seconds
 import koodies.time.sleep
+import koodies.times
 import koodies.toBaseName
 import koodies.tracing.rendering.BackgroundPrinter
 import koodies.tracing.rendering.Styles.None
@@ -39,106 +42,115 @@ import strikt.assertions.isGreaterThan
 import java.nio.file.Path
 import kotlin.io.path.createDirectory
 import kotlin.io.path.createFile
-import kotlin.io.path.deleteIfExists
 import kotlin.io.path.listDirectoryEntries
 
 class FirstBootWaitTest {
-
-    private fun delayScript(seconds: Int) = ShellScript {
-        require(seconds > 0) { "Requested seconds ${seconds.formattedAs.input} must be greater than 0." }
-        echo(banner("firstboot delay"))
-        for (i in seconds downTo 1) {
-            echo(banner("$i seconds to go"))
-            !"sleep 1"
-        }
-        echo(banner("finished"))
-    }
-
-    @Test
-    fun `should use working script`() {
-        val exec = delayScript(3).exec.logging()
-        expecting { exec } that {
-            io.output.ansiRemoved.contains("3") and { contains("FINISHED") }
-            exited.runtime.isGreaterThan(3.seconds)
-        }
-    }
 
     @Nested
     inner class WaitForEmptyDirectoryScript {
 
         @Slow @Test
         fun `should run until directory is empty`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-            resolve("dir").createDirectory().apply {
+            val scripts = resolve("dir").createDirectory().apply {
                 resolve("${fileName}-file1").createFile().also { it.executable = true }
                 resolve("${fileName}-file2").createFile().also { it.executable = true }
-            }.slowlyDeleteFiles()
-            resolve("dir2").createDirectory().apply {
-                resolve("${fileName}-file1").createFile().also { it.executable = true }
-                resolve("${fileName}-file2").createFile().also { it.executable = true }
-            }.slowlyDeleteFiles()
+            }
+            val done = resolve("dir2").createDirectory()
+            slowlyProcessFiles(scripts, done)
             expecting { ubuntu(RendererProviders.block()) { "./${scriptFor("dir", "dir2")}" } } that {
-                io.output.ansiRemoved.toStringMatchesCurlyPattern("{{}}CHECKING DIR, DIR2 … {} script(s) to go{{}}")
-                io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR, DIR2 … completed")
-                io.output.ansiRemoved.containsIgnoringCase("ALL SCRIPTS COMPLETED")
+                io.output.ansiRemoved.toStringMatchesCurlyPattern("{{}}CHECKING DIR ⮕ DIR2 … {} SCRIPT(S) TO GO{{}}")
+                io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR ⮕ DIR2 … COMPLETED")
             }
         }
 
         @Slow @Test
         fun `should return if no executable is found`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-            resolve("dir").createDirectory().apply {
+            val scripts = resolve("dir").createDirectory().apply {
                 resolve("${fileName}-file1").createFile()
+                resolve("${fileName}-file2").createFile()
             }
-            expecting { ubuntu(RendererProviders.block()) { "./${scriptFor("dir")}" } } that {
-                io.output.ansiRemoved.not { contains("script(s) to go") }
-                io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR … completed")
-                io.output.ansiRemoved.containsIgnoringCase("ALL SCRIPTS COMPLETED")
+            val done = resolve("dir2").createDirectory()
+            slowlyProcessFiles(scripts, done)
+            expecting { ubuntu(RendererProviders.block()) { "./${scriptFor("dir", "dir2")}" } } that {
+                io.output.ansiRemoved.not { contains("SCRIPT(S) TO GO") }
+                io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR ⮕ DIR2 … COMPLETED")
             }
         }
 
         @Test
         fun `should return if directory is empty`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             resolve("dir").createDirectory()
-            expecting { ubuntu { "./${scriptFor("dir")}" } } that {
-                io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR … completed")
-                io.output.ansiRemoved.containsIgnoringCase("ALL SCRIPTS COMPLETED")
+            resolve("dir2").createDirectory()
+            expecting { ubuntu { "./${scriptFor("dir", "dir2")}" } } that {
+                io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR ⮕ DIR2 … COMPLETED")
             }
         }
 
         @Test
         fun `should return if directory does not exist`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-            expecting { ubuntu { "./${scriptFor("dir")}" } } that {
-                io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR … completed")
-                io.output.ansiRemoved.containsIgnoringCase("ALL SCRIPTS COMPLETED")
+            resolve("dir2").createDirectory()
+            expecting { ubuntu { "./${scriptFor("dir", "dir2")}" } } that {
+                io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR ⮕ DIR2 … COMPLETED")
             }
         }
 
-        private fun Path.slowlyDeleteFiles() =
+        private fun slowlyProcessFiles(scripts: Path, done: Path) =
             thread {
                 spanning("Slowly deleting files", style = None, printer = BackgroundPrinter) {
-                    while (listDirectoryEntries().isNotEmpty()) {
+                    while (scripts.listDirectoryEntries().isNotEmpty()) {
                         3.seconds.sleep()
-                        listDirectoryEntries().first().also {
-                            log("Deleting ${it.fileName}")
-                        }.deleteIfExists()
+                        scripts.listDirectoryEntries().first().also {
+                            log("Processing ${it.fileName}")
+                        }.moveToDirectory(done)
                     }
+                    done.deleteDirectoryEntriesRecursively()
                 }
             }
 
         @Suppress("SameParameterValue")
-        private fun Path.scriptFor(vararg directories: String): Path? =
-            FirstBootWait.waitForEmptyDirectory(*directories.map { DiskDirectory(it) }.toTypedArray()).toFile(resolve("script.sh")).fileName
+        private fun Path.scriptFor(scripts: String, done: String): Path? =
+            FirstBootWait.trackProgress(DiskDirectory(scripts), DiskDirectory(done)).toFile(resolve("script.sh")).fileName
     }
 
-    @E2E @Test
-    fun `should wait for firstboot scripts to finish`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-        osImage.virtCustomize {
-            firstBoot(delayScript(30))
+    @Nested
+    inner class WithRaspberryPiOS {
+
+        private fun delayScript(seconds: Int) = ShellScript {
+            require(seconds > 0) { "Requested seconds ${seconds.formattedAs.input} must be greater than 0." }
+            echo(banner("firstboot delay", prefix = ""))
+            for (i in seconds downTo 1) {
+                echo(banner("$i seconds to go", prefix = ""))
+                !"sleep 1"
+            }
+            echo(banner("finished", prefix = ""))
         }
-        osImage.boot(uniqueId.value.toBaseName())
-        expectRendered().ansiRemoved {
-            contains("1 SECONDS TO GO")
-            contains("FINISHED")
-            contains("raspberrypi login:")
+
+        @Test
+        fun `should use delay script`() {
+            val exec = delayScript(3).exec.logging()
+            expecting { exec } that {
+                io.output.ansiRemoved.contains("3") and { contains("FINISHED") }
+                exited.runtime.isGreaterThan(3.seconds)
+            }
+        }
+
+        @E2E @Test
+        fun `should wait for firstboot scripts to finish`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+            osImage.virtCustomize {
+                5 * { firstBoot(delayScript(5)) }
+            }
+            osImage.boot(uniqueId.value.toBaseName())
+            expectRendered().ansiRemoved {
+                contains("CHECKING SCRIPTS ⮕ SCRIPTS-DONE … 5 SCRIPT(S) TO GO")
+                contains("CHECKING SCRIPTS ⮕ SCRIPTS-DONE … 4 SCRIPT(S) TO GO")
+                contains("CHECKING SCRIPTS ⮕ SCRIPTS-DONE … 3 SCRIPT(S) TO GO")
+                contains("CHECKING SCRIPTS ⮕ SCRIPTS-DONE … 2 SCRIPT(S) TO GO")
+                contains("CHECKING SCRIPTS ⮕ SCRIPTS-DONE … 1 SCRIPT(S) TO GO")
+                contains("1 SECONDS TO GO")
+                contains("FINISHED")
+                contains("CHECKING SCRIPTS ⮕ SCRIPTS-DONE … COMPLETED")
+                contains("raspberrypi login:")
+            }
         }
     }
 }
