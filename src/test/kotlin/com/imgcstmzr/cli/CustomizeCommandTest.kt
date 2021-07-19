@@ -5,6 +5,7 @@ import com.github.ajalt.clikt.core.PrintHelpMessage
 import com.imgcstmzr.expectRendered
 import com.imgcstmzr.test.E2E
 import com.typesafe.config.ConfigException
+import koodies.io.path.deleteRecursively
 import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.io.path.pathString
 import koodies.io.path.writeText
@@ -87,7 +88,7 @@ class CustomizeCommandTest {
     inner class WithValidArguments {
 
         @Slow @Test
-        fun `should use specified cache dir`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+        fun `should download image to specified cache dir`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             val configFile = resolve("empty.conf").writeText("""
                 img {
                   name = project
@@ -97,31 +98,51 @@ class CustomizeCommandTest {
             CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--cache-dir", pathString))
             expectThat(resolve("project")) {
                 exists()
-                resolve("download").exists() and {
+                resolve("raw").exists() and {
                     get { listDirectoryEntriesRecursively() }.hasSize(1)
                 }
             }
         }
 
-        @Slow @Test
-        fun `should render progress`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-            val configFile = resolve("empty.conf").writeText("""
+        @E2E @Test
+        fun `should customize image`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+            val configFile = resolve("hello.conf").writeText("""
                 img {
                   name = project
-                  os = RISC OS Pico RC5 (test only)
+                  os = Hypriot OS
+                    setup = [
+                      {
+                        name: say hello
+                        scripts: [
+                          {
+                            name: "greet"
+                            content: "echo 'Hey 👋'"
+                          }
+                        ]
+                      },
+                    ]
                 }
             """.trimIndent())
             CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--cache-dir", pathString))
             expectRendered().ansiRemoved {
-                contains("SUMMARY")
-                contains("Image flashed to: —")
-            }
-        }
+                contains("▶ Configuring")
+                contains("Configuration: file://")
+                contains("Name: project")
+                contains("OS: Hypriot OS")
+                contains("Env: file://")
+                contains("Cache: file://")
 
-        @E2E @Test
-        fun `should customize image`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-            val configFile = resolve("empty.conf").writeText("img { }")
-            expectThrows<PrintHelpMessage> { CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--cache-dir", pathString)) }
+                contains("▶ Preparing")
+                contains("· ▶ Retrieving image")
+
+                contains("▶ Applying 1 patches to Hypriot OS")
+                contains("░░░░░░░ GREET")
+                contains("Hey 👋")
+                contains("System halted")
+            }
+
+            // if all worked, delete temp dir immediately because of image size
+            deleteRecursively()
         }
     }
 }

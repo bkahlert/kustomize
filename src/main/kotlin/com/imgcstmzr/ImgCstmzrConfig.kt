@@ -63,7 +63,6 @@ data class ImgCstmzrConfig(
     val files: List<FileOperation>,
     val setup: List<SetupScript>,
     val firstBoot: List<ShellScript>,
-    val flashDisk: String?,
 ) {
 
     companion object {
@@ -249,7 +248,6 @@ data class UnsafeImgCstmzrConfig(
         files = files?.run { map { it.convert() } } ?: emptyList(),
         setup = setup?.map { it.convert() } ?: emptyList(),
         firstBoot = firstBoot?.map { it.convert() } ?: emptyList(),
-        flashDisk = flashDisk,
     )
 }) {
     data class Ssh(val enabled: Boolean?, val port: Int?, val authorizedKeys: AuthorizedKeys?) : Convertible<ImgCstmzrConfig.Ssh> by converter({

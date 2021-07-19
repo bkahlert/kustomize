@@ -23,10 +23,12 @@ class FirstBootPatch(
         "Add ${shellScripts.size} First Boot Script(s): ${shellScripts.mapNotNull { it.name }.map { LineSeparators.LF + it }.joinToString("")}",
         osImage,
     ) {
-        customizeDisk {
-            firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o First Boot") {
-                shellScripts.forEach { embed(it, true) }
-                ""
+        if (shellScripts.isNotEmpty()) {
+            customizeDisk {
+                firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o First Boot") {
+                    shellScripts.forEach { embed(it, true) }
+                    ""
+                }
             }
         }
     }

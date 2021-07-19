@@ -1,6 +1,5 @@
 package com.imgcstmzr.os
 
-import com.imgcstmzr.ImgCstmzr
 import com.imgcstmzr.TestImgCstmzr
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.cli.Layouts
@@ -11,9 +10,7 @@ import com.imgcstmzr.test.ImageFixtures
 import com.imgcstmzr.util.Downloader
 import koodies.collections.addElement
 import koodies.io.path.deleteOnExit
-import koodies.io.selfCleaning
 import koodies.text.Semantics.formattedAs
-import koodies.time.hours
 import koodies.tracing.rendering.Styles.Dotted
 import koodies.tracing.spanning
 import org.junit.jupiter.api.extension.ExtensionContext
@@ -54,11 +51,9 @@ open class OperatingSystemImageProviderExtension : TypeBasedParameterResolver<Op
 
     companion object {
 
-        private val temp by ImgCstmzr.Temp.resolve("download").selfCleaning(1.hours, 5)
-
         private val lock: ReentrantLock = ReentrantLock()
 
-        private val downloader = Downloader(temp, ImageBuilder.schema to ::buildFrom)
+        private val downloader = Downloader(ImageBuilder.schema to ::buildFrom)
 
         private val copiesPerTest = mutableMapOf<String, List<Path>>()
         fun cacheDir(uniqueId: String): Path? = copiesPerTest[uniqueId]?.firstOrNull()
@@ -66,9 +61,9 @@ open class OperatingSystemImageProviderExtension : TypeBasedParameterResolver<Op
         private val cache = Cache(TestImgCstmzr.TestCache)
         private fun OperatingSystem.getCopy(uniqueId: String): OperatingSystemImage =
             lock.withLock {
-                this@getCopy based with(cache) {
+                this based with(cache) {
                     provideCopy(name, reuseLastWorkingCopy = false) {
-                        with(downloader) { download() }
+                        downloader.download(downloadUrl)
                     }.also {
                         copiesPerTest.addElement(uniqueId, it)
                     }

@@ -13,7 +13,9 @@ fun CharSequence.asParam(): String = formattedAs.input
 
 fun KProperty<*>.asParam(nameToUse: String = name.convertCamelCaseToKebabCase()): String = nameToUse.asParam()
 
-val PATCH_DECORATION_FORMATTER: Formatter<CharSequence> = Formatter { it.ansi.green.done }
+val PATCH_NAME_FORMATTER: Formatter<CharSequence> = Formatter { it.ansi.cyan.done }
+val PATCH_DECORATION_FORMATTER: Formatter<CharSequence> = Formatter { it.ansi.cyan.done }
+val PATCH_INNER_DECORATION_FORMATTER: Formatter<CharSequence> = Formatter { it.ansi.green.done }
 
 object Layouts {
 

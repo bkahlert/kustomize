@@ -128,7 +128,6 @@ class ImgCstmzrConfigTest {
                 ),
             )
         }
-        expecting { flashDisk } that { isEqualTo("auto") }
     }
 
     @Test

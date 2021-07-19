@@ -1,6 +1,6 @@
 package com.imgcstmzr.os
 
-import com.imgcstmzr.cli.PATCH_DECORATION_FORMATTER
+import com.imgcstmzr.cli.PATCH_INNER_DECORATION_FORMATTER
 import com.imgcstmzr.os.Program.Companion.compute
 import com.imgcstmzr.os.Program.Companion.format
 import koodies.builder.buildList
@@ -175,7 +175,7 @@ fun OperatingSystemImage.boot(
     name: String?,
     vararg programs: Program,
     nameFormatter: Formatter<CharSequence> = Formatter.ToCharSequence,
-    decorationFormatter: Formatter<CharSequence> = PATCH_DECORATION_FORMATTER,
+    decorationFormatter: Formatter<CharSequence> = PATCH_INNER_DECORATION_FORMATTER,
     autoLogin: Boolean = true,
     autoShutdown: Boolean = true,
     style: (ColumnsLayout, Int) -> Style = Styles.Solid,
@@ -212,7 +212,7 @@ fun OperatingSystemImage.boot(
                             // if the OS was ready and the previous program "just" waited to confirm successful execution
                             // pass this IO also to the next program. Otherwise the execution might get stuck should more
                             // IO be emitted, like `user@bother-you-apYr:~$ [  OK  ] Started User Manager for UID 1000`
-                            //                             ready till here ↑ … now, no more, since line is no more matched
+                            //                             ready till here ↑ … now, no longer, since line is no more matched
                             if (unfinished.isNotEmpty() && !unfinished.compute(this, io)) unfinished.removeFirst()
                         }
                     }.also { operatingSystemProcessor = it }

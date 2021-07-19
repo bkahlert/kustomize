@@ -1,7 +1,7 @@
 package com.imgcstmzr.os
 
 import com.imgcstmzr.cli.Layouts
-import com.imgcstmzr.cli.PATCH_DECORATION_FORMATTER
+import com.imgcstmzr.cli.PATCH_INNER_DECORATION_FORMATTER
 import com.imgcstmzr.libguestfs.GuestfishCommandLine
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder
@@ -93,7 +93,10 @@ class OperatingSystemImage(
             addAll(GuestfishCommandsBuilder(this@OperatingSystemImage).build(init))
             addAll(guestfishCommands)
         }
-    ).exec.logging(exchangeDirectory, nameFormatter = Formatter.ToCharSequence, decorationFormatter = PATCH_DECORATION_FORMATTER, layout = Layouts.DESCRIPTION)
+    ).exec.logging(exchangeDirectory,
+        nameFormatter = Formatter.ToCharSequence,
+        decorationFormatter = PATCH_INNER_DECORATION_FORMATTER,
+        layout = Layouts.DESCRIPTION)
 
     /**
      * @see <a href="https://libguestfs.org/">libguestfs—tools for accessing and modifying virtual machine disk images</a>
@@ -108,7 +111,10 @@ class OperatingSystemImage(
             addAll(CustomizationsBuilder(this@OperatingSystemImage).build(init))
             addAll(customizations)
         }
-    ).exec.logging(exchangeDirectory, nameFormatter = Formatter.ToCharSequence, decorationFormatter = PATCH_DECORATION_FORMATTER, layout = Layouts.DESCRIPTION)
+    ).exec.logging(exchangeDirectory,
+        nameFormatter = Formatter.ToCharSequence,
+        decorationFormatter = PATCH_INNER_DECORATION_FORMATTER,
+        layout = Layouts.DESCRIPTION)
 
     fun increaseDiskSpace(size: Size): Unit =
         spanningLine("Increasing disk space") {

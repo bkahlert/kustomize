@@ -1,5 +1,8 @@
 package com.imgcstmzr.patch
 
+import com.imgcstmzr.cli.Layouts
+import com.imgcstmzr.cli.PATCH_DECORATION_FORMATTER
+import com.imgcstmzr.cli.PATCH_NAME_FORMATTER
 import com.imgcstmzr.libguestfs.GuestfishCommandLine
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder
@@ -16,7 +19,6 @@ import com.imgcstmzr.os.boot
 import koodies.asString
 import koodies.builder.Init
 import koodies.text.ANSI.Text.Companion.ansi
-import koodies.text.Banner.banner
 import koodies.text.LineSeparators
 import koodies.text.Semantics.formattedAs
 import koodies.text.withRandomSuffix
@@ -138,8 +140,8 @@ data class SimplePhasedPatch(
 
     override fun patch(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
         spanning(name,
-            nameFormatter = { it.ansi.cyan.done },
-            decorationFormatter = { it.ansi.cyan.done },
+            nameFormatter = PATCH_NAME_FORMATTER,
+            decorationFormatter = PATCH_DECORATION_FORMATTER,
             style = Solid
         ) {
             applyDiskPreparations() +
@@ -161,8 +163,10 @@ data class SimplePhasedPatch(
             ReturnValues()
         } else {
             spanning("$name",
-                nameFormatter = { "${it.ansi.brightCyan} (${operationCount.toString().ansi.brightCyan})" },
-                decorationFormatter = { it.ansi.cyan.done },
+                nameFormatter = {
+                    "${it.ansi.brightCyan} ${PATCH_DECORATION_FORMATTER("(")}${operationCount.toString().ansi.brightCyan}${PATCH_DECORATION_FORMATTER(")")}"
+                },
+                decorationFormatter = PATCH_DECORATION_FORMATTER,
                 style = Dotted) {
                 val exceptions = mutableListOf<Throwable>()
                 runCatching { transform { exceptions.add(it) } }.onFailure { exceptions.add(it) }
@@ -460,9 +464,21 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
  * Applies all given patches to this [OperatingSystemImage].
  */
 fun OperatingSystemImage.patch(vararg patches: (OperatingSystemImage) -> PhasedPatch): ReturnValues<Throwable> =
-    spanning(banner("Applying ${patches.size} patches to $shortName")) {
-        ReturnValues(*patches.flatMap { it(this@patch).patch(this@patch) }.toTypedArray())
-    }
+    patches
+        .map { it(this) }
+        .filter { it.isNotEmpty }
+        .takeIf { it.isNotEmpty() }
+        ?.let {
+            spanning(
+                "Applying ${it.size} patches to $shortName",
+                nameFormatter = PATCH_NAME_FORMATTER,
+                decorationFormatter = PATCH_DECORATION_FORMATTER,
+                layout = Layouts.DESCRIPTION,
+                style = Dotted,
+            ) {
+                ReturnValues(*it.flatMap { phasedPatch -> phasedPatch.patch(this@patch) }.toTypedArray())
+            }
+        } ?: ReturnValues()
 
 /**
  * A patch that combines the specified [patches].

@@ -27,7 +27,7 @@ class DownloaderTest {
     @Slow @Test
     fun `should download OS`(uniqueId: UniqueId) = withTempDir(uniqueId) {
         val os = OperatingSystemMock("example", downloadUrl = uri)
-        val path = with(getDownloader()) { os.download() }
+        val path = getDownloader().download(os.downloadUrl)
         expectThat(path).hasSize(40959.bytes)
     }
 
