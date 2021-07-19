@@ -1,6 +1,7 @@
 package com.imgcstmzr
 
 import com.imgcstmzr.TestTelemetry.Companion.InMemoryStoringSpanProcessor
+import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.Span
@@ -13,12 +14,13 @@ import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.ReadWriteSpan
 import io.opentelemetry.sdk.trace.ReadableSpan
 import io.opentelemetry.sdk.trace.SdkTracerProvider
+import io.opentelemetry.sdk.trace.SpanLimits
 import io.opentelemetry.sdk.trace.SpanProcessor
 import io.opentelemetry.sdk.trace.data.SpanData
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
 import koodies.collections.synchronizedMapOf
 import koodies.tracing.Jaeger
-import koodies.tracing.OpenTelemetry
+import koodies.tracing.KoodiesTelemetry
 import koodies.tracing.SpanId
 import koodies.tracing.TraceId
 import koodies.tracing.traceId
@@ -51,15 +53,16 @@ class TestTelemetry : TestExecutionListener {
                 .addSpanProcessor(InMemoryStoringSpanProcessor)
                 .addSpanProcessor(batchExporter)
                 .setResource(Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), "imgcstmzr-test")))
+                .setSpanLimits { SpanLimits.builder().setMaxNumberOfEvents(2500).build() }
                 .build()
 
             OpenTelemetrySdk.builder()
                 .setTracerProvider(tracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal()
-                .let { OpenTelemetry.register(it) }
+                .let { KoodiesTelemetry.register(it) }
         } else {
-            OpenTelemetry.register(io.opentelemetry.api.OpenTelemetry.noop())
+            KoodiesTelemetry.register(OpenTelemetry.noop())
         }
     }
 
@@ -94,7 +97,7 @@ class TestTelemetry : TestExecutionListener {
         }
 
         /**
-         * Returns the trace recorded for the given [spanId].
+         * Returns the trace recorded for the given [traceId].
          */
         operator fun get(traceId: TraceId): List<SpanData> =
             traces.getOrDefault(traceId, emptyList())

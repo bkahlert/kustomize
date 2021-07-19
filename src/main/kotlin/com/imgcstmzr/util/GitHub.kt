@@ -17,7 +17,7 @@ object GitHub {
         val latestTag: String
             get() {
                 val url = "https://api.github.com/repos/$repo/releases/latest"
-                return ImgCstmzr.Temp.curlJq(null) { "curl '$url' 2>/dev/null | jq -r '.tag_name'" }.io.output.ansiRemoved
+                return ImgCstmzr.Temp.curlJq("github.com latest tag") { "curl '$url' 2>/dev/null | jq -r '.tag_name'" }.io.output.ansiRemoved
             }
 
         fun downloadRelease(release: String = "latest", downloadDirectory: Path = ImgCstmzr.Temp): Path =

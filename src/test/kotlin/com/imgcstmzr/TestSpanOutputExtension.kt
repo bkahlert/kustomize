@@ -31,6 +31,7 @@ import java.lang.reflect.Method
  * during the execution of a trace.
  */
 class TestSpanOutputExtension : InvocationInterceptor {
+
     override fun interceptTestMethod(
         invocation: Invocation<Void>,
         invocationContext: ReflectiveInvocationContext<Method>,

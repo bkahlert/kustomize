@@ -57,7 +57,7 @@ class FirstBootWaitTest {
             }
             val done = resolve("dir2").createDirectory()
             slowlyProcessFiles(scripts, done)
-            expecting { ubuntu(RendererProviders.block()) { "./${scriptFor("dir", "dir2")}" } } that {
+            expecting { ubuntu(renderer = RendererProviders.block()) { "./${scriptFor("dir", "dir2")}" } } that {
                 io.output.ansiRemoved.toStringMatchesCurlyPattern("{{}}CHECKING DIR ⮕ DIR2 … {} SCRIPT(S) TO GO{{}}")
                 io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR ⮕ DIR2 … COMPLETED")
             }
@@ -71,7 +71,7 @@ class FirstBootWaitTest {
             }
             val done = resolve("dir2").createDirectory()
             slowlyProcessFiles(scripts, done)
-            expecting { ubuntu(RendererProviders.block()) { "./${scriptFor("dir", "dir2")}" } } that {
+            expecting { ubuntu(renderer = RendererProviders.block()) { "./${scriptFor("dir", "dir2")}" } } that {
                 io.output.ansiRemoved.not { contains("SCRIPT(S) TO GO") }
                 io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR ⮕ DIR2 … COMPLETED")
             }
@@ -81,7 +81,7 @@ class FirstBootWaitTest {
         fun `should return if directory is empty`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             resolve("dir").createDirectory()
             resolve("dir2").createDirectory()
-            expecting { ubuntu { "./${scriptFor("dir", "dir2")}" } } that {
+            expecting { ubuntu(renderer = RendererProviders.block()) { "./${scriptFor("dir", "dir2")}" } } that {
                 io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR ⮕ DIR2 … COMPLETED")
             }
         }
@@ -89,7 +89,7 @@ class FirstBootWaitTest {
         @Test
         fun `should return if directory does not exist`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             resolve("dir2").createDirectory()
-            expecting { ubuntu { "./${scriptFor("dir", "dir2")}" } } that {
+            expecting { ubuntu(renderer = RendererProviders.block()) { "./${scriptFor("dir", "dir2")}" } } that {
                 io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR ⮕ DIR2 … COMPLETED")
             }
         }

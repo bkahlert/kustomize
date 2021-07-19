@@ -144,7 +144,8 @@ data class SimplePhasedPatch(
         ) {
             applyDiskPreparations() +
                 applyDiskCustomizations(osImage, trace) +
-                applyDiskAndFileOperations(osImage, trace) +
+                applyDiskOperations(osImage, trace) +
+                applyFileOperations(osImage, trace) +
                 applyOsPreparations() +
                 applyOsBoot(osImage) +
                 applyOsOperations(osImage)
@@ -189,32 +190,27 @@ data class SimplePhasedPatch(
             osImage.virtCustomize(trace, *diskCustomizations.toTypedArray())
         }
 
-    private fun applyDiskAndFileOperations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> {
-        val exceptions = ReturnValues<Throwable>()
-
-        // copy-in `CopyIn` files and copy out file operation files
-        collectingExceptions("Disk Operations", diskOperations.size + fileOperations.size) {
+    private fun applyDiskOperations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
+        collectingExceptions("Disk Operations", diskOperations.size + fileOperations.size) { // copy-in `CopyIn` files and copy out file operation files
             osImage.guestfish(trace, *diskOperations.toTypedArray()) {
                 @Suppress("Destructure")
                 fileOperations.map { fileOperation -> copyOut { fileOperation.file } }
             }
-        }.also { exceptions.addAll(it) }
+        }
 
-        val fileOperationFiles: List<Path> = fileOperations.map { osImage.hostPath(it.file) }
-        collectingExceptions("File Operations", fileOperationFiles.size) { exceptionCallback ->
+    private fun applyFileOperations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
+        collectingExceptions("File Operations", fileOperations.size) { exceptionCallback ->
             @Suppress("Destructure")
             fileOperations.forEach { fileOperation ->
                 kotlin.runCatching { fileOperation(osImage.hostPath(fileOperation.file)) }.onFailure(exceptionCallback)
             }
 
-            if (fileOperationFiles.isNotEmpty()) osImage.guestfish(trace) {
+            val fileOperationFiles: List<Path> = fileOperations.map { osImage.hostPath(it.file) }
+            osImage.guestfish(trace) {
                 // tar-in only relevant files to avoid corrupting incorrect attributes (i.e. executable flag)
                 tarIn { it in fileOperationFiles }
             }
-        }.also { exceptions.addAll(it) }
-
-        return exceptions
-    }
+        }
 
     private fun applyOsPreparations(): ReturnValues<Throwable> =
         osPreparations.collectingExceptions("OS Preparations") { _, osPreparation ->

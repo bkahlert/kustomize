@@ -31,7 +31,6 @@ import koodies.text.truncateByColumns
 import koodies.time.seconds
 import koodies.tracing.CurrentSpan
 import koodies.tracing.Key
-import koodies.tracing.Tracer
 import koodies.tracing.rendering.ColumnsLayout
 import koodies.tracing.rendering.ColumnsLayout.Companion.columns
 import koodies.tracing.rendering.Renderable
@@ -194,7 +193,6 @@ fun OperatingSystemImage.boot(
             decorationFormatter = decorationFormatter,
             layout = OS_BOOT_LAYOUT,
             style = style,
-            tracer = Tracer,
             block = {
                 var operatingSystemProcess: OperatingSystemProcess? = null
                 var operatingSystemProcessor: OperatingSystemProcessor? = null
@@ -213,8 +211,8 @@ fun OperatingSystemImage.boot(
 
                             // if the OS was ready and the previous program "just" waited to confirm successful execution
                             // pass this IO also to the next program. Otherwise the execution might get stuck should more
-                            // IO be emitted, like `bkahlert@bother-you-apYr:~$ [  OK  ] Started User Manager for UID 1000`
-                            //                                 ready till here ↑ … now, no more, since line is no more matched
+                            // IO be emitted, like `user@bother-you-apYr:~$ [  OK  ] Started User Manager for UID 1000`
+                            //                             ready till here ↑ … now, no more, since line is no more matched
                             if (unfinished.isNotEmpty() && !unfinished.compute(this, io)) unfinished.removeFirst()
                         }
                     }.also { operatingSystemProcessor = it }

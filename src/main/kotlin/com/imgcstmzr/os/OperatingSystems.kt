@@ -38,54 +38,63 @@ enum class OperatingSystems(
         approximateImageSize = 420.Mega.bytes,
         defaultCredentials = "pirate" withPassword "hypriot",
     ),
+
     RaspberryPiLite(
         fullName = "Raspberry Pi OS Lite",
         downloadUrl = "https://downloads.raspberrypi.org/raspios_lite_armhf_latest",
         approximateImageSize = 1.85.Giga.bytes,
         defaultCredentials = "pi" withPassword "raspberry",
     ),
+
     RaspberryPi(
         fullName = "Raspberry Pi OS",
         downloadUrl = "https://downloads.raspberrypi.org/raspios_armhf_latest",
         approximateImageSize = 3.82.Giga.bytes,
         defaultCredentials = "pi" withPassword "raspberry",
     ),
+
     DietPi(
         fullName = "Diet Pi",
         downloadUrl = "https://dietpi.com/downloads/images/DietPi_RPi-ARMv6-Buster.7z",
         approximateImageSize = 1.06.Giga.bytes,
-        defaultCredentials = "root" withPassword "dietpi",
+        defaultCredentials = "root" withPassword @Suppress("SpellCheckingInspection") "dietpi",
     ),
+
     TinyCore(
         fullName = "Tiny Core",
         downloadUrl = "http://tinycorelinux.net/12.x/armv6/releases/RPi/piCore-12.0.zip",
         approximateImageSize = 88.Mega.bytes,
         defaultCredentials = "tc" withPassword "piCore",
     ),
+
     ArchLinuxArm(
         fullName = "Arch Linux ARM",
         downloadUrl = "http://os.archlinuxarm.org/os/ArchLinuxARM-rpi-latest.tar.gz",
         approximateImageSize = 1.2.Giga.bytes,
         defaultCredentials = "alarm" withPassword "alarm", // root, root
     ),
+
     RiscOs(
         fullName = "RISC OS",
         downloadUrl = "https://www.riscosopen.org/zipfiles/platform/raspberry-pi/BCM2835.5.24.zip?1544451169",
         approximateImageSize = 5.2.Mega.bytes,
         defaultCredentials = empty,
     ),
+
     RiscOsPicoRc5(
         fullName = "RISC OS Pico RC5",
         downloadUrl = "https://www.riscosopen.org/zipfiles/platform/raspberry-pi/BCM2835Dev.5.29.zip?1604815147",
         approximateImageSize = 2.Mega.bytes,
         defaultCredentials = empty,
     ),
+
     UbuntuServer(
         fullName = "Ubuntu Server 20.10",
         downloadUrl = "https://cdimage.ubuntu.com/releases/20.10/release/ubuntu-20.10-preinstalled-server-armhf+raspi.img.xz",
         approximateImageSize = 3.03.Giga.bytes,
         defaultCredentials = "ubuntu" withPassword "ubuntu",
     ),
+
     WebThingsGateway(
         fullName = "WebThings Gateway for Raspberry Pi",
         downloadUrl = "https://github.com/WebThingsIO/gateway/releases/download/0.12.0/gateway-0.12.0.img.zip",
@@ -98,6 +107,13 @@ enum class OperatingSystems(
         fullName = "ImgCstmzr Test OS",
         downloadUrl = "imgcstmzr://build?files=classpath:img/boot/cmdline.txt%3Eboot&files=classpath:img/boot/config.txt%3Eboot",
         approximateImageSize = 6.Mega.bytes,
+        defaultCredentials = empty,
+    ),
+
+    RiscTestOS(
+        fullName = "RISC OS Pico RC5 (test only)",
+        downloadUrl = @Suppress("SpellCheckingInspection") "classpath:raw/riscos.img",
+        approximateImageSize = 2.Mega.bytes,
         defaultCredentials = empty,
     );
 

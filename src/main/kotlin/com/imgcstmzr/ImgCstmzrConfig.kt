@@ -48,7 +48,7 @@ import kotlin.io.path.exists
 import kotlin.io.path.readText
 
 data class ImgCstmzrConfig(
-    val trace: Boolean = false,
+    val trace: Boolean,
     val name: String,
     val timeZone: TimeZone?,
     val hostname: Hostname?,
@@ -216,12 +216,12 @@ data class ImgCstmzrConfig(
 
 data class UnsafeImgCstmzrConfig(
     val trace: Boolean = false,
-    val name: String,
+    val name: String?,
     val timeZone: String?,
     val timezone: String?,
     val hostname: ImgCstmzrConfig.Hostname?,
     val wifi: ImgCstmzrConfig.Wifi?,
-    val os: OperatingSystems,
+    val os: OperatingSystems?,
     val size: String?,
     val ssh: Ssh?,
     val defaultUser: DefaultUser?,
@@ -235,11 +235,11 @@ data class UnsafeImgCstmzrConfig(
 ) : Convertible<ImgCstmzrConfig> by converter({
     ImgCstmzrConfig(
         trace = trace,
-        name = name,
+        name = requireNotNull(name) { "Missing configuration ${"img.name".asParam()}" },
         timeZone = (timeZone ?: timezone)?.let { TimeZone.getTimeZone(it) },
         hostname = hostname,
         wifi = wifi,
-        os = os,
+        os = requireNotNull(os) { "Missing configuration ${"img.os".asParam()}" },
         size = size?.takeUnless { it.isBlank() }?.toSize(),
         ssh = ssh.convert(),
         defaultUser = defaultUser.convert(),

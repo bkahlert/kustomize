@@ -2,16 +2,17 @@ package com.imgcstmzr
 
 import com.imgcstmzr.OpenTelemetry.NOOP
 import io.opentelemetry.api.GlobalOpenTelemetry
+import koodies.tracing.KoodiesTelemetry
 
-// TODO set event limit
 /**
  * [OpenTelemetry](https://opentelemetry.io) instance used.
  *
  * For an implementation that never traces, use [NOOP].
  */
 object OpenTelemetry : io.opentelemetry.api.OpenTelemetry by GlobalOpenTelemetry.get() {
+
     init {
-        koodies.tracing.OpenTelemetry.register(this)
+        KoodiesTelemetry.register(this)
     }
 
     /**

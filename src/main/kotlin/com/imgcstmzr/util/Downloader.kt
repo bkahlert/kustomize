@@ -3,7 +3,9 @@ package com.imgcstmzr.util
 import com.imgcstmzr.ImgCstmzr
 import com.imgcstmzr.os.OperatingSystem
 import koodies.docker.download
+import koodies.io.path.copyToDirectory
 import koodies.io.randomDirectory
+import koodies.io.useRequiredClassPath
 import java.net.URI
 import java.nio.file.Path
 
@@ -16,7 +18,16 @@ import java.nio.file.Path
  * In case a matching [customHandlerMapping] is found, no download takes place but the
  * corresponding [Handler] is called to retrieve a copy of the requested image.
  */
-class Downloader(private val downloadDirectory: Path = ImgCstmzr.Temp, vararg customHandlers: Pair<String, Handler>) {
+class Downloader(
+    private val downloadDirectory: Path = ImgCstmzr.Temp,
+    vararg customHandlers: Pair<String, Handler> = arrayOf(
+        "classpath" to { uri ->
+            useRequiredClassPath(uri.toString()) {
+                it.copyToDirectory(downloadDirectory)
+            }
+        }
+    ),
+) {
     private val customHandlerMapping = customHandlers.toMap()
 
     private fun String.findScheme() = kotlin.runCatching { URI.create(this).scheme }.getOrElse { IllegalArgumentException("Invalid URI", it) }
