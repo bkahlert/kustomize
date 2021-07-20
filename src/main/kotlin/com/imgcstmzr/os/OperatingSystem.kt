@@ -43,14 +43,17 @@ interface OperatingSystem {
     }
 
     companion object {
+        
         /** Default pattern to match a line that prompts for a username. */
-        val DEFAULT_LOGIN_PATTERN: Regex = Regex("(?<host>(?!Last\\b)[\\w-_]+)(?<sep>\\s+)(?<const>login):(?<optWhitespace>.*)", IGNORE_CASE)
+        val DEFAULT_LOGIN_PATTERN: Regex = Regex("(?<host>(?!Last\\b)[\\w-_]+)(?<sep>\\s+)(?<const>login):(?<optWhitespace>.*)(?<nextLine>.*)$", IGNORE_CASE)
 
         /** Default pattern to match a line that prompts for a password. */
-        val DEFAULT_PASSWORD_PATTERN: Regex = Regex("Password:(?<optWhitespace>\\s*)", IGNORE_CASE)
+        val DEFAULT_PASSWORD_PATTERN: Regex = Regex("Password:(?<optWhitespace>\\s*)(?<nextLine>.*)$", IGNORE_CASE)
 
+//        val DEFAULT_READY_PATTERN: Regex = Regex("(?<user>[\\w@._-]+$?)@(?<host>[\\w-_]+):(?<path>[^#$]+?)[#$](?<optWhitespace>\\s*)", IGNORE_CASE)
         /** Default pattern to match a line that prompts for a command. */
-        val DEFAULT_READY_PATTERN: Regex = Regex("(?<user>[\\w@._-]+$?)@(?<host>[\\w-_]+):(?<path>[^#$]+?)[#$](?<optWhitespace>\\s*)", IGNORE_CASE)
+        val DEFAULT_READY_PATTERN: Regex =
+            Regex("(?<user>[\\w@._-]+$?)@(?<host>[\\w-_]+):(?<path>[^#$]+?)[#$](?<optWhitespace>\\s*)(?<nextLine>.*)$", IGNORE_CASE)
 
         /** Default pattern to match a line that indicates a stuck machine. */
         val DEFAULT_DEAD_END_PATTERN: Regex = Regex(".*in emergency mode.*", IGNORE_CASE)

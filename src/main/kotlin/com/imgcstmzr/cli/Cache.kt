@@ -56,12 +56,14 @@ open class ManagedDirectory(val dir: Path) {
 }
 
 
-private class ProjectDirectory(
+class ProjectDirectory(
     parentDir: Path,
     dirName: String,
     private val reuseLastWorkingCopy: Boolean,
     maxConcurrentWorkingDirectories: Int,
 ) : ManagedDirectory(parentDir, dirName) {
+
+    constructor(dir: Path) : this(dir.parent, dir.fileName.pathString, false, Int.MAX_VALUE)
 
     init {
         deleteOldWorkDirs(maxConcurrentWorkingDirectories)
@@ -70,17 +72,15 @@ private class ProjectDirectory(
     private val downloadDir = SingleFileDirectory(dir, "download")
     private val rawDir = SingleFileDirectory(dir, "raw")
 
-    private fun workDirs(): List<WorkDirectory> {
-
-        return dir.listDirectoryEntriesRecursively()
+    val workDirs: List<WorkDirectory>
+        get() = dir.listDirectoryEntriesRecursively()
             .filter { WorkDirectory.isWorkDirectory(it) }
             .map { WorkDirectory(it) }
             .sortedBy { it.age }
-    }
 
     private fun deleteOldWorkDirs(keep: Int) =
         spanning("Deleting old working directories") {
-            workDirs()
+            workDirs
                 .filter { it.age > 30.minutes }
                 .drop(keep)
                 .forEach {
@@ -90,10 +90,10 @@ private class ProjectDirectory(
         }
 
     fun require(provider: () -> Path): Path = spanning("Retrieving image") {
-        val workDirs = workDirs()
+        val workDirs = workDirs
         val workDir: Path? = if (reuseLastWorkingCopy) {
-            workDirs.mapNotNull { workDir ->
-                val single = workDir.getSingle { file ->
+            workDirs.map { workDir ->
+                val single = workDir.single { file ->
                     file.extensionOrNull == "img"
                 }
                 single
@@ -110,7 +110,7 @@ private class ProjectDirectory(
                 downloadedFile.extractImage { path -> buildFrom(path) }
             }
 
-            WorkDirectory.from(dir, img).getSingle { it.extensionOrNull.equals("img", ignoreCase = true) } ?: throw NoSuchElementException()
+            WorkDirectory.from(dir, img).single { it.extensionOrNull.equals("img", ignoreCase = true) }
         }
     }
 }
@@ -157,16 +157,16 @@ private open class SingleFileDirectory(dir: Path) : ManagedDirectory(dir) {
     }
 }
 
-private class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireValidName(dir)) {
+class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent, requireValidName(dir)) {
 
     val age: Duration get() = Now.passedSince(createdAt(dir).toEpochMilli())
 
-    fun getSingle(filter: (path: Path) -> Boolean): Path? = dir
+    fun single(predicate: (path: Path) -> Boolean = { true }): Path = dir
         .listDirectoryEntriesRecursively()
         .filterNot(Path::isHidden)
-        .filter(filter)
+        .filter(predicate)
         .sortedWith(FileSizeComparator)
-        .firstOrNull()
+        .single()
 
     override fun toString(): String {
         val files = dir.listDirectoryEntriesRecursively().filter { it.isRegularFile() }

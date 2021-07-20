@@ -32,6 +32,7 @@ class UsernamePatch(
             updateUsername(oldUsername, newUsername)
         }
 
+        // TODO delete?
         runPrograms {
             script("finish rename", "ls ${LinuxRoot.home / "pi"}", "id $oldUsername", "id $newUsername")
         }

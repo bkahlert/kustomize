@@ -1,7 +1,17 @@
-package com.imgcstmzr
+package com.imgcstmzr.cli
 
-import com.imgcstmzr.Convertible.Companion.converter
-import com.imgcstmzr.cli.asParam
+import com.imgcstmzr.ImgCstmzr
+import com.imgcstmzr.cli.Convertible.Companion.converter
+import com.imgcstmzr.cli.CustomizationConfig.DefaultUser
+import com.imgcstmzr.cli.CustomizationConfig.FileOperation
+import com.imgcstmzr.cli.CustomizationConfig.Hostname
+import com.imgcstmzr.cli.CustomizationConfig.Samba
+import com.imgcstmzr.cli.CustomizationConfig.SetupScript
+import com.imgcstmzr.cli.CustomizationConfig.Ssh
+import com.imgcstmzr.cli.CustomizationConfig.Tweaks
+import com.imgcstmzr.cli.CustomizationConfig.UsbGadget
+import com.imgcstmzr.cli.CustomizationConfig.UsbGadget.Ethernet
+import com.imgcstmzr.cli.CustomizationConfig.Wifi
 import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystem
@@ -16,6 +26,7 @@ import com.imgcstmzr.patch.ImgResizePatch
 import com.imgcstmzr.patch.PasswordPatch
 import com.imgcstmzr.patch.PhasedPatch
 import com.imgcstmzr.patch.RootShare
+import com.imgcstmzr.patch.RootShare.none
 import com.imgcstmzr.patch.SambaPatch
 import com.imgcstmzr.patch.ShellScriptPatch
 import com.imgcstmzr.patch.SshAuthorizationPatch
@@ -47,7 +58,7 @@ import java.util.TimeZone
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 
-data class ImgCstmzrConfig(
+data class CustomizationConfig(
     val trace: Boolean,
     val name: String,
     val timeZone: TimeZone?,
@@ -68,20 +79,20 @@ data class ImgCstmzrConfig(
     companion object {
 
         /**
-         * Loads a [ImgCstmzrConfig] based on the specified [configFiles].
+         * Loads a [CustomizationConfig] based on the specified [configFiles].
          */
-        fun load(vararg configFiles: Path): ImgCstmzrConfig = configFiles
+        fun load(vararg configFiles: Path): CustomizationConfig = configFiles
             .map { ConfigFactory.parseString(it.readText()) }
             .run { load(first(), *drop(1).toTypedArray()) }
 
         /**
-         * Loads a [ImgCstmzrConfig] based on the mandatory [config]
+         * Loads a [CustomizationConfig] based on the mandatory [config]
          * and the specified optional [fallbacks].
          */
         fun load(
             config: Config,
             vararg fallbacks: Config = arrayOf(ConfigFactory.parseString(Path.of(".env").readText())),
-        ): ImgCstmzrConfig {
+        ): CustomizationConfig {
             val resolve = ConfigFactory.systemProperties()
                 .withFallback(config)
                 .run { fallbacks.fold(this, Config::withFallback) }
@@ -165,7 +176,7 @@ data class ImgCstmzrConfig(
 
         usbGadgets.forEach {
             when (it) {
-                is UsbGadget.Ethernet -> add(
+                is Ethernet -> add(
                     UsbEthernetGadgetPatch(
                         dhcpRange = it.dhcpRange,
                         deviceAddress = it.deviceAddress ?: it.dhcpRange.firstUsableHost,
@@ -218,21 +229,21 @@ data class UnsafeImgCstmzrConfig(
     val name: String?,
     val timeZone: String?,
     val timezone: String?,
-    val hostname: ImgCstmzrConfig.Hostname?,
-    val wifi: ImgCstmzrConfig.Wifi?,
+    val hostname: Hostname?,
+    val wifi: Wifi?,
     val os: OperatingSystems?,
     val size: String?,
     val ssh: Ssh?,
     val defaultUser: DefaultUser?,
     val samba: Samba?,
     val usbGadgets: UsbGadgets?,
-    val tweaks: ImgCstmzrConfig.Tweaks?,
+    val tweaks: Tweaks?,
     val files: List<FileOperation>?,
     val setup: List<SetupScript>?,
     val firstBoot: List<ShellScript>?,
     val flashDisk: String?,
-) : Convertible<ImgCstmzrConfig> by converter({
-    ImgCstmzrConfig(
+) : Convertible<CustomizationConfig> by converter({
+    CustomizationConfig(
         trace = trace,
         name = requireNotNull(name) { "Missing configuration ${"img.name".asParam()}" },
         timeZone = (timeZone ?: timezone)?.let { TimeZone.getTimeZone(it) },
@@ -250,32 +261,34 @@ data class UnsafeImgCstmzrConfig(
         firstBoot = firstBoot?.map { it.convert() } ?: emptyList(),
     )
 }) {
-    data class Ssh(val enabled: Boolean?, val port: Int?, val authorizedKeys: AuthorizedKeys?) : Convertible<ImgCstmzrConfig.Ssh> by converter({
-        val fileBasedKeys = (authorizedKeys?.files ?: emptyList()).flatMap { glob ->
-            ImgCstmzr.HomeDirectory.ls(glob).map { file -> file.readText() }.filter { content -> content.startsWith("ssh-") }
-        }
-        val stringBasedKeys = (authorizedKeys?.keys ?: emptyList()).map { it.trim() }
-        ImgCstmzrConfig.Ssh(enabled, port, fileBasedKeys + stringBasedKeys)
-    }) {
+    data class Ssh(val enabled: Boolean?, val port: Int?, val authorizedKeys: AuthorizedKeys?) :
+        Convertible<com.imgcstmzr.cli.CustomizationConfig.Ssh> by converter({
+            val fileBasedKeys = (authorizedKeys?.files ?: emptyList()).flatMap { glob ->
+                ImgCstmzr.HomeDirectory.ls(glob).map { file -> file.readText() }.filter { content -> content.startsWith("ssh-") }
+            }
+            val stringBasedKeys = (authorizedKeys?.keys ?: emptyList()).map { it.trim() }
+            Ssh(enabled, port, fileBasedKeys + stringBasedKeys)
+        }) {
         data class AuthorizedKeys(val files: List<String>?, val keys: List<String>?)
     }
 
-    data class DefaultUser(val username: String?, val newUsername: String?, val newPassword: String?) : Convertible<ImgCstmzrConfig.DefaultUser> by converter({
-        ImgCstmzrConfig.DefaultUser(username, newUsername, newPassword.takeIf { it != null && it.matches(".*\\^\\d+".toRegex()) }
-            ?.let {
-                val password = it.dropLastWhile { char -> char.isDigit() }.dropLast(1)
-                val offset = it.takeLastWhile { char -> char.isDigit() }.toInt()
-                password - offset
-            } ?: newPassword)
+    data class DefaultUser(val username: String?, val newUsername: String?, val newPassword: String?) :
+        Convertible<com.imgcstmzr.cli.CustomizationConfig.DefaultUser> by converter({
+            com.imgcstmzr.cli.CustomizationConfig.DefaultUser(username, newUsername, newPassword.takeIf { it != null && it.matches(".*\\^\\d+".toRegex()) }
+                ?.let {
+                    val password = it.dropLastWhile { char -> char.isDigit() }.dropLast(1)
+                    val offset = it.takeLastWhile { char -> char.isDigit() }.toInt()
+                    password - offset
+                } ?: newPassword)
+        })
+
+    data class Samba(val homeShare: Boolean?, val rootShare: RootShare?) : Convertible<com.imgcstmzr.cli.CustomizationConfig.Samba> by converter({
+        com.imgcstmzr.cli.CustomizationConfig.Samba(homeShare ?: false, rootShare ?: none)
     })
 
-    data class Samba(val homeShare: Boolean?, val rootShare: RootShare?) : Convertible<ImgCstmzrConfig.Samba> by converter({
-        ImgCstmzrConfig.Samba(homeShare ?: false, rootShare ?: RootShare.none)
-    })
 
-
-    data class UsbGadgets(val ethernet: Ethernet?) : Convertible<List<ImgCstmzrConfig.UsbGadget>> {
-        override fun convert(): List<ImgCstmzrConfig.UsbGadget> =
+    data class UsbGadgets(val ethernet: Ethernet?) : Convertible<List<UsbGadget>> {
+        override fun convert(): List<UsbGadget> =
             listOfNotNull(
                 ethernet.convert(),
             )
@@ -285,10 +298,10 @@ data class UnsafeImgCstmzrConfig(
             deviceAddress: String?,
             hostAsDefaultGateway: Boolean?,
             enableSerialConsole: Boolean?,
-        ) : Convertible<ImgCstmzrConfig.UsbGadget> by converter({
+        ) : Convertible<UsbGadget> by converter({
             val subnet: IPSubnet<out IPAddress> = ipSubnetOf(dhcpRange)
             val ip: IPAddress? = deviceAddress?.toIP()
-            ImgCstmzrConfig.UsbGadget.Ethernet(
+            Ethernet(
                 subnet,
                 ip,
                 hostAsDefaultGateway,
@@ -301,8 +314,8 @@ data class UnsafeImgCstmzrConfig(
         append: String?,
         hostPath: String?,
         diskPath: String,
-    ) : Convertible<ImgCstmzrConfig.FileOperation> by converter({
-        ImgCstmzrConfig.FileOperation(
+    ) : Convertible<com.imgcstmzr.cli.CustomizationConfig.FileOperation> by converter({
+        FileOperation(
             append?.trimIndent(),
             hostPath?.let { path ->
                 val ls = ImgCstmzr.WorkingDirectory.ls(path)
@@ -317,8 +330,8 @@ data class UnsafeImgCstmzrConfig(
         val name: String,
         val sources: List<URI>?,
         val scripts: List<ShellScript>?,
-    ) : Convertible<ImgCstmzrConfig.SetupScript> by converter({
-        ImgCstmzrConfig.SetupScript(name, sources ?: emptyList(), scripts?.map { it.convert() } ?: emptyList())
+    ) : Convertible<com.imgcstmzr.cli.CustomizationConfig.SetupScript> by converter({
+        SetupScript(name, sources ?: emptyList(), scripts?.map { it.convert() } ?: emptyList())
     })
 
     data class ShellScript(

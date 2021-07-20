@@ -1,15 +1,13 @@
-package com.imgcstmzr
+package com.imgcstmzr.cli
 
-import com.imgcstmzr.ImgCstmzrConfig.DefaultUser
-import com.imgcstmzr.ImgCstmzrConfig.FileOperation
-import com.imgcstmzr.ImgCstmzrConfig.Hostname
-import com.imgcstmzr.ImgCstmzrConfig.Samba
-import com.imgcstmzr.ImgCstmzrConfig.UsbGadget.Ethernet
-import com.imgcstmzr.ImgCstmzrConfig.Wifi
-import com.imgcstmzr.libguestfs.mounted
+import com.imgcstmzr.ImgCstmzr
+import com.imgcstmzr.cli.CustomizationConfig.DefaultUser
+import com.imgcstmzr.cli.CustomizationConfig.FileOperation
+import com.imgcstmzr.cli.CustomizationConfig.Hostname
+import com.imgcstmzr.cli.CustomizationConfig.Samba
+import com.imgcstmzr.cli.CustomizationConfig.UsbGadget.Ethernet
+import com.imgcstmzr.cli.CustomizationConfig.Wifi
 import com.imgcstmzr.os.LinuxRoot
-import com.imgcstmzr.os.OS
-import com.imgcstmzr.os.OperatingSystem.Credentials.Companion.withPassword
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.patch.CompositePatch
@@ -30,21 +28,15 @@ import com.imgcstmzr.patch.UsernamePatch
 import com.imgcstmzr.patch.WifiAutoReconnectPatch
 import com.imgcstmzr.patch.WifiPowerSafeModePatch
 import com.imgcstmzr.patch.WpaSupplicantPatch
-import com.imgcstmzr.patch.booted
-import com.imgcstmzr.patch.patch
-import com.imgcstmzr.test.E2E
 import com.typesafe.config.ConfigFactory
 import koodies.net.div
 import koodies.net.ip4Of
 import koodies.shell.ShellScript
-import koodies.test.Smoke
 import koodies.test.SystemProperties
 import koodies.test.SystemProperty
-import koodies.test.asserting
 import koodies.test.containsAtLeast
 import koodies.test.hasElements
 import koodies.test.test
-import koodies.text.ansiRemoved
 import koodies.unit.Gibi
 import koodies.unit.bytes
 import org.junit.jupiter.api.Test
@@ -58,7 +50,6 @@ import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
 import strikt.assertions.isTrue
 import strikt.assertions.none
-import strikt.java.exists
 import java.util.TimeZone
 import kotlin.io.path.div
 
@@ -69,15 +60,15 @@ import kotlin.io.path.div
     SystemProperty("IMG_CSTMZR_WPA_SUPPLICANT", "entry1\nentry2"),
     SystemProperty("INDIVIDUAL_KEY", "B{1:Βϊ𝌁\uD834\uDF57"),
 )
-class ImgCstmzrConfigTest {
+class CustomizationConfigTest {
 
-    private fun loadImgCstmzrConfig(): ImgCstmzrConfig =
-        ImgCstmzrConfig.load(ConfigFactory.parseResources("sample.conf"))
+    private fun loadImgCstmzrConfig(): CustomizationConfig =
+        CustomizationConfig.load(ConfigFactory.parseResources("sample.conf"))
 
     @TestFactory
     fun `should deserialize`() = test(loadImgCstmzrConfig()) {
         expecting { trace } that { isTrue() }
-        expecting { name } that { isEqualTo("Sample Project") }
+        expecting { name } that { isEqualTo(".test") }
         expecting { os } that { isEqualTo(RaspberryPiLite) }
         expecting { timeZone } that { isEqualTo(TimeZone.getTimeZone("Europe/Berlin")) }
         expecting { hostname } that { isEqualTo(Hostname("demo", true)) }
@@ -181,25 +172,5 @@ class ImgCstmzrConfigTest {
             { isA<ShellScriptPatch>() },
             { isA<FirstBootPatch>() },
         )
-    }
-
-    @E2E @Smoke @Test
-    fun `should apply patches`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-        val config = loadImgCstmzrConfig()
-        val patches = config.toOptimizedPatches()
-
-        osImage.patch(*patches.toTypedArray())
-
-        osImage asserting {
-            get { credentials }.isEqualTo("john.doe" withPassword "Password1234")
-            booted {
-                command("echo '👏 🤓 👋'");
-                { true }
-            }
-            mounted {
-                path(LinuxRoot.home / "john.doe" / "first-boot.txt") { not { exists() } }
-            }
-        }
-        expectRendered().ansiRemoved.contains("FINALIZING")
     }
 }

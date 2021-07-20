@@ -8,7 +8,6 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.path
 import com.imgcstmzr.ImgCstmzr
-import com.imgcstmzr.ImgCstmzrConfig
 import com.imgcstmzr.libguestfs.LibguestfsImage
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemImage.Companion.based
@@ -61,7 +60,7 @@ class CustomizeCommand : NoOpCliktCommand(
         echo(Banner.banner("ImgCstmzr"))
         echo()
 
-        val config: ImgCstmzrConfig = spanning(
+        val config: CustomizationConfig = spanning(
             "Configuring",
             nameFormatter = PATCH_NAME_FORMATTER,
             decorationFormatter = PATCH_DECORATION_FORMATTER,
@@ -70,7 +69,7 @@ class CustomizeCommand : NoOpCliktCommand(
         ) {
             configFile.let {
                 log("Configuration: ${it.toUri()} (${it.getSize().toString(BinaryPrefixes)})")
-                ImgCstmzrConfig.load(it, envFile)
+                CustomizationConfig.load(it, envFile)
             }.apply {
                 log("Name: $name")
                 log("OS: $os")
@@ -108,7 +107,7 @@ class CustomizeCommand : NoOpCliktCommand(
         }
     }
 
-    private fun provideImageCopy(config: ImgCstmzrConfig) = with(cache) {
+    private fun provideImageCopy(config: CustomizationConfig) = with(cache) {
         config.os based provideCopy(config.name, reuseLastWorkingCopy) {
             downloader.download(config.os.downloadUrl)
         }

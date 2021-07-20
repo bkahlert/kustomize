@@ -54,6 +54,7 @@ class OperatingSystemTest {
         "trailingWhiteSpaces login: \t",
         "raspberry login: user input",
         "wifi3--pUiy login:",
+        "wifi3--pUiy login: Starting Update UTMP about System Runlevel Changes...",
     ) { asserting { matches(OperatingSystem.DEFAULT_LOGIN_PATTERN) } }
 
     @TestFactory
@@ -64,6 +65,22 @@ class OperatingSystemTest {
         "anything else:",
         "Last login: Sat Dec 12 12:39:17 GMT 2020 on ttyAMA0",
     ) { asserting { not { matches(OperatingSystem.DEFAULT_LOGIN_PATTERN) } } }
+
+    @TestFactory
+    fun `should detect password line`() = testEach(
+        "Password: ",
+        "Password:",
+        "password: ",
+        "Password: Starting Update UTMP about System Runlevel Changes...",
+    ) { asserting { matches(OperatingSystem.DEFAULT_PASSWORD_PATTERN) } }
+
+    @TestFactory
+    fun `should detect non-password line`() = testEach(
+        "",
+        "   ",
+        "Password-",
+        "Enter Password: ",
+    ) { asserting { not { matches(OperatingSystem.DEFAULT_PASSWORD_PATTERN) } } }
 
     @TestFactory
     fun `should detect ready line`() = testEach(
@@ -78,11 +95,12 @@ class OperatingSystemTest {
         "john.doe@raspberrypi:~$",
         "john.doe@demo--rx1E:~$",
         "john.doe@demo--rx1E:~$ ",
+        "pi@raspberrypi:~$ Starting Update UTMP about System Runlevel Changes...",
+        "SomeOne@SomewWere:/some/Dir$: user input",
     ) { asserting { matches(OperatingSystem.DEFAULT_READY_PATTERN) } }
 
     @TestFactory
     fun `should detect non-ready line`() = testEach(
-        "SomeOne@SomewWere:/some/Dir$: user input",
         "raspberrypi login:",
         "ignoreCASE login:",
         "trailingWhiteSpaces login: \t",
