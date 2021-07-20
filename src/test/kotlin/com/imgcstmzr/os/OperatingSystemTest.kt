@@ -55,6 +55,8 @@ class OperatingSystemTest {
         "raspberry login: user input",
         "wifi3--pUiy login:",
         "wifi3--pUiy login: Starting Update UTMP about System Runlevel Changes...",
+        "wifi3--fKwh login: [  OK  ] Started Regenerate SSH host keys.",
+        "wifi3--fKwh login: [  OK  ] Started Update UTMP about System Runlevel Changes.",
     ) { asserting { matches(OperatingSystem.DEFAULT_LOGIN_PATTERN) } }
 
     @TestFactory

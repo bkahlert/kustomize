@@ -37,6 +37,8 @@ class UsbEthernetGadgetPatchTest {
         deviceAddress = ipOf("192.168.168.168"),
         hostAsDefaultGateway = true,
         enableSerialConsole = true,
+        manufacturer = "John Doe",
+        product = "USB Test Device",
     )
 
     @Test
@@ -143,8 +145,8 @@ class UsbEthernetGadgetPatchTest {
                     #!/bin/bash
 
                     cd /sys/kernel/config/usb_gadget/
-                    mkdir -p display-pi
-                    cd display-pi
+                    mkdir -p USB-Test-Device
+                    cd USB-Test-Device
                     echo 0x1d6b > idVendor # Linux Foundation
                     echo 0x0104 > idProduct # Multifunction Composite Gadget
                     echo 0x0100 > bcdDevice # v1.0.0
@@ -154,8 +156,8 @@ class UsbEthernetGadgetPatchTest {
                     #echo 0x01 > bDeviceProtocol
                     mkdir -p strings/0x409
                     echo "fedcba9876543210" > strings/0x409/serialnumber
-                    echo "Ben Hardill" > strings/0x409/manufacturer
-                    echo "Display-Pi USB Device" > strings/0x409/product
+                    echo "John Doe" > strings/0x409/manufacturer
+                    echo "USB Test Device" > strings/0x409/product
                     mkdir -p configs/c.1/strings/0x409
                     echo "Config 1: ECM network" > configs/c.1/strings/0x409/configuration
                     echo 250 > configs/c.1/MaxPower
@@ -206,7 +208,7 @@ class UsbEthernetGadgetPatchTest {
                 @Suppress("SpellCheckingInspection")
                 content.isEqualTo("""
                     [Unit]
-                    Description=My USB gadget
+                    Description=USB Test Device
                     After=network-online.target
                     Wants=network-online.target
                     #After=systemd-modules-load.service

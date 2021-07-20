@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import strikt.assertions.contains
 import strikt.assertions.containsIgnoringCase
+import strikt.assertions.isEmpty
 import strikt.assertions.isGreaterThan
 import java.nio.file.Path
 import kotlin.io.path.createDirectory
@@ -72,8 +73,7 @@ class FirstBootWaitTest {
             val done = resolve("dir2").createDirectory()
             slowlyProcessFiles(scripts, done)
             expecting { ubuntu(renderer = RendererProviders.block()) { "./${scriptFor("dir", "dir2")}" } } that {
-                io.output.ansiRemoved.not { contains("SCRIPT(S) TO GO") }
-                io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR ⮕ DIR2 … COMPLETED")
+                io.output.ansiRemoved.isEmpty()
             }
         }
 
@@ -82,7 +82,7 @@ class FirstBootWaitTest {
             resolve("dir").createDirectory()
             resolve("dir2").createDirectory()
             expecting { ubuntu(renderer = RendererProviders.block()) { "./${scriptFor("dir", "dir2")}" } } that {
-                io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR ⮕ DIR2 … COMPLETED")
+                io.output.ansiRemoved.isEmpty()
             }
         }
 
@@ -90,7 +90,7 @@ class FirstBootWaitTest {
         fun `should return if directory does not exist`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             resolve("dir2").createDirectory()
             expecting { ubuntu(renderer = RendererProviders.block()) { "./${scriptFor("dir", "dir2")}" } } that {
-                io.output.ansiRemoved.containsIgnoringCase("CHECKING DIR ⮕ DIR2 … COMPLETED")
+                io.output.ansiRemoved.isEmpty()
             }
         }
 

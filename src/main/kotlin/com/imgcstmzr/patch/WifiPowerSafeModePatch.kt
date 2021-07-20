@@ -14,13 +14,12 @@ class WifiPowerSafeModePatch : (OperatingSystemImage) -> PhasedPatch {
     ) {
         customizeDisk {
             firstBoot("Disable Wifi Power-Safe Mode") {
-                file(osImage.hostPath(LinuxRoot.etc.rc_local)) {
+                file(LinuxRoot.etc.rc_local.pathString) {
                     removeLine("echo 0")
                     appendLine("/sbin/iw dev wlan0 set power_save off")
                     appendLine("echo 0")
                 }
             }
         }
-        bootOs = true
     }
 }

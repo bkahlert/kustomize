@@ -82,8 +82,6 @@ class TestTelemetry : TestExecutionListener {
 
         /**
          * A span processor that stores created traces to allow assertions.
-         *
-         * ***Note:** Only spans created with [Tracer] are stored.*
          */
         private object InMemoryStoringSpanProcessor : SpanProcessor {
             override fun isStartRequired(): Boolean = false

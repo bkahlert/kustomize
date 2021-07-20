@@ -37,8 +37,10 @@ import koodies.test.SystemProperty
 import koodies.test.containsAtLeast
 import koodies.test.hasElements
 import koodies.test.test
+import koodies.text.LineSeparators.prefixLinesWith
 import koodies.unit.Gibi
 import koodies.unit.bytes
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import strikt.api.expectThat
@@ -61,6 +63,15 @@ import kotlin.io.path.div
     SystemProperty("INDIVIDUAL_KEY", "B{1:Βϊ𝌁\uD834\uDF57"),
 )
 class CustomizationConfigTest {
+
+    private fun loadMinimalConfig(config: String) =
+        CustomizationConfig.load(ConfigFactory.parseString("""
+                img {
+                    name: .test
+                    os: RISC OS Pico RC5 (test only)
+                    ${config.prefixLinesWith("    ")}
+                }
+            """.trimIndent()))
 
     private fun loadImgCstmzrConfig(): CustomizationConfig =
         CustomizationConfig.load(ConfigFactory.parseResources("sample.conf"))
@@ -118,6 +129,52 @@ class CustomizationConfigTest {
                     content = "echo 'Type X to …'>>${'$'}HOME/first-boot.txt"
                 ),
             )
+        }
+    }
+
+    @Nested
+    inner class HostnameConfig {
+
+        @Test
+        fun `should deserialize name`() {
+            expectThat(loadMinimalConfig("""
+                hostname {
+                    name: "test"
+                }
+            """.trimIndent())) {
+                get { hostname }.isEqualTo(Hostname("test", true))
+            }
+        }
+
+        @Test
+        fun `should deserialize no name`() {
+            expectThat(loadMinimalConfig("")) {
+                get { hostname }.isEqualTo(null)
+            }
+        }
+
+        @Test
+        fun `should deserialize random suffix`() {
+            expectThat(loadMinimalConfig("""
+                hostname {
+                    name: "test"
+                    random-suffix: true
+                }
+            """.trimIndent())) {
+                get { hostname }.isEqualTo(Hostname("test", true))
+            }
+        }
+
+        @Test
+        fun `should deserialize no random suffix`() {
+            expectThat(loadMinimalConfig("""
+                hostname {
+                    name: "test"
+                    random-suffix: false
+                }
+            """.trimIndent())) {
+                get { hostname }.isEqualTo(Hostname("test", false))
+            }
         }
     }
 

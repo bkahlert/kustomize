@@ -11,6 +11,7 @@ import koodies.net.IPAddress
 import koodies.net.IPSubnet
 import koodies.net.div
 import koodies.net.ip4Of
+import koodies.toBaseName
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]
@@ -67,6 +68,16 @@ class UsbEthernetGadgetPatch(
      * Whether to activate the serial console.
      */
     val enableSerialConsole: Boolean = false,
+
+    /**
+     * Manufacturer of USB device.
+     */
+    val manufacturer: String,
+
+    /**
+     * Name of USB device.
+     */
+    val product: String,
 ) : (OperatingSystemImage) -> PhasedPatch {
     override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build(
         "Configure USB Gadget with DHCP Address Range $dhcpRange",
@@ -150,13 +161,14 @@ class UsbEthernetGadgetPatch(
                   address $deviceAddress/${dhcpRange.prefixLength}
             """.trimIndent())
 
+            val dirName = product.toBaseName()
             @Suppress("SpellCheckingInspection")
             copyIn(USB_GADGET, """
                 #!/bin/bash
     
                 cd /sys/kernel/config/usb_gadget/
-                mkdir -p display-pi
-                cd display-pi
+                mkdir -p $dirName
+                cd $dirName
                 echo 0x1d6b > idVendor # Linux Foundation
                 echo 0x0104 > idProduct # Multifunction Composite Gadget
                 echo 0x0100 > bcdDevice # v1.0.0
@@ -166,8 +178,8 @@ class UsbEthernetGadgetPatch(
                 #echo 0x01 > bDeviceProtocol
                 mkdir -p strings/0x409
                 echo "fedcba9876543210" > strings/0x409/serialnumber
-                echo "Ben Hardill" > strings/0x409/manufacturer
-                echo "Display-Pi USB Device" > strings/0x409/product
+                echo "$manufacturer" > strings/0x409/manufacturer
+                echo "$product" > strings/0x409/product
                 mkdir -p configs/c.1/strings/0x409
                 echo "Config 1: ECM network" > configs/c.1/strings/0x409/configuration
                 echo 250 > configs/c.1/MaxPower
@@ -203,7 +215,7 @@ class UsbEthernetGadgetPatch(
             @Suppress("SpellCheckingInspection")
             copyIn(USBGADGET_SERVICE, """
                 [Unit]
-                Description=My USB gadget
+                Description=$product
                 After=network-online.target
                 Wants=network-online.target
                 #After=systemd-modules-load.service

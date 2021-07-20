@@ -48,7 +48,7 @@ object FirstBootWait {
     }
 
     fun trackProgress(scripts: DiskDirectory, done: DiskDirectory): ShellScript = ShellScript {
-        val scriptsToGo = "\$diff SCRIPT(S) TO GO".ansi.yellow
+        val scriptsToGo = "\$_diff SCRIPT(S) TO GO".ansi.yellow
         val completed = "COMPLETED".ansi.green
         shebang
         //language=Shell Script
@@ -62,10 +62,9 @@ object FirstBootWait {
             }
             
             _total=$(fileCount '$scripts')
+            _prevDiff=0
             
             firstbootRunning() {
-              printf '${banner("Checking ${scripts.fileName.pathString} ⮕ ${done.fileName.pathString}", prefix = "")} … '
-              
               scripts=$(fileCount '$scripts')
               done=$(fileCount '$done')
               if [ "${'$'}scripts" = "0" ]; then
@@ -76,10 +75,21 @@ object FirstBootWait {
                 fi
               fi
               
-              diff=${'$'}((_total - done))
-              caption=$([ "${'$'}diff" = "0" ] && echo "$completed" || echo "$scriptsToGo") 
-              printf '%s\n' "${'$'}caption"
-              [ ! "${'$'}diff" = "0" ]
+              _diff=${'$'}((_total - done))
+              
+              if [ ! "${'$'}_diff" = "${'$'}_prevDiff" ]; then
+                printf '${banner("Checking ${scripts.fileName.pathString} ⮕ ${done.fileName.pathString}", prefix = "")} … '
+                
+                if [ "${'$'}_diff" = "0" ]; then
+                  echo "$completed"
+                else
+                  echo "$scriptsToGo"
+                fi
+                
+                _prevDiff=${'$'}_diff
+              fi
+              
+              [ ! "${'$'}_diff" = "0" ]
             }
 
             while firstbootRunning; do

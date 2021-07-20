@@ -4,6 +4,7 @@ import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine.Customization.FirstBoot
 import com.imgcstmzr.libguestfs.file
 import com.imgcstmzr.os.OperatingSystemImage
 import koodies.content
+import koodies.io.path.pathString
 import koodies.junit.UniqueId
 import koodies.test.containsAtLeast
 import koodies.test.withTempDir
@@ -21,6 +22,7 @@ class WifiPowerSafeModePatchTest {
 
         expectThat(patch).customizations {
             last().isA<FirstBootOption>().file.content {
+                not { contains(osImage.directory.pathString) }
                 contains("/sbin/iw dev wlan0 set power_save off")
                 containsAtLeast("echo 0", 2)
             }
