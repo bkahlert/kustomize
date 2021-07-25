@@ -1,0 +1,1151 @@
+[
+  {
+    "id": "d3d3a738.50ff6",
+    "type": "tab",
+    "label": "Status Lifecycle",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "86cf6ae1.86e16",
+    "type": "tab",
+    "label": "Flow 1",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "160680de.88ba5f",
+    "type": "tab",
+    "label": "Flow 1",
+    "disabled": true,
+    "info": ""
+  },
+  {
+    "id": "6a5dd260.098bbc",
+    "type": "subflow",
+    "name": "speak errors",
+    "info": "",
+    "category": "",
+    "in": [],
+    "out": [],
+    "env": [],
+    "color": "#DDAA99"
+  },
+  {
+    "id": "686fa107.2f1818",
+    "type": "subflow",
+    "name": "speak status",
+    "info": "",
+    "category": "",
+    "in": [
+      {
+        "x": 50,
+        "y": 30,
+        "wires": [
+          {
+            "id": "9de1781d.c3793"
+          }
+        ]
+      }
+    ],
+    "out": [],
+    "env": [],
+    "color": "#DDAA99"
+  },
+  {
+    "id": "2a640a44.501106",
+    "type": "group",
+    "z": "d3d3a738.50ff6",
+    "style": {
+      "stroke": "#999999",
+      "stroke-opacity": "1",
+      "fill": "none",
+      "fill-opacity": "1",
+      "label": true,
+      "label-position": "nw",
+      "color": "#a4a4a4"
+    },
+    "nodes": [
+      "a33692ff.42565"
+    ],
+    "x": 1074,
+    "y": 1179,
+    "w": 152,
+    "h": 82
+  },
+  {
+    "id": "ed608b58.9ef53",
+    "type": "websocket-listener",
+    "path": "/status",
+    "wholemsg": "false"
+  },
+  {
+    "id": "31dd706.b8e229",
+    "type": "tls-config",
+    "name": "",
+    "cert": "",
+    "key": "",
+    "ca": "",
+    "certname": "",
+    "keyname": "",
+    "caname": "",
+    "servername": "",
+    "verifyservercert": true
+  },
+  {
+    "id": "6efd2345.171b3c",
+    "type": "hue-bridge",
+    "name": "Philips hue",
+    "bridge": "192.168.16.249",
+    "key": "nx3MhBbh1PhTg2FMnFeW2O6Usb4SY1OVQkKQenA9",
+    "interval": "3000",
+    "disableupdates": false
+  },
+  {
+    "id": "4d149ab7.912cb4",
+    "type": "ui_group",
+    "name": "Default",
+    "tab": "be8560a0.836a",
+    "order": 1,
+    "disp": true,
+    "width": "6",
+    "collapse": false
+  },
+  {
+    "id": "be8560a0.836a",
+    "type": "ui_tab",
+    "name": "Home",
+    "icon": "dashboard",
+    "disabled": false,
+    "hidden": false
+  },
+  {
+    "id": "98039b67.028e38",
+    "type": "ui_base",
+    "theme": {
+      "name": "theme-light",
+      "lightTheme": {
+        "default": "#0094CE",
+        "baseColor": "#0094CE",
+        "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+        "edited": true,
+        "reset": false
+      },
+      "darkTheme": {
+        "default": "#097479",
+        "baseColor": "#097479",
+        "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+        "edited": false
+      },
+      "customTheme": {
+        "name": "Untitled Theme 1",
+        "default": "#4B7930",
+        "baseColor": "#4B7930",
+        "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+      },
+      "themeState": {
+        "base-color": {
+          "default": "#0094CE",
+          "value": "#0094CE",
+          "edited": false
+        },
+        "page-titlebar-backgroundColor": {
+          "value": "#0094CE",
+          "edited": false
+        },
+        "page-backgroundColor": {
+          "value": "#fafafa",
+          "edited": false
+        },
+        "page-sidebar-backgroundColor": {
+          "value": "#ffffff",
+          "edited": false
+        },
+        "group-textColor": {
+          "value": "#1bbfff",
+          "edited": false
+        },
+        "group-borderColor": {
+          "value": "#ffffff",
+          "edited": false
+        },
+        "group-backgroundColor": {
+          "value": "#ffffff",
+          "edited": false
+        },
+        "widget-textColor": {
+          "value": "#111111",
+          "edited": false
+        },
+        "widget-backgroundColor": {
+          "value": "#0094ce",
+          "edited": false
+        },
+        "widget-borderColor": {
+          "value": "#ffffff",
+          "edited": false
+        },
+        "base-font": {
+          "value": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+        }
+      },
+      "angularTheme": {
+        "primary": "indigo",
+        "accents": "blue",
+        "warn": "red",
+        "background": "grey",
+        "palette": "light"
+      }
+    },
+    "site": {
+      "name": "Node-RED Dashboard",
+      "hideToolbar": "false",
+      "allowSwipe": "false",
+      "lockMenu": "false",
+      "allowTempTheme": "true",
+      "dateFormat": "DD/MM/YYYY",
+      "sizes": {
+        "sx": 48,
+        "sy": 48,
+        "gx": 6,
+        "gy": 6,
+        "cx": 6,
+        "cy": 6,
+        "px": 0,
+        "py": 0
+      }
+    }
+  },
+  {
+    "id": "9b205eaf.7add",
+    "type": "catch",
+    "z": "6a5dd260.098bbc",
+    "name": "",
+    "scope": null,
+    "uncaught": true,
+    "x": 200,
+    "y": 80,
+    "wires": [
+      [
+        "ed6e3983.59cc78"
+      ]
+    ]
+  },
+  {
+    "id": "1ba67e34.d8fc72",
+    "type": "play audio",
+    "z": "6a5dd260.098bbc",
+    "name": "",
+    "voice": "9",
+    "x": 590,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "ed6e3983.59cc78",
+    "type": "change",
+    "z": "6a5dd260.098bbc",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "message",
+        "tot": "msg"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 400,
+    "y": 80,
+    "wires": [
+      [
+        "1ba67e34.d8fc72"
+      ]
+    ]
+  },
+  {
+    "id": "28a5c0a5.3c5c2",
+    "type": "play audio",
+    "z": "686fa107.2f1818",
+    "name": "",
+    "voice": "10",
+    "x": 450,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "f141d032.6881c",
+    "type": "http in",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "url": "/status",
+    "method": "put",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 510,
+    "y": 640,
+    "wires": [
+      [
+        "5caee2cf.6be6ec"
+      ]
+    ]
+  },
+  {
+    "id": "e8b81718.5a35f",
+    "type": "http response",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "statusCode": "200",
+    "headers": {},
+    "x": 1640,
+    "y": 700,
+    "wires": []
+  },
+  {
+    "id": "5caee2cf.6be6ec",
+    "type": "json",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 770,
+    "y": 640,
+    "wires": [
+      [
+        "e70660c7.026038"
+      ]
+    ]
+  },
+  {
+    "id": "e70660c7.026038",
+    "type": "file",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "filename": "/data/status.json",
+    "appendNewline": true,
+    "createDir": true,
+    "overwriteFile": "true",
+    "encoding": "utf8",
+    "x": 1030,
+    "y": 640,
+    "wires": [
+      [
+        "596f7bdc.8d6284",
+        "9eb81e11.b5a25"
+      ]
+    ]
+  },
+  {
+    "id": "9de1781d.c3793",
+    "type": "function",
+    "z": "686fa107.2f1818",
+    "name": "",
+    "func": "const clone = RED.util.cloneMessage(msg);\nclone.payload = `New status: ${msg.payload[\"name\"]}`;\nreturn clone;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "x": 220,
+    "y": 80,
+    "wires": [
+      [
+        "28a5c0a5.3c5c2"
+      ]
+    ],
+    "inputLabels": [
+      "x"
+    ]
+  },
+  {
+    "id": "13d33836.673f4",
+    "type": "subflow:6a5dd260.098bbc",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "env": [],
+    "x": 1350,
+    "y": 460,
+    "wires": []
+  },
+  {
+    "id": "292396af.90e33a",
+    "type": "websocket out",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "server": "ed608b58.9ef53",
+    "client": "",
+    "x": 1630,
+    "y": 580,
+    "wires": []
+  },
+  {
+    "id": "d3714b99.088ba8",
+    "type": "inject",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "{\"name\": \"test\"}",
+    "payloadType": "str",
+    "x": 340,
+    "y": 640,
+    "wires": [
+      [
+        "5caee2cf.6be6ec"
+      ]
+    ]
+  },
+  {
+    "id": "3381a67b.9f5e9a",
+    "type": "subflow:686fa107.2f1818",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "env": [],
+    "x": 1350,
+    "y": 500,
+    "wires": []
+  },
+  {
+    "id": "30c09dd0.8115ea",
+    "type": "http in",
+    "z": "86cf6ae1.86e16",
+    "name": "",
+    "url": "/proxy",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 450,
+    "y": 560,
+    "wires": [
+      [
+        "150e4a82.92e2d5",
+        "8d0c7124.2fbdb8"
+      ]
+    ]
+  },
+  {
+    "id": "4efe03c5.ab090c",
+    "type": "http response",
+    "z": "86cf6ae1.86e16",
+    "name": "",
+    "statusCode": "",
+    "headers": {},
+    "x": 970,
+    "y": 600,
+    "wires": []
+  },
+  {
+    "id": "150e4a82.92e2d5",
+    "type": "http request",
+    "z": "86cf6ae1.86e16",
+    "name": "",
+    "method": "GET",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "req.headers[\"request-uri\"]",
+    "tls": "31dd706.b8e229",
+    "persist": false,
+    "proxy": "",
+    "authType": "",
+    "x": 750,
+    "y": 600,
+    "wires": [
+      [
+        "4efe03c5.ab090c",
+        "b983e0ed.28dcf8"
+      ]
+    ]
+  },
+  {
+    "id": "b983e0ed.28dcf8",
+    "type": "debug",
+    "z": "86cf6ae1.86e16",
+    "name": "",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 670,
+    "y": 460,
+    "wires": []
+  },
+  {
+    "id": "ef41e63d.ca5118",
+    "type": "inject",
+    "z": "86cf6ae1.86e16",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "https://google.com",
+    "payloadType": "str",
+    "x": 500,
+    "y": 380,
+    "wires": [
+      [
+        "7dfc6494.b2b09c",
+        "6c25faca.f28eac"
+      ]
+    ]
+  },
+  {
+    "id": "8d0c7124.2fbdb8",
+    "type": "debug",
+    "z": "86cf6ae1.86e16",
+    "name": "",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "req.headers[\"request-uri\"]",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 830,
+    "y": 680,
+    "wires": []
+  },
+  {
+    "id": "7dfc6494.b2b09c",
+    "type": "change",
+    "z": "86cf6ae1.86e16",
+    "name": "",
+    "rules": [
+      {
+        "t": "set",
+        "p": "payload",
+        "pt": "msg",
+        "to": "",
+        "tot": "str"
+      }
+    ],
+    "action": "",
+    "property": "",
+    "from": "",
+    "to": "",
+    "reg": false,
+    "x": 790,
+    "y": 380,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "6c25faca.f28eac",
+    "type": "function",
+    "z": "86cf6ae1.86e16",
+    "name": "",
+    "func": "msg.req = msg.req || {}\nmsg.req.headers = msg.req.headers || {}\nmsg.req.headers[\"request-uri\"] = \"https://google.de\";//msg.payload;\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "x": 870,
+    "y": 500,
+    "wires": [
+      [
+        "ba62826d.c0368",
+        "8d0c7124.2fbdb8"
+      ]
+    ]
+  },
+  {
+    "id": "ba62826d.c0368",
+    "type": "debug",
+    "z": "86cf6ae1.86e16",
+    "name": "",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1060,
+    "y": 480,
+    "wires": []
+  },
+  {
+    "id": "9ea08b2a.42219",
+    "type": "http in",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "url": "/status",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 510,
+    "y": 700,
+    "wires": [
+      [
+        "3e26311a.7877de"
+      ]
+    ]
+  },
+  {
+    "id": "3a37b473.48b3ac",
+    "type": "catch",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "scope": null,
+    "uncaught": false,
+    "x": 500,
+    "y": 760,
+    "wires": [
+      [
+        "457c3d6b.08524c"
+      ]
+    ]
+  },
+  {
+    "id": "457c3d6b.08524c",
+    "type": "function",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "func": "msg.payload = JSON.stringify(msg.error);\nnode.status({fill:\"red\",shape:\"ring\",text:msg.error.message});\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "x": 780,
+    "y": 760,
+    "wires": [
+      [
+        "d31b93bf.0da19"
+      ]
+    ]
+  },
+  {
+    "id": "bf6a9fbc.40dcb8",
+    "type": "hue-bridge-node",
+    "z": "160680de.88ba5f",
+    "name": "Bridge",
+    "bridge": "6efd2345.171b3c",
+    "autoupdates": true,
+    "skipglobalevents": false,
+    "x": 340,
+    "y": 240,
+    "wires": [
+      [
+        "f2529ad7.8b6c9"
+      ]
+    ]
+  },
+  {
+    "id": "50f28d06.d8fb2c",
+    "type": "hue-light",
+    "z": "160680de.88ba5f",
+    "name": "Spot 1",
+    "bridge": "6efd2345.171b3c",
+    "lightid": "4",
+    "colornamer": true,
+    "skipevents": false,
+    "x": 680,
+    "y": 420,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "d14437af.71017",
+    "type": "hue-light",
+    "z": "160680de.88ba5f",
+    "name": "Spot 2",
+    "bridge": "6efd2345.171b3c",
+    "lightid": "5",
+    "colornamer": true,
+    "skipevents": false,
+    "x": 580,
+    "y": 580,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "fc97b460.16c0e",
+    "type": "hue-light",
+    "z": "160680de.88ba5f",
+    "name": "Living Room Door",
+    "bridge": "6efd2345.171b3c",
+    "lightid": "8",
+    "colornamer": true,
+    "skipevents": false,
+    "x": 840,
+    "y": 320,
+    "wires": [
+      [
+        "e95f0fd4.4d2b1"
+      ]
+    ]
+  },
+  {
+    "id": "f2529ad7.8b6c9",
+    "type": "hue-scene",
+    "z": "160680de.88ba5f",
+    "name": "Blue rain on 1437224479692",
+    "bridge": "6efd2345.171b3c",
+    "sceneid": "0f2c67d80-on-0",
+    "groupid": "2",
+    "skipevents": false,
+    "x": 360,
+    "y": 440,
+    "wires": [
+      [
+        "fc97b460.16c0e"
+      ]
+    ]
+  },
+  {
+    "id": "328db1bf.60c8f6",
+    "type": "inject",
+    "z": "160680de.88ba5f",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 240,
+    "wires": [
+      [
+        "bf6a9fbc.40dcb8"
+      ]
+    ]
+  },
+  {
+    "id": "e95f0fd4.4d2b1",
+    "type": "debug",
+    "z": "160680de.88ba5f",
+    "name": "",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "false",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1080,
+    "y": 380,
+    "wires": []
+  },
+  {
+    "id": "7e6b5f39.26a3a",
+    "type": "inject",
+    "z": "160680de.88ba5f",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 210,
+    "y": 820,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "54e86030.b9acb8",
+    "type": "comment",
+    "z": "d3d3a738.50ff6",
+    "name": "README",
+    "info": "# Useful Links\n\n## Show Your Status\nhttp://192.168.16.57:1880/status\n\n## Change Your Status\nhttp://192.168.16.57:1880/status",
+    "x": 1080,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "34891022.13219",
+    "type": "pi-gpiod out",
+    "z": "86cf6ae1.86e16",
+    "name": "",
+    "host": "gpiod",
+    "port": 8888,
+    "pin": "17",
+    "set": true,
+    "level": "0",
+    "out": "out",
+    "sermin": "1000",
+    "sermax": "2000",
+    "freq": "800",
+    "x": 800,
+    "y": 960,
+    "wires": []
+  },
+  {
+    "id": "ccc3b149.e73cd",
+    "type": "inject",
+    "z": "86cf6ae1.86e16",
+    "name": "",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 470,
+    "y": 960,
+    "wires": [
+      [
+        "34891022.13219"
+      ]
+    ]
+  },
+  {
+    "id": "23b199d0.91e116",
+    "type": "ui_webcam",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "group": "4d149ab7.912cb4",
+    "order": 0,
+    "width": 0,
+    "height": 5,
+    "countdown": false,
+    "autoStart": true,
+    "hideCaptureButton": false,
+    "showImage": "2",
+    "mirror": true,
+    "format": "png",
+    "x": 1620,
+    "y": 1280,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "11c853f8.6888bc",
+    "type": "ui_text",
+    "z": "d3d3a738.50ff6",
+    "group": "4d149ab7.912cb4",
+    "order": 1,
+    "width": 0,
+    "height": 0,
+    "name": "",
+    "label": "text",
+    "format": "{{msg.payload}}",
+    "layout": "row-left",
+    "x": 1540,
+    "y": 1120,
+    "wires": []
+  },
+  {
+    "id": "a33692ff.42565",
+    "type": "ui_button",
+    "z": "d3d3a738.50ff6",
+    "g": "2a640a44.501106",
+    "name": "",
+    "group": "4d149ab7.912cb4",
+    "order": 0,
+    "width": 0,
+    "height": 0,
+    "passthru": false,
+    "label": "button",
+    "tooltip": "",
+    "color": "",
+    "bgcolor": "",
+    "icon": "",
+    "payload": "",
+    "payloadType": "str",
+    "topic": "topic",
+    "topicType": "msg",
+    "x": 1150,
+    "y": 1220,
+    "wires": [
+      [
+        "11c853f8.6888bc",
+        "23b199d0.91e116"
+      ]
+    ]
+  },
+  {
+    "id": "95fbdc17.9256a",
+    "type": "watch",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "files": "/data/status.json",
+    "recursive": "",
+    "x": 520,
+    "y": 580,
+    "wires": [
+      [
+        "247aab71.c6b624"
+      ]
+    ]
+  },
+  {
+    "id": "3e26311a.7877de",
+    "type": "file in",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "filename": "/data/status.json",
+    "format": "utf8",
+    "chunk": false,
+    "sendError": false,
+    "encoding": "none",
+    "x": 810,
+    "y": 700,
+    "wires": [
+      [
+        "5cb1e5b8.6b595c"
+      ]
+    ]
+  },
+  {
+    "id": "247aab71.c6b624",
+    "type": "file in",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "filename": "",
+    "format": "utf8",
+    "chunk": false,
+    "sendError": false,
+    "encoding": "none",
+    "x": 770,
+    "y": 580,
+    "wires": [
+      [
+        "6be20d95.6f2374"
+      ]
+    ]
+  },
+  {
+    "id": "6be20d95.6f2374",
+    "type": "json",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 990,
+    "y": 580,
+    "wires": [
+      [
+        "2efd4943.f8c5f6"
+      ]
+    ]
+  },
+  {
+    "id": "5cb1e5b8.6b595c",
+    "type": "json",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 990,
+    "y": 700,
+    "wires": [
+      [
+        "596f7bdc.8d6284"
+      ]
+    ]
+  },
+  {
+    "id": "596f7bdc.8d6284",
+    "type": "function",
+    "z": "d3d3a738.50ff6",
+    "name": "set timestamp",
+    "func": "const Fs=global.get('fs');\n\nfunction lastUpdated(file) {  \n  const { mtime, ctime } = Fs.statSync(file)\n  return mtime\n}\n\nmsg.payload = msg.payload || {}\nmsg.payload.timestamp = lastUpdated(\"/data/status.json\")\nnode.status({fill:\"green\",shape:\"dot\",text:msg.payload.timestamp});\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "x": 1300,
+    "y": 700,
+    "wires": [
+      [
+        "e8b81718.5a35f"
+      ]
+    ]
+  },
+  {
+    "id": "12d08ed4.43cf01",
+    "type": "function",
+    "z": "d3d3a738.50ff6",
+    "name": "set timestamp",
+    "func": "msg.payload = msg.payload || {}\nmsg.payload.timestamp = Date()\nnode.status({fill:\"green\",shape:\"dot\",text:msg.payload.timestamp});\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "x": 1300,
+    "y": 760,
+    "wires": [
+      [
+        "b2b5b199.ad922"
+      ]
+    ]
+  },
+  {
+    "id": "2efd4943.f8c5f6",
+    "type": "function",
+    "z": "d3d3a738.50ff6",
+    "name": "set timestamp",
+    "func": "const Fs=global.get('fs');\n\nfunction lastUpdated(file) {  \n  const { mtime, ctime } = Fs.statSync(file)\n  return mtime\n}\n\nmsg.payload = msg.payload || {}\nmsg.payload.timestamp = lastUpdated(\"/data/status.json\")\nnode.status({fill:\"green\",shape:\"dot\",text:msg.payload.timestamp});\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "x": 1300,
+    "y": 580,
+    "wires": [
+      [
+        "292396af.90e33a",
+        "3381a67b.9f5e9a"
+      ]
+    ]
+  },
+  {
+    "id": "b2b5b199.ad922",
+    "type": "http response",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "statusCode": "500",
+    "headers": {},
+    "x": 1640,
+    "y": 760,
+    "wires": []
+  },
+  {
+    "id": "d31b93bf.0da19",
+    "type": "json",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 990,
+    "y": 760,
+    "wires": [
+      [
+        "12d08ed4.43cf01"
+      ]
+    ]
+  },
+  {
+    "id": "80833d10.d644b",
+    "type": "delay",
+    "z": "d3d3a738.50ff6",
+    "d": true,
+    "name": "",
+    "pauseType": "delayv",
+    "timeout": "5",
+    "timeoutUnits": "seconds",
+    "rate": "1",
+    "nbRateUnits": "1",
+    "rateUnits": "second",
+    "randomFirst": "1",
+    "randomLast": "5",
+    "randomUnits": "seconds",
+    "drop": false,
+    "x": 1480,
+    "y": 640,
+    "wires": [
+      [
+        "99674449.7690e8"
+      ]
+    ]
+  },
+  {
+    "id": "9eb81e11.b5a25",
+    "type": "function",
+    "z": "d3d3a738.50ff6",
+    "name": "",
+    "func": "if(msg.duration){\n    msg.delay=msg.duration\n}\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "x": 1280,
+    "y": 640,
+    "wires": [
+      [
+        "80833d10.d644b"
+      ]
+    ]
+  },
+  {
+    "id": "99674449.7690e8",
+    "type": "http request",
+    "z": "d3d3a738.50ff6",
+    "d": true,
+    "name": "",
+    "method": "GET",
+    "ret": "txt",
+    "paytoqs": false,
+    "url": "",
+    "persist": false,
+    "authType": "",
+    "x": 1730,
+    "y": 640,
+    "wires": [
+      []
+    ]
+  }
+]
