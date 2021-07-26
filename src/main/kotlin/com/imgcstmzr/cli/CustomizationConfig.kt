@@ -145,7 +145,7 @@ data class CustomizationConfig(
          */
         fun load(
             config: Config,
-            vararg fallbacks: Config = arrayOf(ConfigFactory.parseString(Path.of(".env").readText())),
+            vararg fallbacks: Config,
         ): CustomizationConfig = ConfigFactory.systemProperties()
             .withFallback(config)
             .run { fallbacks.fold(this, Config::withFallback) }
@@ -352,7 +352,8 @@ data class IntermediaryCustomizationConfig(
         val newUsername: String?,
         val newPassword: String?,
     ) : Convertible<DefaultUser> by converter({
-        DefaultUser(username, newUsername, newPassword.takeIf { it != null && it.matches(".*\\^\\d+".toRegex()) }
+        DefaultUser(username, newUsername, newPassword
+            ?.takeIf { it.matches(".*\\^\\d+".toRegex()) }
             ?.let {
                 val password = it.dropLastWhile { char -> char.isDigit() }.dropLast(1)
                 val offset = it.takeLastWhile { char -> char.isDigit() }.toInt()

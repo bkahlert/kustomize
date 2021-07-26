@@ -7,7 +7,6 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.path
-import com.imgcstmzr.ImgCstmzr
 import com.imgcstmzr.libguestfs.LibguestfsImage
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystemImage.Companion.based
@@ -25,7 +24,6 @@ import koodies.tracing.rendering.Styles
 import koodies.tracing.spanning
 import koodies.unit.BinaryPrefixes
 import java.nio.file.Path
-import kotlin.io.path.createDirectories
 import kotlin.io.path.isReadable
 
 class CustomizeCommand : NoOpCliktCommand(
@@ -57,7 +55,7 @@ class CustomizeCommand : NoOpCliktCommand(
     private val reuseLastWorkingCopy: Boolean by option(help = "Whether to re-use the last working copy (instead of creating a new one).")
         .flag(default = false)
 
-    private val cache: Cache by lazy { Cache(ImgCstmzr.WorkingDirectory.resolve(cacheDir).createDirectories().toRealPath()) }
+    private val cache: Cache by lazy { Cache(cacheDir) }
 
     private val skipPatches: Boolean by option("--skip-patches", help = "Skips applying patches altogether.")
         .flag(default = false)

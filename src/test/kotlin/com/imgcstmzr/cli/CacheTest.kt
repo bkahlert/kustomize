@@ -1,7 +1,9 @@
 package com.imgcstmzr.cli
 
+import com.imgcstmzr.ImgCstmzr
 import koodies.io.ClassPathFile
 import koodies.io.path.asPath
+import koodies.io.path.deleteRecursively
 import koodies.io.path.hasContent
 import koodies.io.path.isInside
 import koodies.io.path.listDirectoryEntriesRecursively
@@ -9,6 +11,8 @@ import koodies.io.randomDirectory
 import koodies.junit.UniqueId
 import koodies.test.single
 import koodies.test.withTempDir
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion.Builder
 import strikt.api.expectThat
@@ -25,7 +29,24 @@ class CacheTest {
     @Test
     fun `should instantiate in provided directory`(uniqueId: UniqueId) = withTempDir(uniqueId) {
         val cache = Cache(this)
-        expectThat(cache.dir).isEqualTo(this)
+        expectThat(cache.dir).isEqualTo(toRealPath())
+    }
+
+    @Nested
+    inner class WithRelativePath {
+
+        private val relativePath = ".cache.test".asPath()
+
+        @Test
+        fun `should instantiate relative to working directory`() {
+            val cache = Cache(relativePath)
+            expectThat(cache.dir).isEqualTo(ImgCstmzr.WorkingDirectory.resolve(relativePath))
+        }
+
+        @AfterEach
+        fun cleanup() {
+            ImgCstmzr.WorkingDirectory.resolve(relativePath).deleteRecursively()
+        }
     }
 
     @Test

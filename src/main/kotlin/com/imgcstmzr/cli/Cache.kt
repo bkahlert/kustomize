@@ -1,5 +1,6 @@
 package com.imgcstmzr.cli
 
+import com.imgcstmzr.ImgCstmzr
 import com.imgcstmzr.libguestfs.ImageBuilder.buildFrom
 import com.imgcstmzr.libguestfs.ImageExtractor.extractImage
 import koodies.io.path.FileSizeComparator
@@ -33,7 +34,9 @@ import kotlin.io.path.isWritable
 import kotlin.io.path.moveTo
 import kotlin.time.Duration
 
-class Cache(dir: Path, private val maxConcurrentWorkingDirectories: Int = 5) : ManagedDirectory(dir) {
+class Cache(dir: Path, private val maxConcurrentWorkingDirectories: Int = 5) : ManagedDirectory(
+    ImgCstmzr.WorkingDirectory.resolve(dir).createDirectories().toRealPath(),
+) {
 
     fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> Path): Path =
         ProjectDirectory(dir, name, reuseLastWorkingCopy, maxConcurrentWorkingDirectories).require(provider)

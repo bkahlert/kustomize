@@ -3,8 +3,8 @@ package com.imgcstmzr.cli
 import com.github.ajalt.clikt.core.BadParameterValue
 import com.github.ajalt.clikt.core.MissingOption
 import com.github.ajalt.clikt.core.PrintHelpMessage
-import com.imgcstmzr.ImgCstmzr
-import com.imgcstmzr.TestImgCstmzr
+import com.imgcstmzr.ImgCstmzr.WorkingDirectory
+import com.imgcstmzr.TestImgCstmzr.TestCacheDirectory
 import com.imgcstmzr.expectRendered
 import com.imgcstmzr.os.OperatingSystems.HypriotOS
 import com.imgcstmzr.test.E2E
@@ -45,14 +45,14 @@ class CustomizeCommandTest {
         fun `should create cache in workdir by default`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             val configFile = MinimalConfFixture.copyToDirectory(this)
             CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--skip-patches"))
-            expectRendered().contains("Env: ${TestImgCstmzr.WorkingDirectory.resolve(".env").toUri()}")
+            expectRendered().contains("Env: ${WorkingDirectory.resolve(".env").toUri()}")
         }
 
         @Slow @Test
         fun `should create cache relative to workdir if specified relative path`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             val configFile = MinimalConfFixture.copyToDirectory(this)
             CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--skip-patches", "--env-file", "relative-env-file"))
-            expectRendered().contains("Env: ${TestImgCstmzr.WorkingDirectory.resolve("relative-env-file").toUri()}")
+            expectRendered().contains("Env: ${WorkingDirectory.resolve("relative-env-file").toUri()}")
         }
 
         @Slow @Test
@@ -64,8 +64,8 @@ class CustomizeCommandTest {
 
         @AfterEach
         fun cleanUp() {
-            ImgCstmzr.WorkingDirectory.resolve("cache").deleteRecursively()
-            ImgCstmzr.WorkingDirectory.resolve("minimal").deleteRecursively()
+            WorkingDirectory.resolve("cache").deleteRecursively()
+            WorkingDirectory.resolve("minimal").deleteRecursively()
         }
     }
 
@@ -76,14 +76,14 @@ class CustomizeCommandTest {
         fun `should create cache in workdir by default`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             val configFile = MinimalConfFixture.copyToDirectory(this)
             CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--skip-patches"))
-            expectThat(ImgCstmzr.WorkingDirectory / "minimal").containsImage("riscos.img")
+            expectThat(WorkingDirectory / "minimal").containsImage("riscos.img")
         }
 
         @Slow @Test
         fun `should create cache relative to workdir if specified relative path`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             val configFile = MinimalConfFixture.copyToDirectory(this)
             CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--skip-patches", "--cache-dir", "cache"))
-            expectThat(ImgCstmzr.WorkingDirectory / "cache" / "minimal").containsImage("riscos.img")
+            expectThat(WorkingDirectory / "cache" / "minimal").containsImage("riscos.img")
         }
 
         @Slow @Test
@@ -95,8 +95,8 @@ class CustomizeCommandTest {
 
         @AfterEach
         fun cleanUp() {
-            ImgCstmzr.WorkingDirectory.resolve("cache").deleteRecursively()
-            ImgCstmzr.WorkingDirectory.resolve("minimal").deleteRecursively()
+            WorkingDirectory.resolve("cache").deleteRecursively()
+            WorkingDirectory.resolve("minimal").deleteRecursively()
         }
     }
 
@@ -157,32 +157,32 @@ class CustomizeCommandTest {
                   os = ${HypriotOS.fullName}
                     setup = [
                       {
-                        name: say hello
+                        name: setup things
                         scripts: [
                           {
-                            name: "greet"
-                            content: "echo 'Hey 👋'"
+                            name: Greet
+                            content: "echo '👏 🤓 👋'"
                           }
                         ]
                       },
                     ]
                 }
             """.trimIndent())
-            CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--cache-dir", TestImgCstmzr.TestCache.pathString))
+            CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--cache-dir", TestCacheDirectory.pathString))
             expectRendered().ansiRemoved {
                 contains("▶ Configuring")
                 contains("Configuration: ${resolve("hello.conf").toUri()}")
                 contains("Name: ${HypriotOS.name}")
                 contains("OS: ${HypriotOS.fullName}")
-                contains("Env: ${TestImgCstmzr.WorkingDirectory.resolve(".env").toUri()}")
-                contains("Cache: ${resolve(TestImgCstmzr.TestCache).toUri()}")
+                contains("Env: ${WorkingDirectory.resolve(".env").toUri()}")
+                contains("Cache: ${WorkingDirectory.resolve(TestCacheDirectory).toUri()}")
 
                 contains("▶ Preparing")
                 contains("· ▶ Retrieving image")
 
                 contains("▶ Applying 1 patches to Hypriot OS")
                 contains("░░░░░░░ GREET")
-                contains("Hey 👋")
+                contains("👏 🤓 👋")
                 contains("System halted")
             }
 

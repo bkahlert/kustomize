@@ -29,6 +29,7 @@ import com.imgcstmzr.patch.WifiAutoReconnectPatch
 import com.imgcstmzr.patch.WifiPowerSafeModePatch
 import com.imgcstmzr.patch.WpaSupplicantPatch
 import com.typesafe.config.ConfigFactory
+import koodies.io.path.asPath
 import koodies.net.div
 import koodies.net.ip4Of
 import koodies.shell.ShellScript
@@ -56,13 +57,13 @@ import strikt.assertions.isTrue
 import strikt.assertions.none
 import java.util.TimeZone
 import kotlin.io.path.div
+import kotlin.io.path.readText
 
 @Suppress("SpellCheckingInspection")
 @SystemProperties(
-    SystemProperty("IMG_CSTMZR_USERNAME", "john.doe"),
-    SystemProperty("IMG_CSTMZR_PASSWORD", "Password1234"),
-    SystemProperty("IMG_CSTMZR_WPA_SUPPLICANT", "entry1\nentry2"),
-    SystemProperty("INDIVIDUAL_KEY", "B{1:Βϊ𝌁\uD834\uDF57"),
+    SystemProperty("SAMPLE_FULL_USERNAME", "john.doe"),
+    SystemProperty("SAMPLE_FULL_PASSWORD", "Password1234"),
+    SystemProperty("SAMPLE_FULL_WPA_SUPPLICANT", "entry1\nentry2"),
 )
 class CustomizationConfigTest {
 
@@ -75,16 +76,16 @@ class CustomizationConfigTest {
                 }
             """.trimIndent()))
 
-    private fun loadImgCstmzrConfig(): CustomizationConfig =
-        CustomizationConfig.load(ConfigFactory.parseResources("sample.conf"))
+    private fun loadFullConfig(): CustomizationConfig =
+        CustomizationConfig.load(ConfigFactory.parseString("sample-full.conf".asPath().readText()))
 
     @TestFactory
-    fun `should deserialize`() = test(loadImgCstmzrConfig()) {
+    fun `should deserialize`() = test(loadFullConfig()) {
         expecting { trace } that { isTrue() }
-        expecting { name } that { isEqualTo(".test") }
+        expecting { name } that { isEqualTo("sample-full") }
         expecting { os } that { isEqualTo(RaspberryPiLite) }
         expecting { timeZone } that { isEqualTo(TimeZone.getTimeZone("Europe/Berlin")) }
-        expecting { hostname } that { isEqualTo(Hostname("demo", true)) }
+        expecting { hostname } that { isEqualTo(Hostname("sample-full", true)) }
         expecting { wifi } that { isEqualTo(Wifi("entry1\nentry2", autoReconnect = true, powerSafeMode = false)) }
         expecting { size } that { isEqualTo(4.Gibi.bytes) }
         with { ssh!! }.then {
@@ -128,7 +129,7 @@ class CustomizationConfigTest {
             containsExactly(
                 ShellScript(
                     name = "Finalizing",
-                    content = "echo 'Type X to …'>>${'$'}HOME/first-boot.txt"
+                    content = "echo '👏 🤓 👋'>>${'$'}HOME/first-boot.txt"
                 ),
             )
         }
@@ -257,7 +258,7 @@ class CustomizationConfigTest {
 
     @Test
     fun `should create patch`(osImage: OperatingSystemImage) {
-        val config = loadImgCstmzrConfig()
+        val config = loadFullConfig()
         val patch = config.toPatches()
         expectThat(CompositePatch(patch).invoke(osImage)) {
             get { name }.contains("Increase Disk Space to 4 GiB").contains("Change Username")
@@ -271,7 +272,7 @@ class CustomizationConfigTest {
 
     @Test
     fun `should optimize patches`() {
-        val config = loadImgCstmzrConfig()
+        val config = loadFullConfig()
         val patches = config.toOptimizedPatches()
         expectThat(patches).hasElements(
             {

@@ -96,7 +96,7 @@ class OperatingSystemTest {
         "SomeOne@SomewWere:/some/Dir$ ",
         "john.doe@raspberrypi:~$",
         "john.doe@demo--rx1E:~$",
-        "john.doe@demo--rx1E:~$ ",
+        "john.doe@sample-full--rx1E:~$ ",
         "pi@raspberrypi:~$ Starting Update UTMP about System Runlevel Changes...",
         "SomeOne@SomewWere:/some/Dir$: user input",
     ) { asserting { matches(OperatingSystem.DEFAULT_READY_PATTERN) } }

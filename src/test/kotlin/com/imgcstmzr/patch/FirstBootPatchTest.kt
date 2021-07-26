@@ -28,13 +28,13 @@ class FirstBootPatchTest {
     @Test
     fun `should copy firstboot script`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
         val patch = FirstBootPatch("Test") {
-            echo("Type X to …")
+            echo("👏 🤓 👋")
             !"startx"
         }
         expectThat(patch(osImage)).diskCustomizations {
             last().isA<Customization.FirstBootOption>().file.textContent {
                 contains("""echo '"'"'${banner("Test")}'"'"'""")
-                contains("""'"'"'echo'"'"' '"'"'Type X to …'"'"'""")
+                contains("""'"'"'echo'"'"' '"'"'👏 🤓 👋'"'"'""")
                 contains("startx")
             }
         }
@@ -43,7 +43,7 @@ class FirstBootPatchTest {
     @Test
     fun `should copy firstboot script order fix`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
         val patch = FirstBootPatch("Test") {
-            echo("Type X to …")
+            echo("👏 🤓 👋")
             !"startx"
         }
         expectThat(patch(osImage)).diskCustomizations { containsFirstBootScriptFix() }

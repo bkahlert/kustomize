@@ -20,5 +20,5 @@ object TestImgCstmzr : Locations {
     /**
      * Directory in which built images and needed resources are stored.
      */
-    val TestCache: Path = ".cache".asPath()
+    val TestCacheDirectory: Path = ".cache".asPath()
 }

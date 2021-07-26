@@ -52,7 +52,7 @@ val <T : Path> Builder<T>.content: Builder<String>
     get() = get("get text") { readText() }
 
 val <T : Path> Builder<T>.textContent: Builder<String>
-    get() = get("text context") { readText() }
+    get() = get("text content") { readText() }
 
 fun Builder<Path>.textContent(assertion: Builder<String>.() -> Unit): Builder<Path> =
     with("text content", { readText() }, assertion)

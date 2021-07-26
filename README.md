@@ -20,7 +20,7 @@ docker run --rm -it \
            -e COLORTERM="$COLORTERM" \
            imgcstmzr \
            --cache-dir /work/cache \
-           --config-file demo.conf \
+           --config-file sample.conf \
            --env-file .env
 ```
 
@@ -33,8 +33,8 @@ docker run --rm -it \
 · Configuration: file:///tmp/imgcstmzr-test/ImgCstmzrIntegrationTest.should_apply_patches--h2ss/sample.conf (256 B)
 · Name: .test
 · OS: Raspberry Pi OS Lite
-· Env: file:///home/john/.env.imgcstmzr
-· Cache: file:///home/john/.imgcstmzr/
+· Env: file:///home/john/sample/.env
+· Cache: file:///home/john/sample/
 ✔︎
 ▶ Preparing
 · Listing images ✔︎
@@ -47,13 +47,13 @@ docker run --rm -it \
 · · · Moving download to file:///tmp/imgcstmzr/download/raspios_lite_armhf_latest
 · · · Deleting file:///tmp/imgcstmzr/download/dfAO--21E-tmp/
 · · ✔︎
-· · ▶ Moving download to file:///home/john/.imgcstmzr/.test/download/raspios_lite_armhf_latest ✔︎
-· · ▶ Unarchiving file:///home/john/.imgcstmz … MB) ▶ Extracting found image 2021-05-07-raspios-buster-armhf-lite.img ✔︎
-· · ▶ Moving download to file:///home/john/.imgcstmzr/.test/raw/2021-05-07-raspios-buster-armhf-lite.img ✔︎
+· · ▶ Moving download to file:///home/john/sample/download/raspios_lite_armhf_latest ✔︎
+· · ▶ Unarchiving file:///home/john/sample … MB) ▶ Extracting found image 2021-05-07-raspios-buster-armhf-lite.img ✔︎
+· · ▶ Moving download to file:///home/john/sample/raw/2021-05-07-raspios-buster-armhf-lite.img ✔︎
 · ✔︎
 ✔︎
 ▶ Applying 2 patches to Raspberry Pi OS Lite ／ 2021-05-07-raspios-buster-armhf-lite.img
-· ╭──╴Set Hostname to demo
+· ╭──╴Set Hostname to sample
 · │   Set Time Zone to Central European Standard Time
 · │   Change Username pi to john.doe
 · │
@@ -63,7 +63,7 @@ docker run --rm -it \
 · │   · · [   0.0] Examining the guest ...
 · │   · · [  31.8] Setting a random seed
 · │   · · [  32.2] Setting the machine ID in /etc/machine-id
-· │   · · [  32.2] Setting the hostname: demo--aTy0
+· │   · · [  32.2] Setting the hostname: sample--aTy0
 · │   · · [  43.5] Setting the timezone: Europe/Berlin
 · │   · · [  43.6] Appending line to /etc/sudoers.d/privacy
 · │   · · [  43.7] Appending line to /etc/sudoers
@@ -100,14 +100,14 @@ docker run --rm -it \
 · │   · · [  OK  ] Reached target Login Prompts.                                    ◀◀ login❬1/4: wait … rename ◀ shutdown
 · │   · ·                                                                           ◀◀ login❬1/4: wait … rename ◀ shutdown
 · │   · ·                                                                           ◀◀ login❬1/4: wait … rename ◀ shutdown
-· │   · · Raspbian GNU/Linux 10 demo--aTy0 ttyAMA0                                  ◀◀ login❬1/4: wait … rename ◀ shutdown
+· │   · · Raspbian GNU/Linux 10 sample--aTy0 ttyAMA0                                ◀◀ login❬1/4: wait … rename ◀ shutdown
 · │   · ·                                                                           ◀◀ login❬1/4: wait … rename ◀ shutdown
-· │   · · demo--aTy0 login:                                                         ◀◀ login❬1/4: wait … rename ◀ shutdown
+· │   · · sample--aTy0 login:                                                       ◀◀ login❬1/4: wait … rename ◀ shutdown
 · │   · ·                                                                           
 · │   · ·         ̣ ˱ ❨ ( Entering "john.doe" )                                      
 · │   · · {*≧∀≦}                                                                    
 · │   · ·                                                                           
-· │   · · demo--aTy0 login: john.doe                                                ◀◀ login❬2/4: conf … rename ◀ shutdown
+· │   · · sample--aTy0 login: john.doe                                              ◀◀ login❬2/4: conf … rename ◀ shutdown
 · │   · ·                                                                           ◀◀ login❬2/4: conf … rename ◀ shutdown
 · │   · · Password:                                                                 ◀◀ login❬3/4: pass … rename ◀ shutdown
 · │   · ·                                                                           
@@ -115,7 +115,7 @@ docker run --rm -it \
 · │   · · ( ´ｰ`)                                                                    
 · │   · ·                                                                           
 · │   · · Password:                                                                 ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · · Linux demo--aTy0 4.19.50+ #1 Tue Nov 26 01:49:16 CET 2019 armv6l          ◀◀ login❬3/4: pass … rename ◀ shutdown
+· │   · · Linux sample--aTy0 4.19.50+ #1 Tue Nov 26 01:49:16 CET 2019 armv6l        ◀◀ login❬3/4: pass … rename ◀ shutdown
 · │   · ·                                                                           ◀◀ login❬3/4: pass … rename ◀ shutdown
 · │   · · The programs included with the Debian GNU/Linux system are free software; ◀◀ login❬4/4 confi … rename ◀ shutdown
 · │   · · the exact distribution terms for each program are described in the        ◀◀ login❬4/4 confi … rename ◀ shutdown
@@ -129,7 +129,7 @@ docker run --rm -it \
 · │   · ·          Starting User Manager for UID 1000...                            ◀◀ login❬4/4 confi … rename ◀ shutdown
 · │   · · [  OK  ] Started User Manager for UID 1000.                               ◀◀ login❬4/4 confi … rename ◀ shutdown
 · │   · · [  OK  ] Started Session c1 of user john.doe.                             ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · · john.doe@demo--aTy0:~$                                                    ◀◀ login❬4/4 confi … rename ◀ shutdown
+· │   · · john.doe@sample--aTy0:~$                                                  ◀◀ login❬4/4 confi … rename ◀ shutdown
 · │   · ·                                                                           
 · │   · ·               ̣ ˱ ❨ ( Logged in successfully )                             
 · │   · · （；￣︶￣）                                                                
@@ -138,30 +138,30 @@ docker run --rm -it \
 · │   · ·            ̣ ˱ ❨ ( Entering "ls /home/pi" )                                
 · │   · · （´∀`）ｂ                                                                    
 · │   · ·                                                                           
-· │   · · john.doe@demo--aTy0:~$ ls /home/pi                                        ◀◀ finish rename❬1/3: ls …❭ ◀ shutdown
+· │   · · john.doe@sample--aTy0:~$ ls /home/pi                                      ◀◀ finish rename❬1/3: ls …❭ ◀ shutdown
 · │   · · ls: cannot access '/home/pi': No such file or directory                   ◀◀ finish rename❬2/3: id❭ ◀ shutdown
-· │   · · john.doe@demo--aTy0:~$                                                    ◀◀ finish rename❬2/3: id❭ ◀ shutdown
+· │   · · john.doe@sample--aTy0:~$                                                  ◀◀ finish rename❬2/3: id❭ ◀ shutdown
 · │   · ·                                                                           
 · │   · ·      ̣ ˱ ❨ ( Entering "id pi" )                                            
 · │   · · ▼ω▼                                                                       
 · │   · ·                                                                           
-· │   · · john.doe@demo--aTy0:~$ id pi                                              ◀◀ finish rename❬2/3: id …❭ ◀ shutdown
+· │   · · john.doe@sample--aTy0:~$ id pi                                            ◀◀ finish rename❬2/3: id …❭ ◀ shutdown
 · │   · · id: ‘pi’: no such user                                                    ◀◀ finish rename❬3/3: id❭ ◀ shutdown
-· │   · · john.doe@demo--aTy0:~$                                                    ◀◀ finish rename❬3/3: id❭ ◀ shutdown
+· │   · · john.doe@sample--aTy0:~$                                                  ◀◀ finish rename❬3/3: id❭ ◀ shutdown
 · │   · ·                                                                           
 · │   · ·         ̣ ˱ ❨ ( Entering "id john.doe" )                                   
 · │   · · (^_^)v                                                                    
 · │   · ·                                                                           
-· │   · · john.doe@demo--aTy0:~$ id john.doe                                        ◀◀ finish rename❬3/3: id …❭ ◀ shutdown
+· │   · · john.doe@sample--aTy0:~$ id john.doe                                      ◀◀ finish rename❬3/3: id …❭ ◀ shutdown
 · │   · · uid=1000(john.doe) gid=1000(john.doe) groups … (cdrom),27(sudo),29(audio) ◀◀ finish rename❬w … inish❭ ◀ shutdown
-· │   · · john.doe@demo--aTy0:~$                                                    ◀◀ finish rename❬w … inish❭ ◀ shutdown
+· │   · · john.doe@sample--aTy0:~$                                                  ◀◀ finish rename❬w … inish❭ ◀ shutdown
 · │   · · Watchdog started. Timing out in 5.00s.                                    
 · │   · · Watchdog stopped.                                                         
 · │   · ·                                                                           
 · │   · ·         ̣ ˱ ❨ ( Entering "'sudo' 'shutdown' '-h' 'now'" )                  
 · │   · · (^^)ｂ                                                                    
 · │   · ·                                                                           
-· │   · · john.doe@demo--aTy0:~$ 'sudo' 'shutdown' '-h' 'now'                       ◀◀ shutdown❬shutting down❭
+· │   · · john.doe@sample--aTy0:~$ 'sudo' 'shutdown' '-h' 'now'                     ◀◀ shutdown❬shutting down❭
 · │   · · [  OK  ] Stopped target Timers.                                           ◀◀ shutdown❬shutting down❭
 · │   · · [  OK  ] Stopped Daily Cleanup of Temporary Directories.                  ◀◀ shutdown❬shutting down❭
 · ┊   · ·
@@ -191,7 +191,7 @@ docker run --rm -it \
 · ╰──╴✔︎
 ✔︎
 
-(／￣‿￣)／~~☆’․･․･﹕☆ 2021-05-07-raspios-buster-armhf-lite.img @ file:///home/john/.imgcstmzr/.test/2021-07-19T23-56-57--OJPy/
+(／￣‿￣)／~~☆’․･․･﹕☆ 2021-05-07-raspios-buster-armhf-lite.img @ file:///home/john/sample/2021-07-19T23-56-57--OJPy/
 ```
 
 ## Usage

@@ -1,6 +1,6 @@
 package com.imgcstmzr.os
 
-import com.imgcstmzr.TestImgCstmzr
+import com.imgcstmzr.TestImgCstmzr.TestCacheDirectory
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.cli.Layouts
 import com.imgcstmzr.libguestfs.ImageBuilder
@@ -58,7 +58,7 @@ open class OperatingSystemImageProviderExtension : TypeBasedParameterResolver<Op
         private val copiesPerTest = mutableMapOf<String, List<Path>>()
         fun cacheDir(uniqueId: String): Path? = copiesPerTest[uniqueId]?.firstOrNull()
 
-        private val cache = Cache(TestImgCstmzr.TestCache)
+        private val cache = Cache(TestCacheDirectory)
         private fun OperatingSystem.getCopy(uniqueId: String): OperatingSystemImage =
             lock.withLock {
                 this based with(cache) {
