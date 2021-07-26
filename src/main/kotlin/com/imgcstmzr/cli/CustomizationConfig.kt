@@ -134,7 +134,8 @@ data class CustomizationConfig(
         /**
          * Loads a [CustomizationConfig] based on the specified [configFiles].
          */
-        fun load(vararg configFiles: Path): CustomizationConfig = configFiles
+        fun load(vararg configFiles: Path?): CustomizationConfig = configFiles
+            .filterNotNull()
             .map { ConfigFactory.parseString(it.readText()) }
             .run { load(first(), *drop(1).toTypedArray()) }
 

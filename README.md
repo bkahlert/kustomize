@@ -20,7 +20,7 @@ docker run --rm -it \
            -e COLORTERM="$COLORTERM" \
            imgcstmzr \
            --cache-dir /work/cache \
-           --config demo.conf \
+           --config-file demo.conf \
            --env-file .env
 ```
 
@@ -208,7 +208,7 @@ docker build --no-cache=true \
 2. [Install](#installation) dependencies
 3. `imgcstmzr` --img=raspberry-pi-os-lite --version=LATEST --ssh.enabled=true --flash.auto=true
 
-Alternatively run `--config=bother-you.json
+Alternatively run `--config-file=bother-you.json
 
 ## Installation
 

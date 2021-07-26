@@ -16,6 +16,7 @@ import com.imgcstmzr.patch.patch
 import com.imgcstmzr.util.Downloader
 import koodies.docker.Docker
 import koodies.exception.toCompactString
+import koodies.io.path.asPath
 import koodies.io.path.getSize
 import koodies.kaomoji.Kaomoji
 import koodies.text.Banner
@@ -24,7 +25,8 @@ import koodies.tracing.rendering.Styles
 import koodies.tracing.spanning
 import koodies.unit.BinaryPrefixes
 import java.nio.file.Path
-import kotlin.io.path.div
+import kotlin.io.path.createDirectories
+import kotlin.io.path.isReadable
 
 class CustomizeCommand : NoOpCliktCommand(
     name = "imgcstmzr",
@@ -42,23 +44,22 @@ class CustomizeCommand : NoOpCliktCommand(
         }
     }
 
-    private val configFile: Path by option("--config", "--config-file", help = "Configuration to be used for image customization.")
+    private val configFile: Path by option("--config-file", help = "Configuration to be used for image customization.")
         .path(mustExist = true, canBeDir = false, mustBeReadable = true).required()
 
-    // TODO make optional
-    private val envFile: Path by option("--env", "--env-file", help = ".env file that can be used to pass credentials like a new user password.")
-        .path(mustExist = false, canBeDir = false, mustBeReadable = false).default(ImgCstmzr.HomeDirectory.resolve(".env.imgcstmzr"))
+    private val envFile: Path by option("--env-file", help = ".env file to set environment variables")
+        .path(mustExist = false, canBeDir = false, mustBeReadable = false).default(".env".asPath())
 
-    private val cacheDir: Path by option("--cache-dir", help = "Directory that stores images, downloads, etc.")
-        .path(canBeFile = false, mustBeWritable = true)
-        .default(ImgCstmzr.Cache)
+    private val cacheDir: Path by option("--cache-dir", help = "Directory in which downloaded and customized images are stored.")
+        .path(mustExist = false, canBeFile = false)
+        .default(".".asPath())
 
     private val reuseLastWorkingCopy: Boolean by option(help = "Whether to re-use the last working copy (instead of creating a new one).")
         .flag(default = false)
 
-    private val cache: Cache by lazy { Cache(ImgCstmzr.WorkingDirectory / cacheDir) }
+    private val cache: Cache by lazy { Cache(ImgCstmzr.WorkingDirectory.resolve(cacheDir).createDirectories().toRealPath()) }
 
-    private val skipPatches: Boolean by option("--skip-tests", help = "Skips applying patches alltogether.")
+    private val skipPatches: Boolean by option("--skip-patches", help = "Skips applying patches altogether.")
         .flag(default = false)
 
     override fun run() {
@@ -72,14 +73,14 @@ class CustomizeCommand : NoOpCliktCommand(
             layout = Layouts.DESCRIPTION,
             style = Styles.Dotted,
         ) {
-            configFile.let {
-                log("Configuration: ${it.toUri()} (${it.getSize().toString(BinaryPrefixes)})")
-                CustomizationConfig.load(it, envFile)
+            configFile.run {
+                log("Configuration: ${toUri()} (${getSize().toString(BinaryPrefixes)})")
+                CustomizationConfig.load(this, envFile.takeIf { it.isReadable() })
             }.apply {
                 log("Name: $name")
                 log("OS: $os")
                 log("Env: ${envFile.toUri()}")
-                log("Cache: ${cacheDir.toUri()}")
+                log("Cache: ${cache.dir.toUri()}")
             }
         }
 

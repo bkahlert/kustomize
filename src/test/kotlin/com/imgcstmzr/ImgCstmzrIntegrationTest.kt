@@ -7,6 +7,7 @@ import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystemImage.Companion.based
 import com.imgcstmzr.os.OperatingSystems
 import com.imgcstmzr.test.E2E
+import koodies.io.path.asPath
 import koodies.io.path.copyToDirectory
 import koodies.io.path.extensionOrNull
 import koodies.io.path.listDirectoryEntriesRecursively
@@ -36,9 +37,9 @@ class ImgCstmzrIntegrationTest {
     fun `should apply patches`(uniqueId: UniqueId) = withTempDir(uniqueId) {
         val configFile = useRequiredClassPath("sample.conf") { it.copyToDirectory(this) }
 
-        CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString))
+        CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--cache-dir", TestImgCstmzr.TestCache.pathString))
 
-        val projectDirectory = ProjectDirectory(ImgCstmzr.Cache).workDirs.minByOrNull { it.age } ?: fail("Failed to locate project directory.")
+        val projectDirectory = ProjectDirectory(".cache".asPath()).workDirs.minByOrNull { it.age } ?: fail("Failed to locate project directory.")
 
         val osImage = OperatingSystems.RaspberryPiLite based projectDirectory.single { it.extensionOrNull.equals("img", ignoreCase = true) }
 

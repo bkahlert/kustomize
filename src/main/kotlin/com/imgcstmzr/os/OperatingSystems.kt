@@ -29,7 +29,7 @@ enum class OperatingSystems(
     ),
 
     @Suppress("SpellCheckingInspection")
-    HypriotOs(
+    HypriotOS(
         fullName = "Hypriot OS",
         downloadUrl = {
             val tag = GitHub.repo("hypriot/image-builder-rpi").latestTag

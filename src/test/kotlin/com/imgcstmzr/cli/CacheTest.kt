@@ -1,15 +1,24 @@
 package com.imgcstmzr.cli
 
 import koodies.io.ClassPathFile
+import koodies.io.path.asPath
 import koodies.io.path.hasContent
 import koodies.io.path.isInside
+import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.io.randomDirectory
 import koodies.junit.UniqueId
+import koodies.test.single
 import koodies.test.withTempDir
 import org.junit.jupiter.api.Test
+import strikt.api.Assertion.Builder
 import strikt.api.expectThat
+import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
 import strikt.assertions.isTrue
+import strikt.java.exists
+import strikt.java.fileName
+import strikt.java.resolve
+import java.nio.file.Path
 
 class CacheTest {
 
@@ -55,3 +64,12 @@ class CacheTest {
         }
     }
 }
+
+fun Builder<Path>.containsImage(name: String): Builder<Path> =
+    exists() and {
+        resolve("raw").exists() and {
+            get { listDirectoryEntriesRecursively() }
+                .hasSize(1)
+                .single { fileName.isEqualTo(name.asPath()) }
+        }
+    }
