@@ -6,11 +6,11 @@ import com.imgcstmzr.libguestfs.LibguestfsImage
 import com.imgcstmzr.libguestfs.mounted
 import com.imgcstmzr.os.OperatingSystemImage.Companion.based
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
-import koodies.content
 import koodies.docker.DockerRequiring
 import koodies.io.path.hasContent
 import koodies.io.path.isDuplicateOf
 import koodies.io.path.pathString
+import koodies.io.path.textContent
 import koodies.io.path.touch
 import koodies.io.path.withDirectoriesCreated
 import koodies.io.path.writeLine
@@ -76,7 +76,7 @@ class OperatingSystemImageTest {
 
             @Suppress("SpellCheckingInspection")
             expectThat(osImage.exchangeDirectory.resolve("boot/cmdline.txt"))
-                .content.toStringContainsAll("console=serial", "console=tty", "rootfstype=ext4")
+                .textContent.toStringContainsAll("console=serial", "console=tty", "rootfstype=ext4")
         }
     }
 
@@ -97,7 +97,7 @@ class OperatingSystemImageTest {
 
             @Suppress("SpellCheckingInspection")
             expectThat(osImage.exchangeDirectory.resolve("boot/cmdline.txt"))
-                .content.toStringContainsAll("console=serial", "console=tty", "rootfstype=ext4")
+                .textContent.toStringContainsAll("console=serial", "console=tty", "rootfstype=ext4")
         }
 
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
@@ -118,9 +118,10 @@ class OperatingSystemImageTest {
                 copyOut { LinuxRoot / "boot" / "cmdline.txt" }
             }
 
-            expectThat(dir.resolve("boot/cmdline.txt")).content
-                .not { contains("overwrite me") }
-                .contains("console=serial")
+            expectThat(dir.resolve("boot/cmdline.txt")).textContent {
+                not { contains("overwrite me") }
+                contains("console=serial")
+            }
         }
 
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test

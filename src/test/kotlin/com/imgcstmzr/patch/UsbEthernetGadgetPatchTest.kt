@@ -16,7 +16,7 @@ import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USB0_DNSMASQD
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USB0_NETWORK
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USBGADGET_SERVICE
 import com.imgcstmzr.patch.UsbEthernetGadgetPatch.Companion.USB_GADGET
-import koodies.content
+import koodies.io.path.textContent
 import koodies.junit.UniqueId
 import koodies.net.ip4Of
 import koodies.net.ipOf
@@ -49,7 +49,7 @@ class UsbEthernetGadgetPatchTest {
     @Test
     fun `should configure dnsmasq for usb0`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(patch(osImage)).customizations {
+            that(patch(osImage)).diskCustomizations {
                 contains(
                     MkdirOption(USB0_DNSMASQD.parent),
                     CopyInOption(osImage.hostPath(USB0_DNSMASQD), USB0_DNSMASQD.parent),
@@ -58,7 +58,7 @@ class UsbEthernetGadgetPatchTest {
             }
             that(osImage.hostPath(USB0_DNSMASQD)) {
                 @Suppress("SpellCheckingInspection")
-                content.matchesCurlyPattern("""
+                textContent.matchesCurlyPattern("""
                     dhcp-authoritative 
                     dhcp-rapid-commit
                     no-ping
@@ -78,7 +78,7 @@ class UsbEthernetGadgetPatchTest {
     @Test
     fun `should configure DHCP script`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(patch(osImage)).customizations {
+            that(patch(osImage)).diskCustomizations {
                 contains(
                     MkdirOption(DHCP_SCRIPT.parent),
                     CopyInOption(osImage.hostPath(DHCP_SCRIPT), DHCP_SCRIPT.parent),
@@ -87,7 +87,7 @@ class UsbEthernetGadgetPatchTest {
             }
             that(osImage.hostPath(DHCP_SCRIPT)) {
                 @Suppress("SpellCheckingInspection")
-                content.matchesCurlyPattern("""
+                textContent.matchesCurlyPattern("""
                     #!/bin/bash
                     op="${'$'}{1:-op}"
                     mac="${'$'}{2:-mac}"
@@ -111,14 +111,14 @@ class UsbEthernetGadgetPatchTest {
     @Test
     fun `should configure network interface for usb0`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(patch(osImage)).customizations {
+            that(patch(osImage)).diskCustomizations {
                 contains(
                     MkdirOption(USB0_NETWORK.parent),
                     CopyInOption(osImage.hostPath(USB0_NETWORK), USB0_NETWORK.parent))
             }
             that(osImage.hostPath(USB0_NETWORK)) {
                 @Suppress("SpellCheckingInspection")
-                content.isEqualTo("""
+                textContent.isEqualTo("""
                     auto usb0
                     allow-hotplug usb0
                     iface usb0 inet static
@@ -132,7 +132,7 @@ class UsbEthernetGadgetPatchTest {
     @Test
     fun `should configure USB gadget`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(patch(osImage)).customizations {
+            that(patch(osImage)).diskCustomizations {
                 contains(
                     MkdirOption(USB_GADGET.parent),
                     CopyInOption(osImage.hostPath(USB_GADGET), USB_GADGET.parent),
@@ -141,7 +141,7 @@ class UsbEthernetGadgetPatchTest {
             }
             that(osImage.hostPath(USB_GADGET)) {
                 @Suppress("SpellCheckingInspection")
-                content.isEqualTo("""
+                textContent.isEqualTo("""
                     #!/bin/bash
 
                     cd /sys/kernel/config/usb_gadget/
@@ -198,7 +198,7 @@ class UsbEthernetGadgetPatchTest {
     fun `should configure USB gadget service`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         val patch = patch(osImage)
         expect {
-            that(patch).customizations {
+            that(patch).diskCustomizations {
                 contains(
                     MkdirOption(USBGADGET_SERVICE.parent),
                     CopyInOption(osImage.hostPath(USBGADGET_SERVICE), USBGADGET_SERVICE.parent),
@@ -206,7 +206,7 @@ class UsbEthernetGadgetPatchTest {
             }
             that(osImage.hostPath(USBGADGET_SERVICE)) {
                 @Suppress("SpellCheckingInspection")
-                content.isEqualTo("""
+                textContent.isEqualTo("""
                     [Unit]
                     Description=USB Test Device
                     After=network-online.target
@@ -223,10 +223,10 @@ class UsbEthernetGadgetPatchTest {
                     
                 """.trimIndent())
             }
-            that(patch).customizations {
+            that(patch).diskCustomizations {
                 filterIsInstance<FirstBootOption>().apply {
                     @Suppress("SpellCheckingInspection")
-                    any { file.content.contains("systemctl enable usbgadget.service") }
+                    any { file.textContent.contains("systemctl enable usbgadget.service") }
                 }
             }
         }
@@ -235,15 +235,15 @@ class UsbEthernetGadgetPatchTest {
     @Test
     fun `should update various files`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         expect {
-            that(patch(osImage)).customizations {
+            that(patch(osImage)).diskCustomizations {
                 filterIsInstance<FirstBootOption>().apply {
-                    any { file.content.contains("echo 'dtoverlay=dwc2' >> $config_txt") }
-                    any { file.content.contains("sed -i 's/${'$'}/ modules-load=dwc2/' $cmdline_txt") }
+                    any { file.textContent.contains("echo 'dtoverlay=dwc2' >> $config_txt") }
+                    any { file.textContent.contains("sed -i 's/${'$'}/ modules-load=dwc2/' $cmdline_txt") }
                     @Suppress("SpellCheckingInspection")
-                    any { file.content.contains("echo 'libcomposite' >> $modules") }
+                    any { file.textContent.contains("echo 'libcomposite' >> $modules") }
                     @Suppress("SpellCheckingInspection")
-                    any { file.content.contains("echo 'denyinterfaces usb0' >> $dhcpcd_conf") }
-                    any { file.content.contains("systemctl enable serial-getty@ttyGS0.service") }
+                    any { file.textContent.contains("echo 'denyinterfaces usb0' >> $dhcpcd_conf") }
+                    any { file.textContent.contains("systemctl enable serial-getty@ttyGS0.service") }
                 }
             }
         }

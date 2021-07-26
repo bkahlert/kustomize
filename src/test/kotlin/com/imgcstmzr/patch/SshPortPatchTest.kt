@@ -13,7 +13,7 @@ class SshPortPatchTest {
     @Test
     fun `should create ssh file`(osImage: OperatingSystemImage) {
         val patch = SshPortPatch(1234).invoke(osImage)
-        expectThat(patch).customizations {
+        expectThat(patch).diskCustomizations {
             containsFirstBootScriptFix()
             last().isEqualTo(FirstBootCommandOption("sed -i 's/^\\#Port 22\$/Port 1234/g' /etc/ssh/sshd_config"))
         }

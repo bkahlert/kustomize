@@ -9,13 +9,12 @@ import com.imgcstmzr.os.OS
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.test.E2E
-import koodies.content
+import koodies.io.path.textContent
 import koodies.junit.UniqueId
 import koodies.shell.ShellScript
 import koodies.test.Smoke
 import koodies.test.withTempDir
 import koodies.text.Banner.banner
-import koodies.text.singleQuoted
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.api.expectThat
@@ -26,17 +25,16 @@ import strikt.assertions.last
 
 class FirstBootPatchTest {
 
-    private val patch = FirstBootPatch("Test") {
-        echo("Type X to …")
-        !"startx"
-    }
-
     @Test
     fun `should copy firstboot script`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(patch(osImage)).customizations {
-            last().isA<Customization.FirstBootOption>().file.content {
-                contains("echo ${banner("Test").singleQuoted}")
-                contains("'echo' 'Type X to …'")
+        val patch = FirstBootPatch("Test") {
+            echo("Type X to …")
+            !"startx"
+        }
+        expectThat(patch(osImage)).diskCustomizations {
+            last().isA<Customization.FirstBootOption>().file.textContent {
+                contains("""echo '"'"'${banner("Test")}'"'"'""")
+                contains("""'"'"'echo'"'"' '"'"'Type X to …'"'"'""")
                 contains("startx")
             }
         }
@@ -44,7 +42,11 @@ class FirstBootPatchTest {
 
     @Test
     fun `should copy firstboot script order fix`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(patch(osImage)).customizations { containsFirstBootScriptFix() }
+        val patch = FirstBootPatch("Test") {
+            echo("Type X to …")
+            !"startx"
+        }
+        expectThat(patch(osImage)).diskCustomizations { containsFirstBootScriptFix() }
     }
 
     @E2E @Smoke @Test
@@ -69,7 +71,7 @@ class FirstBootPatchTest {
                 }
                 that(osImage).mounted {
                     path(LinuxRoot.home / "file") {
-                        content.isEqualTo("""
+                        textContent.isEqualTo("""
                             a
                             b
                             c

@@ -11,7 +11,7 @@ import koodies.io.path.copyToDirectory
 import koodies.io.path.extensionOrNull
 import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.io.path.pathString
-import koodies.io.path.text
+import koodies.io.path.textContent
 import koodies.io.useRequiredClassPath
 import koodies.junit.UniqueId
 import koodies.test.Smoke
@@ -43,7 +43,7 @@ class ImgCstmzrIntegrationTest {
         val osImage = OperatingSystems.RaspberryPiLite based projectDirectory.single { it.extensionOrNull.equals("img", ignoreCase = true) }
 
         expectThat(osImage).mounted {
-            path(LinuxRoot.etc.hostname) { text.matchesCurlyPattern("demo--{}") }
+            path(LinuxRoot.etc.hostname) { textContent.matchesCurlyPattern("demo--{}") }
             path(LinuxRoot.home / "john.doe") { get { listDirectoryEntriesRecursively() }.isNotEmpty() }
         }
     }

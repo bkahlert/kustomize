@@ -18,7 +18,7 @@ class WpaSupplicantPatchTest {
         val patch = WpaSupplicantPatch("entry1\nentry2").invoke(osImage)
 
         expect {
-            that(patch).customizations {
+            that(patch).diskCustomizations {
                 containsExactly(
                     MkdirOption(LinuxRoot.etc.wpa_supplicant),
                     CopyInOption(

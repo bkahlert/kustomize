@@ -181,11 +181,11 @@ fun <T : PhasedPatch> Assertion.Builder<T>.matches(
 }.then { if (allPassed) pass() else fail() }
 
 
-fun <T : PhasedPatch> Assertion.Builder<T>.customizations(
+fun <T : PhasedPatch> Assertion.Builder<T>.diskCustomizations(
     block: Assertion.Builder<List<Customization>>.() -> Unit,
 ) = get("virt-customizations") { diskCustomizations }.block()
 
-fun <T : PhasedPatch> Assertion.Builder<T>.guestfishCommands(
+fun <T : PhasedPatch> Assertion.Builder<T>.diskOperations(
     block: Assertion.Builder<List<GuestfishCommand>>.() -> Unit,
 ) = get("guestfish commands") { diskOperations }.block()
 

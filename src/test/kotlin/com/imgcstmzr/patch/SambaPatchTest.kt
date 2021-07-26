@@ -15,7 +15,7 @@ import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
 import com.imgcstmzr.patch.RootShare.`read-write`
 import com.imgcstmzr.test.E2E
-import koodies.content
+import koodies.io.path.textContent
 import koodies.junit.UniqueId
 import koodies.test.Smoke
 import koodies.test.withTempDir
@@ -38,16 +38,16 @@ class SambaPatchTest {
 
     @Test
     fun `should install samba`(osImage: OperatingSystemImage) {
-        expectThat(sambaPatch(osImage)).customizations {
+        expectThat(sambaPatch(osImage)).diskCustomizations {
             filterIsInstance<FirstBootInstallOption>().first().packages.containsExactlyInAnyOrder("samba", "cifs-utils")
         }
     }
 
     @Test
     fun `should build samba conf`(osImage: OperatingSystemImage) {
-        expectThat(sambaPatch(osImage)).customizations {
+        expectThat(sambaPatch(osImage)).diskCustomizations {
             filterIsInstance<CopyInOption>().any {
-                localPath.content.isEqualTo(
+                localPath.textContent.isEqualTo(
                     """
                     [global]
                     workgroup = smb
@@ -82,9 +82,9 @@ class SambaPatchTest {
 
     @Test
     fun `should set samba password`(osImage: OperatingSystemImage) {
-        expectThat(sambaPatch(osImage)).customizations {
+        expectThat(sambaPatch(osImage)).diskCustomizations {
             filterIsInstance<FirstBootOption>().any {
-                file.content.contains(
+                file.textContent.contains(
                     """
                         echo "…"
                         echo "…"
@@ -98,12 +98,12 @@ class SambaPatchTest {
 
     @Test
     fun `should shutdown`(osImage: OperatingSystemImage) {
-        expectThat(sambaPatch(osImage)).customizations { containsFirstBootShutdownCommand() }
+        expectThat(sambaPatch(osImage)).diskCustomizations { containsFirstBootShutdownCommand() }
     }
 
     @Test
     fun `should copy firstboot script order fix`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(sambaPatch(osImage)).customizations { containsFirstBootScriptFix() }
+        expectThat(sambaPatch(osImage)).diskCustomizations { containsFirstBootScriptFix() }
     }
 
     @E2E @Smoke @Test
@@ -129,7 +129,7 @@ class SambaPatchTest {
 
             that(osImage).mounted {
                 path("/etc/samba/smb.conf") {
-                    content.isEqualTo(
+                    textContent.isEqualTo(
                         """
                         [global]
                         workgroup = smb

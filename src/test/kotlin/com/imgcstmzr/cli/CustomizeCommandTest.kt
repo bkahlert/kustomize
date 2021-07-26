@@ -5,6 +5,8 @@ import com.github.ajalt.clikt.core.PrintHelpMessage
 import com.imgcstmzr.expectRendered
 import com.imgcstmzr.test.E2E
 import com.typesafe.config.ConfigException
+import koodies.io.copyToDirectory
+import koodies.io.path.asPath
 import koodies.io.path.deleteRecursively
 import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.io.path.pathString
@@ -12,6 +14,7 @@ import koodies.io.path.writeText
 import koodies.junit.UniqueId
 import koodies.test.Slow
 import koodies.test.expectThrows
+import koodies.test.single
 import koodies.test.withTempDir
 import koodies.text.ansiRemoved
 import org.junit.jupiter.api.Nested
@@ -19,9 +22,11 @@ import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.hasSize
+import strikt.assertions.isEqualTo
 import strikt.assertions.isNotNull
 import strikt.assertions.message
 import strikt.java.exists
+import strikt.java.fileName
 import strikt.java.resolve
 
 class CustomizeCommandTest {
@@ -85,16 +90,29 @@ class CustomizeCommandTest {
     }
 
     @Nested
+    inner class CacheArgument {
+
+        @Slow @Test
+        fun `should create cache relative to workdir`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+            val configFile = MinimalConfFixture.copyToDirectory(this)
+            CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--skip-patches"))
+            expectThat(resolve("project")) {
+                exists()
+                resolve("raw").exists() and {
+                    get { listDirectoryEntriesRecursively() }
+                        .hasSize(1)
+                        .single { fileName.isEqualTo("riscos.img".asPath()) }
+                }
+            }
+        }
+    }
+
+    @Nested
     inner class WithValidArguments {
 
         @Slow @Test
         fun `should download image to specified cache dir`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-            val configFile = resolve("empty.conf").writeText("""
-                img {
-                  name = project
-                  os = RISC OS Pico RC5 (test only)
-                }
-            """.trimIndent())
+            val configFile = MinimalConfFixture.copyToDirectory(this)
             CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--cache-dir", pathString))
             expectThat(resolve("project")) {
                 exists()

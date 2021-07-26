@@ -1,5 +1,29 @@
 # ImgCstmzr — Kotlin Based Image Customizer
 
+## run bash
+
+docker run --rm -it --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock --entrypoint /bin/bash imgcstmzr
+
+## build
+
+docker build -t imgcstmzr:latest .
+
+## run
+
+```shell
+docker run --rm -it \
+           --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+           --mount type=bind,source=/tmp,target=/tmp \
+           --mount type=bind,source=$(pwd),target=/work \
+           -e TERM="$TERM" \
+           -e TERM_PROGRAM="$TERM_PROGRAM" \
+           -e COLORTERM="$COLORTERM" \
+           imgcstmzr \
+           --cache-dir /work/cache \
+           --config demo.conf \
+           --env-file .env
+```
+
 **ONLY THOROUGLY TESTED WITH RASPBERRY PI OS IMAGES**
 
 ```text

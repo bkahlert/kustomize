@@ -13,7 +13,7 @@ class SshEnablementPatchTest {
     @Test
     fun `should create ssh file`(osImage: OperatingSystemImage) {
         val patch = SshEnablementPatch().invoke(osImage)
-        expectThat(patch).guestfishCommands {
+        expectThat(patch).diskOperations {
             first().isEqualTo(TouchCommand(LinuxRoot.boot.ssh))
         }
     }

@@ -235,22 +235,9 @@ val OS_BOOT_LAYOUT = ColumnsLayout(
     maxColumns = 160,
 )
 
-fun Collection<Any>.asExtra(): Renderable =
-    Renderable.of(this) { columns, _ ->
-        when {
-            isEmpty() -> "◼"
-            columns != null -> {
-                joinToTruncatedString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success).truncateByColumns(columns).toString()
-            }
-            else -> {
-                joinToString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success)
-            }
-        }
-    }
-
-class RenderablePrograms(programs: Collection<Program>) : Collection<Program> by programs, Renderable by Renderable.of(programs, { columns, _ ->
+class RenderablePrograms(private val programs: Collection<Program>) : Collection<Program> by programs, Renderable by Renderable.of(programs, { columns, _ ->
     when {
-        isEmpty() -> "◼"
+        size == 0 -> "◼"
         columns != null -> {
             joinToTruncatedString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success).truncateByColumns(columns).toString()
         }
@@ -258,7 +245,11 @@ class RenderablePrograms(programs: Collection<Program>) : Collection<Program> by
             joinToString(" ◀ ".formattedAs.meta, "◀◀ ".formattedAs.success)
         }
     }
-})
+}) {
+    override fun isEmpty(): Boolean {
+        return programs.isEmpty()
+    }
+}
 
 fun CurrentSpan.ioEvent(io: IO, programs: Collection<Program>) =
     event("io", *io.attributes.toTypedArray(), STATUS to RenderablePrograms(programs))

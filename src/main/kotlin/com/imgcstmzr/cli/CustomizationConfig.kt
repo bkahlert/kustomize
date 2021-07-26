@@ -2,6 +2,8 @@ package com.imgcstmzr.cli
 
 import com.imgcstmzr.ImgCstmzr
 import com.imgcstmzr.cli.Convertible.Companion.converter
+import com.imgcstmzr.cli.CustomizationConfig.DefaultUser
+import com.imgcstmzr.cli.CustomizationConfig.FileOperation
 import com.imgcstmzr.cli.CustomizationConfig.Hostname
 import com.imgcstmzr.cli.CustomizationConfig.Samba
 import com.imgcstmzr.cli.CustomizationConfig.SetupScript
@@ -10,6 +12,8 @@ import com.imgcstmzr.cli.CustomizationConfig.Tweaks
 import com.imgcstmzr.cli.CustomizationConfig.UsbGadget
 import com.imgcstmzr.cli.CustomizationConfig.UsbGadget.Ethernet
 import com.imgcstmzr.cli.CustomizationConfig.Wifi
+import com.imgcstmzr.libguestfs.GuestfishCommandLine
+import com.imgcstmzr.libguestfs.VirtCustomizeCommandLine
 import com.imgcstmzr.os.DiskPath
 import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OperatingSystem
@@ -56,28 +60,71 @@ import java.util.TimeZone
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 
+/**
+ * Representation of a `.conf` file.
+ *
+ * ***Note:** The configuration is indirectly loaded using [IntermediaryCustomizationConfig].
+ */
 data class CustomizationConfig(
+    /**
+     * Whether to enable verbose logging (i.e. [VirtCustomizeCommandLine] and [GuestfishCommandLine]).
+     */
     val trace: Boolean,
+    /**
+     * Name of the configuration (i.e. used as the name for the [Cache] directory).
+     */
     val name: String,
+    /**
+     * The [TimeZone] to be applied to the image.
+     */
     val timeZone: TimeZone?,
+    /**
+     * The [Hostname] to be applied to the image.
+     */
     val hostname: Hostname?,
+    /**
+     * The [Wifi] settings to be applied to the image.
+     */
     val wifi: Wifi?,
+    /**
+     * The [OperatingSystem] to be used.
+     */
     val os: OperatingSystems,
+    /**
+     * The [Size] the image to be scaled to.
+     */
     val size: Size?,
+    /**
+     * The [Ssh] settings to be applied to the image.
+     */
     val ssh: Ssh?,
+    /**
+     * The [DefaultUser] settings to be applied to the image.
+     */
     val defaultUser: DefaultUser?,
+    /**
+     * The [Samba] settings to be applied to the image.
+     */
     val samba: Samba?,
+    /**
+     * The [UsbGadget] settings to be applied to the image.
+     */
     val usbGadgets: List<UsbGadget>,
+    /**
+     * The [Tweaks] to be applied to the image.
+     */
     val tweaks: Tweaks?,
+    /**
+     * The [FileOperation] list to be applied to the image.
+     */
     val files: List<FileOperation>,
     /**
-     * Setup scripts of which each gets executed with a consecutive reboot.
+     * The [SetupScript] list to be applied to the image.
      */
     val setup: List<SetupScript>,
     /**
-     * Scripts that will be installed as firstboot scripts, that is,
-     * their are not executed before the prepared image is started on the
-     * target device.
+     * The [ShellScript] list to be started on first boot
+     * (the moment the image is booted after it has been customized).
      */
     val firstBoot: List<ShellScript>,
 ) {
@@ -98,17 +145,10 @@ data class CustomizationConfig(
         fun load(
             config: Config,
             vararg fallbacks: Config = arrayOf(ConfigFactory.parseString(Path.of(".env").readText())),
-        ): CustomizationConfig {
-            val resolve = ConfigFactory.systemProperties()
-                .withFallback(config)
-                .run { fallbacks.fold(this, Config::withFallback) }
-                .resolve()
-            val extract = resolve
-                .extract<UnsafeImgCstmzrConfig>("img")
-            val convert = extract
-                .convert()
-            return convert
-        }
+        ): CustomizationConfig = ConfigFactory.systemProperties()
+            .withFallback(config)
+            .run { fallbacks.fold(this, Config::withFallback) }
+            .resolve().extract<IntermediaryCustomizationConfig>("img").convert()
     }
 
     data class Hostname(val name: String, val randomSuffix: Boolean)
@@ -139,15 +179,18 @@ data class CustomizationConfig(
     }
 
     /**
-     * A collection of [scripts] that gets executed with a consecutive reboot,
+     * A collection of [scripts] that gets executed withs reboots in between,
      * that is, two setup scripts each run on their own with one reboot in between.
      */
     class SetupScript(
         val name: String,
         val sources: List<URI>,
-        scripts: List<ShellScript>,
+        val scripts: List<ShellScript>,
     ) : List<ShellScript> by scripts
 
+    /**
+     * Returns a list of patches that reflect this configuration.
+     */
     fun toPatches(): List<(OperatingSystemImage) -> PhasedPatch> = buildList {
         size?.apply { add(ImgResizePatch(this)) }
 
@@ -194,7 +237,7 @@ data class CustomizationConfig(
                         deviceAddress = it.deviceAddress ?: it.dhcpRange.firstUsableHost,
                         hostAsDefaultGateway = it.hostAsDefaultGateway ?: false,
                         enableSerialConsole = it.enableSerialConsole ?: false,
-                        manufacturer = it.manufacturer ?: "ImgCstmzr",
+                        manufacturer = it.manufacturer ?: "Björn Kahlert",
                         product = it.product ?: "USB Gadget")
                 )
             }
@@ -211,6 +254,9 @@ data class CustomizationConfig(
         firstBoot.also { +FirstBootPatch(it) }
     }
 
+    /**
+     * Returns a list of patches that have been tested to work together.
+     */
     fun toOptimizedPatches(): List<(OperatingSystemImage) -> PhasedPatch> = with(toPatches().toMutableList()) {
         listOf(
             CompositePatch(extract<TweaksPatch>()
@@ -237,24 +283,28 @@ data class CustomizationConfig(
         filterIsInstance<T>().also { removeAll(it) }
 }
 
-
-data class UnsafeImgCstmzrConfig(
+/**
+ * Helper to load `.conf` files.
+ *
+ * Performs conversions / checks not easily performed with no intermediary step.
+ */
+data class IntermediaryCustomizationConfig(
     val trace: Boolean = false,
     val name: String?,
     val timeZone: String?,
     val timezone: String?,
-    val hostname: Hostname?,
+    val hostname: IntermediaryHostname?,
     val wifi: Wifi?,
     val os: OperatingSystems?,
     val size: String?,
-    val ssh: Ssh?,
-    val defaultUser: DefaultUser?,
-    val samba: Samba?,
-    val usbGadgets: UsbGadgets?,
+    val ssh: IntermediarySsh?,
+    val defaultUser: IntermediaryDefaultUser?,
+    val samba: IntermediarySamba?,
+    val usbGadgets: IntermediaryUsbGadgets?,
     val tweaks: Tweaks?,
-    val files: List<FileOperation>?,
-    val setup: List<SetupScript>?,
-    val firstBoot: List<ShellScript>?,
+    val files: List<IntermediaryFileOperation>?,
+    val setup: List<IntermediarySetupScript>?,
+    val firstBoot: List<IntermediaryShellScript>?,
     val flashDisk: String?,
 ) : Convertible<CustomizationConfig> by converter({
     CustomizationConfig(
@@ -275,70 +325,76 @@ data class UnsafeImgCstmzrConfig(
         firstBoot = firstBoot?.map { it.convert() } ?: emptyList(),
     )
 }) {
-    data class Hostname(val name: String, val randomSuffix: Boolean?) :
-        Convertible<CustomizationConfig.Hostname> by converter({
-            CustomizationConfig.Hostname(name, randomSuffix ?: true)
-        })
+    data class IntermediaryHostname(
+        val name: String,
+        val randomSuffix: Boolean?,
+    ) : Convertible<Hostname> by converter({
+        Hostname(name, randomSuffix ?: true)
+    })
 
-    data class Ssh(val enabled: Boolean?, val port: Int?, val authorizedKeys: AuthorizedKeys?) :
-        Convertible<CustomizationConfig.Ssh> by converter({
-            val fileBasedKeys = (authorizedKeys?.files ?: emptyList()).flatMap { glob ->
-                ImgCstmzr.HomeDirectory.ls(glob).map { file -> file.readText() }.filter { content -> content.startsWith("ssh-") }
-            }
-            val stringBasedKeys = (authorizedKeys?.keys ?: emptyList()).map { it.trim() }
-            Ssh(enabled, port, fileBasedKeys + stringBasedKeys)
-        }) {
+    data class IntermediarySsh(
+        val enabled: Boolean?,
+        val port: Int?,
+        val authorizedKeys: AuthorizedKeys?,
+    ) : Convertible<Ssh> by converter({
+        val fileBasedKeys = (authorizedKeys?.files ?: emptyList()).flatMap { glob ->
+            ImgCstmzr.HomeDirectory.ls(glob).map { file -> file.readText() }.filter { content -> content.startsWith("ssh-") }
+        }
+        val stringBasedKeys = (authorizedKeys?.keys ?: emptyList()).map { it.trim() }
+        Ssh(enabled, port, fileBasedKeys + stringBasedKeys)
+    }) {
         data class AuthorizedKeys(val files: List<String>?, val keys: List<String>?)
     }
 
-    data class DefaultUser(val username: String?, val newUsername: String?, val newPassword: String?) :
-        Convertible<CustomizationConfig.DefaultUser> by converter({
-            CustomizationConfig.DefaultUser(username, newUsername, newPassword.takeIf { it != null && it.matches(".*\\^\\d+".toRegex()) }
-                ?.let {
-                    val password = it.dropLastWhile { char -> char.isDigit() }.dropLast(1)
-                    val offset = it.takeLastWhile { char -> char.isDigit() }.toInt()
-                    password - offset
-                } ?: newPassword)
-        })
+    data class IntermediaryDefaultUser(
+        val username: String?,
+        val newUsername: String?,
+        val newPassword: String?,
+    ) : Convertible<DefaultUser> by converter({
+        DefaultUser(username, newUsername, newPassword.takeIf { it != null && it.matches(".*\\^\\d+".toRegex()) }
+            ?.let {
+                val password = it.dropLastWhile { char -> char.isDigit() }.dropLast(1)
+                val offset = it.takeLastWhile { char -> char.isDigit() }.toInt()
+                password - offset
+            } ?: newPassword)
+    })
 
-    data class Samba(val homeShare: Boolean?, val rootShare: RootShare?) : Convertible<CustomizationConfig.Samba> by converter({
-        CustomizationConfig.Samba(homeShare ?: false, rootShare ?: none)
+    data class IntermediarySamba(
+        val homeShare: Boolean?,
+        val rootShare: RootShare?,
+    ) : Convertible<Samba> by converter({
+        Samba(homeShare ?: false, rootShare ?: none)
     })
 
 
-    data class UsbGadgets(val ethernet: Ethernet?) : Convertible<List<UsbGadget>> {
+    data class IntermediaryUsbGadgets(
+        val ethernet: IntermediaryEthernet?,
+    ) : Convertible<List<UsbGadget>> {
         override fun convert(): List<UsbGadget> =
             listOfNotNull(
                 ethernet.convert(),
             )
 
-        class Ethernet(
-            dhcpRange: String,
-            deviceAddress: String?,
-            hostAsDefaultGateway: Boolean?,
-            enableSerialConsole: Boolean?,
-            manufacturer: String?,
-            product: String?,
+        data class IntermediaryEthernet(
+            val dhcpRange: String,
+            val deviceAddress: String?,
+            val hostAsDefaultGateway: Boolean?,
+            val enableSerialConsole: Boolean?,
+            val manufacturer: String?,
+            val product: String?,
         ) : Convertible<UsbGadget> by converter({
             val subnet: IPSubnet<out IPAddress> = ipSubnetOf(dhcpRange)
             val ip: IPAddress? = deviceAddress?.toIP()
-            Ethernet(
-                subnet,
-                ip,
-                hostAsDefaultGateway,
-                enableSerialConsole,
-                manufacturer,
-                product,
-            )
+            Ethernet(subnet, ip, hostAsDefaultGateway, enableSerialConsole, manufacturer, product)
         })
     }
 
-    class FileOperation(
-        append: String?,
-        hostPath: String?,
-        diskPath: String,
-    ) : Convertible<CustomizationConfig.FileOperation> by converter({
-        CustomizationConfig.FileOperation(
+    data class IntermediaryFileOperation(
+        val append: String?,
+        val hostPath: String?,
+        val diskPath: String,
+    ) : Convertible<FileOperation> by converter({
+        FileOperation(
             append?.trimIndent(),
             hostPath?.let { path ->
                 val ls = ImgCstmzr.WorkingDirectory.ls(path)
@@ -349,19 +405,19 @@ data class UnsafeImgCstmzrConfig(
         )
     })
 
-    data class SetupScript(
+    data class IntermediarySetupScript(
         val name: String,
         val sources: List<URI>?,
-        val scripts: List<ShellScript>?,
-    ) : Convertible<CustomizationConfig.SetupScript> by converter({
+        val scripts: List<IntermediaryShellScript>?,
+    ) : Convertible<SetupScript> by converter({
         SetupScript(name, sources ?: emptyList(), scripts?.map { it.convert() } ?: emptyList())
     })
 
-    data class ShellScript(
+    data class IntermediaryShellScript(
         val name: String?,
         val content: String?,
-    ) : Convertible<koodies.shell.ShellScript> by converter({
-        koodies.shell.ShellScript(name, content ?: "")
+    ) : Convertible<ShellScript> by converter({
+        ShellScript(name, content ?: "")
     })
 }
 

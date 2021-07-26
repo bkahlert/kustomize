@@ -14,7 +14,7 @@ class TweaksPatchTest {
         val patch = TweaksPatch(9).invoke(osImage)
 
         expect {
-            that(patch).customizations {
+            that(patch).diskCustomizations {
                 containsExactly(listOf(AppendLineOption(LinuxRoot.etc.apt.apt_conf_d.`80_retries`, """APT::Acquire::Retries "9";""")))
             }
         }

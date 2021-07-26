@@ -114,7 +114,7 @@ class Program(
         /**
          * Formats an array of programs
          */
-        fun Array<out Program>.format(): CharSequence = if (size > 0) map { it.name }.asExtra() else "no programs".formattedAs.meta
+        fun Array<out Program>.format(): CharSequence = if (size > 0) RenderablePrograms(toList()) else "no programs".formattedAs.meta
 
         private fun stateName(index: Int, commands: Array<out String>): String {
             val commandLine = commands[index]

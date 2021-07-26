@@ -14,13 +14,13 @@ import com.imgcstmzr.os.LinuxRoot.etc
 import com.imgcstmzr.os.OperatingSystem
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.pathString
-import koodies.content
 import koodies.docker.DockerExec
 import koodies.docker.asContainerPath
 import koodies.exec.CommandLine
 import koodies.exec.Executable
 import koodies.io.path.asPath
 import koodies.io.path.hasContent
+import koodies.io.path.textContent
 import koodies.io.text
 import koodies.shell.ShellScript
 import koodies.test.toStringIsEqualTo
@@ -227,13 +227,13 @@ private fun Executable<DockerExec>.firstbootScript(
 
 fun Assertion.Builder<List<Customization>>.containsFirstBootScriptFix() {
     filterIsInstance<MkdirOption>().any { dir.pathString.isEqualTo(FirstBootOrderFix.FIRSTBOOT_SCRIPTS.pathString) }
-    filterIsInstance<CopyInOption>().any { localPath.content.trim().isEqualTo(FirstBootOrderFix.text.trim()) }
+    filterIsInstance<CopyInOption>().any { localPath.textContent.trim().isEqualTo(FirstBootOrderFix.text.trim()) }
     filterIsInstance<ChmodOption>().any { setsPermission("0755", FirstBootOrderFix.FIRSTBOOT_FIX) }
 }
 
 fun Assertion.Builder<List<Customization>>.containsFirstBootShutdownCommand() {
     filterIsInstance<FirstBootOption>().any {
-        file.content.contains(OperatingSystem.DEFAULT_SHUTDOWN_COMMAND.shellCommand)
+        file.textContent.contains(OperatingSystem.DEFAULT_SHUTDOWN_COMMAND.shellCommand)
     }
 }
 

@@ -24,6 +24,7 @@ import koodies.tracing.rendering.Styles
 import koodies.tracing.spanning
 import koodies.unit.BinaryPrefixes
 import java.nio.file.Path
+import kotlin.io.path.div
 
 class CustomizeCommand : NoOpCliktCommand(
     name = "imgcstmzr",
@@ -44,6 +45,7 @@ class CustomizeCommand : NoOpCliktCommand(
     private val configFile: Path by option("--config", "--config-file", help = "Configuration to be used for image customization.")
         .path(mustExist = true, canBeDir = false, mustBeReadable = true).required()
 
+    // TODO make optional
     private val envFile: Path by option("--env", "--env-file", help = ".env file that can be used to pass credentials like a new user password.")
         .path(mustExist = false, canBeDir = false, mustBeReadable = false).default(ImgCstmzr.HomeDirectory.resolve(".env.imgcstmzr"))
 
@@ -54,7 +56,10 @@ class CustomizeCommand : NoOpCliktCommand(
     private val reuseLastWorkingCopy: Boolean by option(help = "Whether to re-use the last working copy (instead of creating a new one).")
         .flag(default = false)
 
-    private val cache: Cache by lazy { Cache(cacheDir) }
+    private val cache: Cache by lazy { Cache(ImgCstmzr.WorkingDirectory / cacheDir) }
+
+    private val skipPatches: Boolean by option("--skip-tests", help = "Skips applying patches alltogether.")
+        .flag(default = false)
 
     override fun run() {
         echo(Banner.banner("ImgCstmzr"))
@@ -90,13 +95,18 @@ class CustomizeCommand : NoOpCliktCommand(
             provideImageCopy(config)
         }
 
-        val patches = config.toOptimizedPatches()
-        val exceptions: ReturnValues<Throwable> = osImage.patch(*patches.toTypedArray())
+        val exceptions: ReturnValues<Throwable> =
+            if (skipPatches) {
+                ReturnValues()
+            } else {
+                val patches = config.toOptimizedPatches()
+                osImage.patch(*patches.toTypedArray())
+            }
 
         echo()
 
         if (exceptions.isEmpty()) {
-            echo("${Kaomoji.Magical.random()} ${osImage.file.fileName} @ ${osImage.directory.toUri()}")
+            echo("${Kaomoji.Wizards.random()} ${osImage.file.fileName} @ ${osImage.directory.toUri()}")
         } else {
             echo(Kaomoji.BadMood.random().also {
                 echo("The following problems occurred during image customization:")

@@ -47,7 +47,9 @@ import strikt.api.expectThat
 import strikt.assertions.any
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
+import strikt.assertions.hasSize
 import strikt.assertions.isA
+import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotEmpty
 import strikt.assertions.isTrue
@@ -174,6 +176,81 @@ class CustomizationConfigTest {
                 }
             """.trimIndent())) {
                 get { hostname }.isEqualTo(Hostname("test", false))
+            }
+        }
+    }
+
+    @Nested
+    inner class FirstBootConfig {
+
+        @Test
+        fun `should deserialize scripts`() {
+            expectThat(loadMinimalConfig("""
+                first-boot = [
+                    {
+                      content: ""${'"'}
+                          echo 'A'
+                          echo 'B'
+                          echo 'C'
+                          ""${'"'}
+                    },
+                    {
+                      name: "write and run scripts"
+                      content: ""${'"'}
+                
+                          cat <<EOF >/root/script.sh
+                          #!/bin/sh
+                          echo '1'
+                          echo '2'
+                          echo '3'
+                          EOF
+                
+                          chmod +x /root/script.sh
+                          /root/script.sh
+                          ""${'"'}
+                    },
+                  ]
+            """.trimIndent())) {
+                get { firstBoot }
+                    .hasSize(2)
+                    .containsExactly(
+                        ShellScript("""
+                            echo 'A'
+                            echo 'B'
+                            echo 'C'
+
+                    """.trimIndent()),
+                        ShellScript("write and run scripts", """
+                            
+                            
+                            cat <<EOF >/root/script.sh
+                            #!/bin/sh
+                            echo '1'
+                            echo '2'
+                            echo '3'
+                            EOF
+
+                            chmod +x /root/script.sh
+                            /root/script.sh
+
+                    """.trimIndent()),
+                    )
+            }
+        }
+
+        @Test
+        fun `should deserialize no scripts`() {
+            expectThat(loadMinimalConfig("")) {
+                get { firstBoot }.isEmpty()
+            }
+        }
+
+        @Test
+        fun `should deserialize empty scripts`() {
+            expectThat(loadMinimalConfig("""
+                first-boot = [ ]
+            """.trimIndent())) {
+                get { firstBoot }.isEmpty()
             }
         }
     }

@@ -6,11 +6,11 @@ import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OS
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
-import koodies.content
 import koodies.docker.DockerRequiring
 import koodies.exception.rootCause
 import koodies.io.copyToTemp
 import koodies.io.path.hasContent
+import koodies.io.path.textContent
 import koodies.io.path.writeText
 import koodies.io.randomPath
 import koodies.io.tempFile
@@ -48,7 +48,7 @@ class CopyFilesPatchTest {
             that(osImage).mounted {
                 path(sampleHtmlDiskPath) { hasContent(HtmlFixture.text) }
                 path(sampleTxtDiskPath) { hasContent(TextFixture.text) }
-                path(configTxtDiskPath) { content.isEqualTo("new file") }
+                path(configTxtDiskPath) { textContent.isEqualTo("new file") }
             }
         }
     }

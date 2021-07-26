@@ -6,9 +6,9 @@ import com.imgcstmzr.os.LinuxRoot
 import com.imgcstmzr.os.OS
 import com.imgcstmzr.os.OperatingSystemImage
 import com.imgcstmzr.os.OperatingSystems.RaspberryPiLite
-import koodies.content
 import koodies.docker.DockerRequiring
 import koodies.io.path.hasContent
+import koodies.io.path.textContent
 import koodies.junit.UniqueId
 import koodies.test.FifteenMinutesTimeout
 import koodies.test.HtmlFixture
@@ -40,7 +40,7 @@ class AppendToFilesPatchTest {
                 that(osImage).mounted {
                     path(sampleHtmlDiskPath) { hasContent(HtmlFixture.text.withTrailingLineSeparator()) }
                     path(sampleTxtDiskPath) { hasContent(TextFixture.text.withTrailingLineSeparator()) }
-                    path(configTxtDiskPath) { content.endsWith("${LF}some text$LF") }
+                    path(configTxtDiskPath) { textContent.endsWith("${LF}some text$LF") }
                 }
             }
         }

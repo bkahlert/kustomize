@@ -16,7 +16,7 @@ class TimeZonePatchTest {
     @Test
     fun `should contain time zone customization`(osImage: OperatingSystemImage) {
         val patch = TimeZonePatch(berlinTimeZone).invoke(osImage)
-        expectThat(patch).customizations {
+        expectThat(patch).diskCustomizations {
             single().isA<TimeZoneOption>().get { timeZone }.isEqualTo(berlinTimeZone)
         }
     }
