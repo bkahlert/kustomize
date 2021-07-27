@@ -35,7 +35,7 @@ import kotlin.io.path.moveTo
 import kotlin.time.Duration
 
 class Cache(dir: Path, private val maxConcurrentWorkingDirectories: Int = 5) : ManagedDirectory(
-    ImgCstmzr.WorkingDirectory.resolve(dir).createDirectories().toRealPath(),
+    ImgCstmzr.WorkingDirectory.resolve(dir).createDirectories().normalize(),
 ) {
 
     fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> Path): Path =

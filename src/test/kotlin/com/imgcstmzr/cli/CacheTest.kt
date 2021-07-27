@@ -29,7 +29,7 @@ class CacheTest {
     @Test
     fun `should instantiate in provided directory`(uniqueId: UniqueId) = withTempDir(uniqueId) {
         val cache = Cache(this)
-        expectThat(cache.dir).isEqualTo(toRealPath())
+        expectThat(cache.dir).isEqualTo(normalize())
     }
 
     @Nested
