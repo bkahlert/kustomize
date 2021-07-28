@@ -1,3 +1,0 @@
-GET http://192.168.16.45:1880/proxy
-Request-URI: https://google.com
-Content-Type: application/json

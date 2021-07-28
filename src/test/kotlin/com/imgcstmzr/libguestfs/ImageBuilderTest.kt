@@ -2,7 +2,6 @@ package com.imgcstmzr.libguestfs
 
 import com.imgcstmzr.libguestfs.ImageBuilder.buildFrom
 import com.imgcstmzr.libguestfs.ImageBuilder.format
-import com.imgcstmzr.os.OperatingSystems
 import koodies.docker.DockerRequiring
 import koodies.io.compress.TarArchiveGzCompressor.tarGzip
 import koodies.io.path.addExtensions
@@ -24,7 +23,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
-import java.net.URI
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 
@@ -47,58 +45,19 @@ class ImageBuilderTest {
             expectThrows<IllegalArgumentException> { buildFrom(Path.of("archive.zip")) }
         }
 
-        @Nested
-        inner class ArchiveBasedImageBuild {
+        @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
+        fun `should build img from archive`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+            val archive = randomDirectory().apply {
+                resolve("boot").createDirectories()
+                resolve("boot/cmdline.txt").apply { writeText("console=serial0,115200 console=tty1 …") }
+                resolve("boot/important.file").apply { writeText("important content") }
+            }.tarGzip()
 
-            @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
-            fun `should build img from archive`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-                val archive = randomDirectory().apply {
-                    resolve("boot").createDirectories()
-                    resolve("boot/cmdline.txt").apply { writeText("console=serial0,115200 console=tty1 …") }
-                    resolve("boot/important.file").apply { writeText("important content") }
-                }.tarGzip()
+            val img = buildFrom(archive, totalSize = 6.Mebi.bytes, bootSize = 3.Mebi.bytes).deleteOnExit()
 
-                val img = buildFrom(archive, totalSize = 6.Mebi.bytes, bootSize = 3.Mebi.bytes).deleteOnExit()
-
-                expectThat(img) {
-                    endsWith(archive.removeExtensions("tar", "gz").addExtensions("img"))
-                    hasSize(6_291_456.bytes)
-                }
-            }
-        }
-
-        @Nested
-        inner class UriBasedImageBuild {
-
-            @Test
-            fun `should throw on invalid scheme`() {
-                @Suppress("SpellCheckingInspection")
-                expectThrows<IllegalArgumentException> { buildFrom(URI.create("invalid://build/?files=classpath:config.txt%3Eboot")) }
-            }
-
-            @Test
-            fun `should throw on invalid host`() {
-                @Suppress("SpellCheckingInspection")
-                expectThrows<IllegalArgumentException> { buildFrom(URI.create("imgcstmzr://invalid/?files=classpath:config.txt%3Eboot")) }
-            }
-
-            @Test
-            fun `should throw on missing destination`() {
-                expectThrows<IllegalArgumentException> { buildFrom(URI.create("invalid://build/?files=classpath:config.txt")) }
-            }
-
-            @Test
-            fun `should throw on missing files`() {
-                expectThrows<IllegalArgumentException> { buildFrom(URI.create("invalid://build/")) }
-            }
-
-            @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
-            fun `should build img`() {
-                val uri = URI.create(OperatingSystems.ImgCstmzrTestOS.downloadUrl)
-
-                val img = buildFrom(uri)
-
-                expectThat(img).hasSize(4_194_304.bytes)
+            expectThat(img) {
+                endsWith(archive.removeExtensions("tar", "gz").addExtensions("img"))
+                hasSize(6_291_456.bytes)
             }
         }
     }

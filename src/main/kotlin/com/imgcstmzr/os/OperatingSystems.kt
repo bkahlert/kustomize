@@ -102,17 +102,9 @@ enum class OperatingSystems(
         defaultCredentials = "pi" withPassword "raspberry",
     ),
 
-    @Suppress("SpellCheckingInspection")
-    ImgCstmzrTestOS(
-        fullName = "ImgCstmzr Test OS",
-        downloadUrl = "imgcstmzr://build?files=classpath:img/boot/cmdline.txt%3Eboot&files=classpath:img/boot/config.txt%3Eboot",
-        approximateImageSize = 6.Mega.bytes,
-        defaultCredentials = empty,
-    ),
-
     RiscTestOS(
         fullName = "RISC OS Pico RC5 (test only)",
-        downloadUrl = @Suppress("SpellCheckingInspection") "classpath:raw/riscos.img",
+        downloadUrl = @Suppress("SpellCheckingInspection") "classpath:riscos.img",
         approximateImageSize = 2.Mega.bytes,
         defaultCredentials = empty,
     );

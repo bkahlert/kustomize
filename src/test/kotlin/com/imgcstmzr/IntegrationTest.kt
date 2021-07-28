@@ -38,14 +38,6 @@ class IntegrationTest {
         }
     }
 
-    private fun findImage(projectName: String): OperatingSystemImage {
-        val projectDirectory = WorkingDirectory / ".cache" / projectName
-        val workDirectory = projectDirectory.listDirectoryEntries().filter { it.isDirectory() }.minByOrNull { it.age } ?: fail("Work directory not found")
-        val image = workDirectory.listDirectoryEntries().singleOrNull { it.extensionOrNull.equals("img", ignoreCase = true) } ?: fail("Image not found")
-        val osImage = RaspberryPiLite based image
-        return osImage
-    }
-
     @SystemProperties(
         SystemProperty("SAMPLE_FULL_USERNAME", "john.doe"),
         SystemProperty("SAMPLE_FULL_PASSWORD", "Password1234"),
@@ -59,5 +51,13 @@ class IntegrationTest {
             path(LinuxRoot.etc.hostname) { textContent.matchesCurlyPattern("sample-full--{}") }
             path(LinuxRoot.home / "john.doe") { get { listDirectoryEntriesRecursively() }.isNotEmpty() }
         }
+    }
+
+    private fun findImage(projectName: String): OperatingSystemImage {
+        val projectDirectory = WorkingDirectory / ".cache" / projectName
+        val workDirectory = projectDirectory.listDirectoryEntries().filter { it.isDirectory() }.minByOrNull { it.age } ?: fail("Work directory not found")
+        val image = workDirectory.listDirectoryEntries().singleOrNull { it.extensionOrNull.equals("img", ignoreCase = true) } ?: fail("Image not found")
+        val osImage = RaspberryPiLite based image
+        return osImage
     }
 }

@@ -1,4 +1,4 @@
-# ImgCstmzr — Kotlin Based Image Customizer
+# Kustomize — Kotlin Based Image Customizer
 
 ## run bash
 

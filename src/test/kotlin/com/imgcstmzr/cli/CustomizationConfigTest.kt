@@ -113,7 +113,7 @@ class CustomizationConfigTest {
         expecting { files } that {
             isEqualTo(listOf(
                 FileOperation("line 1\nline 2", null, LinuxRoot.boot / "file-of-lines.txt"),
-                FileOperation(null, ImgCstmzr.WorkingDirectory / "src" / "test" / "resources" / "BKAHLERT.png", LinuxRoot.home / "john.doe" / "image.png"),
+                FileOperation(null, ImgCstmzr.WorkingDirectory / "src" / "test" / "resources" / "sample.png", LinuxRoot.home / "john.doe" / "image.png"),
             )).any { get { append } isEqualTo ("line 1\nline 2") }
         }
         expecting { setup[0].name } that { isEqualTo("the basics") }

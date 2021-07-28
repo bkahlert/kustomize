@@ -1,6 +1,0 @@
-PUT http://localhost:8080/busy
-Content-Type: application/json
-
-{
-  "status": "Busy"
-}

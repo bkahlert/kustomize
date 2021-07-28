@@ -1,6 +1,5 @@
 package com.imgcstmzr.libguestfs
 
-import com.imgcstmzr.ImgCstmzr
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.ExitCommand
 import com.imgcstmzr.libguestfs.GuestfishCommandLine.GuestfishCommand.UmountAllCommand
 import com.imgcstmzr.libguestfs.ImageBuilder.FileSystemType.EXT4
@@ -10,42 +9,28 @@ import koodies.docker.DockerContainer.Companion
 import koodies.docker.DockerRunCommandLine
 import koodies.docker.DockerRunCommandLine.Options
 import koodies.docker.MountOptions
-import koodies.io.compress.Archiver.archive
 import koodies.io.compress.GzCompressor.gunzip
-import koodies.io.path.asPath
-import koodies.io.path.copyToDirectory
 import koodies.io.path.delete
 import koodies.io.path.deleteOnExit
 import koodies.io.path.hasExtensions
 import koodies.io.path.removeExtensions
 import koodies.io.path.uriString
-import koodies.io.selfCleaning
 import koodies.shell.HereDoc
 import koodies.shell.ShellScript
 import koodies.text.ANSI.Text.Companion.ansi
-import koodies.text.LineSeparators.LF
-import koodies.text.Semantics.Symbols.PointNext
-import koodies.text.Unicode.TAB
-import koodies.text.quoted
-import koodies.text.spaced
 import koodies.time.Now
-import koodies.time.hours
 import koodies.tracing.rendering.Styles.Dotted
-import koodies.tracing.rendering.spanningLine
 import koodies.tracing.spanning
 import koodies.unit.BinaryPrefixes
 import koodies.unit.Gibi
 import koodies.unit.Mebi
 import koodies.unit.Size
 import koodies.unit.bytes
-import java.net.URI
 import java.nio.file.Path
-import kotlin.io.path.createDirectories
 import kotlin.math.ceil
 
+@Deprecated("very probable no more needed (only by ArchLinux because its not provided as img file)")
 object ImageBuilder {
-
-    private val temp by ImgCstmzr.Temp.resolve("image-build").selfCleaning(1.hours, 5)
 
     private fun Size.round(): Size {
         val toString = toString(BinaryPrefixes.Mebi, 1)
@@ -62,42 +47,6 @@ object ImageBuilder {
     const val schema: String = "imgcstmzr"
     const val host: String = "build"
 
-    /**
-     * Dynamically creates a raw image with two partitions containing the files
-     * as specified by the [uri].
-     */
-    fun buildFrom(uri: URI): Path = spanning("Initiating raw image creation from $uri") {
-
-        require(uri.scheme == schema) { "URI $uri is invalid as its scheme differs from ${schema.quoted}" }
-        require(uri.host == host) { "URI $uri is invalid as its host differs from ${host.quoted}" }
-
-        val query = mutableMapOf<String, MutableList<String>>().apply {
-            uri.query.split("&").map {
-                it.split("=", limit = 2).run { first() to last() }
-            }.forEach { (key, value) ->
-                computeIfAbsent(key) { mutableListOf() }.add(value)
-            }
-        }
-
-        val files = query.getOrDefault("files", emptyList())
-        require(query.isNotEmpty()) { "URI $uri does not reference any file using the \"files\" parameter" }
-
-        val path: List<Pair<Path, Path>> = files.map { it.split(">", limit = 2) }
-            .map { relation -> relation.first().asPath() to relation.last().asPath() }
-        log("${path.size} files:" + path.joinToString("") { (from, to) -> "$LF$TAB${from.uriString}${PointNext.spaced}${to.uriString}" })
-
-        prepareImg(*path.toTypedArray())
-    }
-
-    private fun prepareImg(vararg paths: Pair<Path, Path>): Path =
-        buildFrom(temp.resolve("imgcstmzr-" + paths.take(5).mapNotNull { it.first.fileName }
-            .joinToString(separator = "-")).createDirectories().run {
-            spanningLine("Copying ${paths.size} files to ${toUri()}") {
-                paths.forEach { (from, to) -> from.copyToDirectory(resolve(to)) }
-            }
-            @Suppress("SpellCheckingInspection")
-            spanningLine("Gzipping") { archive("tar", overwrite = true) }
-        }, totalSize = 4.Mebi.bytes, bootSize = 2.Mebi.bytes)
 
     /**
      * Creates an image consisting of the two partitions `root` and `boot`.
@@ -109,6 +58,7 @@ object ImageBuilder {
      * @param bootSize the size of the boot filesystem
      * @param partitionTableType partition table type
      */
+    @Deprecated("very probable no more needed (only by ArchLinux because its not provided as img file)")
     fun buildFrom(
         archive: Path,
         bootFileSystem: FileSystemType = FAT,

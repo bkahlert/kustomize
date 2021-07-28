@@ -3,8 +3,6 @@ package com.imgcstmzr.os
 import com.imgcstmzr.TestImgCstmzr.TestCacheDirectory
 import com.imgcstmzr.cli.Cache
 import com.imgcstmzr.cli.Layouts
-import com.imgcstmzr.libguestfs.ImageBuilder
-import com.imgcstmzr.libguestfs.ImageBuilder.buildFrom
 import com.imgcstmzr.os.OperatingSystemImage.Companion.based
 import com.imgcstmzr.test.ImageFixtures
 import com.imgcstmzr.util.Downloader
@@ -25,7 +23,7 @@ import kotlin.io.path.createDirectories
 @Retention(RUNTIME)
 @Target(AnnotationTarget.VALUE_PARAMETER)
 annotation class OS(
-    val value: OperatingSystems = OperatingSystems.ImgCstmzrTestOS,
+    val value: OperatingSystems = OperatingSystems.RiscTestOS,
     val autoDelete: Boolean = true,
 )
 
@@ -36,7 +34,7 @@ open class OperatingSystemImageProviderExtension : TypeBasedParameterResolver<Op
         extensionContext: ExtensionContext,
     ): OperatingSystemImage = lock.withLock {
         val annotation = parameterContext.parameter.getAnnotation(OS::class.java)
-        val operatingSystem: OperatingSystem = annotation?.value ?: OperatingSystems.ImgCstmzrTestOS
+        val operatingSystem: OperatingSystem = annotation?.value ?: OperatingSystems.RiscTestOS
         val autoDelete = annotation?.autoDelete ?: true
         spanning(
             "Provisioning ${operatingSystem.fullName.formattedAs.input}",
@@ -53,7 +51,7 @@ open class OperatingSystemImageProviderExtension : TypeBasedParameterResolver<Op
 
         private val lock: ReentrantLock = ReentrantLock()
 
-        private val downloader = Downloader(ImageBuilder.schema to ::buildFrom)
+        private val downloader = Downloader()
 
         private val copiesPerTest = mutableMapOf<String, List<Path>>()
         fun cacheDir(uniqueId: String): Path? = copiesPerTest[uniqueId]?.firstOrNull()
