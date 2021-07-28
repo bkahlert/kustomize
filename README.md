@@ -1,4 +1,11 @@
-# Kustomize — Kotlin Based Image Customizer
+# kustomize — Kotlin-based customizer for IoT images like Raspberry Pi OS
+
+This tool customizes an IoT image such as a [Raspberry Pi OS](https://www.raspberrypi.org/software/operating-systems) image
+using a [HOCON](https://github.com/lightbend/config/blob/master/HOCON.md) based config file and the tools
+[koodies](https://github.com/bkahlert/koodies),
+[virt-customize](https://libguestfs.org/virt-customize.1.html),
+[guestfish](https://libguestfs.org/guestfish.1.html) and [dockerpi](https://github.com/lukechilds/dockerpi) to be readily usable on the target device such as a [Raspberry Pi](https://www.raspberrypi.org/).
+
 
 ## run bash
 

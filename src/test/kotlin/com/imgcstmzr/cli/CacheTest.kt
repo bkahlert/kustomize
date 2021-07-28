@@ -54,11 +54,11 @@ class CacheTest {
         val cache = Cache(randomDirectory())
 
         val copy = cache.provideCopy("my-copy") {
-            ClassPathFile("test.img.zip").copyToTemp()
+            ClassPathFile("riscos.img.zip").copyToTemp()
         }
 
         expectThat(copy)
-            .hasContent("test.img content\n")
+            .hasContent(ClassPathFile("riscos.img").data)
             .get { isInside(cache.dir) }.isTrue()
     }
 
@@ -68,7 +68,7 @@ class CacheTest {
         var providerCalls = 0
         val provider = {
             providerCalls++
-            ClassPathFile("test.img.zip").copyToDirectory(this)
+            ClassPathFile("riscos.img.zip").copyToDirectory(this)
         }
 
         val copies = (0..2).map {
@@ -80,7 +80,7 @@ class CacheTest {
         expectThat(providerCalls).isEqualTo(1)
         copies.forEach { copy ->
             expectThat(copy)
-                .hasContent("test.img content\n")
+                .hasContent(ClassPathFile("riscos.img").data)
                 .get { isInside(cache.dir) }.isTrue()
         }
     }

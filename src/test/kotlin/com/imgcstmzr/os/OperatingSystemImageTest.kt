@@ -51,14 +51,14 @@ class OperatingSystemImageTest {
     fun `should have full name`() {
         @Suppress("SpellCheckingInspection")
         expectThat((OperatingSystemMock("full-name-test") based Path.of("foo/bar")).fullName)
-            .isEqualTo("ImgCstmzr Test OS ／ file://${ImgCstmzr.WorkingDirectory}/foo/bar")
+            .isEqualTo("RISC OS Pico RC5 (test only) ／ file://${ImgCstmzr.WorkingDirectory}/foo/bar")
     }
 
     @Test
     fun `should have short name`() {
         @Suppress("SpellCheckingInspection")
         expectThat((OperatingSystemMock("short-name-test") based Path.of("foo/bar")).shortName)
-            .isEqualTo("ImgCstmzr Test OS ／ bar")
+            .isEqualTo("RISC OS Pico RC5 (test only) ／ bar")
     }
 
     @Test
