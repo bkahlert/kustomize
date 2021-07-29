@@ -3,7 +3,7 @@ package com.bkahlert.kustomize.patch
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.io.path.withDirectoriesCreated
+import koodies.io.createParentDirectories
 import kotlin.io.path.writeLines
 
 enum class RootShare { none, `read-only`, `read-write` }
@@ -86,7 +86,7 @@ class SambaPatch(
         customizeDisk {
             firstBootInstall { listOf("samba", "cifs-utils") }
             copyIn(SAMBA_CONF) {
-                withDirectoriesCreated().writeLines(config.lines())
+                createParentDirectories().writeLines(config.lines())
             }
             firstBoot("Change SMB Password for $username") {
                 """

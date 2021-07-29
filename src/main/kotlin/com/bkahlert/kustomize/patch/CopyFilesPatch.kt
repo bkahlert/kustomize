@@ -2,8 +2,8 @@ package com.bkahlert.kustomize.patch
 
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.OperatingSystemImage
+import koodies.io.isInside
 import koodies.io.path.copyTo
-import koodies.io.path.isSubPathOf
 import koodies.io.path.requireExists
 import java.nio.file.Path
 
@@ -27,7 +27,7 @@ class CopyFilesPatch(
                 files.forEach { (path, diskPath) ->
                     path.requireExists()
                     copyIn {
-                        require(!path.isSubPathOf(it.exchangeDirectory)) { "$path must be located outside of ${it.exchangeDirectory}" }
+                        require(!path.isInside(it.exchangeDirectory)) { "$path must be located outside of ${it.exchangeDirectory}" }
                         val hostPath = it.hostPath(diskPath)
                         path.copyTo(hostPath)
                         diskPath

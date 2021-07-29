@@ -40,9 +40,9 @@ import koodies.docker.MountOptions
 import koodies.docker.asContainerPath
 import koodies.exec.CommandLine
 import koodies.exec.Executable
+import koodies.io.createParentDirectories
 import koodies.io.path.asPath
 import koodies.io.path.pathString
-import koodies.io.path.withDirectoriesCreated
 import koodies.io.text
 import koodies.shell.ShellScript
 import koodies.shell.ShellScript.ScriptContext
@@ -335,7 +335,7 @@ class VirtCustomizeCommandLine(
              * under the specified [diskPath].
              */
             fun copyIn(diskPath: DiskPath, text: String) {
-                copyIn(diskPath) { withDirectoriesCreated().writeLines(text.lines()) }
+                copyIn(diskPath) { createParentDirectories().writeLines(text.lines()) }
             }
 
             /**

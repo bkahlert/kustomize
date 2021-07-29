@@ -2,7 +2,7 @@ package com.bkahlert.kustomize.os.linux
 
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder.CustomizationsContext
 import com.bkahlert.kustomize.os.LinuxRoot
-import koodies.io.path.withDirectoriesCreated
+import koodies.io.createParentDirectories
 import koodies.text.LineSeparators.lines
 import kotlin.io.path.writeLines
 
@@ -13,7 +13,7 @@ import kotlin.io.path.writeLines
  */
 fun CustomizationsContext.installService(serviceUnit: ServiceUnit) {
     copyIn(serviceUnit.diskFile) {
-        withDirectoriesCreated().writeLines(serviceUnit.text.lines())
+        createParentDirectories().writeLines(serviceUnit.text.lines())
     }
     serviceUnit.wantedBy.forEach { wantedBy ->
         val wantedByDirectory = LinuxRoot.etc.systemd.system / "$wantedBy.wants"

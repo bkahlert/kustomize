@@ -19,7 +19,7 @@ repositories {
 
 dependencies {
 
-    implementation("com.bkahlert:koodies:1.6.0")
+    implementation("com.bkahlert:koodies:1.6.1")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.21") {
         because("filepeek takes 1.3")
