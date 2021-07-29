@@ -211,6 +211,8 @@ docker run --rm -it \
 
 The just customized `sample.img` can now be flashed to a memory card and booted on your Raspberry.
 
+*Hint: If anything goes wrong, the whole customization process is traced to a locally started Jaeger instance at http://localhost:16686*
+
 ## Configuration Options
 
 See [sample-full.conf](sample-full.conf) for all existing configuration options.
