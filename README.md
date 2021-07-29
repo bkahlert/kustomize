@@ -1,19 +1,19 @@
 # kustomize — Kotlin-based customizer for IoT images like Raspberry Pi OS
 
-This tool customizes an IoT image such as a [Raspberry Pi OS](https://www.raspberrypi.org/software/operating-systems) image
-using a [HOCON](https://github.com/lightbend/config/blob/master/HOCON.md) based config file and the tools
+This tool customizes an IoT image such as a [Raspberry Pi OS](https://www.raspberrypi.org/software/operating-systems) image using
+a [HOCON](https://github.com/lightbend/config/blob/master/HOCON.md) based config file and the tools
 [koodies](https://github.com/bkahlert/koodies),
 [virt-customize](https://libguestfs.org/virt-customize.1.html),
-[guestfish](https://libguestfs.org/guestfish.1.html) and [dockerpi](https://github.com/lukechilds/dockerpi) to be readily usable on the target device such as a [Raspberry Pi](https://www.raspberrypi.org/).
-
+[guestfish](https://libguestfs.org/guestfish.1.html) and [dockerpi](https://github.com/lukechilds/dockerpi) to be readily usable on the target device such as
+a [Raspberry Pi](https://www.raspberrypi.org/).
 
 ## run bash
 
-docker run --rm -it --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock --entrypoint /bin/bash imgcstmzr
+docker run --rm -it --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock --entrypoint /bin/bash kustomize
 
 ## build
 
-docker build -t imgcstmzr:latest .
+docker build -t kustomize:latest .
 
 ## run
 
@@ -25,7 +25,7 @@ docker run --rm -it \
            -e TERM="$TERM" \
            -e TERM_PROGRAM="$TERM_PROGRAM" \
            -e COLORTERM="$COLORTERM" \
-           imgcstmzr \
+           kustomize \
            --cache-dir /work/cache \
            --config-file sample.conf \
            --env-file .env
@@ -37,7 +37,7 @@ docker run --rm -it \
 ░░░░░░░ IMG CSTMZR
 
 ▶ Configuring
-· Configuration: file:///tmp/imgcstmzr-test/ImgCstmzrIntegrationTest.should_apply_patches--h2ss/sample.conf (256 B)
+· Configuration: file:///tmp/kustomize-test/IntegrationTest.should_apply_patches--h2ss/sample.conf (256 B)
 · Name: .test
 · OS: Raspberry Pi OS Lite
 · Env: file:///home/john/sample/.env
@@ -49,10 +49,10 @@ docker run --rm -it \
 · ▶ Deleting old working directories ✔︎
 · ▶ Retrieving image
 · · ▶ Downloading https://downloads.raspberrypi.org/raspios_lite_armhf_latest
-· · · Using temporary directory file:///tmp/imgcstmzr/download/dfAO--21E-tmp/
-· · · Downloaded [file:///tmp/imgcstmzr/download/dfAO--21E-tmp/raspios_lite_armhf_latest]
-· · · Moving download to file:///tmp/imgcstmzr/download/raspios_lite_armhf_latest
-· · · Deleting file:///tmp/imgcstmzr/download/dfAO--21E-tmp/
+· · · Using temporary directory file:///tmp/kustomize/download/dfAO--21E-tmp/
+· · · Downloaded [file:///tmp/kustomize/download/dfAO--21E-tmp/raspios_lite_armhf_latest]
+· · · Moving download to file:///tmp/kustomize/download/raspios_lite_armhf_latest
+· · · Deleting file:///tmp/kustomize/download/dfAO--21E-tmp/
 · · ✔︎
 · · ▶ Moving download to file:///home/john/sample/download/raspios_lite_armhf_latest ✔︎
 · · ▶ Unarchiving file:///home/john/sample … MB) ▶ Extracting found image 2021-05-07-raspios-buster-armhf-lite.img ✔︎
@@ -208,12 +208,12 @@ docker build --no-cache=true \
   --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
   --build-arg VCS_REF=$(git rev-parse --short HEAD) \
   --build-arg VERSION=$(./gradlew properties | grep ^version: | perl -pe 's/version:\s+//') \
-  -t bkahlert/imgcstmzr:latest .
+  -t bkahlert/kustomize:latest .
 ```
 
 1. Download
 2. [Install](#installation) dependencies
-3. `imgcstmzr` --img=raspberry-pi-os-lite --version=LATEST --ssh.enabled=true --flash.auto=true
+3. `kustomize` --img=raspberry-pi-os-lite --version=LATEST --ssh.enabled=true --flash.auto=true
 
 Alternatively run `--config-file=bother-you.json
 
@@ -228,7 +228,7 @@ Alternatively run `--config-file=bother-you.json
 ### Native Image Builder
 
 - [gu](https://www.graalvm.org/docs/reference-manual/gu/): `gu install native-image`
-- Run `bin/imgcstmzr`
+- Run `bin/kustomize`
 
 ## Development
 

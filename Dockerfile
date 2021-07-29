@@ -1,5 +1,5 @@
 FROM openjdk:18-slim
-WORKDIR /imgcstmzr
+WORKDIR /kustomize
 
 # copy gradle
 COPY gradlew .
@@ -34,19 +34,19 @@ LABEL maintainer="Björn Kahlert <mail@bkahlert.com>" \
       authors="Björn Kahlert <mail@bkahlert.com>" \
       org.label-schema.schema-version="1.0" \
       org.label-schema.license=MIT \
-      org.label-schema.name="bkahlert/imgcstmzr" \
-      org.label-schema.description="Image Customizer for Raspberry Pi OS and alike" \
-      org.label-schema.url="https://imgcstmzr.com/" \
+      org.label-schema.name="bkahlert/kustomize" \
+      org.label-schema.description="Kotlin-based customizer for IoT images like Raspberry Pi OS" \
+      org.label-schema.url="https://github.com/bkahlert/kustomize" \
       org.label-schema.vcs-type=Git \
-      org.label-schema.vcs-url="https://github.com/imgcstmzr/imgcstmzr.git" \
-      org.label-schema.docker.cmd="docker run --rm --name imgcstmzr -it --mount type=bind,source=$(pwd),target=/work" \
+      org.label-schema.vcs-url="https://github.com/bkahlert/kustomize.git" \
+      org.label-schema.docker.cmd="docker run --rm --name kustomize -it --mount type=bind,source=$(pwd),target=/work" \
       org.label-schema.usage="README.md"
 
 # copy binaries
-COPY --from=0 /imgcstmzr/build/install .
+COPY --from=0 /kustomize/build/install .
 #RUN groupadd --gid ${GID} app
 #RUN useradd --home-dir /work --create-home --no-log-init --uid ${UID} --gid ${GID} app
 #USER app
 WORKDIR /work
-ENTRYPOINT ["/imgcstmzr/bin/imgcstmzr"]
+ENTRYPOINT ["/kustomize/bin/kustomize"]
 CMD ["-h"]

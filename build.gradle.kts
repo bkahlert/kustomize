@@ -9,7 +9,7 @@ plugins {
     application
 }
 
-group = "com.imgcstmzr"
+group = "com.bkahlert"
 version = "1.0-SNAPSHOT"
 
 repositories {

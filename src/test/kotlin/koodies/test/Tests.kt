@@ -1,6 +1,6 @@
 package koodies.test
 
-import com.imgcstmzr.TestImgCstmzr
+import com.bkahlert.kustomize.TestKustomize
 import filepeek.LambdaBody
 import koodies.Exceptions.ISE
 import koodies.collections.asStream
@@ -943,9 +943,9 @@ class DynamicTestBuilder<T>(val subject: T, private val buildErrors: MutableList
  * @throws IllegalStateException if called from outside of a test
  */
 fun withTempDir(uniqueId: UniqueId, block: Path.() -> Unit) {
-    val tempDir: Path = TestImgCstmzr.TestRoot.resolve(uniqueId.value.toBaseName().withRandomSuffix()).createDirectories()
+    val tempDir: Path = TestKustomize.TestRoot.resolve(uniqueId.value.toBaseName().withRandomSuffix()).createDirectories()
     tempDir.block()
-    check(TestImgCstmzr.TestRoot.exists()) {
+    check(TestKustomize.TestRoot.exists()) {
         println("The shared root temp directory was deleted by $uniqueId or a concurrently running test. This must not happen.".ansi.red.toString())
         exitProcess(-1)
     }

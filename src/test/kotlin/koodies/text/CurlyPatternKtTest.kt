@@ -36,7 +36,7 @@ class CurlyPatternKtTest {
 
         val block = listOf(
             """Executing [sh, -c, >&1 echo "test output"""",
-            """>&2 echo "test error"] in /Users/bkahlert/Development/com.imgcstmzr.""",
+            """>&2 echo "test error"] in /Users/bkahlert/Development/com.bkahlert.kustomize.""",
             """Started Process(pid=72692, exitValue=0)""",
             """Process(pid=72692, exitValue=0) stopped with exit code 0""",
         ).joinToString(lineSeparator)
