@@ -1,7 +1,6 @@
 package com.imgcstmzr.cli
 
 import com.imgcstmzr.ImgCstmzr
-import com.imgcstmzr.cli.Convertible.Companion.converter
 import com.imgcstmzr.cli.CustomizationConfig.DefaultUser
 import com.imgcstmzr.cli.CustomizationConfig.FileOperation
 import com.imgcstmzr.cli.CustomizationConfig.Hostname
@@ -51,19 +50,21 @@ import koodies.net.IPSubnet
 import koodies.net.ipSubnetOf
 import koodies.net.toIP
 import koodies.shell.ShellScript
+import koodies.text.LineSeparators.LF
+import koodies.text.levenshteinDistance
 import koodies.text.minus
+import koodies.text.takeUnlessBlank
 import koodies.unit.Size
 import koodies.unit.toSize
 import java.net.URI
 import java.nio.file.Path
 import java.util.TimeZone
 import kotlin.io.path.exists
+import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.readText
 
 /**
  * Representation of a `.conf` file.
- *
- * ***Note:** The configuration is indirectly loaded using [IntermediaryCustomizationConfig].
  */
 data class CustomizationConfig(
     /**
@@ -134,22 +135,110 @@ data class CustomizationConfig(
         /**
          * Loads a [CustomizationConfig] based on the specified [configFiles].
          */
-        fun load(vararg configFiles: Path?): CustomizationConfig = configFiles
-            .filterNotNull()
-            .map { ConfigFactory.parseString(it.readText()) }
-            .run { load(first(), *drop(1).toTypedArray()) }
+        fun load(configFile: Path, vararg configFiles: Path?): CustomizationConfig =
+            ConfigFactory.parseString(configFile.readText())
+                .withFallback(ConfigFactory.systemProperties())
+                .let {
+                    configFiles
+                        .filterNotNull()
+                        .map { ConfigFactory.parseString(it.readText()) }
+                        .fold(it, Config::withFallback)
+                }
+                .resolve()
+                .run {
+                    CustomizationConfig(
+                        extract("trace") ?: false,
+                        extract("name") ?: configFile.fileName.nameWithoutExtension,
+                        (extract("timeZone") ?: extract<String?>("timezone"))?.let { TimeZone.getTimeZone(it) },
+                        extract<IntermediaryHostname?>("hostname")?.run { Hostname(name, randomSuffix ?: true) },
+                        extract("wifi"),
+                        kotlin.runCatching { extract<String?>("os") }.getOrNull().run {
+                            val os = this?.takeUnlessBlank() ?: throw IllegalArgumentException("Missing configuration: ${"os".asParam()}")
+                            val ranking: Map<Int, List<OperatingSystems>> = OperatingSystems.values().groupBy {
+                                minOf(os.levenshteinDistance(it.name), os.levenshteinDistance(it.fullName))
+                            }
+                            val (_, matches) = ranking.minByOrNull { it.key } ?: error("They are no configured operating systems to choose from.")
+                            when (matches.size) {
+                                0 -> throw IllegalArgumentException("$os is not supported.")
+                                1 -> matches.first()
+                                else -> throw IllegalArgumentException(
+                                    "$os is not supported. Did you mean any of the following? ${
+                                        matches.joinToString("") {
+                                            "$LF- ${it.name}: ${it.fullName}"
+                                        }
+                                    }")
+                            }
+                        },
+                        extract<String?>("size")?.takeUnless { it.isBlank() }?.toSize(),
+                        extract<IntermediarySsh?>("ssh")?.run {
+                            val fileBasedKeys = (authorizedKeys?.files ?: emptyList()).flatMap { glob ->
+                                ImgCstmzr.HomeDirectory.ls(glob).map { file -> file.readText() }.filter { content -> content.startsWith("ssh-") }
+                            }
+                            val stringBasedKeys = (authorizedKeys?.keys ?: emptyList()).map { it.trim() }
+                            Ssh(enabled, port, fileBasedKeys + stringBasedKeys)
+                        },
+                        extract<IntermediaryDefaultUser?>("defaultUser")?.run {
+                            DefaultUser(username, newUsername, newPassword
+                                ?.takeIf { it.matches(".*\\^\\d+".toRegex()) }
+                                ?.let {
+                                    val password = it.dropLastWhile { char -> char.isDigit() }.dropLast(1)
+                                    val offset = it.takeLastWhile { char -> char.isDigit() }.toInt()
+                                    password - offset
+                                } ?: newPassword)
+                        },
+                        extract<IntermediarySamba?>("samba")?.run { Samba(homeShare ?: false, rootShare ?: none) },
+                        extract<IntermediaryUsbGadgets?>("usbGadgets")?.run {
+                            listOfNotNull(ethernet?.run {
+                                val subnet: IPSubnet<out IPAddress> = ipSubnetOf(dhcpRange)
+                                val ip: IPAddress? = deviceAddress?.toIP()
+                                Ethernet(subnet, ip, hostAsDefaultGateway, enableSerialConsole, manufacturer, product)
+                            })
+                        } ?: emptyList(),
+                        extract("tweaks"),
+                        extract<List<IntermediaryFileOperation>?>("files")?.map {
+                            FileOperation(
+                                it.append?.trimIndent(),
+                                it.hostPath?.let { path ->
+                                    val ls = ImgCstmzr.WorkingDirectory.ls(path)
+                                    ls.firstOrNull { it.exists() }
+                                        ?: error("The resolved expression ${it.hostPath} would point to at least one existing file.")
+                                },
+                                LinuxRoot / it.diskPath,
+                            )
+                        } ?: emptyList(),
+                        extract<List<IntermediarySetupScript>?>("setup")?.map {
+                            SetupScript(it.name, it.sources ?: emptyList(), it.scripts?.map { (name, content) ->
+                                ShellScript(name, content ?: "")
+                            } ?: emptyList())
+                        } ?: emptyList(),
+                        extract<List<IntermediaryShellScript>?>("firstBoot")?.map {
+                            ShellScript(it.name, it.content ?: "")
+                        } ?: emptyList(),
+                    )
+                }
 
-        /**
-         * Loads a [CustomizationConfig] based on the mandatory [config]
-         * and the specified optional [fallbacks].
-         */
-        fun load(
-            config: Config,
-            vararg fallbacks: Config,
-        ): CustomizationConfig = ConfigFactory.systemProperties()
-            .withFallback(config)
-            .run { fallbacks.fold(this, Config::withFallback) }
-            .resolve().extract<IntermediaryCustomizationConfig>("img").convert()
+        data class IntermediaryHostname(val name: String, val randomSuffix: Boolean?)
+        data class IntermediarySsh(val enabled: Boolean?, val port: Int?, val authorizedKeys: AuthorizedKeys?) {
+            data class AuthorizedKeys(val files: List<String>?, val keys: List<String>?)
+        }
+
+        data class IntermediaryDefaultUser(val username: String?, val newUsername: String?, val newPassword: String?)
+        data class IntermediarySamba(val homeShare: Boolean?, val rootShare: RootShare?)
+
+        data class IntermediaryUsbGadgets(val ethernet: IntermediaryEthernet?) {
+            data class IntermediaryEthernet(
+                val dhcpRange: String,
+                val deviceAddress: String?,
+                val hostAsDefaultGateway: Boolean?,
+                val enableSerialConsole: Boolean?,
+                val manufacturer: String?,
+                val product: String?,
+            )
+        }
+
+        data class IntermediaryFileOperation(val append: String?, val hostPath: String?, val diskPath: String)
+        data class IntermediarySetupScript(val name: String, val sources: List<URI>?, val scripts: List<IntermediaryShellScript>?)
+        data class IntermediaryShellScript(val name: String?, val content: String?)
     }
 
     data class Hostname(val name: String, val randomSuffix: Boolean)
@@ -283,154 +372,3 @@ data class CustomizationConfig(
     private inline fun <reified T : (OperatingSystemImage) -> PhasedPatch> MutableList<(OperatingSystemImage) -> PhasedPatch>.extract(): List<T> =
         filterIsInstance<T>().also { removeAll(it) }
 }
-
-/**
- * Helper to load `.conf` files.
- *
- * Performs conversions / checks not easily performed with no intermediary step.
- */
-data class IntermediaryCustomizationConfig(
-    val trace: Boolean = false,
-    val name: String?,
-    val timeZone: String?,
-    val timezone: String?,
-    val hostname: IntermediaryHostname?,
-    val wifi: Wifi?,
-    val os: OperatingSystems?,
-    val size: String?,
-    val ssh: IntermediarySsh?,
-    val defaultUser: IntermediaryDefaultUser?,
-    val samba: IntermediarySamba?,
-    val usbGadgets: IntermediaryUsbGadgets?,
-    val tweaks: Tweaks?,
-    val files: List<IntermediaryFileOperation>?,
-    val setup: List<IntermediarySetupScript>?,
-    val firstBoot: List<IntermediaryShellScript>?,
-    val flashDisk: String?,
-) : Convertible<CustomizationConfig> by converter({
-    CustomizationConfig(
-        trace = trace,
-        name = requireNotNull(name) { "Missing configuration ${"img.name".asParam()}" },
-        timeZone = (timeZone ?: timezone)?.let { TimeZone.getTimeZone(it) },
-        hostname = hostname.convert(),
-        wifi = wifi,
-        os = requireNotNull(os) { "Missing configuration ${"img.os".asParam()}" },
-        size = size?.takeUnless { it.isBlank() }?.toSize(),
-        ssh = ssh.convert(),
-        defaultUser = defaultUser.convert(),
-        samba = samba.convert(),
-        usbGadgets = usbGadgets.convert() ?: emptyList(),
-        tweaks = tweaks,
-        files = files?.run { map { it.convert() } } ?: emptyList(),
-        setup = setup?.map { it.convert() } ?: emptyList(),
-        firstBoot = firstBoot?.map { it.convert() } ?: emptyList(),
-    )
-}) {
-    data class IntermediaryHostname(
-        val name: String,
-        val randomSuffix: Boolean?,
-    ) : Convertible<Hostname> by converter({
-        Hostname(name, randomSuffix ?: true)
-    })
-
-    data class IntermediarySsh(
-        val enabled: Boolean?,
-        val port: Int?,
-        val authorizedKeys: AuthorizedKeys?,
-    ) : Convertible<Ssh> by converter({
-        val fileBasedKeys = (authorizedKeys?.files ?: emptyList()).flatMap { glob ->
-            ImgCstmzr.HomeDirectory.ls(glob).map { file -> file.readText() }.filter { content -> content.startsWith("ssh-") }
-        }
-        val stringBasedKeys = (authorizedKeys?.keys ?: emptyList()).map { it.trim() }
-        Ssh(enabled, port, fileBasedKeys + stringBasedKeys)
-    }) {
-        data class AuthorizedKeys(val files: List<String>?, val keys: List<String>?)
-    }
-
-    data class IntermediaryDefaultUser(
-        val username: String?,
-        val newUsername: String?,
-        val newPassword: String?,
-    ) : Convertible<DefaultUser> by converter({
-        DefaultUser(username, newUsername, newPassword
-            ?.takeIf { it.matches(".*\\^\\d+".toRegex()) }
-            ?.let {
-                val password = it.dropLastWhile { char -> char.isDigit() }.dropLast(1)
-                val offset = it.takeLastWhile { char -> char.isDigit() }.toInt()
-                password - offset
-            } ?: newPassword)
-    })
-
-    data class IntermediarySamba(
-        val homeShare: Boolean?,
-        val rootShare: RootShare?,
-    ) : Convertible<Samba> by converter({
-        Samba(homeShare ?: false, rootShare ?: none)
-    })
-
-
-    data class IntermediaryUsbGadgets(
-        val ethernet: IntermediaryEthernet?,
-    ) : Convertible<List<UsbGadget>> {
-        override fun convert(): List<UsbGadget> =
-            listOfNotNull(
-                ethernet.convert(),
-            )
-
-        data class IntermediaryEthernet(
-            val dhcpRange: String,
-            val deviceAddress: String?,
-            val hostAsDefaultGateway: Boolean?,
-            val enableSerialConsole: Boolean?,
-            val manufacturer: String?,
-            val product: String?,
-        ) : Convertible<UsbGadget> by converter({
-            val subnet: IPSubnet<out IPAddress> = ipSubnetOf(dhcpRange)
-            val ip: IPAddress? = deviceAddress?.toIP()
-            Ethernet(subnet, ip, hostAsDefaultGateway, enableSerialConsole, manufacturer, product)
-        })
-    }
-
-    data class IntermediaryFileOperation(
-        val append: String?,
-        val hostPath: String?,
-        val diskPath: String,
-    ) : Convertible<FileOperation> by converter({
-        FileOperation(
-            append?.trimIndent(),
-            hostPath?.let { path ->
-                val ls = ImgCstmzr.WorkingDirectory.ls(path)
-                ls.firstOrNull { it.exists() }
-                    ?: error("The resolved expression $hostPath would point to at least one existing file.")
-            },
-            LinuxRoot / diskPath,
-        )
-    })
-
-    data class IntermediarySetupScript(
-        val name: String,
-        val sources: List<URI>?,
-        val scripts: List<IntermediaryShellScript>?,
-    ) : Convertible<SetupScript> by converter({
-        SetupScript(name, sources ?: emptyList(), scripts?.map { it.convert() } ?: emptyList())
-    })
-
-    data class IntermediaryShellScript(
-        val name: String?,
-        val content: String?,
-    ) : Convertible<ShellScript> by converter({
-        ShellScript(name, content ?: "")
-    })
-}
-
-
-fun interface Convertible<T> {
-    fun convert(): T
-
-    companion object {
-        inline fun <reified T> converter(crossinline converter: () -> T): Convertible<T> =
-            Convertible { converter() }
-    }
-}
-
-inline fun <reified T> Convertible<T>?.convert(): T? = this?.convert()

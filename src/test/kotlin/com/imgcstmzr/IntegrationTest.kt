@@ -27,7 +27,7 @@ import kotlin.io.path.listDirectoryEntries
 class IntegrationTest {
 
     @E2E @Smoke @Test
-    fun `should customize with sample`() {
+    fun `should customize with sample configuration`() {
 
         CustomizeCommand().parse(arrayOf("--config-file", "sample.conf", "--cache-dir", ".cache"))
 
@@ -44,7 +44,7 @@ class IntegrationTest {
         SystemProperty("SAMPLE_FULL_WPA_SUPPLICANT", "entry1\nentry2"),
     )
     @E2E @Test
-    fun `should customize with full sample`() {
+    fun `should customize with full sample configuration`() {
         CustomizeCommand().parse(arrayOf("--config-file", "sample-full.conf", "--cache-dir", ".cache"))
         val osImage = findImage("sample-full")
         expectThat(osImage).mounted {

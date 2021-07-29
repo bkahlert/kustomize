@@ -8,10 +8,8 @@ import koodies.test.Fixture
  */
 object MinimalConfFixture : Fixture<String>, InMemoryTextFile(
     "minimal.conf", """
-        img {
-          name = minimal
-          os = RISC OS Pico RC5 (test only)
-        }
+        name = minimal
+        os = RISC OS Pico RC5 (test only)
     """.trimIndent()) {
     override val contents: String get() = text
 }

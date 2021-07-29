@@ -10,6 +10,7 @@ import com.imgcstmzr.os.OperatingSystems.HypriotOS
 import com.imgcstmzr.test.E2E
 import com.typesafe.config.ConfigException
 import koodies.io.copyToDirectory
+import koodies.io.path.deleteOnExit
 import koodies.io.path.deleteRecursively
 import koodies.io.path.pathString
 import koodies.io.path.writeText
@@ -25,6 +26,7 @@ import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.isNotNull
 import strikt.assertions.message
+import strikt.java.isDirectory
 import kotlin.io.path.div
 
 class CustomizeCommandTest {
@@ -116,7 +118,7 @@ class CustomizeCommandTest {
         @Test
         fun `should throw on broken config file`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             val configFile = resolve("broken.conf").writeText("""
-                img {
+                {
             """.trimIndent())
             expectThrows<ConfigException.Parse> { CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString)) }
         }
@@ -125,26 +127,19 @@ class CustomizeCommandTest {
         inner class IncompleteConfig {
 
             @Test
-            fun `should throw on missing name`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-                val configFile = resolve("incomplete.conf").writeText("""
-                    img {
-                      os = RISC OS Pico RC5 (test only)
-                    }
+            fun `should use file name on missing name`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+                val configFile = resolve("file-name.conf").writeText("""
+                    os = RISC OS Pico RC5 (test only)
                 """.trimIndent())
-                expectThrows<IllegalArgumentException> { CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString)) } that {
-                    message.isNotNull().ansiRemoved.contains("Missing configuration img.name")
-                }
+                CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString))
+                expectThat(WorkingDirectory.resolve("file-name").deleteOnExit(true)).isDirectory()
             }
 
             @Test
             fun `should throw on missing os`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-                val configFile = resolve("incomplete.conf").writeText("""
-                    img {
-                      name = project
-                    }
-                """.trimIndent())
+                val configFile = resolve("incomplete.conf").writeText("")
                 expectThrows<IllegalArgumentException> { CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString)) } that {
-                    message.isNotNull().ansiRemoved.contains("Missing configuration img.os")
+                    message.isNotNull().ansiRemoved.contains("Missing configuration: os")
                 }
             }
         }
@@ -152,21 +147,19 @@ class CustomizeCommandTest {
         @E2E @Test
         fun `should customize image`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             val configFile = resolve("hello.conf").writeText("""
-                img {
-                  name = ${HypriotOS.name}
-                  os = ${HypriotOS.fullName}
-                    setup = [
+                name = ${HypriotOS.name}
+                os = ${HypriotOS.fullName}
+                setup = [
+                  {
+                    name: setup things
+                    scripts: [
                       {
-                        name: setup things
-                        scripts: [
-                          {
-                            name: Greet
-                            content: "echo '👏 🤓 👋'"
-                          }
-                        ]
-                      },
+                        name: Greet
+                        content: "echo '👏 🤓 👋'"
+                      }
                     ]
-                }
+                  },
+                ]
             """.trimIndent())
             CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--cache-dir", TestCacheDirectory.pathString))
             expectRendered().ansiRemoved {
