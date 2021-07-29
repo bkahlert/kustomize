@@ -1,7 +1,6 @@
 package com.imgcstmzr.cli
 
 import com.imgcstmzr.ImgCstmzr
-import com.imgcstmzr.libguestfs.ImageBuilder.buildFrom
 import com.imgcstmzr.libguestfs.ImageExtractor.extractImage
 import koodies.io.path.FileSizeComparator
 import koodies.io.path.cloneTo
@@ -110,7 +109,7 @@ class ProjectDirectory(
 
             val img = rawDir.requireSingle {
                 val downloadedFile = downloadDir.requireSingle(provider)
-                downloadedFile.extractImage { path -> buildFrom(path) }
+                downloadedFile.extractImage()
             }
 
             WorkDirectory.from(dir, img).single { it.extensionOrNull.equals("img", ignoreCase = true) }

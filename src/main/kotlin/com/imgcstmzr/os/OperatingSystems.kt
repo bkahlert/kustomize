@@ -67,13 +67,6 @@ enum class OperatingSystems(
         defaultCredentials = "tc" withPassword "piCore",
     ),
 
-    ArchLinuxArm(
-        fullName = "Arch Linux ARM",
-        downloadUrl = "http://os.archlinuxarm.org/os/ArchLinuxARM-rpi-latest.tar.gz",
-        approximateImageSize = 1.2.Giga.bytes,
-        defaultCredentials = "alarm" withPassword "alarm", // root, root
-    ),
-
     RiscOs(
         fullName = "RISC OS",
         downloadUrl = "https://www.riscosopen.org/zipfiles/platform/raspberry-pi/BCM2835.5.24.zip?1544451169",

@@ -24,7 +24,7 @@ object ImageExtractor {
             && !path.last().toString().startsWith("._")
     }
 
-    fun Path.extractImage(imageBuilder: (Path) -> Path): Path = spanning("Unarchiving $uriString (${getSize()})") {
+    fun Path.extractImage(): Path = spanning("Unarchiving $uriString (${getSize()})") {
         if (imgFilter(this@extractImage)) {
             log("$fileName is already an image.")
             this@extractImage
@@ -35,7 +35,7 @@ object ImageExtractor {
             when (filteredArchiveEntries.size) {
                 0 -> {
                     log("No image found. Using archive as image.")
-                    imageBuilder(this@extractImage).moveToDirectory(temp)
+                    moveToDirectory(temp)
                 }
                 1 -> {
                     spanning("Extracting found image ${filteredArchiveEntries.first().name}") {
