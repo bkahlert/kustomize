@@ -19,7 +19,6 @@ import koodies.docker.DockerRequiring
 import koodies.exec.Process.State.Excepted
 import koodies.exec.rootCause
 import koodies.test.FifteenMinutesTimeout
-import koodies.test.expecting
 import koodies.text.ansiRemoved
 import koodies.text.matchesCurlyPattern
 import org.junit.jupiter.api.Test
@@ -48,7 +47,7 @@ class PasswordPatchTest {
     fun `should update shadow file correctly`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val passwordPath = LinuxRoot.etc.shadow
         val username = RaspberryPiLite.defaultCredentials.username
-        val newPassword = "on-a-diet"
+        val newPassword = "WUOrfQgcWkJMc"
         val passwordPatch = PasswordPatch(username, newPassword)
         val userPassword = osImage.guestfish {
             copyOut { passwordPath }
@@ -70,10 +69,12 @@ class PasswordPatchTest {
         osImage.patch(PasswordPatch(RaspberryPiLite.defaultCredentials.username, "po"))
 
         osImage.credentials = Credentials("pi", "wrong password")
-        expecting { osImage.boot(container.name) } that {
-            isA<Excepted>().rootCause.isA<IncorrectPasswordException>()
-                .message.isEqualTo("The entered password \"wrong password\" is incorrect.")
-        }
+        expectThat(osImage.boot(container.name))
+            .isA<Excepted>()
+            .rootCause
+            .isA<IncorrectPasswordException>()
+            .message.isEqualTo("The entered password \"wrong password\" is incorrect.")
+
         expectRendered().ansiRemoved {
             contains("Login incorrect")
         }

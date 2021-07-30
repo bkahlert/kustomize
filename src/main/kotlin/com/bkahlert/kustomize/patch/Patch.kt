@@ -373,7 +373,7 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
              * Resizes the [OperatingSystemImage] to the specified [size].
              */
             fun resize(size: Size) {
-                diskOperations.add { osImage.increaseDiskSpace(size) }
+                diskOperations.add { osImage.resize(size) }
             }
 
             /**

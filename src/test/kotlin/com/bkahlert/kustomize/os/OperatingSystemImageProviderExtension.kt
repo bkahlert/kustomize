@@ -1,6 +1,7 @@
 package com.bkahlert.kustomize.os
 
 import com.bkahlert.kustomize.TestKustomize.TestCacheDirectory
+import com.bkahlert.kustomize.cli.Cache
 import com.bkahlert.kustomize.cli.Layouts
 import com.bkahlert.kustomize.os.OperatingSystemImage.Companion.based
 import com.bkahlert.kustomize.test.ImageFixtures
@@ -55,7 +56,7 @@ open class OperatingSystemImageProviderExtension : TypeBasedParameterResolver<Op
         private val copiesPerTest = mutableMapOf<String, List<Path>>()
         fun cacheDir(uniqueId: String): Path? = copiesPerTest[uniqueId]?.firstOrNull()
 
-        private val cache = com.bkahlert.kustomize.cli.Cache(TestCacheDirectory)
+        private val cache = Cache(TestCacheDirectory)
         private fun OperatingSystem.getCopy(uniqueId: String): OperatingSystemImage =
             lock.withLock {
                 this based with(cache) {

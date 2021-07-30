@@ -1,10 +1,10 @@
 package com.bkahlert.kustomize.cli
 
 import koodies.io.ClassPathFile
+import koodies.io.isInside
 import koodies.io.path.asPath
 import koodies.io.path.deleteRecursively
 import koodies.io.path.hasContent
-import koodies.io.path.isInside
 import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.io.randomDirectory
 import koodies.junit.UniqueId

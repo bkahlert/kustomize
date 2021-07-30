@@ -53,7 +53,7 @@ class GuestfishCommandLineTest {
             'type=bind,source=${osImage.exchangeDirectory},target=/shared' \
             '--mount' \
             'type=bind,source=${osImage.file},target=/images/disk.img' \
-            'bkahlert/libguestfs@sha256:e8fdf16c69a9155b0e30cdc9b2f872232507f5461be2e7dff307f4c1b50faa20' \
+            'bkahlert/libguestfs@sha256:de20843ae800c12a8b498c10ec27e2136b55dee4d62d927dff6b3ae360676d00' \
             '-c' \
             'guestfish --rw --add /images/disk.img --mount /dev/sda2:/ --mount /dev/sda1:/boot <<HERE-{}
             !mkdir -p

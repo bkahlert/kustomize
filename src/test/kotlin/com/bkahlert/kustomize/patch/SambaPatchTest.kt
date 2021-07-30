@@ -19,7 +19,6 @@ import koodies.io.path.textContent
 import koodies.junit.UniqueId
 import koodies.test.Smoke
 import koodies.test.withTempDir
-import koodies.text.LineSeparators.lineSequence
 import koodies.unit.Gibi
 import koodies.unit.bytes
 import org.junit.jupiter.api.Test
@@ -112,7 +111,7 @@ class SambaPatchTest {
         @OS(RaspberryPiLite) osImage: OperatingSystemImage,
     ) = withTempDir(uniqueId) {
 
-        osImage.patch(ImgResizePatch(2.Gibi.bytes), sambaPatch)
+        osImage.patch(ResizePatch(2.Gibi.bytes), sambaPatch)
 
         expect {
             lateinit var output: Sequence<String>

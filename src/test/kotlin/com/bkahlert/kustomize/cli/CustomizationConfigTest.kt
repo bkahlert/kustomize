@@ -13,8 +13,8 @@ import com.bkahlert.kustomize.os.OperatingSystems.RiscTestOS
 import com.bkahlert.kustomize.patch.CompositePatch
 import com.bkahlert.kustomize.patch.FirstBootPatch
 import com.bkahlert.kustomize.patch.HostnamePatch
-import com.bkahlert.kustomize.patch.ImgResizePatch
 import com.bkahlert.kustomize.patch.PasswordPatch
+import com.bkahlert.kustomize.patch.ResizePatch
 import com.bkahlert.kustomize.patch.RootShare.`read-write`
 import com.bkahlert.kustomize.patch.SambaPatch
 import com.bkahlert.kustomize.patch.ShellScriptPatch
@@ -353,7 +353,7 @@ class CustomizationConfigTest {
                             TweaksPatch::class,
                             TimeZonePatch::class,
                             HostnamePatch::class,
-                            ImgResizePatch::class,
+                            ResizePatch::class,
                             UsernamePatch::class,
                             SshEnablementPatch::class,
                             WpaSupplicantPatch::class,

@@ -9,7 +9,7 @@ import koodies.unit.Size
  * set increases the available space to [size] by resizing
  * the image itself and subsequently resizing the contained partitions.
  */
-class ImgResizePatch(
+class ResizePatch(
     private val size: Size,
 ) : (OperatingSystemImage) -> PhasedPatch {
     override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build(
@@ -17,9 +17,5 @@ class ImgResizePatch(
         osImage,
     ) {
         prepareDisk { resize(size) }
-
-        runPrograms {
-            script("finish resize", "sudo raspi-config --expand-rootfs")
-        }
     }
 }

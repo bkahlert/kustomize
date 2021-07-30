@@ -11,14 +11,14 @@ import strikt.api.expectThat
 import strikt.assertions.isGreaterThanOrEqualTo
 import strikt.assertions.isNotEqualTo
 
-class ImgResizePatchTest {
+class ResizePatchTest {
 
     @E2E @Test
     fun `should increase size`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val oldSize = osImage.size
         val newSize = osImage.size + 10.Mebi.bytes
 
-        osImage.patch(ImgResizePatch(newSize))
+        osImage.patch(ResizePatch(newSize))
 
         expectThat(osImage.size)
             .isGreaterThanOrEqualTo(newSize)

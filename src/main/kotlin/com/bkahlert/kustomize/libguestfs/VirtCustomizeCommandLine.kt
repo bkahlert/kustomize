@@ -93,7 +93,6 @@ class VirtCustomizeCommandLine(
     val options: Options,
     val customizations: List<Customization>,
     val dockerOptions: DockerRunCommandLine.Options = Options(
-        entryPoint = COMMAND,
         name = DockerContainer.from(COMMAND.withRandomSuffix()),
         autoCleanup = true,
         mounts = MountOptions {

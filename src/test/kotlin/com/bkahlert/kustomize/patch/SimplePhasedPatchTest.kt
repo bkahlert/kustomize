@@ -18,9 +18,9 @@ import com.bkahlert.kustomize.test.E2E
 import koodies.docker.DockerContainer
 import koodies.exec.Process.State.Exited.Succeeded
 import koodies.exec.output
+import koodies.io.createParentDirectories
 import koodies.io.path.hasContent
 import koodies.io.path.listDirectoryEntriesRecursively
-import koodies.io.path.withDirectoriesCreated
 import koodies.io.path.writeText
 import koodies.io.toAsciiArt
 import koodies.regex.groupValue
@@ -99,7 +99,7 @@ class SimplePhasedPatchTest {
 
     @E2E @Test
     fun `should copy-in only relevant files`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-        osImage.hostPath(LinuxRoot.home / "pi" / "local.txt").withDirectoriesCreated().createFile().writeText("local")
+        osImage.hostPath(LinuxRoot.home / "pi" / "local.txt").createParentDirectories().createFile().writeText("local")
 
         val patch = PhasedPatch.build("test", osImage) {
             modifyFiles {
@@ -253,7 +253,7 @@ fun Assertion.Builder<OperatingSystemImage>.booted(
 ): Assertion.Builder<OperatingSystemImage> =
     assert("booted ${this.get { operatingSystem }}") { osImage ->
         when (val exitState = osImage.boot(
-            DockerContainer.from("Assertion Boot of $this").name,
+            DockerContainer.from("Assertion Boot of ${osImage.fileName}").name,
             Program("check", initialState, *states),
             decorationFormatter = { it.formattedAs.debug }
         )) {

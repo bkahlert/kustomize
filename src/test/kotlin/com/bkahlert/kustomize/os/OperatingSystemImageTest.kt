@@ -1,17 +1,17 @@
 package com.bkahlert.kustomize.os
 
+import com.bkahlert.kustomize.Kustomize
 import com.bkahlert.kustomize.expectRendered
 import com.bkahlert.kustomize.libguestfs.LibguestfsImage
 import com.bkahlert.kustomize.libguestfs.mounted
 import com.bkahlert.kustomize.os.OperatingSystemImage.Companion.based
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
 import koodies.docker.DockerRequiring
+import koodies.io.createParentDirectories
 import koodies.io.path.hasContent
 import koodies.io.path.isDuplicateOf
-import koodies.io.path.pathString
 import koodies.io.path.textContent
 import koodies.io.path.touch
-import koodies.io.path.withDirectoriesCreated
 import koodies.io.path.writeLine
 import koodies.io.path.writeText
 import koodies.io.randomDirectory
@@ -22,6 +22,8 @@ import koodies.test.FiveMinutesTimeout
 import koodies.test.Smoke
 import koodies.test.toStringContainsAll
 import koodies.test.withTempDir
+import koodies.unit.Gibi
+import koodies.unit.bytes
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
@@ -32,6 +34,7 @@ import strikt.java.exists
 import java.nio.file.Path
 import kotlin.io.path.div
 import kotlin.io.path.isWritable
+import kotlin.io.path.pathString
 import kotlin.io.path.readLines
 
 class OperatingSystemImageTest {
@@ -50,7 +53,7 @@ class OperatingSystemImageTest {
     fun `should have full name`() {
         @Suppress("SpellCheckingInspection")
         expectThat((OperatingSystemMock("full-name-test") based Path.of("foo/bar")).fullName)
-            .isEqualTo("RISC OS Pico RC5 (test only) ／ file://${com.bkahlert.kustomize.Kustomize.WorkingDirectory}/foo/bar")
+            .isEqualTo("RISC OS Pico RC5 (test only) ／ file://${Kustomize.WorkingDirectory}/foo/bar")
     }
 
     @Test
@@ -112,7 +115,7 @@ class OperatingSystemImageTest {
 
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
         fun `should override locally existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-            val dir = osImage.exchangeDirectory.apply { resolve("boot/cmdline.txt").withDirectoriesCreated().writeText("overwrite me") }
+            val dir = osImage.exchangeDirectory.apply { resolve("boot/cmdline.txt").createParentDirectories().writeText("overwrite me") }
             osImage.guestfish {
                 copyOut { LinuxRoot / "boot" / "cmdline.txt" }
             }
@@ -125,7 +128,7 @@ class OperatingSystemImageTest {
 
         @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
         fun `should override existing file`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
-            val dir = osImage.exchangeDirectory.apply { resolve("boot/cmdline.txt").withDirectoriesCreated().writeText("overwrite me") }
+            val dir = osImage.exchangeDirectory.apply { resolve("boot/cmdline.txt").createParentDirectories().writeText("overwrite me") }
             osImage.guestfish {
                 copyIn { LinuxRoot / "boot" / "cmdline.txt" }
             }
@@ -134,6 +137,16 @@ class OperatingSystemImageTest {
             }
 
             expectThat(dir.resolve("boot/cmdline.txt")).hasContent("overwrite me")
+        }
+    }
+
+    @Nested
+    inner class Resize {
+
+        @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
+        fun `should resize`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+            val targetSize = 4.Gibi.bytes.also { check(osImage.size < it) { "$osImage is already larger than $it. Please update test." } }
+            expectThat(osImage.resize(targetSize)).isEqualTo(targetSize)
         }
     }
 

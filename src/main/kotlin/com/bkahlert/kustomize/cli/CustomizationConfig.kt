@@ -22,9 +22,9 @@ import com.bkahlert.kustomize.patch.CompositePatch
 import com.bkahlert.kustomize.patch.CopyFilesPatch
 import com.bkahlert.kustomize.patch.FirstBootPatch
 import com.bkahlert.kustomize.patch.HostnamePatch
-import com.bkahlert.kustomize.patch.ImgResizePatch
 import com.bkahlert.kustomize.patch.PasswordPatch
 import com.bkahlert.kustomize.patch.PhasedPatch
+import com.bkahlert.kustomize.patch.ResizePatch
 import com.bkahlert.kustomize.patch.RootShare
 import com.bkahlert.kustomize.patch.RootShare.none
 import com.bkahlert.kustomize.patch.SambaPatch
@@ -282,7 +282,7 @@ data class CustomizationConfig(
      * Returns a list of patches that reflect this configuration.
      */
     fun toPatches(): List<(OperatingSystemImage) -> PhasedPatch> = buildList {
-        size?.apply { add(ImgResizePatch(this)) }
+        size?.apply { add(ResizePatch(this)) }
 
         hostname?.apply { add(HostnamePatch(name, randomSuffix)) }
 
@@ -349,10 +349,10 @@ data class CustomizationConfig(
      */
     fun toOptimizedPatches(): List<(OperatingSystemImage) -> PhasedPatch> = with(toPatches().toMutableList()) {
         listOf(
-            CompositePatch(extract<TweaksPatch>()
+            CompositePatch(extract<ResizePatch>()
+                + extract<TweaksPatch>()
                 + extract<HostnamePatch>()
                 + extract<TimeZonePatch>()
-                + extract<ImgResizePatch>()
                 + extract<UsernamePatch>()
                 + extract<SshEnablementPatch>()
                 + extract<WpaSupplicantPatch>()),
