@@ -90,12 +90,12 @@ class SambaPatch(
             }
             firstBoot("Change SMB Password for $username") {
                 """
-            echo "…"
-            echo "…"
-            echo "…"
-            pass="$password"
-            (echo "${'$'}pass"; echo "${'$'}pass") | smbpasswd -s -a "$username"
-            """
+                echo "…"
+                echo "…"
+                echo "…"
+                pass="$password"
+                (echo "${'$'}pass"; echo "${'$'}pass") | smbpasswd -s -a "$username"
+                """
             }
             firstBootShutdownCommand()
         }

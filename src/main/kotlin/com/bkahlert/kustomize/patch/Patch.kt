@@ -557,3 +557,89 @@ data class FileOperation(
         }
     }
 }
+
+
+class PatchContext(
+    private val trace: Boolean = false,
+    private val osImage: OperatingSystemImage,
+    private val exceptions: MutableList<Throwable>,
+) {
+
+    /**
+     * Resizes the [OperatingSystemImage] to the specified [size].
+     */
+    fun resize(size: Size) {
+        kotlin.runCatching { osImage.resize(size) }.onFailure { exceptions.add(it) }
+    }
+
+    /**
+     * Changes the username to be used for login from [oldUsername] to [newUsername].
+     */
+    fun updateUsername(oldUsername: String, newUsername: String) {
+        spanning("Updating username of user ${oldUsername.formattedAs.input} to ${newUsername.formattedAs.input}") {
+            osImage.credentials = osImage.credentials.copy(username = newUsername)
+        }
+    }
+
+    /**
+     * Changes the password used to login using the given [username] to [password].
+     */
+    fun updatePassword(username: String, password: String) {
+        if (osImage.credentials.username != username) return
+        spanning("Updating password of user ${osImage.credentials.username.formattedAs.input}") {
+            osImage.credentials = osImage.credentials.copy(password = password)
+        }
+    }
+
+    /**
+     * Options to be applied on the img file
+     * using the [VirtCustomizeCommandLine].
+     */
+    fun virtCustomize(customizationsBuilder: CustomizationsBuilder.CustomizationsContext.() -> Unit) {
+        osImage.virtCustomize(trace, *CustomizationsBuilder(osImage).build(customizationsBuilder).toTypedArray())
+    }
+
+    /**
+     * Operations to be applied on the mounted file system
+     * using the [GuestfishCommandLine] tool.
+     */
+    fun guestfish(guestfishCommandsBuilder: GuestfishCommandsBuilder.GuestfishCommandsContext.() -> Unit) {
+        osImage.guestfish(trace, *GuestfishCommandsBuilder(osImage).build(guestfishCommandsBuilder).toTypedArray())
+    }
+
+    fun edit(vararg fileOperations: FileOperation) {
+        spanning("Edit files") {
+            osImage.guestfish(trace) {
+                @Suppress("Destructure")
+                fileOperations.map { fileOperation -> copyOut { fileOperation.file } }
+            }
+
+            @Suppress("Destructure")
+            fileOperations.forEach { fileOperation ->
+                kotlin.runCatching { fileOperation(osImage.hostPath(fileOperation.file)) }.onFailure { exceptions.add(it) }
+            }
+
+            val fileOperationFiles: List<Path> = fileOperations.map { osImage.hostPath(it.file) }
+            osImage.guestfish(trace) {
+                // tar-in only relevant files to avoid corrupting incorrect attributes (i.e. executable flag)
+                tarIn { it in fileOperationFiles }
+            }
+        }
+    }
+
+    fun boot(vararg programs: Program) {
+        osImage.boot(
+            osImage.name.withRandomSuffix(),
+            *programs,
+            style = Dotted,
+            autoLogin = programs.isNotEmpty(),
+            autoShutdown = programs.isNotEmpty(),
+        )
+    }
+}
+
+fun OperatingSystemImage.patch(trace: Boolean = false, patch: PatchContext.() -> Unit): ReturnValues<Throwable> {
+    val exceptions = mutableListOf<Throwable>()
+    PatchContext(trace, this, exceptions).apply(patch)
+    return ReturnValues(*exceptions.toTypedArray())
+}
