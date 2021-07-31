@@ -34,7 +34,7 @@ dependencies {
     implementation("com.github.ajalt.clikt:clikt:3.1.0")
     implementation("io.github.config4k:config4k:0.4.2")
 
-    implementation("org.apache.commons:commons-compress:1.20") {
+    implementation("org.apache.commons:commons-compress:1.21") {
         because("needed to extract downloaded archives containing the image")
     }
 

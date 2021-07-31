@@ -63,7 +63,7 @@ docker run --rm -it \
 · ▶ Retrieving image
 · · ▶ Downloading https://downloads.raspberrypi.org/raspios_lite_armhf_latest ✔︎
 · · ▶ Moving download to file:///home/john/sample/download/raspios_lite_armhf_latest ✔︎
-· · ▶ Unarchiving file:///home/john/sample … ound image 2021-05-07-raspios-buster-armhf-lite.img ✔︎
+· · ▶ Unarchiving file:///home/john/sample … und image 2021-05-07-raspios-buster-armhf-lite.img ✔︎
 · · ▶ Moving download to file:///home/john/sample/raw/2021-05-07-raspios-buster-armhf-lite.img ✔︎
 · ✔︎
 ✔︎
@@ -83,12 +83,12 @@ docker run --rm -it \
 · │   · · [  43.6] Appending line to /etc/sudoers.d/privacy
 · │   · · [  43.7] Appending line to /etc/sudoers
 · │   · · [  43.7] Making directory: /usr/lib/virt-sysprep/scripts
-· │   · · [  43.7] Copying: usr/lib/virt-sysp … rst-boot-order-fix to /usr/lib/virt-sysprep/scripts
-· │   · · [  43.8] Changing permissions of /u … sysprep/scripts/0000---first-boot-order-fix to 0755
+· │   · · [  43.7] Copying: usr/lib/virt-sysp … st-boot-order-fix to /usr/lib/virt-sysprep/scripts
+· │   · · [  43.8] Changing permissions of /u … ysprep/scripts/0000---first-boot-order-fix to 0755
 · │   · · [  43.8] Making directory: /etc/systemd/system
 · │   · · [  43.8] Copying: etc/systemd/system/firstboot-wait.service to /etc/systemd/system
 · │   · · [  43.9] Making directory: /etc/systemd/system/multi-user.target.wants
-· │   · · [  43.9] Linking: /etc/systemd/syst … rvice -> /etc/systemd/system/firstboot-wait.service
+· │   · · [  43.9] Linking: /etc/systemd/syst … vice -> /etc/systemd/system/firstboot-wait.service
 · │   · · [  44.0] Making directory: /etc/systemd/scripts
 · │   · · [  44.0] Copying: etc/systemd/scripts/firstboot-wait.sh to /etc/systemd/scripts
 · │   · · [  44.1] Changing permissions of /etc/systemd/scripts/firstboot-wait.sh to 0755
