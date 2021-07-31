@@ -1,6 +1,8 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name=" [no args]" type="JetRunConfigurationType">
     <option name="MAIN_CLASS_NAME" value="MainKt" />
+    <module name="kustomize.main" />
+    <shortenClasspath name="NONE" />
     <extension name="net.ashald.envfile">
       <option name="IS_ENABLED" value="false" />
       <option name="IS_SUBST" value="false" />

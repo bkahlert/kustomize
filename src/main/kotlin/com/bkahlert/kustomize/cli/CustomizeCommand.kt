@@ -1,5 +1,6 @@
 package com.bkahlert.kustomize.cli
 
+import com.bkahlert.kustomize.KustomizeTelemetry
 import com.bkahlert.kustomize.libguestfs.LibguestfsImage
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystemImage.Companion.based
@@ -18,7 +19,9 @@ import koodies.exception.toCompactString
 import koodies.io.path.asPath
 import koodies.io.path.getSize
 import koodies.kaomoji.Kaomoji
+import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.Banner
+import koodies.text.Semantics.formattedAs
 import koodies.tracing.rendering.ReturnValues
 import koodies.tracing.rendering.Styles
 import koodies.tracing.spanning
@@ -52,7 +55,7 @@ class CustomizeCommand : NoOpCliktCommand(
         .path(mustExist = false, canBeFile = false)
         .default(".".asPath())
 
-    private val reuseLastWorkingCopy: Boolean by option(help = "Whether to re-use the last working copy (instead of creating a new one).")
+    private val jaegerTracing: Boolean by option(help = "Whether to trace the customization using a locally started Jaeger.")
         .flag(default = false)
 
     private val cache: Cache by lazy { Cache(cacheDir) }
@@ -61,6 +64,10 @@ class CustomizeCommand : NoOpCliktCommand(
         .flag(default = false)
 
     override fun run() {
+        if (jaegerTracing) {
+            echo("Tracing UI: ${KustomizeTelemetry.tracerUI}".ansi.formattedAs.meta)
+        }
+
         echo(Banner.banner("Kustomize"))
         echo()
 
@@ -117,7 +124,7 @@ class CustomizeCommand : NoOpCliktCommand(
     }
 
     private fun provideImageCopy(config: CustomizationConfig) = with(cache) {
-        config.os based provideCopy(config.name, reuseLastWorkingCopy) {
+        config.os based provideCopy(config.name) {
             downloader.download(config.os.downloadUrl)
         }
     }

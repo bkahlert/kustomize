@@ -1,7 +1,9 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="--config=sample.conf + otel" type="JetRunConfigurationType">
     <option name="MAIN_CLASS_NAME" value="MainKt" />
-    <option name="PROGRAM_PARAMETERS" value="--config=sample.conf" />
+    <module name="kustomize.main" />
+    <option name="PROGRAM_PARAMETERS" value="--config-file=sample.conf --jaeger-tracing" />
+    <shortenClasspath name="NONE" />
     <option name="VM_PARAMETERS" value="-Dotel.traces.exporter=jaeger -Dotel.resource.attributes=service.name=kustomize" />
     <extension name="net.ashald.envfile">
       <option name="IS_ENABLED" value="false" />

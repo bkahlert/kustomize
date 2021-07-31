@@ -72,7 +72,7 @@ class CacheTest {
 
         val copies = (0..2).map {
             with(cache) {
-                provideCopy("my-copy", false, provider)
+                provideCopy("my-copy", provider)
             }
         }
 

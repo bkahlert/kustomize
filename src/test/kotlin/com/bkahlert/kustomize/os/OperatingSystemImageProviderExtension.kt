@@ -60,7 +60,7 @@ open class OperatingSystemImageProviderExtension : TypeBasedParameterResolver<Op
         private fun OperatingSystem.getCopy(uniqueId: String): OperatingSystemImage =
             lock.withLock {
                 this based with(cache) {
-                    provideCopy(name, reuseLastWorkingCopy = false) {
+                    provideCopy(name) {
                         downloader.download(downloadUrl)
                     }.also {
                         copiesPerTest.addElement(uniqueId, it)

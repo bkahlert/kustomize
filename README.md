@@ -63,7 +63,7 @@ docker run --rm -it \
 · ▶ Retrieving image
 · · ▶ Downloading https://downloads.raspberrypi.org/raspios_lite_armhf_latest ✔︎
 · · ▶ Moving download to file:///home/john/sample/download/raspios_lite_armhf_latest ✔︎
-· · ▶ Unarchiving file:///home/john/sample … MB) ▶ Extracting found image 2021-05-07-raspios-buster-armhf-lite.img ✔︎
+· · ▶ Unarchiving file:///home/john/sample … ound image 2021-05-07-raspios-buster-armhf-lite.img ✔︎
 · · ▶ Moving download to file:///home/john/sample/raw/2021-05-07-raspios-buster-armhf-lite.img ✔︎
 · ✔︎
 ✔︎
@@ -83,12 +83,12 @@ docker run --rm -it \
 · │   · · [  43.6] Appending line to /etc/sudoers.d/privacy
 · │   · · [  43.7] Appending line to /etc/sudoers
 · │   · · [  43.7] Making directory: /usr/lib/virt-sysprep/scripts
-· │   · · [  43.7] Copying: usr/lib/virt-sysprep/scripts/0000---first-boot-order-fix to /usr/lib/virt-sysprep/scripts
-· │   · · [  43.8] Changing permissions of /usr/lib/virt-sysprep/scripts/0000---first-boot-order-fix to 0755
+· │   · · [  43.7] Copying: usr/lib/virt-sysp … rst-boot-order-fix to /usr/lib/virt-sysprep/scripts
+· │   · · [  43.8] Changing permissions of /u … sysprep/scripts/0000---first-boot-order-fix to 0755
 · │   · · [  43.8] Making directory: /etc/systemd/system
 · │   · · [  43.8] Copying: etc/systemd/system/firstboot-wait.service to /etc/systemd/system
 · │   · · [  43.9] Making directory: /etc/systemd/system/multi-user.target.wants
-· │   · · [  43.9] Linking: /etc/systemd/syst … wants/firstboot-wait.service -> /etc/systemd/system/firstboot-wait.service
+· │   · · [  43.9] Linking: /etc/systemd/syst … rvice -> /etc/systemd/system/firstboot-wait.service
 · │   · · [  44.0] Making directory: /etc/systemd/scripts
 · │   · · [  44.0] Copying: etc/systemd/scripts/firstboot-wait.sh to /etc/systemd/scripts
 · │   · · [  44.1] Changing permissions of /etc/systemd/scripts/firstboot-wait.sh to 0755
@@ -103,48 +103,48 @@ docker run --rm -it \
 · │   ▶ OS Preparations (1) ▶ Updating username of user pi to john.doe (1) ✔︎
 · │   ◼ OS Boot
 · │   ▶ OS Operations (1)
-· │   · ▶ Running Raspberry Pi OS Lite ／ 202 … -raspios-buster-armhf-lite.img with ◀◀ finish rename
-· │   · · image: /sdcard/filesystem.img                                             ◀◀ login ◀ finish rename ◀ shutdown
+· │   · ▶ Running Raspberry Pi OS Lite ／ 202 … -raspios-buster-armhf-lite.img with
+· │   · · image: /sdcard/filesystem.img
 · ┊   · ·
-· │   · · firstboot.sh[385]: === Running /usr … -john-doe-pi ===                    ◀◀ login❬1/4: wait … rename ◀ shutdown
-· │   · · firstboot.sh[385]: === Running /usr … n-john-doe-pi ===                   ◀◀ login❬1/4: wait … rename ◀ shutdown
-· │   · · firstboot.sh[385]: === Running /usr … --home-john-doe--m-john-doe ===     ◀◀ login❬1/4: wait … rename ◀ shutdown
-· │   · · firstboot-wait.sh[387]: CHECKING SCRIPTS ⮕ SCRIPTS-DONE … COMPLETED      ◀◀ login❬1/4: wait … rename ◀ shutdown
-· │   · · [  OK  ] Started libguestfs firstboot service completion.                 ◀◀ login❬1/4: wait … rename ◀ shutdown
-· │   · · [  OK  ] Started Serial Getty on ttyAMA0.                                 ◀◀ login❬1/4: wait … rename ◀ shutdown
-· │   · · [  OK  ] Reached target Login Prompts.                                    ◀◀ login❬1/4: wait … rename ◀ shutdown
-· │   · ·                                                                           ◀◀ login❬1/4: wait … rename ◀ shutdown
-· │   · ·                                                                           ◀◀ login❬1/4: wait … rename ◀ shutdown
-· │   · · Raspbian GNU/Linux 10 sample--aTy0 ttyAMA0                                ◀◀ login❬1/4: wait … rename ◀ shutdown
-· │   · ·                                                                           ◀◀ login❬1/4: wait … rename ◀ shutdown
-· │   · · sample--aTy0 login:                                                       ◀◀ login❬1/4: wait … rename ◀ shutdown
+· │   · · firstboot.sh[385]: === Running /usr … -john-doe-pi ===                    ◀◀ login
+· │   · · firstboot.sh[385]: === Running /usr … n-john-doe-pi ===                   ◀◀ login
+· │   · · firstboot.sh[385]: === Running /usr … --home-john-doe--m-john-doe ===     ◀◀ login
+· │   · · firstboot-wait.sh[387]: CHECKING SCRIPTS ⮕ SCRIPTS-DONE … COMPLETED      ◀◀ login
+· │   · · [  OK  ] Started libguestfs firstboot service completion.                 ◀◀ login
+· │   · · [  OK  ] Started Serial Getty on ttyAMA0.                                 ◀◀ login
+· │   · · [  OK  ] Reached target Login Prompts.                                    ◀◀ login
+· │   · ·                                                                           ◀◀ login
+· │   · ·                                                                           ◀◀ login
+· │   · · Raspbian GNU/Linux 10 sample--aTy0 ttyAMA0                                ◀◀ login
+· │   · ·                                                                           ◀◀ login
+· │   · · sample--aTy0 login:                                                       ◀◀ login
 · │   · ·                                                                           
 · │   · ·         ̣ ˱ ❨ ( Entering "john.doe" )                                      
 · │   · · {*≧∀≦}                                                                    
 · │   · ·                                                                           
-· │   · · sample--aTy0 login: john.doe                                              ◀◀ login❬2/4: conf … rename ◀ shutdown
-· │   · ·                                                                           ◀◀ login❬2/4: conf … rename ◀ shutdown
-· │   · · Password:                                                                 ◀◀ login❬3/4: pass … rename ◀ shutdown
+· │   · · sample--aTy0 login: john.doe                                              ◀◀ login
+· │   · ·                                                                           ◀◀ login
+· │   · · Password:                                                                 ◀◀ login
 · │   · ·                                                                           
 · │   · ·         ̣ ˱ ❨ ( Entering "raspberry" )                                     
 · │   · · ( ´ｰ`)                                                                    
 · │   · ·                                                                           
-· │   · · Password:                                                                 ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · · Linux sample--aTy0 4.19.50+ #1 Tue Nov 26 01:49:16 CET 2019 armv6l        ◀◀ login❬3/4: pass … rename ◀ shutdown
-· │   · ·                                                                           ◀◀ login❬3/4: pass … rename ◀ shutdown
-· │   · · The programs included with the Debian GNU/Linux system are free software; ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · · the exact distribution terms for each program are described in the        ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · · individual files in /usr/share/doc/*/copyright.                           ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · ·                                                                           ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · · Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent         ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · · permitted by applicable law.                                              ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · · [  OK  ] Created slice User Slice of UID 1000.                            ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · ·          Starting User Runtime Directory /run/user/1000...                ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · · [  OK  ] Started User Runtime Directory /run/user/1000.                   ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · ·          Starting User Manager for UID 1000...                            ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · · [  OK  ] Started User Manager for UID 1000.                               ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · · [  OK  ] Started Session c1 of user john.doe.                             ◀◀ login❬4/4 confi … rename ◀ shutdown
-· │   · · john.doe@sample--aTy0:~$                                                  ◀◀ login❬4/4 confi … rename ◀ shutdown
+· │   · · Password:                                                                 ◀◀ login
+· │   · · Linux sample--aTy0 4.19.50+ #1 Tue Nov 26 01:49:16 CET 2019 armv6l        ◀◀ login
+· │   · ·                                                                           ◀◀ login
+· │   · · The programs included with the Debian GNU/Linux system are free software; ◀◀ login
+· │   · · the exact distribution terms for each program are described in the        ◀◀ login
+· │   · · individual files in /usr/share/doc/*/copyright.                           ◀◀ login
+· │   · ·                                                                           ◀◀ login
+· │   · · Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent         ◀◀ login
+· │   · · permitted by applicable law.                                              ◀◀ login
+· │   · · [  OK  ] Created slice User Slice of UID 1000.                            ◀◀ login
+· │   · ·          Starting User Runtime Directory /run/user/1000...                ◀◀ login
+· │   · · [  OK  ] Started User Runtime Directory /run/user/1000.                   ◀◀ login
+· │   · ·          Starting User Manager for UID 1000...                            ◀◀ login
+· │   · · [  OK  ] Started User Manager for UID 1000.                               ◀◀ login
+· │   · · [  OK  ] Started Session c1 of user john.doe.                             ◀◀ login
+· │   · · john.doe@sample--aTy0:~$                                                  ◀◀ login
 · │   · ·                                                                           
 · │   · ·               ̣ ˱ ❨ ( Logged in successfully )                             
 · │   · · （；￣︶￣）                                                                
@@ -153,34 +153,34 @@ docker run --rm -it \
 · │   · ·            ̣ ˱ ❨ ( Entering "ls /home/pi" )                                
 · │   · · （´∀`）ｂ                                                                    
 · │   · ·                                                                           
-· │   · · john.doe@sample--aTy0:~$ ls /home/pi                                      ◀◀ finish rename❬1/3: ls …❭ ◀ shutdown
-· │   · · ls: cannot access '/home/pi': No such file or directory                   ◀◀ finish rename❬2/3: id❭ ◀ shutdown
-· │   · · john.doe@sample--aTy0:~$                                                  ◀◀ finish rename❬2/3: id❭ ◀ shutdown
+· │   · · john.doe@sample--aTy0:~$ ls /home/pi                                      ◀◀ finish
+· │   · · ls: cannot access '/home/pi': No such file or directory                   ◀◀ finish
+· │   · · john.doe@sample--aTy0:~$                                                  ◀◀ finish
 · │   · ·                                                                           
 · │   · ·      ̣ ˱ ❨ ( Entering "id pi" )                                            
 · │   · · ▼ω▼                                                                       
 · │   · ·                                                                           
-· │   · · john.doe@sample--aTy0:~$ id pi                                            ◀◀ finish rename❬2/3: id …❭ ◀ shutdown
-· │   · · id: ‘pi’: no such user                                                    ◀◀ finish rename❬3/3: id❭ ◀ shutdown
-· │   · · john.doe@sample--aTy0:~$                                                  ◀◀ finish rename❬3/3: id❭ ◀ shutdown
+· │   · · john.doe@sample--aTy0:~$ id pi                                            ◀◀ finish
+· │   · · id: ‘pi’: no such user                                                    ◀◀ finish
+· │   · · john.doe@sample--aTy0:~$                                                  ◀◀ finish
 · │   · ·                                                                           
 · │   · ·         ̣ ˱ ❨ ( Entering "id john.doe" )                                   
 · │   · · (^_^)v                                                                    
 · │   · ·                                                                           
-· │   · · john.doe@sample--aTy0:~$ id john.doe                                      ◀◀ finish rename❬3/3: id …❭ ◀ shutdown
-· │   · · uid=1000(john.doe) gid=1000(john.doe) groups … (cdrom),27(sudo),29(audio) ◀◀ finish rename❬w … inish❭ ◀ shutdown
-· │   · · john.doe@sample--aTy0:~$                                                  ◀◀ finish rename❬w … inish❭ ◀ shutdown
+· │   · · john.doe@sample--aTy0:~$ id john.doe                                      ◀◀ finish
+· │   · · uid=1000(john.doe) gid=1000(john.doe) groups … (cdrom),27(sudo),29(audio) ◀◀ finish
+· │   · · john.doe@sample--aTy0:~$                                                  ◀◀ finish
 · │   · · Watchdog started. Timing out in 5.00s.                                    
 · │   · · Watchdog stopped.                                                         
 · │   · ·                                                                           
 · │   · ·         ̣ ˱ ❨ ( Entering "'sudo' 'shutdown' '-h' 'now'" )                  
 · │   · · (^^)ｂ                                                                    
 · │   · ·                                                                           
-· │   · · john.doe@sample--aTy0:~$ 'sudo' 'shutdown' '-h' 'now'                     ◀◀ shutdown❬shutting down❭
-· │   · · [  OK  ] Stopped target Timers.                                           ◀◀ shutdown❬shutting down❭
-· │   · · [  OK  ] Stopped Daily Cleanup of Temporary Directories.                  ◀◀ shutdown❬shutting down❭
+· │   · · john.doe@sample--aTy0:~$ 'sudo' 'shutdown' '-h' 'now'                     ◀◀ shutdown
+· │   · · [  OK  ] Stopped target Timers.                                           ◀◀ shutdown
+· │   · · [  OK  ] Stopped Daily Cleanup of Temporary Directories.                  ◀◀ shutdown
 · ┊   · ·
-· │   · · [  OK  ] Reached target Power-Off.                                        ◀◀ shutdown❬shutting down❭
+· │   · · [  OK  ] Reached target Power-Off.                                        ◀◀ shutdown
 · │   · · reboot: System halted                                                     ◼
 · │   · ✔︎
 · │   ✔︎
@@ -211,7 +211,20 @@ docker run --rm -it \
 
 The just customized `sample.img` can now be flashed to a memory card and booted on your Raspberry.
 
-*Hint: If anything goes wrong, the whole customization process is traced to a locally started Jaeger instance at http://localhost:16686*
+### Debugging
+
+The customization process can optionally be traced to a locally started Jaeger instance at http://localhost:16686 using `--jaeger-tracing`:
+
+```shell
+kustomize --config-file sample.conf --jaeger-tracing
+# OR
+docker run --rm -it \
+-v /var/run/docker.sock:/var/run/docker.sock \
+-v /tmp/koodies:/tmp/koodies \
+-v "$(pwd)":"$(pwd)" \
+-w "$(pwd)" \
+bkahlert/kustomize --config-file sample.conf --jaeger-tracing
+```
 
 ## Configuration Options
 

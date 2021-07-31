@@ -36,8 +36,8 @@ class Cache(dir: Path, private val maxConcurrentWorkingDirectories: Int = 5) : c
     com.bkahlert.kustomize.Kustomize.WorkingDirectory.resolve(dir).createDirectories().normalize(),
 ) {
 
-    fun provideCopy(name: String, reuseLastWorkingCopy: Boolean = false, provider: () -> Path): Path =
-        ProjectDirectory(dir, name, reuseLastWorkingCopy, maxConcurrentWorkingDirectories).require(provider)
+    fun provideCopy(name: String, provider: () -> Path): Path =
+        ProjectDirectory(dir, name, maxConcurrentWorkingDirectories).require(provider)
 }
 
 open class ManagedDirectory(val dir: Path) {
@@ -60,11 +60,10 @@ open class ManagedDirectory(val dir: Path) {
 class ProjectDirectory(
     parentDir: Path,
     dirName: String,
-    private val reuseLastWorkingCopy: Boolean,
     maxConcurrentWorkingDirectories: Int,
 ) : com.bkahlert.kustomize.cli.ManagedDirectory(parentDir, dirName) {
 
-    constructor(dir: Path) : this(dir.parent, dir.fileName.pathString, false, Int.MAX_VALUE)
+    constructor(dir: Path) : this(dir.parent, dir.fileName.pathString, Int.MAX_VALUE)
 
     init {
         deleteOldWorkDirs(maxConcurrentWorkingDirectories)
@@ -91,28 +90,12 @@ class ProjectDirectory(
         }
 
     fun require(provider: () -> Path): Path = spanning("Retrieving image") {
-        val workDirs = workDirs
-        val workDir: Path? = if (reuseLastWorkingCopy) {
-            workDirs.map { workDir ->
-                val single = workDir.single { file ->
-                    file.extensionOrNull == "img"
-                }
-                single
-            }.firstOrNull().also {
-                if (it != null) log("Re-using last working copy ${it.fileName}")
-                else log("No working copy exists that could be re-used. Creating a new one.")
-            }
-        } else null
-
-        workDir ?: run {
-
-            val img = rawDir.requireSingle {
-                val downloadedFile = downloadDir.requireSingle(provider)
-                downloadedFile.extractImage()
-            }
-
-            WorkDirectory.from(dir, img).single { it.extensionOrNull.equals("img", ignoreCase = true) }
+        val img = rawDir.requireSingle {
+            val downloadedFile = downloadDir.requireSingle(provider)
+            downloadedFile.extractImage()
         }
+
+        WorkDirectory.from(dir, img).single { it.extensionOrNull.equals("img", ignoreCase = true) }
     }
 }
 
