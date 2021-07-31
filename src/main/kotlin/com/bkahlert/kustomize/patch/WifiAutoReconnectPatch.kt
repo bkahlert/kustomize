@@ -34,9 +34,6 @@ class WifiAutoReconnectPatch(private vararg val hosts: String = arrayOf("google.
                 "*/5 * * * *      root     ${checkConnection or reEstablishConnection or printFailed}" to CRONTAB
             }
         }
-
-        bootOs = true
-
     }
 
     companion object {

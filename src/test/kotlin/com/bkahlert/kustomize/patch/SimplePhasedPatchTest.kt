@@ -8,29 +8,17 @@ import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OS
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import com.bkahlert.kustomize.os.OperatingSystemProcess
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
-import com.bkahlert.kustomize.os.Program
-import com.bkahlert.kustomize.os.ProgramState
-import com.bkahlert.kustomize.os.boot
 import com.bkahlert.kustomize.os.size
 import com.bkahlert.kustomize.test.E2E
-import koodies.docker.DockerContainer
-import koodies.exec.Process.State.Exited.Succeeded
-import koodies.exec.output
 import koodies.io.createParentDirectories
 import koodies.io.path.hasContent
 import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.io.path.writeText
 import koodies.io.toAsciiArt
-import koodies.regex.groupValue
-import koodies.shell.ScriptInit
-import koodies.shell.ShellScript
 import koodies.test.SvgFixture
 import koodies.text.LineSeparators.LF
-import koodies.text.Semantics.formattedAs
 import koodies.text.ansiRemoved
-import koodies.tracing.spanning
 import koodies.unit.Gibi
 import koodies.unit.bytes
 import org.junit.jupiter.api.Test
@@ -46,8 +34,6 @@ import strikt.java.resolve
 import java.nio.file.Path
 import kotlin.io.path.createFile
 import kotlin.io.path.exists
-import kotlin.text.RegexOption.DOT_MATCHES_ALL
-import kotlin.text.RegexOption.MULTILINE
 
 class SimplePhasedPatchTest {
 
@@ -68,20 +54,7 @@ class SimplePhasedPatchTest {
                 FileOperation(LinuxRoot / "file2", {}, {}),
                 FileOperation(LinuxRoot / "file3", {}, {}),
             ),
-            osPreparations = listOf(
-                { spanning("operation1") { log("event1") } },
-                { spanning("operation2") { log("event2") } },
-                { spanning("operation3") { log("event3") } },
-                { spanning("operation4") { log("event4") } },
-            ),
             osBoot = false,
-            osOperations = listOf(
-                osImage.compileScript("program1", "command1"),
-                osImage.compileScript("program2", "command2"),
-                osImage.compileScript("program3", "command3"),
-                osImage.compileScript("program4", "command4"),
-                osImage.compileScript("program5", "command5"),
-            ),
         )
 
         patch.patch(osImage)
@@ -138,9 +111,6 @@ class SimplePhasedPatchTest {
                     it.writeText(SvgFixture.toAsciiArt() + LF)
                 }
             }
-            runPrograms {
-                script("demo", "cat ${LinuxRoot.home / "pi" / "demo.ansi"}")
-            }
         }
 
         patch.patch(osImage)
@@ -148,16 +118,6 @@ class SimplePhasedPatchTest {
         expectThat(osImage) {
             hostPath(LinuxRoot.etc.hostname).hasContent("test-machine$LF")
             size.isGreaterThanOrEqualTo(2.Gibi.bytes)
-            booted({ "init" },
-                "init" to {
-                    enter("sudo cat ${LinuxRoot.etc.hostname}")
-                    "validate"
-                },
-                "validate" to {
-                    if (it != "test-machine") "validate"
-                    else null
-                }
-            )
         }
     }
 }
@@ -167,17 +127,13 @@ fun <T : PhasedPatch> Assertion.Builder<T>.matches(
     diskCustomizationsAssertion: Assertion.Builder<List<Customization>>.() -> Unit = { hasSize(0) },
     diskOperationsAssertion: Assertion.Builder<List<GuestfishCommand>>.() -> Unit = { hasSize(0) },
     fileOperationsAssertion: Assertion.Builder<List<FileOperation>>.() -> Unit = { hasSize(0) },
-    osPreparationsAssertion: Assertion.Builder<List<() -> Unit>>.() -> Unit = { hasSize(0) },
     osBootAssertion: Assertion.Builder<Boolean>.() -> Unit = { isFalse() },
-    osOperationsAssertion: Assertion.Builder<List<Program>>.() -> Unit = { hasSize(0) },
 ) = compose("matches") {
     diskPreparationsAssertion(get { diskPreparations })
     diskCustomizationsAssertion(get { diskCustomizations })
     diskOperationsAssertion(get { diskOperations })
     fileOperationsAssertion(get { fileOperations })
-    osPreparationsAssertion(get { osPreparations })
     osBootAssertion(get { osBoot })
-    osOperationsAssertion(get { osOperations })
 }.then { if (allPassed) pass() else fail() }
 
 
@@ -189,85 +145,8 @@ fun <T : PhasedPatch> Assertion.Builder<T>.diskOperations(
     block: Assertion.Builder<List<GuestfishCommand>>.() -> Unit,
 ) = get("guestfish commands") { diskOperations }.block()
 
-inline fun Assertion.Builder<OperatingSystemImage>.booted(
-    crossinline assertion: OperatingSystemProcess.(String) -> ((String) -> Boolean)?,
-): Assertion.Builder<OperatingSystemImage> {
-    get("booted ${this.get { operatingSystem }}") {
-
-        val verificationStep: OperatingSystemProcess.(String) -> String? = { output: String ->
-            val asserter: ((String) -> Boolean)? = this.assertion(output)
-            if (asserter != null) {
-                val successfullyTested = asserter(output)
-                if (!successfullyTested) " …"
-                else null
-            } else {
-                null
-            }
-        }
-
-        val container = DockerContainer.from(file)
-        kotlin.runCatching {
-            boot(
-                container.name, Program("test", { "testing" }, "testing" to verificationStep),
-                decorationFormatter = { it.formattedAs.debug },
-            )
-        }.onFailure { container.remove(force = true) }.getOrThrow()
-    }
-
-    return this
-}
-
-/**
- * Runs the specified [script] in the currently running [OperatingSystemProcess]
- * and wraps the output (roughly, not exactly) with the given [outputMarker].
- *
- * Returns
- */
-inline fun OperatingSystemProcess.script(
-    outputMarker: String = "\u200B\uFEFF".repeat(5),
-    crossinline script: ScriptInit,
-): Sequence<String> {
-    val snippet = ShellScript {
-        embed(ShellScript {
-            !"printf '$outputMarker'"
-            script()
-            !"printf '$outputMarker'"
-        }, true)
-    }.toString()
-    command(snippet)
-    return Sequence {
-        val regex = Regex(Regex.escape(outputMarker) + "(?<captured>.*)" + Regex.escape(outputMarker), setOf(DOT_MATCHES_ALL, MULTILINE))
-        regex.findAll(io.output.ansiRemoved).mapNotNull { it.groupValue("captured") }.iterator()
-    }
-}
-
 /**
  * Assertions on the directory used to share files with the [OperatingSystemImage].
  */
 fun Assertion.Builder<OperatingSystemImage>.hostPath(diskPath: DiskPath): DescribeableBuilder<Path> =
     get("shared directory %s") { hostPath(diskPath) }
-
-fun Assertion.Builder<OperatingSystemImage>.booted(
-    initialState: OperatingSystemProcess.() -> String?,
-    vararg states: ProgramState,
-): Assertion.Builder<OperatingSystemImage> =
-    assert("booted ${this.get { operatingSystem }}") { osImage ->
-        when (val exitState = osImage.boot(
-            DockerContainer.from("Assertion Boot of ${osImage.fileName}").name,
-            Program("check", initialState, *states),
-            decorationFormatter = { it.formattedAs.debug }
-        )) {
-            is Succeeded -> pass()
-            else -> fail(exitState)
-        }
-    }
-
-inline fun <reified T : OperatingSystemProcess> Assertion.Builder<T>.command(input: String): DescribeableBuilder<String?> = get("running $input") {
-    enter(input)
-    readLine()
-}
-
-interface RunningOSX
-
-val <T : RunningOSX> Assertion.Builder<T>.command: Assertion.Builder<T>
-    get() = get { this }

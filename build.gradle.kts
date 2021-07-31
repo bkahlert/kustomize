@@ -19,7 +19,8 @@ repositories {
 
 dependencies {
 
-    implementation("com.bkahlert.koodies:koodies:1.9.4")
+//    implementation("com.bkahlert.koodies:koodies:1.9.4")
+    implementation("com.bkahlert.koodies:koodies:1.10.0-SNAPSHOT")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.21") {
         because("filepeek takes 1.3")

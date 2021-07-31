@@ -24,10 +24,8 @@ class ShellScriptPatch(
         ) {
 
             customizeDisk {
-                firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o Setup") { osImage ->
-                    shellScripts.forEach { embed(it, true) }
-                    !osImage.shutdownCommand
-                }
+                shellScripts.forEach { firstBoot(it) }
+                firstBootShutdownCommand()
             }
 
             bootOs = true

@@ -13,7 +13,6 @@ import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder.CustomizationsContext
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Options
-import com.bkahlert.kustomize.os.OperatingSystem.Credentials
 import koodies.Exceptions.IAE
 import koodies.builder.Init
 import koodies.builder.buildList
@@ -47,10 +46,6 @@ import kotlin.io.path.moveTo
  */
 class OperatingSystemImage(
     val operatingSystem: OperatingSystem,
-    /**
-     * The credentials that give access to the [OperatingSystem].
-     */
-    var credentials: Credentials = operatingSystem.defaultCredentials,
     private val path: Path,
 ) : OperatingSystem by operatingSystem {
 

@@ -2,9 +2,9 @@ package com.bkahlert.kustomize.cli
 
 import com.bkahlert.kustomize.KustomizeTelemetry
 import com.bkahlert.kustomize.libguestfs.LibguestfsImage
+import com.bkahlert.kustomize.os.DockerPiImage
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystemImage.Companion.based
-import com.bkahlert.kustomize.os.OperatingSystemProcess.Companion.DockerPiImage
 import com.bkahlert.kustomize.patch.patch
 import com.bkahlert.kustomize.util.Downloader
 import com.github.ajalt.clikt.core.NoOpCliktCommand

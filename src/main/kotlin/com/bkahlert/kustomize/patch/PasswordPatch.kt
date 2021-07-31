@@ -19,9 +19,5 @@ class PasswordPatch(
         customizeDisk {
             password(PasswordOption.byString(username, password))
         }
-
-        prepareOs {
-            updatePassword(username, password)
-        }
     }
 }

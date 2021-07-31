@@ -38,13 +38,7 @@ class PatchKtTest {
                     it.writeText(testName.toString())
                 }
             }
-            prepareOs {
-                updatePassword("username", "new password")
-            }
             bootOs = true
-            runPrograms {
-                script("name", "command1", "command2")
-            }
         }
         expectThat(patch).matches(
             diskPreparationsAssertion = { hasSize(1) },
@@ -55,9 +49,7 @@ class PatchKtTest {
                     get { file }.isEqualTo(LinuxRoot / "test.txt")
                 })
             },
-            osPreparationsAssertion = { hasSize(1) },
             osBootAssertion = { isTrue() },
-            osOperationsAssertion = { hasSize(1) },
         )
     }
 }

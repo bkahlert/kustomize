@@ -54,6 +54,7 @@ import java.util.TimeZone
 import kotlin.io.path.exists
 import kotlin.io.path.isReadable
 import kotlin.io.path.isWritable
+import kotlin.io.path.moveTo
 import kotlin.io.path.writeLines
 import com.bkahlert.kustomize.libguestfs.LibguestfsOption as LibguestfsCommandLineOption
 
@@ -365,25 +366,18 @@ class VirtCustomizeCommandLine(
                 fixFirstBootOrder()
                 waitForFirstBoot()
                 customizations.add(run {
-                    val diskPath = LinuxRoot / "script".withRandomSuffix().plus(".sh")
-                    val hostPath = osImage.hostPath(diskPath)
-                    val scriptFile = shellScript.toFile(hostPath)
-                    FirstBootOption(scriptFile)
+                    val scriptFile = shellScript.toFile()
+                    val diskPath = LinuxRoot / scriptFile.fileName.pathString
+                    val hostPath = osImage.hostPath(diskPath).also { scriptFile.moveTo(it) }
+                    FirstBootOption(hostPath)
                 })
             }
 
             /**
              * Install SCRIPT inside the guest, so that when the guest first boots up, the script runs (as root, late in the boot process).
              */
-            fun firstBoot(name: String? = null, init: ScriptContext.(OperatingSystemImage) -> CharSequence) {
-                fixFirstBootOrder()
-                waitForFirstBoot()
-                customizations.add(run {
-                    val diskPath = LinuxRoot / "script".withRandomSuffix().plus(".sh")
-                    val hostPath = osImage.hostPath(diskPath)
-                    val scriptFile = ShellScript(name) { init(osImage) }.toFile(hostPath)
-                    FirstBootOption(scriptFile)
-                })
+            fun firstBoot(name: String? = null, init: ScriptContext.() -> CharSequence) {
+                firstBoot(ShellScript(name, init))
             }
 
             /**
@@ -422,7 +416,7 @@ class VirtCustomizeCommandLine(
              * @see firstBootInstall
              */
             fun firstBootShutdownCommand() {
-                firstBoot("Shutdown") { it.shutdownCommand.shellCommand }
+                firstBoot("Shutdown") { ShellScript { shutdown }.toString() }
             }
 
             /**

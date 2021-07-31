@@ -8,6 +8,7 @@ import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OS
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
+import com.bkahlert.kustomize.os.boot
 import com.bkahlert.kustomize.test.E2E
 import koodies.io.path.textContent
 import koodies.junit.UniqueId
@@ -16,7 +17,6 @@ import koodies.test.Smoke
 import koodies.test.withTempDir
 import koodies.text.Banner.banner
 import org.junit.jupiter.api.Test
-import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.isA
@@ -62,23 +62,21 @@ class FirstBootPatchTest {
                     ShellScript("appending 'c'") { "echo 'c' >> ${LinuxRoot.home / "file"}" },
                     ShellScript("appending 'd'") { "echo 'd' >> /home/file" },
                 ),
+                FirstBootPatch(
+                    ShellScript { shutdown },
+                ),
             )
+            osImage.boot()
 
-            expect {
-                that(osImage).booted {
-                    command("echo /home/file");
-                    { true }
-                }
-                that(osImage).mounted {
-                    path(LinuxRoot.home / "file") {
-                        textContent.isEqualTo("""
-                            a
-                            b
-                            c
-                            d
-                            
-                        """.trimIndent())
-                    }
+            expectThat(osImage).mounted {
+                path(LinuxRoot.home / "file") {
+                    textContent.isEqualTo("""
+                        a
+                        b
+                        c
+                        d
+                        
+                    """.trimIndent())
                 }
             }
         }

@@ -13,8 +13,6 @@ import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customizations
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeDsl
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import com.bkahlert.kustomize.os.OperatingSystemProcess
-import com.bkahlert.kustomize.os.Program
 import com.bkahlert.kustomize.os.boot
 import koodies.asString
 import koodies.builder.Init
@@ -97,21 +95,9 @@ interface PhasedPatch : Patch {
     val fileOperations: List<FileOperation>
 
     /**
-     * Operations to be applied on the actual raw `.img` file
-     * after operations "inside" the `.img` file take place.
-     */
-    val osPreparations: List<() -> Unit>
-
-    /**
      * Whether to boot the operating system.
      */
     val osBoot: Boolean
-
-    /**
-     * Operations to be applied
-     * on the booted operating system.
-     */
-    val osOperations: List<Program>
 
     companion object {
 
@@ -132,11 +118,9 @@ data class SimplePhasedPatch(
     override val diskCustomizations: List<Customization>,
     override val diskOperations: List<GuestfishCommand>,
     override val fileOperations: List<FileOperation>,
-    override val osPreparations: List<() -> Unit>,
     override val osBoot: Boolean,
-    override val osOperations: List<Program>,
 ) : PhasedPatch {
-    override val operationCount: Int = diskPreparations.size + diskCustomizations.size + diskOperations.size + fileOperations.size + osOperations.size
+    override val operationCount: Int = diskPreparations.size + diskCustomizations.size + diskOperations.size + fileOperations.size + (if (osBoot) 1 else 0)
 
     override fun patch(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
         spanning(name,
@@ -148,9 +132,7 @@ data class SimplePhasedPatch(
                 applyDiskCustomizations(osImage, trace) +
                 applyDiskOperations(osImage, trace) +
                 applyFileOperations(osImage, trace) +
-                applyOsPreparations() +
-                applyOsBoot(osImage) +
-                applyOsOperations(osImage)
+                applyOsBoot(osImage)
         }
 
     private fun collectingExceptions(
@@ -211,14 +193,9 @@ data class SimplePhasedPatch(
 
             val fileOperationFiles: List<Path> = fileOperations.map { osImage.hostPath(it.file) }
             osImage.guestfish(trace) {
-                // tar-in only relevant files to avoid corrupting incorrect attributes (i.e. executable flag)
+                // Tar-in only relevant files to avoid corrupting incorrect attributes (i.e. executable flag)
                 tarIn { it in fileOperationFiles }
             }
-        }
-
-    private fun applyOsPreparations(): ReturnValues<Throwable> =
-        osPreparations.collectingExceptions("OS Preparations") { _, osPreparation ->
-            osPreparation()
         }
 
     private fun applyOsBoot(osImage: OperatingSystemImage): ReturnValues<Throwable> =
@@ -226,20 +203,6 @@ data class SimplePhasedPatch(
             osImage.boot(
                 name.withRandomSuffix(),
                 style = Dotted,
-                autoLogin = false,
-                autoShutdown = false,
-            )
-        }
-
-
-    private fun applyOsOperations(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-        collectingExceptions("OS Operations", osOperations.size) {
-            osImage.boot(
-                name.withRandomSuffix(),
-                *osOperations.toTypedArray(),
-                style = Dotted,
-                autoLogin = true,
-                autoShutdown = true,
             )
         }
 }
@@ -257,18 +220,14 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
         val diskCustomizations: MutableList<Customization> = mutableListOf()
         val diskOperations: MutableList<GuestfishCommand> = mutableListOf()
         val fileOperations: MutableList<FileOperation> = mutableListOf()
-        val osPreparations: MutableList<() -> Unit> = mutableListOf()
         val osBoot: MutableList<Boolean> = mutableListOf()
-        val osOperations: MutableList<Program> = mutableListOf()
 
         PhasedPatchContext(
             diskPreparations,
             diskCustomizations,
             diskOperations,
             fileOperations,
-            osPreparations,
             osBoot,
-            osOperations,
         ).init()
 
         return SimplePhasedPatch(
@@ -277,9 +236,7 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
             diskCustomizations,
             diskOperations,
             fileOperations,
-            osPreparations,
             osBoot.lastOrNull() ?: false,
-            osOperations,
         )
     }
 
@@ -292,9 +249,7 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
         private val diskCustomizations: MutableList<Customization>,
         private val diskOperations: MutableList<GuestfishCommand>,
         private val fileOperations: MutableList<FileOperation>,
-        private val osPreparations: MutableList<() -> Unit>,
         private val osBoot: MutableList<Boolean>,
-        private val osOperations: MutableList<Program>,
     ) {
 
         /**
@@ -327,16 +282,9 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
          * Operations on files of the externally, not immediately
          * accessible file system.
          */
+        @Deprecated("delete")
         fun modifyFiles(init: FileOperationsBuilder.FileOperationsContext.() -> Unit) {
             fileOperations.addAll(FileOperationsBuilder.build(init))
-        }
-
-        /**
-         * Operations to be applied on the actual raw `.img` file
-         * after operations "inside" the `.img` file take place.
-         */
-        fun prepareOs(init: ImageOperationsBuilder.ImageOperationsContext.() -> Unit) {
-            osPreparations.addAll(ImageOperationsBuilder(osImage).build(init))
         }
 
         /**
@@ -347,14 +295,6 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
             set(value) {
                 osBoot.add(value)
             }
-
-        /**
-         * Operations to be applied
-         * on the booted operating system.
-         */
-        fun runPrograms(init: OsOperationsBuilder.OsOperationsContext.() -> Unit) {
-            osOperations.addAll(OsOperationsBuilder(osImage).build(init))
-        }
     }
 
     /** Builds image operations. */
@@ -374,29 +314,6 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
              */
             fun resize(size: Size) {
                 diskOperations.add { osImage.resize(size) }
-            }
-
-            /**
-             * Changes the username to be used for login from [oldUsername] to [newUsername].
-             */
-            fun updateUsername(oldUsername: String, newUsername: String) {
-                diskOperations.add {
-                    spanning("Updating username of user ${oldUsername.formattedAs.input} to ${newUsername.formattedAs.input}") {
-                        osImage.credentials = osImage.credentials.copy(username = newUsername)
-                    }
-                }
-            }
-
-            /**
-             * Changes the password used to login using the given [username] to [password].
-             */
-            fun updatePassword(username: String, password: String) {
-                diskOperations.add {
-                    if (osImage.credentials.username != username) return@add
-                    spanning("Updating password of user ${osImage.credentials.username.formattedAs.input}") {
-                        osImage.credentials = osImage.credentials.copy(password = password)
-                    }
-                }
             }
         }
     }
@@ -421,40 +338,6 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
              */
             fun edit(path: DiskPath, validator: (Path) -> Unit, operations: (Path) -> Unit) {
                 fileOperations.add(FileOperation(path, validator, operations))
-            }
-        }
-    }
-
-    /** Builder for OS operations. */
-    class OsOperationsBuilder(private val osImage: OperatingSystemImage) {
-
-        /**
-         * Builds a new [Program] list.
-         */
-        fun build(init: OsOperationsContext.() -> Unit): List<Program> =
-            mutableListOf<Program>().also { OsOperationsContext(it).init() }
-
-        /** Context for building OS operations. */
-        inner class OsOperationsContext(private val programs: MutableList<Program>) {
-
-            /**
-             * Adds a [Program] to be executed inside of the running [OperatingSystemImage]
-             * for the given [purpose] and instructions defined by [initialState] and [states].
-             */
-            fun program(
-                purpose: String,
-                initialState: OperatingSystemProcess.() -> String?,
-                vararg states: Pair<String, OperatingSystemProcess.(String) -> String?>,
-            ) {
-                programs.add(Program(purpose, initialState, *states))
-            }
-
-            /**
-             * Adds a [Program] to be executed inside of the running [OperatingSystemImage]
-             * that runs the given [commandLines].
-             */
-            fun script(name: String, vararg commandLines: String) {
-                programs.add(osImage.compileScript(name, *commandLines))
             }
         }
     }
@@ -484,7 +367,7 @@ fun OperatingSystemImage.patch(vararg patches: (OperatingSystemImage) -> PhasedP
  * A patch that combines the specified [patches].
  *
  * Composing patches allows for faster image customizations
- * as less reboots are necessary.
+ * as fewer reboots are necessary.
  */
 class CompositePatch(
     /**
@@ -505,9 +388,7 @@ class CompositePatch(
             diskCustomizations = flatMap { it.diskCustomizations }.toList(),
             diskOperations = flatMap { it.diskOperations }.toList(),
             fileOperations = flatMap { it.fileOperations }.toList(),
-            osPreparations = flatMap { it.osPreparations }.toList(),
             osBoot = any { patch -> patch.osBoot },
-            osOperations = flatMap { it.osOperations }.toList(),
         )
     }
 
@@ -573,25 +454,6 @@ class PatchContext(
     }
 
     /**
-     * Changes the username to be used for login from [oldUsername] to [newUsername].
-     */
-    fun updateUsername(oldUsername: String, newUsername: String) {
-        spanning("Updating username of user ${oldUsername.formattedAs.input} to ${newUsername.formattedAs.input}") {
-            osImage.credentials = osImage.credentials.copy(username = newUsername)
-        }
-    }
-
-    /**
-     * Changes the password used to login using the given [username] to [password].
-     */
-    fun updatePassword(username: String, password: String) {
-        if (osImage.credentials.username != username) return
-        spanning("Updating password of user ${osImage.credentials.username.formattedAs.input}") {
-            osImage.credentials = osImage.credentials.copy(password = password)
-        }
-    }
-
-    /**
      * Options to be applied on the img file
      * using the [VirtCustomizeCommandLine].
      */
@@ -621,19 +483,16 @@ class PatchContext(
 
             val fileOperationFiles: List<Path> = fileOperations.map { osImage.hostPath(it.file) }
             osImage.guestfish(trace) {
-                // tar-in only relevant files to avoid corrupting incorrect attributes (i.e. executable flag)
+                // Tar-in only relevant files to avoid corrupting incorrect attributes (i.e. executable flag)
                 tarIn { it in fileOperationFiles }
             }
         }
     }
 
-    fun boot(vararg programs: Program) {
+    fun boot() {
         osImage.boot(
             osImage.name.withRandomSuffix(),
-            *programs,
             style = Dotted,
-            autoLogin = programs.isNotEmpty(),
-            autoShutdown = programs.isNotEmpty(),
         )
     }
 }

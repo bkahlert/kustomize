@@ -25,10 +25,7 @@ class FirstBootPatch(
     ) {
         if (shellScripts.isNotEmpty()) {
             customizeDisk {
-                firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o First Boot") {
-                    shellScripts.forEach { embed(it, true) }
-                    ""
-                }
+                shellScripts.forEach { firstBoot(it) }
             }
         }
     }

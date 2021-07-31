@@ -55,6 +55,7 @@ import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
+import strikt.assertions.isFalse
 import strikt.assertions.isNotEmpty
 import strikt.assertions.isNotNull
 import strikt.assertions.isTrue
@@ -337,8 +338,7 @@ class CustomizationConfigTest {
                 get { diskPreparations }.isNotEmpty()
                 get { diskCustomizations }.isNotEmpty()
                 get { diskOperations }.isNotEmpty()
-                get { osPreparations }.isNotEmpty()
-                get { osOperations }.isNotEmpty()
+                get { osBoot }.isFalse()
             }
         }
 

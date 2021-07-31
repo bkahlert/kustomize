@@ -27,14 +27,5 @@ class UsernamePatch(
             firstBootCommand { "groupmod -n $newUsername $oldUsername" }
             firstBootCommand { "usermod -d ${LinuxRoot.home / newUsername} -m $newUsername" }
         }
-
-        prepareOs {
-            updateUsername(oldUsername, newUsername)
-        }
-
-        // TODO delete?
-        runPrograms {
-            script("finish rename", "ls ${LinuxRoot.home / "pi"}", "id $oldUsername", "id $newUsername")
-        }
     }
 }
