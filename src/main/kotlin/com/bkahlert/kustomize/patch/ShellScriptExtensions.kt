@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.patch
 
-import koodies.builder.buildList
+import koodies.builder.buildArray
 import koodies.builder.context.ListBuildingContext
 import koodies.shell.ShellScript.ScriptContext
 import koodies.shell.ShellScript.ScriptContext.Line
@@ -15,8 +15,6 @@ val ScriptContext.apt get() = Apt(this)
  * Several "front-end" interfaces exist, such as synaptic and aptitude.
  */
 class AptGet(private val script: ScriptContext) {
-    private fun command(command: String, args: List<String>): Line =
-        script.command("apt-get", command, *args.toTypedArray())
 
     /**
      * This option is followed by one or more packages desired for installation.
@@ -39,12 +37,12 @@ class AptGet(private val script: ScriptContext) {
          * Ignore missing packages. If packages cannot be retrieved or fail the integrity check after retrieval (corrupted package files), hold back those packages and handle the result.
          */
         ignoreMissing: Boolean = false,
-    ): Line = command("install", defaultArguments(quiet, yes, packages) { if (ignoreMissing) add("-m") })
+    ): Line = script.command("apt-get", *arguments(quiet, yes) { if (ignoreMissing) add("-m") }, "install", *packages)
 
     /**
      * Install shorthand for [install].
      */
-    infix fun install(`package`: String): Line = install(`package`)
+    infix fun install(`package`: String): Line = install(packages = arrayOf(`package`))
 
     /**
      * Uninstalls the optional specified [packages]. Afterwards all no more needed packages will be automatically removed as well.
@@ -63,21 +61,18 @@ class AptGet(private val script: ScriptContext) {
          * Quiet. Produces output suitable for logging, omitting progress indicators.
          */
         quiet: Int = 2,
-    ): Line = command("autoremove", defaultArguments(quiet, yes, packages))
+    ): Line = script.command("apt-get", *arguments(quiet, yes), "autoremove", *packages)
 
-    private fun defaultArguments(
+    private fun arguments(
         quiet: Int,
         yes: Boolean,
-        packages: Array<out String>,
         custom: ListBuildingContext<String>.() -> Unit = {},
-    ): List<String> =
-        buildList {
+    ): Array<out String> =
+        buildArray {
             require(quiet in 0..2) { "quiet must be between 0 and 2" }
             if (yes && quiet < 2) add("-y")
             if (quiet == 1) add("-q")
             if (quiet == 2) add("-qq")
-            custom()
-            addAll(packages)
         }
 }
 

@@ -37,14 +37,14 @@ class SambaPatchTest {
 
     @Test
     fun `should install samba`(osImage: OperatingSystemImage) {
-        expectThat(sambaPatch(osImage)).diskCustomizations {
+        expectThat(sambaPatch(osImage)).virtCustomizations {
             filterIsInstance<FirstBootInstallOption>().first().packages.containsExactlyInAnyOrder("samba", "cifs-utils")
         }
     }
 
     @Test
     fun `should build samba conf`(osImage: OperatingSystemImage) {
-        expectThat(sambaPatch(osImage)).diskCustomizations {
+        expectThat(sambaPatch(osImage)).virtCustomizations {
             filterIsInstance<CopyInOption>().any {
                 localPath.textContent.isEqualTo(
                     """
@@ -81,7 +81,7 @@ class SambaPatchTest {
 
     @Test
     fun `should set samba password`(osImage: OperatingSystemImage) {
-        expectThat(sambaPatch(osImage)).diskCustomizations {
+        expectThat(sambaPatch(osImage)).virtCustomizations {
             filterIsInstance<FirstBootOption>().any {
                 file.textContent.contains(
                     """
@@ -97,12 +97,12 @@ class SambaPatchTest {
 
     @Test
     fun `should shutdown`(osImage: OperatingSystemImage) {
-        expectThat(sambaPatch(osImage)).diskCustomizations { containsFirstBootShutdownCommand() }
+        expectThat(sambaPatch(osImage)).virtCustomizations { containsFirstBootShutdownCommand() }
     }
 
     @Test
     fun `should copy firstboot script order fix`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(sambaPatch(osImage)).diskCustomizations { containsFirstBootScriptFix() }
+        expectThat(sambaPatch(osImage)).virtCustomizations { containsFirstBootScriptFix() }
     }
 
     @E2E @Smoke @Test

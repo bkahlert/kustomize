@@ -55,7 +55,6 @@ import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEmpty
 import strikt.assertions.isEqualTo
-import strikt.assertions.isFalse
 import strikt.assertions.isNotEmpty
 import strikt.assertions.isNotNull
 import strikt.assertions.isTrue
@@ -335,10 +334,10 @@ class CustomizationConfigTest {
             val patch = config.toPatches()
             expectThat(CompositePatch(patch).invoke(osImage)) {
                 get { name }.contains("Increase Disk Space to 4 GiB").contains("Change Username")
-                get { diskPreparations }.isNotEmpty()
-                get { virtCustomizations }.isNotEmpty()
                 get { diskOperations }.isNotEmpty()
-                get { osBoot }.isFalse()
+                get { virtCustomizations }.isNotEmpty()
+                get { guestfishCommands }.isNotEmpty()
+                get { osBoot }.isTrue()
             }
         }
 

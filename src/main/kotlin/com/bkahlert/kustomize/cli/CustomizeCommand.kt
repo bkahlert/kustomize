@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.cli
 
-import com.bkahlert.kustomize.KustomizeTelemetry
+import com.bkahlert.kustomize.Telemetry
 import com.bkahlert.kustomize.libguestfs.LibguestfsImage
 import com.bkahlert.kustomize.os.DockerPiImage
 import com.bkahlert.kustomize.os.OperatingSystemImage
@@ -63,7 +63,7 @@ class CustomizeCommand : NoOpCliktCommand(
         .flag(default = false)
 
     override fun run() {
-        echo("Tracing UI: ${KustomizeTelemetry.start(jaegerHostname)?.toString() ?: "-"}".ansi.formattedAs.meta)
+        echo("Tracing UI: ${Telemetry.start(jaegerHostname)?.toString() ?: "-"}".ansi.formattedAs.meta)
 
         echo(Banner.banner("Kustomize"))
         echo()

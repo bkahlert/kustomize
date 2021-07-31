@@ -19,7 +19,7 @@ class WifiAutoReconnectPatchTest {
         val patch = WifiAutoReconnectPatch().invoke(osImage)
         withTempDir(uniqueId) {
             expectThat(patch) {
-                diskCustomizations {
+                virtCustomizations {
                     hasSize(1)
                     @Suppress("LongLine")
                     filterIsInstance<AppendLineOption>().single()

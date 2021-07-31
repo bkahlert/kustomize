@@ -11,7 +11,6 @@ import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizat
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.LinuxRoot.etc
-import com.bkahlert.kustomize.os.OperatingSystem
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.pathString
 import koodies.docker.DockerExec
@@ -25,6 +24,7 @@ import koodies.io.text
 import koodies.shell.ShellScript
 import koodies.test.toStringIsEqualTo
 import koodies.text.LineSeparators.LF
+import koodies.text.lines
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expectCatching
@@ -34,6 +34,7 @@ import strikt.assertions.contains
 import strikt.assertions.filterIsInstance
 import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
+import strikt.assertions.last
 import strikt.assertions.trim
 import java.nio.file.Path
 import kotlin.io.path.exists
@@ -217,7 +218,7 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
 )
 
 private fun CommandLine.firstbootScript(): Path =
-    commandLineParts.single { it.contains("script-") }.asPath()
+    commandLineParts.dropWhile { it != "--firstboot" }.drop(1).first().asPath()
 
 private fun Executable<DockerExec>.firstbootScript(
     environment: Map<String, String>,
@@ -232,7 +233,7 @@ fun Assertion.Builder<List<VirtCustomization>>.containsFirstBootScriptFix() {
 
 fun Assertion.Builder<List<VirtCustomization>>.containsFirstBootShutdownCommand() {
     filterIsInstance<FirstBootOption>().any {
-        file.textContent.contains(OperatingSystem.DEFAULT_SHUTDOWN_COMMAND.shellCommand)
+        file.textContent.trim().lines().last().contains("shutdown")
     }
 }
 

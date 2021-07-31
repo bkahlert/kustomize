@@ -72,8 +72,8 @@ docker run --rm -it \
 · │   Set Time Zone to Central European Standard Time
 · │   Change Username pi to john.doe
 · │
-· │   ◼ Disk Preparations
-· │   ▶ Disk Customizations (17)
+· │   ◼ Disk Operations
+· │   ▶ virt-customize (17)
 · │   · ▶ 17 virt-customize operations 🐳 bkahlert/libguestfs: file:///tmp/koodies/exec/WPG.sh
 · │   · · [   0.0] Examining the guest ...
 · │   · · [  31.8] Setting a random seed
@@ -98,11 +98,9 @@ docker run --rm -it \
 · │   · · [  45.9] Finishing off
 · │   · ✔︎
 · │   ✔︎
-· │   ◼ Disk Operations
+· │   ◼ guestfish
 · │   ◼ File Operations
-· │   ▶ OS Preparations (1) ▶ Updating username of user pi to john.doe (1) ✔︎
-· │   ◼ OS Boot
-· │   ▶ OS Operations (1)
+· │   ▶ OS Boot
 · │   · ▶ Running Raspberry Pi OS Lite ／ 202 … -raspios-buster-armhf-lite.img with
 · │   · · image: /sdcard/filesystem.img
 · ┊   · ·
@@ -188,8 +186,8 @@ docker run --rm -it \
 · ╰──╴✔︎
 · ╭──╴Set Password of john.doe
 · │
-· │   ◼ Disk Preparations
-· │   ▶ Disk Customizations (1)
+· │   ◼ Disk Operations
+· │   ▶ virt-customize (1)
 · │   · ▶ 1 virt-customize operation 🐳 bkahlert/libguestfs: file:///tmp/koodies/exec/6z1.sh
 · │   · · [   0.0] Examining the guest ...
 · │   · · [  32.1] Setting a random seed
@@ -197,11 +195,9 @@ docker run --rm -it \
 · │   · · [  43.9] Finishing off
 · │   · ✔︎
 · │   ✔︎
-· │   ◼ Disk Operations
+· │   ◼ guestfish
 · │   ◼ File Operations
-· │   ▶ OS Preparations (1) ▶ Updating password of user john.doe (1) ✔︎
 · │   ◼ OS Boot
-· │   ◼ OS Operations
 · │
 · ╰──╴✔︎
 ✔︎

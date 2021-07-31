@@ -41,9 +41,9 @@ class PatchKtTest {
             bootOs = true
         }
         expectThat(patch).matches(
-            diskPreparationsAssertion = { hasSize(1) },
-            diskCustomizationsAssertion = { hasElements({ isEqualTo(HostnameOption("test-machine")) }) },
-            diskOperationsAssertion = { hasElements({ isA<CopyOut>() }) },
+            diskOperationsAssertion = { hasSize(1) },
+            virtCustomizationsAssertion = { hasElements({ isEqualTo(HostnameOption("test-machine")) }) },
+            guestfishCommandsAssertions = { hasElements({ isA<CopyOut>() }) },
             fileOperationsAssertion = {
                 hasElements({
                     get { file }.isEqualTo(LinuxRoot / "test.txt")

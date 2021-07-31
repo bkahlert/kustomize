@@ -1,7 +1,7 @@
 package com.bkahlert.kustomize.test
 
 import com.bkahlert.kustomize.libguestfs.LibguestfsImage
-import com.bkahlert.kustomize.os.OperatingSystemProcess.Companion.DockerPiImage
+import com.bkahlert.kustomize.os.DockerPiImage
 import com.bkahlert.kustomize.test.E2E.Companion.NAME
 import koodies.docker.DockerRequiring
 import koodies.test.ThirtyMinutesTimeout

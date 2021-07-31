@@ -16,8 +16,12 @@ import java.net.URI
 /**
  * [OpenTelemetry](https://opentelemetry.io) instance used.
  */
-object KustomizeTelemetry {
+object Telemetry {
+    internal var started: Boolean = false
+    internal var uri: URI? = null
     fun start(jaegerHostname: String?): URI? {
+        if (started) return uri
+
         val jaeger = jaegerHostname?.let { Jaeger(it).apply { startLocally() } }
 
         OpenTelemetrySdk.builder()
@@ -35,6 +39,9 @@ object KustomizeTelemetry {
             .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
             .buildAndRegisterGlobal()
 
-        return jaeger?.uiEndpoint
+        return jaeger?.uiEndpoint.also {
+            started = true
+            uri = it
+        }
     }
 }

@@ -41,11 +41,11 @@ class SimplePhasedPatchTest {
     fun `should render`(osImage: OperatingSystemImage) {
         val patch = SimplePhasedPatch(
             name = "patch",
-            diskPreparations = emptyList(),
+            diskOperations = emptyList(),
             virtCustomizations = listOf(
                 VirtCustomization("command", "argument")
             ),
-            diskOperations = listOf(
+            guestfishCommands = listOf(
                 GuestfishCommand("command1", "argument2"),
                 GuestfishCommand("command2", "argument2"),
             ),
@@ -60,13 +60,11 @@ class SimplePhasedPatchTest {
         patch.patch(osImage)
 
         expectRendered().ansiRemoved {
-            contains("◼ Disk Preparations")
-            contains("▶ Disk Customizations (1)")
-            contains("▶ Disk Operations (5)")
+            contains("◼ Disk Operations")
+            contains("▶ virt-customize (1)")
+            contains("▶ guestfish (5)")
             contains("▶ File Operations (3)")
-            contains("▶ OS Preparations (4)")
             contains("◼ OS Boot")
-            contains("▶ OS Operations (5)")
         }
     }
 
@@ -123,27 +121,27 @@ class SimplePhasedPatchTest {
 }
 
 fun <T : PhasedPatch> Assertion.Builder<T>.matches(
-    diskPreparationsAssertion: Assertion.Builder<List<() -> Unit>>.() -> Unit = { hasSize(0) },
-    diskCustomizationsAssertion: Assertion.Builder<List<VirtCustomization>>.() -> Unit = { hasSize(0) },
-    diskOperationsAssertion: Assertion.Builder<List<GuestfishCommand>>.() -> Unit = { hasSize(0) },
+    diskOperationsAssertion: Assertion.Builder<List<() -> Unit>>.() -> Unit = { hasSize(0) },
+    virtCustomizationsAssertion: Assertion.Builder<List<VirtCustomization>>.() -> Unit = { hasSize(0) },
+    guestfishCommandsAssertions: Assertion.Builder<List<GuestfishCommand>>.() -> Unit = { hasSize(0) },
     fileOperationsAssertion: Assertion.Builder<List<FileOperation>>.() -> Unit = { hasSize(0) },
     osBootAssertion: Assertion.Builder<Boolean>.() -> Unit = { isFalse() },
 ) = compose("matches") {
-    diskPreparationsAssertion(get { diskPreparations })
-    diskCustomizationsAssertion(get { virtCustomizations })
     diskOperationsAssertion(get { diskOperations })
+    virtCustomizationsAssertion(get { virtCustomizations })
+    guestfishCommandsAssertions(get { guestfishCommands })
     fileOperationsAssertion(get { fileOperations })
     osBootAssertion(get { osBoot })
 }.then { if (allPassed) pass() else fail() }
 
 
-fun <T : PhasedPatch> Assertion.Builder<T>.diskCustomizations(
+fun <T : PhasedPatch> Assertion.Builder<T>.virtCustomizations(
     block: Assertion.Builder<List<VirtCustomization>>.() -> Unit,
 ) = get("virt-customizations") { virtCustomizations }.block()
 
-fun <T : PhasedPatch> Assertion.Builder<T>.diskOperations(
+fun <T : PhasedPatch> Assertion.Builder<T>.guestfishCommands(
     block: Assertion.Builder<List<GuestfishCommand>>.() -> Unit,
-) = get("guestfish commands") { diskOperations }.block()
+) = get("guestfish commands") { guestfishCommands }.block()
 
 /**
  * Assertions on the directory used to share files with the [OperatingSystemImage].

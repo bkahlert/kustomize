@@ -16,7 +16,6 @@ import koodies.exec.IO.Meta
 import koodies.exec.IO.Output
 import koodies.exec.Process.ExitState
 import koodies.exec.Process.State
-import koodies.jvm.thread
 import koodies.kaomoji.Kaomoji
 import koodies.text.ANSI.Formatter
 import koodies.text.LineSeparators.LF
@@ -28,7 +27,6 @@ import koodies.tracing.rendering.ColumnsLayout
 import koodies.tracing.rendering.Style
 import koodies.tracing.rendering.Styles
 import koodies.tracing.spanning
-import kotlin.text.RegexOption.IGNORE_CASE
 
 /**
  * A virtualized Raspberry Pi inside a Docker image.
@@ -65,10 +63,9 @@ fun OperatingSystemImage.boot(
         block = {
             block { io ->
                 if (!stuck && io.ansiRemoved != "${ESC}M") {
-                    stuck = Regex(".*in emergency mode.*", IGNORE_CASE).matches(io.ansiRemoved)
+                    stuck = this@boot.deadEndPattern?.matches(io.ansiRemoved) == true
                     if (stuck) {
-                        thread { negativeFeedback("The VM is stuck. Chances are the VM starts correctly with less load on this machine.") }
-                        exec.stop()
+                        negativeFeedback("The VM is stuck. Chances are the VM starts correctly with less load on this machine.")
                         throw IllegalStateException(io.ansiRemoved)
                     } else {
                         when (io) {

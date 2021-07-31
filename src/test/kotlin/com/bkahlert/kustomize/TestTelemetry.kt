@@ -29,22 +29,23 @@ import org.junit.platform.launcher.TestPlan
 import strikt.api.Assertion.Builder
 import strikt.api.DescribeableBuilder
 import strikt.api.expectThat
-import kotlin.time.ExperimentalTime
 
 /**
  * [OpenTelemetry] integration in JUnit that runs OpenTelemetry
  * along a [TestPlan] execution and provides [InMemoryStoringSpanProcessor] and [expectTraced] to assess recorded data.
  */
-@ExperimentalTime
 class TestTelemetry : TestExecutionListener {
 
     private lateinit var batchExporter: BatchSpanProcessor
 
-    @ExperimentalTime
     override fun testPlanExecutionStarted(testPlan: TestPlan) {
         if (ENABLED) {
             val jaegerExporter = JaegerGrpcSpanExporter.builder()
-                .setEndpoint(Jaeger.startLocally())
+                .setEndpoint(Jaeger("localhost").run {
+                    Telemetry.started = true
+                    Telemetry.uri = uiEndpoint
+                    startLocally()
+                })
                 .build()
 
             batchExporter = BatchSpanProcessor.builder(jaegerExporter).build()

@@ -2,6 +2,11 @@ package com.bkahlert.kustomize.libguestfs
 
 import com.bkahlert.kustomize.libguestfs.FirstBootWait.waitForFirstBootToComplete
 import com.bkahlert.kustomize.libguestfs.LibguestfsOption.Companion.relativize
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.ColorsOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.DiskOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.QuietOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.TraceOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.VerboseOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.AppendLineOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.ChmodOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.CommandsFromFileOption
@@ -22,11 +27,6 @@ import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizat
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.TimeZoneOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.TouchOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.WriteOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.ColorsOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.DiskOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.QuietOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.TraceOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.VerboseOption
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
@@ -366,7 +366,7 @@ class VirtCustomizeCommandLine(
                 fixFirstBootOrder()
                 waitForFirstBoot()
                 virtCustomizations.add(run {
-                    val scriptFile = shellScript.toFile()
+                    val scriptFile = shellScript.toFile(echoName = true)
                     val diskPath = LinuxRoot / scriptFile.fileName.pathString
                     val hostPath = osImage.hostPath(diskPath).also { scriptFile.moveTo(it) }
                     FirstBootOption(hostPath)

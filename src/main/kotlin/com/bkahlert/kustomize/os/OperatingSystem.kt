@@ -1,6 +1,7 @@
 package com.bkahlert.kustomize.os
 
 import koodies.unit.Size
+import kotlin.text.RegexOption.IGNORE_CASE
 
 /**
  * Representation of an operating system that can be customized.
@@ -36,6 +37,11 @@ interface OperatingSystem {
         }
     }
 
+    companion object {
+        /** Default pattern to match a line that indicates a stuck machine. */
+        val DEFAULT_DEAD_END_PATTERN: Regex = Regex(".*in emergency mode.*", IGNORE_CASE)
+    }
+
     /**
      * The full name of this [OperatingSystem].
      */
@@ -62,4 +68,10 @@ interface OperatingSystem {
      * The [Credentials] to be used to log in to a user session if no others specified.
      */
     val defaultCredentials: Credentials
+
+    /**
+     * The [Regex] that matches output which signifies that the [OperatingSystem] is stuck and
+     * that there is no chance to recover without further steps.
+     */
+    val deadEndPattern: Regex? get() = DEFAULT_DEAD_END_PATTERN
 }

@@ -31,10 +31,10 @@ class FirstBootPatchTest {
             echo("👏 🤓 👋")
             !"startx"
         }
-        expectThat(patch(osImage)).diskCustomizations {
+        expectThat(patch(osImage)).virtCustomizations {
             last().isA<VirtCustomization.FirstBootOption>().file.textContent {
-                contains("""echo '"'"'${banner("Test")}'"'"'""")
-                contains("""'"'"'echo'"'"' '"'"'👏 🤓 👋'"'"'""")
+                contains("echo '${banner("Test")}'")
+                contains("'echo' '👏 🤓 👋'")
                 contains("startx")
             }
         }
@@ -46,7 +46,7 @@ class FirstBootPatchTest {
             echo("👏 🤓 👋")
             !"startx"
         }
-        expectThat(patch(osImage)).diskCustomizations { containsFirstBootScriptFix() }
+        expectThat(patch(osImage)).virtCustomizations { containsFirstBootScriptFix() }
     }
 
     @E2E @Smoke @Test

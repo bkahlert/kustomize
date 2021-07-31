@@ -14,7 +14,7 @@ class ShellScriptExtensionsKtTest {
 
         @Test
         fun `should add command`() {
-            expectThat(ShellScript { aptGet install "dnsmasq" }).first().isEqualTo("'apt-get' 'install' '-y' 'dnsmasq'")
+            expectThat(ShellScript { aptGet install "dnsmasq" }).first().isEqualTo("'apt-get' '-qq' 'install' 'dnsmasq'")
         }
     }
 

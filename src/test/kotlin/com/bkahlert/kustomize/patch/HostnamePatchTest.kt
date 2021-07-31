@@ -13,7 +13,7 @@ class HostnamePatchTest {
     @Test
     fun `should provide hostname changing command`(osImage: OperatingSystemImage) {
         val patch = HostnamePatch("test-machine", true).invoke(osImage)
-        expectThat(patch).matches(diskCustomizationsAssertion = {
+        expectThat(patch).matches(virtCustomizationsAssertion = {
             first().get { get(1) }.matches(hostnameRegex)
         })
     }

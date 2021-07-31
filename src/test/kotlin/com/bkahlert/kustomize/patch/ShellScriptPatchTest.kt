@@ -6,7 +6,6 @@ import com.bkahlert.kustomize.libguestfs.file
 import com.bkahlert.kustomize.libguestfs.mounted
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OS
-import com.bkahlert.kustomize.os.OperatingSystem
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
 import com.bkahlert.kustomize.test.E2E
@@ -18,7 +17,9 @@ import koodies.text.Banner.banner
 import koodies.text.LineSeparators.LF
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
+import strikt.assertions.any
 import strikt.assertions.contains
+import strikt.assertions.filterIsInstance
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.last
@@ -36,19 +37,24 @@ class ShellScriptPatchTest {
 
     @Test
     fun `should copy firstboot script`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(shellScriptPatch(osImage)).diskCustomizations {
+        expectThat(shellScriptPatch(osImage)).virtCustomizations {
+            filterIsInstance<VirtCustomization.FirstBootOption>().any {
+                file.textContent {
+                    contains("echo '${banner("Test")}'")
+                    contains("touch $testFile")
+                    contains("echo 'Frank was here; went to get beer.' > $testFile")
+                }
+            }
             last().isA<VirtCustomization.FirstBootOption>().file.textContent {
-                contains("""echo '"'"'${banner("Test")}'"'"'""")
-                contains("touch $testFile")
-                contains("""echo '"'"'Frank was here; went to get beer.'"'"' > $testFile""")
-                contains(OperatingSystem.DEFAULT_SHUTDOWN_COMMAND.shellCommand)
+                contains("echo '${banner("shutdown")}'")
+                contains("'shutdown' '-h' 'now'")
             }
         }
     }
 
     @Test
     fun `should copy firstboot script order fix`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
-        expectThat(shellScriptPatch(osImage)).diskCustomizations { containsFirstBootScriptFix() }
+        expectThat(shellScriptPatch(osImage)).virtCustomizations { containsFirstBootScriptFix() }
     }
 
     @E2E @Smoke @Test

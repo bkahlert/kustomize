@@ -14,7 +14,7 @@ class PasswordPatchTest {
         val passwordPatch = PasswordPatch("pi", "po")
         val expected = VirtCustomization.PasswordOption.byString("pi", "po")
         expectThat(passwordPatch(osImage)).matches(
-            diskCustomizationsAssertion = { first().isEqualTo(expected) },
+            virtCustomizationsAssertion = { first().isEqualTo(expected) },
         )
     }
 }
