@@ -1,7 +1,7 @@
 package com.bkahlert.kustomize.patch
 
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.CopyInOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.MkdirOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.CopyInOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.MkdirOption
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.LinuxRoot.etc.wpa_supplicant.wpa_supplicant_conf
 import com.bkahlert.kustomize.os.OperatingSystemImage

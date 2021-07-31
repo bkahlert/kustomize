@@ -1,7 +1,7 @@
 package com.bkahlert.kustomize.patch
 
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.Composite.CopyOut
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.HostnameOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.HostnameOption
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import koodies.io.path.writeText
@@ -22,13 +22,13 @@ class PatchKtTest {
     @Test
     fun `should build`(testName: TestName, osImage: OperatingSystemImage) {
         val patch = PhasedPatch.build("All Phases", osImage) {
-            prepareDisk {
+            disk {
                 resize(2.Gibi.bytes)
             }
-            customizeDisk {
+            virtCustomize {
                 hostname { "test-machine" }
             }
-            modifyDisk {
+            guestfish {
                 copyOut { LinuxRoot.etc.hostname }
             }
             modifyFiles {

@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.patch
 
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.PasswordOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.PasswordOption
 import com.bkahlert.kustomize.os.OperatingSystemImage
 
 /**
@@ -16,7 +16,7 @@ class PasswordPatch(
         osImage,
     ) {
 
-        customizeDisk {
+        virtCustomize {
             password(PasswordOption.byString(username, password))
         }
     }

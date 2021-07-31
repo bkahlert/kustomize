@@ -24,7 +24,7 @@ class FirstBootPatch(
         osImage,
     ) {
         if (shellScripts.isNotEmpty()) {
-            customizeDisk {
+            virtCustomize {
                 shellScripts.forEach { firstBoot(it) }
             }
         }

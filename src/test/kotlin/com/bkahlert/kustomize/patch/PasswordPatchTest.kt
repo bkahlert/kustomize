@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.patch
 
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
@@ -12,7 +12,7 @@ class PasswordPatchTest {
     @Test
     fun `should provide password change command`(osImage: OperatingSystemImage) {
         val passwordPatch = PasswordPatch("pi", "po")
-        val expected = Customization.PasswordOption.byString("pi", "po")
+        val expected = VirtCustomization.PasswordOption.byString("pi", "po")
         expectThat(passwordPatch(osImage)).matches(
             diskCustomizationsAssertion = { first().isEqualTo(expected) },
         )

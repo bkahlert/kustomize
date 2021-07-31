@@ -8,8 +8,8 @@ import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder
 import com.bkahlert.kustomize.libguestfs.GuestfishDsl
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizationsBuilder
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeDsl
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.OperatingSystemImage
@@ -80,7 +80,7 @@ interface PhasedPatch : Patch {
      * Options to be applied on the img file
      * using the [VirtCustomizeCommandLine].
      */
-    val diskCustomizations: List<Customization>
+    val virtCustomizations: List<VirtCustomization>
 
     /**
      * Operations to be applied on the mounted file system
@@ -115,12 +115,12 @@ interface PhasedPatch : Patch {
 data class SimplePhasedPatch(
     override val name: CharSequence,
     override val diskPreparations: List<() -> Unit>,
-    override val diskCustomizations: List<Customization>,
+    override val virtCustomizations: List<VirtCustomization>,
     override val diskOperations: List<GuestfishCommand>,
     override val fileOperations: List<FileOperation>,
     override val osBoot: Boolean,
 ) : PhasedPatch {
-    override val operationCount: Int = diskPreparations.size + diskCustomizations.size + diskOperations.size + fileOperations.size + (if (osBoot) 1 else 0)
+    override val operationCount: Int = diskPreparations.size + virtCustomizations.size + diskOperations.size + fileOperations.size + (if (osBoot) 1 else 0)
 
     override fun patch(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
         spanning(name,
@@ -172,8 +172,8 @@ data class SimplePhasedPatch(
         }
 
     private fun applyDiskCustomizations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
-        collectingExceptions("Disk Customizations", diskCustomizations.size) {
-            osImage.virtCustomize(trace, *diskCustomizations.toTypedArray())
+        collectingExceptions("Disk Customizations", virtCustomizations.size) {
+            osImage.virtCustomize(trace, *virtCustomizations.toTypedArray())
         }
 
     private fun applyDiskOperations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
@@ -217,14 +217,14 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
      */
     fun build(init: PhasedPatchContext.() -> Unit): PhasedPatch {
         val diskPreparations: MutableList<() -> Unit> = mutableListOf()
-        val diskCustomizations: MutableList<Customization> = mutableListOf()
+        val virtCustomizations: MutableList<VirtCustomization> = mutableListOf()
         val diskOperations: MutableList<GuestfishCommand> = mutableListOf()
         val fileOperations: MutableList<FileOperation> = mutableListOf()
         val osBoot: MutableList<Boolean> = mutableListOf()
 
         PhasedPatchContext(
             diskPreparations,
-            diskCustomizations,
+            virtCustomizations,
             diskOperations,
             fileOperations,
             osBoot,
@@ -233,7 +233,7 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
         return SimplePhasedPatch(
             name,
             diskPreparations,
-            diskCustomizations,
+            virtCustomizations,
             diskOperations,
             fileOperations,
             osBoot.lastOrNull() ?: false,
@@ -246,7 +246,7 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
     @Suppress("PublicApiImplicitType")
     inner class PhasedPatchContext(
         private val diskPreparations: MutableList<() -> Unit>,
-        private val diskCustomizations: MutableList<Customization>,
+        private val virtCustomizations: MutableList<VirtCustomization>,
         private val diskOperations: MutableList<GuestfishCommand>,
         private val fileOperations: MutableList<FileOperation>,
         private val osBoot: MutableList<Boolean>,
@@ -256,7 +256,7 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
          * Operations to be applied on the actual raw `.img` file
          * before operations "inside" the `.img` file take place.
          */
-        fun prepareDisk(init: ImageOperationsBuilder.ImageOperationsContext.() -> Unit) {
+        fun disk(init: ImageOperationsBuilder.ImageOperationsContext.() -> Unit) {
             diskPreparations.addAll(ImageOperationsBuilder(osImage).build(init))
         }
 
@@ -265,8 +265,8 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
          * using the [VirtCustomizeCommandLine].
          */
         @VirtCustomizeDsl
-        fun customizeDisk(init: CustomizationsBuilder.CustomizationsContext.() -> Unit) {
-            diskCustomizations.addAll(CustomizationsBuilder(osImage).build(init))
+        fun virtCustomize(init: VirtCustomizationsBuilder.VirtCustomizationsContext.() -> Unit) {
+            virtCustomizations.addAll(VirtCustomizationsBuilder(osImage).build(init))
         }
 
         /**
@@ -274,7 +274,7 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
          * using the [GuestfishCommandLine] tool.
          */
         @GuestfishDsl
-        fun modifyDisk(init: GuestfishCommandsBuilder.GuestfishCommandsContext.() -> Unit) {
+        fun guestfish(init: GuestfishCommandsBuilder.GuestfishCommandsContext.() -> Unit) {
             diskOperations.addAll(GuestfishCommandsBuilder(osImage).build(init))
         }
 
@@ -385,7 +385,7 @@ class CompositePatch(
         SimplePhasedPatch(
             name = Renderable.of(joinToString(LineSeparators.LF) { it.name }) { _, _ -> this },
             diskPreparations = flatMap { it.diskPreparations }.toList(),
-            diskCustomizations = flatMap { it.diskCustomizations }.toList(),
+            virtCustomizations = flatMap { it.virtCustomizations }.toList(),
             diskOperations = flatMap { it.diskOperations }.toList(),
             fileOperations = flatMap { it.fileOperations }.toList(),
             osBoot = any { patch -> patch.osBoot },
@@ -457,8 +457,8 @@ class PatchContext(
      * Options to be applied on the img file
      * using the [VirtCustomizeCommandLine].
      */
-    fun virtCustomize(customizationsBuilder: CustomizationsBuilder.CustomizationsContext.() -> Unit) {
-        osImage.virtCustomize(trace, *CustomizationsBuilder(osImage).build(customizationsBuilder).toTypedArray())
+    fun virtCustomize(virtCustomizationsBuilder: VirtCustomizationsBuilder.VirtCustomizationsContext.() -> Unit) {
+        osImage.virtCustomize(trace, *VirtCustomizationsBuilder(osImage).build(virtCustomizationsBuilder).toTypedArray())
     }
 
     /**

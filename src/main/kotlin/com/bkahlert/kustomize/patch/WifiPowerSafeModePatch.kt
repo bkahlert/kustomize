@@ -12,7 +12,7 @@ class WifiPowerSafeModePatch : (OperatingSystemImage) -> PhasedPatch {
         "Disable Wifi Power-Safe Mode",
         osImage
     ) {
-        customizeDisk {
+        virtCustomize {
             firstBoot("Disable Wifi Power-Safe Mode") {
                 file(LinuxRoot.etc.rc_local.pathString) {
                     removeLine("echo 0")

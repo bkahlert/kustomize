@@ -1,13 +1,13 @@
 package com.bkahlert.kustomize.libguestfs
 
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.ChmodOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.CopyInOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootCommandOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootInstallOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.MkdirOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.ChmodOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.CopyInOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootCommandOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootInstallOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.MkdirOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizationsBuilder
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.LinuxRoot.etc
@@ -177,7 +177,7 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
         verbose = true,
         trace = true,
     ),
-    CustomizationsBuilder(osImage).build {
+    VirtCustomizationsBuilder(osImage).build {
         appendLine { "Defaults        lecture = never" to etc / "sudoers.d" / "privacy" }
 
         chmods { "0664" to LinuxRoot / "chmod-file" }
@@ -206,8 +206,8 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
         link { LinuxRoot / "link" to LinuxRoot / "target" }
         mkdir { LinuxRoot / "new" / "dir" }
         move { LinuxRoot / "new" / "dir" to LinuxRoot / "moved" / "dir" }
-        password(Customization.PasswordOption.byString("super-admin", "super secure"))
-        rootPassword(Customization.RootPasswordOption.disabled())
+        password(VirtCustomization.PasswordOption.byString("super-admin", "super secure"))
+        rootPassword(VirtCustomization.RootPasswordOption.disabled())
         sshInjectFile { "file-user" to Path.of("file/key") }
         sshInject { "string-user" to "string-key" }
         timeZoneId { "Europe/Berlin" }
@@ -224,13 +224,13 @@ private fun Executable<DockerExec>.firstbootScript(
     workingDirectory: Path?,
 ): Path = toCommandLine(environment, workingDirectory).firstbootScript()
 
-fun Assertion.Builder<List<Customization>>.containsFirstBootScriptFix() {
+fun Assertion.Builder<List<VirtCustomization>>.containsFirstBootScriptFix() {
     filterIsInstance<MkdirOption>().any { dir.pathString.isEqualTo(FirstBootOrderFix.FIRSTBOOT_SCRIPTS.pathString) }
     filterIsInstance<CopyInOption>().any { localPath.textContent.trim().isEqualTo(FirstBootOrderFix.text.trim()) }
     filterIsInstance<ChmodOption>().any { setsPermission("0755", FirstBootOrderFix.FIRSTBOOT_FIX) }
 }
 
-fun Assertion.Builder<List<Customization>>.containsFirstBootShutdownCommand() {
+fun Assertion.Builder<List<VirtCustomization>>.containsFirstBootShutdownCommand() {
     filterIsInstance<FirstBootOption>().any {
         file.textContent.contains(OperatingSystem.DEFAULT_SHUTDOWN_COMMAND.shellCommand)
     }

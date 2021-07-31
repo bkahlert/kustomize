@@ -336,7 +336,7 @@ class CustomizationConfigTest {
             expectThat(CompositePatch(patch).invoke(osImage)) {
                 get { name }.contains("Increase Disk Space to 4 GiB").contains("Change Username")
                 get { diskPreparations }.isNotEmpty()
-                get { diskCustomizations }.isNotEmpty()
+                get { virtCustomizations }.isNotEmpty()
                 get { diskOperations }.isNotEmpty()
                 get { osBoot }.isFalse()
             }

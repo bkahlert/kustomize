@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.patch
 
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.AppendLineOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.AppendLineOption
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import org.junit.jupiter.api.Test

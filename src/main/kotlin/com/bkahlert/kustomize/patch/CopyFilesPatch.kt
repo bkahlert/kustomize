@@ -23,7 +23,7 @@ class CopyFilesPatch(
             "Copy Files: " + files.joinToString { (from, to) -> "${from.fileName} ➜ ${to.fileName}" },
             osImage,
         ) {
-            modifyDisk {
+            guestfish {
                 files.forEach { (path, diskPath) ->
                     path.requireExists()
                     copyIn {

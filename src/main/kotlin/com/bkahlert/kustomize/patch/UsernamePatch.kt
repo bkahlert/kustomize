@@ -14,7 +14,7 @@ class UsernamePatch(
     override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build("Change Username $oldUsername to $newUsername", osImage) {
 
         @Suppress("SpellCheckingInspection")
-        customizeDisk {
+        virtCustomize {
             appendLine {
                 val privacyFile = LinuxRoot.etc / "sudoers.d" / "privacy"
                 "Defaults        lecture = never" to privacyFile

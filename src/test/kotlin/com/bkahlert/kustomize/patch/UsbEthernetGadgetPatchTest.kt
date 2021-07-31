@@ -1,10 +1,10 @@
 package com.bkahlert.kustomize.patch
 
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.ChmodOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.CopyInOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootInstallOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.MkdirOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.ChmodOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.CopyInOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootInstallOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.MkdirOption
 import com.bkahlert.kustomize.libguestfs.file
 import com.bkahlert.kustomize.os.LinuxRoot.boot.cmdline_txt
 import com.bkahlert.kustomize.os.LinuxRoot.boot.config_txt

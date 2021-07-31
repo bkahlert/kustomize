@@ -2,7 +2,7 @@ package com.bkahlert.kustomize.patch
 
 import com.bkahlert.kustomize.expectRendered
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization
 import com.bkahlert.kustomize.libguestfs.mounted
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
@@ -42,8 +42,8 @@ class SimplePhasedPatchTest {
         val patch = SimplePhasedPatch(
             name = "patch",
             diskPreparations = emptyList(),
-            diskCustomizations = listOf(
-                Customization("command", "argument")
+            virtCustomizations = listOf(
+                VirtCustomization("command", "argument")
             ),
             diskOperations = listOf(
                 GuestfishCommand("command1", "argument2"),
@@ -95,13 +95,13 @@ class SimplePhasedPatchTest {
     fun `should run each op type executing patch successfully`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
 
         val patch = PhasedPatch.build("All Phases Patch", osImage) {
-            prepareDisk {
+            disk {
                 resize(2.Gibi.bytes)
             }
-            customizeDisk {
+            virtCustomize {
                 hostname { "test-machine" }
             }
-            modifyDisk {
+            guestfish {
                 copyOut { LinuxRoot.etc.hostname }
             }
             modifyFiles {
@@ -124,13 +124,13 @@ class SimplePhasedPatchTest {
 
 fun <T : PhasedPatch> Assertion.Builder<T>.matches(
     diskPreparationsAssertion: Assertion.Builder<List<() -> Unit>>.() -> Unit = { hasSize(0) },
-    diskCustomizationsAssertion: Assertion.Builder<List<Customization>>.() -> Unit = { hasSize(0) },
+    diskCustomizationsAssertion: Assertion.Builder<List<VirtCustomization>>.() -> Unit = { hasSize(0) },
     diskOperationsAssertion: Assertion.Builder<List<GuestfishCommand>>.() -> Unit = { hasSize(0) },
     fileOperationsAssertion: Assertion.Builder<List<FileOperation>>.() -> Unit = { hasSize(0) },
     osBootAssertion: Assertion.Builder<Boolean>.() -> Unit = { isFalse() },
 ) = compose("matches") {
     diskPreparationsAssertion(get { diskPreparations })
-    diskCustomizationsAssertion(get { diskCustomizations })
+    diskCustomizationsAssertion(get { virtCustomizations })
     diskOperationsAssertion(get { diskOperations })
     fileOperationsAssertion(get { fileOperations })
     osBootAssertion(get { osBoot })
@@ -138,8 +138,8 @@ fun <T : PhasedPatch> Assertion.Builder<T>.matches(
 
 
 fun <T : PhasedPatch> Assertion.Builder<T>.diskCustomizations(
-    block: Assertion.Builder<List<Customization>>.() -> Unit,
-) = get("virt-customizations") { diskCustomizations }.block()
+    block: Assertion.Builder<List<VirtCustomization>>.() -> Unit,
+) = get("virt-customizations") { virtCustomizations }.block()
 
 fun <T : PhasedPatch> Assertion.Builder<T>.diskOperations(
     block: Assertion.Builder<List<GuestfishCommand>>.() -> Unit,

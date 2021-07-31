@@ -1,8 +1,8 @@
 package com.bkahlert.kustomize.patch
 
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.CopyInOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootInstallOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.CopyInOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootInstallOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootOption
 import com.bkahlert.kustomize.libguestfs.containsFirstBootScriptFix
 import com.bkahlert.kustomize.libguestfs.containsFirstBootShutdownCommand
 import com.bkahlert.kustomize.libguestfs.file

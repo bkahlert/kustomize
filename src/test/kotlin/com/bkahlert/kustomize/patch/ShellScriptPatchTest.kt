@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.patch
 
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization
 import com.bkahlert.kustomize.libguestfs.containsFirstBootScriptFix
 import com.bkahlert.kustomize.libguestfs.file
 import com.bkahlert.kustomize.libguestfs.mounted
@@ -37,7 +37,7 @@ class ShellScriptPatchTest {
     @Test
     fun `should copy firstboot script`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
         expectThat(shellScriptPatch(osImage)).diskCustomizations {
-            last().isA<Customization.FirstBootOption>().file.textContent {
+            last().isA<VirtCustomization.FirstBootOption>().file.textContent {
                 contains("""echo '"'"'${banner("Test")}'"'"'""")
                 contains("touch $testFile")
                 contains("""echo '"'"'Frank was here; went to get beer.'"'"' > $testFile""")

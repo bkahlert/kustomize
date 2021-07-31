@@ -23,7 +23,7 @@ class ShellScriptPatch(
             osImage,
         ) {
 
-            customizeDisk {
+            virtCustomize {
                 shellScripts.forEach { firstBoot(it) }
                 firstBootShutdownCommand()
             }

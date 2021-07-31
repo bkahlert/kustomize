@@ -17,7 +17,7 @@ class HostnamePatch(
         "Set Hostname to $hostname",
         osImage,
     ) {
-        customizeDisk {
+        virtCustomize {
             hostname {
                 if (randomSuffix) hostname.withRandomSuffix()
                 else hostname

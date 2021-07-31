@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.patch
 
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootOption
 import com.bkahlert.kustomize.libguestfs.file
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import koodies.io.path.pathString

@@ -83,7 +83,7 @@ class SambaPatch(
             }
         }.toString()
 
-        customizeDisk {
+        virtCustomize {
             firstBootInstall { listOf("samba", "cifs-utils") }
             copyIn(SAMBA_CONF) {
                 createParentDirectories().writeLines(config.lines())

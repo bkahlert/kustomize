@@ -2,7 +2,7 @@ package com.bkahlert.kustomize.libguestfs
 
 import com.bkahlert.kustomize.libguestfs.FirstBootOrderFix.FIRSTBOOT_SCRIPTS
 import com.bkahlert.kustomize.libguestfs.FirstBootOrderFix.FIRSTBOOT_SCRIPTS_DONE
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder.CustomizationsContext
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizationsBuilder.VirtCustomizationsContext
 import com.bkahlert.kustomize.os.DiskDirectory
 import com.bkahlert.kustomize.os.linux.ServiceScript
 import com.bkahlert.kustomize.os.linux.ServiceUnit
@@ -42,7 +42,7 @@ object FirstBootWait {
         WantedBy=multi-user.target
     """)
 
-    fun CustomizationsContext.waitForFirstBootToComplete() {
+    fun VirtCustomizationsContext.waitForFirstBootToComplete() {
         installService(serviceUnit)
         copyIn(serviceScript)
     }

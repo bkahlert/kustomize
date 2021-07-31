@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.os.linux
 
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder.CustomizationsContext
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizationsBuilder.VirtCustomizationsContext
 import com.bkahlert.kustomize.os.LinuxRoot
 import koodies.io.createParentDirectories
 import koodies.text.LineSeparators.lines
@@ -11,7 +11,7 @@ import kotlin.io.path.writeLines
  * with the given [name] (e.g. `custom.service`), the given [content] and `wantedBy` dependencies
  * for all provided [wantedBys].
  */
-fun CustomizationsContext.installService(serviceUnit: ServiceUnit) {
+fun VirtCustomizationsContext.installService(serviceUnit: ServiceUnit) {
     copyIn(serviceUnit.diskFile) {
         createParentDirectories().writeLines(serviceUnit.text.lines())
     }
@@ -24,7 +24,7 @@ fun CustomizationsContext.installService(serviceUnit: ServiceUnit) {
     }
 }
 
-fun CustomizationsContext.copyIn(serviceScript: ServiceScript) {
+fun VirtCustomizationsContext.copyIn(serviceScript: ServiceScript) {
     copyIn(serviceScript.diskFile, serviceScript.script.content)
     chmods { "0755" to serviceScript.diskFile }
 }
