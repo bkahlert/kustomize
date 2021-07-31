@@ -16,7 +16,6 @@
     </extension>
     <method v="2">
       <option name="Make" enabled="true" />
-      <option name="RunConfigurationTask" enabled="true" run_configuration_name="Download OpenTelemetry Agent" run_configuration_type="ShConfigurationType" />
     </method>
   </configuration>
 </component>

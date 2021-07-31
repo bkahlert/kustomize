@@ -55,8 +55,7 @@ class CustomizeCommand : NoOpCliktCommand(
         .path(mustExist = false, canBeFile = false)
         .default(".".asPath())
 
-    private val jaegerTracing: Boolean by option(help = "Whether to trace the customization using a locally started Jaeger.")
-        .flag(default = false)
+    private val jaegerHostname: String? by option(help = "Hostname of the Jaeger to trace to.")
 
     private val cache: Cache by lazy { Cache(cacheDir) }
 
@@ -64,9 +63,7 @@ class CustomizeCommand : NoOpCliktCommand(
         .flag(default = false)
 
     override fun run() {
-        if (jaegerTracing) {
-            echo("Tracing UI: ${KustomizeTelemetry.tracerUI}".ansi.formattedAs.meta)
-        }
+        echo("Tracing UI: ${KustomizeTelemetry.start(jaegerHostname)?.toString() ?: "-"}".ansi.formattedAs.meta)
 
         echo(Banner.banner("Kustomize"))
         echo()

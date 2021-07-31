@@ -213,17 +213,17 @@ The just customized `sample.img` can now be flashed to a memory card and booted 
 
 ### Debugging
 
-The customization process can optionally be traced to a locally started Jaeger instance at http://localhost:16686 using `--jaeger-tracing`:
+The customization process can optionally be traced to a locally started Jaeger instance at http://localhost:16686 using `--jaeger-hostname`:
 
 ```shell
-kustomize --config-file sample.conf --jaeger-tracing
+kustomize --config-file sample.conf --jaeger-hostname localhost
 # OR
 docker run --rm -it \
 -v /var/run/docker.sock:/var/run/docker.sock \
 -v /tmp/koodies:/tmp/koodies \
 -v "$(pwd)":"$(pwd)" \
 -w "$(pwd)" \
-bkahlert/kustomize --config-file sample.conf --jaeger-tracing
+bkahlert/kustomize --config-file sample.conf --jaeger-hostname host.docker.internal
 ```
 
 ## Configuration Options
