@@ -108,6 +108,10 @@ object LinuxRoot : DiskDirectory("/") {
         object subgid : File("subgid")
         object subuid : File("subuid")
 
+        object sudoers_d : Directory("sudoers.d") {
+            object privacy : File("privacy")
+        }
+
         object systemd : Directory("systemd") {
             object scripts : Directory("scripts")
             object system : Directory("system")

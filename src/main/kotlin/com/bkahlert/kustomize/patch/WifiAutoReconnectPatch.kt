@@ -29,10 +29,8 @@ class WifiAutoReconnectPatch(private vararg val hosts: String = arrayOf("google.
         val checkConnection = printChecking and checkHosts and printOk
         val reEstablishConnection = printReconnecting and wifiDown and wifiUp and sleep10s and checkHosts and printReEstablished
 
-        virtCustomize {
-            appendLine {
-                "*/5 * * * *      root     ${checkConnection or reEstablishConnection or printFailed}" to CRONTAB
-            }
+        guestfish {
+            writeAppendLine(CRONTAB, "*/5 * * * *      root     ${checkConnection or reEstablishConnection or printFailed}")
         }
     }
 

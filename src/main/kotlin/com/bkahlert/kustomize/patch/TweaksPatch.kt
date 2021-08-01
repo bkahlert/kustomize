@@ -16,8 +16,8 @@ class TweaksPatch(
         osImage
     ) {
 
-        virtCustomize {
-            appendLine { """APT::Acquire::Retries "$aptRetries";""" to LinuxRoot.etc.apt.apt_conf_d.`80_retries` }
+        guestfish {
+            writeAppendLine(LinuxRoot.etc.apt.apt_conf_d.`80_retries`, """APT::Acquire::Retries "$aptRetries";""")
         }
 
     }

@@ -77,8 +77,6 @@ class VirtCustomizeCommandLineTest {
             '--colors' \
             '--verbose' \
             '-x' \
-            '--append-line' \
-            '/etc/sudoers.d/privacy:Defaults        lecture = never' \
             '--chmod' \
             '0664:/chmod-file' \
             '--chmod' \
@@ -179,8 +177,6 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
         trace = true,
     ),
     VirtCustomizationsBuilder(osImage).build {
-        appendLine { "Defaults        lecture = never" to etc / "sudoers.d" / "privacy" }
-
         chmods { "0664" to LinuxRoot / "chmod-file" }
         chmods { "0664" to LinuxRoot / "other" / "file" }
         commandsFromFiles { osImage -> osImage.hostPath(LinuxRoot / "commands" / "from/files-1") }

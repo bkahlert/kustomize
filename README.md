@@ -72,7 +72,7 @@ docker run --rm -it \
 · │   Set Time Zone to Central European Standard Time
 · │   Change Username pi to john.doe
 · │
-· │   ◼ Disk Operations
+· │   ◼ disk
 · │   ▶ virt-customize (17)
 · │   · ▶ 17 virt-customize operations 🐳 bkahlert/libguestfs: file:///tmp/koodies/exec/WPG.sh
 · │   · · [   0.0] Examining the guest ...
@@ -100,7 +100,7 @@ docker run --rm -it \
 · │   ✔︎
 · │   ◼ guestfish
 · │   ◼ File Operations
-· │   ▶ OS Boot
+· │   ▶ boot
 · │   · ▶ Running Raspberry Pi OS Lite ／ 202 … -raspios-buster-armhf-lite.img with
 · │   · · image: /sdcard/filesystem.img
 · ┊   · ·
@@ -186,7 +186,7 @@ docker run --rm -it \
 · ╰──╴✔︎
 · ╭──╴Set Password of john.doe
 · │
-· │   ◼ Disk Operations
+· │   ◼ disk
 · │   ▶ virt-customize (1)
 · │   · ▶ 1 virt-customize operation 🐳 bkahlert/libguestfs: file:///tmp/koodies/exec/6z1.sh
 · │   · · [   0.0] Examining the guest ...
@@ -197,7 +197,7 @@ docker run --rm -it \
 · │   ✔︎
 · │   ◼ guestfish
 · │   ◼ File Operations
-· │   ◼ OS Boot
+· │   ◼ boot
 · │
 · ╰──╴✔︎
 ✔︎

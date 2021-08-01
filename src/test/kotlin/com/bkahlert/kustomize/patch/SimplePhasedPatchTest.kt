@@ -13,10 +13,7 @@ import com.bkahlert.kustomize.os.size
 import com.bkahlert.kustomize.test.E2E
 import koodies.io.createParentDirectories
 import koodies.io.path.hasContent
-import koodies.io.path.listDirectoryEntriesRecursively
 import koodies.io.path.writeText
-import koodies.io.toAsciiArt
-import koodies.test.SvgFixture
 import koodies.text.LineSeparators.LF
 import koodies.text.ansiRemoved
 import koodies.unit.Gibi
@@ -33,7 +30,6 @@ import strikt.java.exists
 import strikt.java.resolve
 import java.nio.file.Path
 import kotlin.io.path.createFile
-import kotlin.io.path.exists
 
 class SimplePhasedPatchTest {
 
@@ -49,42 +45,35 @@ class SimplePhasedPatchTest {
                 GuestfishCommand("command1", "argument2"),
                 GuestfishCommand("command2", "argument2"),
             ),
-            fileOperations = listOf(
-                FileOperation(LinuxRoot / "file1", {}, {}),
-                FileOperation(LinuxRoot / "file2", {}, {}),
-                FileOperation(LinuxRoot / "file3", {}, {}),
-            ),
             osBoot = false,
         )
 
         patch.patch(osImage)
 
         expectRendered().ansiRemoved {
-            contains("◼ Disk Operations")
+            contains("◼ disk")
             contains("▶ virt-customize (1)")
-            contains("▶ guestfish (5)")
-            contains("▶ File Operations (3)")
-            contains("◼ OS Boot")
+            contains("▶ guestfish (2)")
+            contains("◼ boot")
         }
     }
 
     @E2E @Test
     fun `should copy-in only relevant files`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         osImage.hostPath(LinuxRoot.home / "pi" / "local.txt").createParentDirectories().createFile().writeText("local")
+        osImage.hostPath(LinuxRoot.home / "pi" / "shared.txt").createParentDirectories().createFile().writeText("shared")
 
         val patch = PhasedPatch.build("test", osImage) {
-            modifyFiles {
-                edit(LinuxRoot.home / "pi" / "file.txt", { require(it.exists()) }) { it.writeText("content") }
+            guestfish {
+                copyIn { LinuxRoot.home / "pi" / "shared.txt" }
             }
         }
-
         patch.patch(osImage)
 
-        osImage.exchangeDirectory.listDirectoryEntriesRecursively()
         expectThat(osImage).mounted {
             path(LinuxRoot.home / "pi") {
                 resolve("local.txt").not { exists() }
-                resolve("file.txt").exists()
+                resolve("shared.txt").exists()
             }
         }
     }
@@ -102,13 +91,6 @@ class SimplePhasedPatchTest {
             guestfish {
                 copyOut { LinuxRoot.etc.hostname }
             }
-            modifyFiles {
-                edit(LinuxRoot.home / "pi" / "demo.ansi", {
-                    require(it.exists())
-                }) {
-                    it.writeText(SvgFixture.toAsciiArt() + LF)
-                }
-            }
         }
 
         patch.patch(osImage)
@@ -124,13 +106,11 @@ fun <T : PhasedPatch> Assertion.Builder<T>.matches(
     diskOperationsAssertion: Assertion.Builder<List<() -> Unit>>.() -> Unit = { hasSize(0) },
     virtCustomizationsAssertion: Assertion.Builder<List<VirtCustomization>>.() -> Unit = { hasSize(0) },
     guestfishCommandsAssertions: Assertion.Builder<List<GuestfishCommand>>.() -> Unit = { hasSize(0) },
-    fileOperationsAssertion: Assertion.Builder<List<FileOperation>>.() -> Unit = { hasSize(0) },
     osBootAssertion: Assertion.Builder<Boolean>.() -> Unit = { isFalse() },
 ) = compose("matches") {
     diskOperationsAssertion(get { diskOperations })
     virtCustomizationsAssertion(get { virtCustomizations })
     guestfishCommandsAssertions(get { guestfishCommands })
-    fileOperationsAssertion(get { fileOperations })
     osBootAssertion(get { osBoot })
 }.then { if (allPassed) pass() else fail() }
 

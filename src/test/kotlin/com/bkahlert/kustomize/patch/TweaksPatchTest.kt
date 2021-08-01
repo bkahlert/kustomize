@@ -1,8 +1,9 @@
 package com.bkahlert.kustomize.patch
 
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.AppendLineOption
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.WriteAppendCommand
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
+import koodies.text.LineSeparators.LF
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.assertions.containsExactly
@@ -14,8 +15,8 @@ class TweaksPatchTest {
         val patch = TweaksPatch(9).invoke(osImage)
 
         expect {
-            that(patch).virtCustomizations {
-                containsExactly(listOf(AppendLineOption(LinuxRoot.etc.apt.apt_conf_d.`80_retries`, """APT::Acquire::Retries "9";""")))
+            that(patch).guestfishCommands {
+                containsExactly(listOf(WriteAppendCommand(LinuxRoot.etc.apt.apt_conf_d.`80_retries`, """APT::Acquire::Retries "9";$LF""")))
             }
         }
     }

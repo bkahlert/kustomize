@@ -7,7 +7,6 @@ import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.DiskOpt
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.QuietOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.TraceOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.VerboseOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.AppendLineOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.ChmodOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.CommandsFromFileOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.CopyInOption
@@ -164,13 +163,6 @@ class VirtCustomizeCommandLine(
     open class VirtCustomization(override val name: String, override val arguments: List<String>) : LibguestfsCommandLineOption(name, arguments) {
         constructor(name: String, argument: String) : this(name, Collections.singletonList(argument))
 
-        /**
-         * Append a single line of text to the [file].
-         *
-         * If the file does not already end with a newline, then one is added before the appended line.
-         * Also a newline is added to the end of the [line] string automatically.
-         */
-        class AppendLineOption(val file: DiskPath, val line: String) : VirtCustomization("--append-line", "$file:$line")
         class ChmodOption(val permission: String, val file: DiskPath) : VirtCustomization("--chmod", "$permission:$file")
         class CommandsFromFileOption(val file: Path) : VirtCustomization("--commands-from-file", file.pathString)
         class CopyOption(val source: DiskPath, val dest: DiskPath) : VirtCustomization("--copy", "$source:$dest")
@@ -262,16 +254,6 @@ class VirtCustomizeCommandLine(
             }
 
             private val waitForFirstBoot by callableOnce { waitForFirstBootToComplete() }
-
-            /**
-             * Append a single line of text to the specified [DiskPath].
-             *
-             * If the file does not already end with a newline, then one is added before the appended line.
-             * Also a newline is added to the end of the specified line automatically.
-             */
-            fun appendLine(init: (OperatingSystemImage) -> Pair<String, DiskPath>) {
-                virtCustomizations.add(init(osImage).run { AppendLineOption(second, first) })
-            }
 
             /**
              * Change the permissions of FILE to PERMISSIONS.

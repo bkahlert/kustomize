@@ -39,7 +39,7 @@ class AppendToFilesPatchTest {
             expect {
                 that(osImage).mounted {
                     path(sampleHtmlDiskPath) { hasContent(HtmlFixture.text.withTrailingLineSeparator()) }
-                    path(sampleTxtDiskPath) { hasContent(TextFixture.text.withTrailingLineSeparator()) }
+                    path(sampleTxtDiskPath) { hasContent(koodies.text.LineSeparators.unify(TextFixture.text + LF)) }
                     path(configTxtDiskPath) { textContent.endsWith("${LF}some text$LF") }
                 }
             }

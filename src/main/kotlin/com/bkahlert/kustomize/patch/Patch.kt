@@ -11,25 +11,21 @@ import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizationsBuilder
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeDsl
-import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.boot
 import koodies.asString
 import koodies.builder.Init
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.LineSeparators
-import koodies.text.Semantics.formattedAs
 import koodies.text.withRandomSuffix
 import koodies.tracing.CurrentSpan
 import koodies.tracing.rendering.Renderable
 import koodies.tracing.rendering.ReturnValues
 import koodies.tracing.rendering.Styles.Dotted
 import koodies.tracing.rendering.Styles.Solid
-import koodies.tracing.rendering.spanningLine
 import koodies.tracing.spanning
 import koodies.tracing.tracing
 import koodies.unit.Size
-import java.nio.file.Path
 
 /**
  * A patch to customize an [OperatingSystemImage]
@@ -89,12 +85,6 @@ interface PhasedPatch : Patch {
     val guestfishCommands: List<GuestfishCommand>
 
     /**
-     * Operations on files of the externally, not immediately
-     * accessible file system.
-     */
-    val fileOperations: List<FileOperation>
-
-    /**
      * Whether to boot the operating system.
      */
     val osBoot: Boolean
@@ -117,10 +107,9 @@ data class SimplePhasedPatch(
     override val diskOperations: List<() -> Unit>,
     override val virtCustomizations: List<VirtCustomization>,
     override val guestfishCommands: List<GuestfishCommand>,
-    override val fileOperations: List<FileOperation>,
     override val osBoot: Boolean,
 ) : PhasedPatch {
-    override val operationCount: Int = diskOperations.size + virtCustomizations.size + guestfishCommands.size + fileOperations.size + (if (osBoot) 1 else 0)
+    override val operationCount: Int = diskOperations.size + virtCustomizations.size + guestfishCommands.size + (if (osBoot) 1 else 0)
 
     override fun patch(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
         spanning(name,
@@ -131,7 +120,6 @@ data class SimplePhasedPatch(
             applyDiskOperations() +
                 applyVirtCustomizations(osImage, trace) +
                 applyGuestfishCommands(osImage, trace) +
-                applyFileOperations(osImage, trace) +
                 applyOsBoot(osImage)
         }
 
@@ -167,7 +155,7 @@ data class SimplePhasedPatch(
         }
 
     private fun applyDiskOperations(): ReturnValues<Throwable> =
-        diskOperations.collectingExceptions("Disk Operations") { _, preparation ->
+        diskOperations.collectingExceptions("disk") { _, preparation ->
             preparation()
         }
 
@@ -177,29 +165,12 @@ data class SimplePhasedPatch(
         }
 
     private fun applyGuestfishCommands(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
-        collectingExceptions("guestfish", guestfishCommands.size + fileOperations.size) { // copy-in `CopyIn` files and copy out file operation files
-            osImage.guestfish(trace, *guestfishCommands.toTypedArray()) {
-                @Suppress("Destructure")
-                fileOperations.map { fileOperation -> copyOut { fileOperation.file } }
-            }
-        }
-
-    private fun applyFileOperations(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
-        collectingExceptions("File Operations", fileOperations.size) { exceptionCallback ->
-            @Suppress("Destructure")
-            fileOperations.forEach { fileOperation ->
-                kotlin.runCatching { fileOperation(osImage.hostPath(fileOperation.file)) }.onFailure(exceptionCallback)
-            }
-
-            val fileOperationFiles: List<Path> = fileOperations.map { osImage.hostPath(it.file) }
-            osImage.guestfish(trace) {
-                // Tar-in only relevant files to avoid corrupting incorrect attributes (i.e. executable flag)
-                tarIn { it in fileOperationFiles }
-            }
+        collectingExceptions("guestfish", guestfishCommands.size) {
+            osImage.guestfish(trace, *guestfishCommands.toTypedArray())
         }
 
     private fun applyOsBoot(osImage: OperatingSystemImage): ReturnValues<Throwable> =
-        collectingExceptions("OS Boot", if (osBoot) 1 else 0) {
+        collectingExceptions("boot", if (osBoot) 1 else 0) {
             osImage.boot(
                 name.withRandomSuffix(),
                 style = Dotted,
@@ -219,14 +190,12 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
         val diskOperations: MutableList<() -> Unit> = mutableListOf()
         val virtCustomizations: MutableList<VirtCustomization> = mutableListOf()
         val guestfishCommands: MutableList<GuestfishCommand> = mutableListOf()
-        val fileOperations: MutableList<FileOperation> = mutableListOf()
         val osBoot: MutableList<Boolean> = mutableListOf()
 
         PhasedPatchContext(
             diskOperations,
             virtCustomizations,
             guestfishCommands,
-            fileOperations,
             osBoot,
         ).init()
 
@@ -235,7 +204,6 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
             diskOperations,
             virtCustomizations,
             guestfishCommands,
-            fileOperations,
             osBoot.lastOrNull() ?: false,
         )
     }
@@ -248,7 +216,6 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
         private val diskOperations: MutableList<() -> Unit>,
         private val virtCustomizations: MutableList<VirtCustomization>,
         private val guestfishCommands: MutableList<GuestfishCommand>,
-        private val fileOperations: MutableList<FileOperation>,
         private val osBoot: MutableList<Boolean>,
     ) {
 
@@ -279,15 +246,6 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
         }
 
         /**
-         * Operations on files of the externally, not immediately
-         * accessible file system.
-         */
-        @Deprecated("delete")
-        fun modifyFiles(init: FileOperationsBuilder.FileOperationsContext.() -> Unit) {
-            fileOperations.addAll(FileOperationsBuilder.build(init))
-        }
-
-        /**
          * Whether to boot the operating system.
          */
         var bootOs: Boolean
@@ -314,30 +272,6 @@ class PhasedPatchBuilder(private val name: CharSequence, private val osImage: Op
              */
             fun resize(size: Size) {
                 diskOperations.add { osImage.resize(size) }
-            }
-        }
-    }
-
-    /** Builder for instances of [FileOperation]. */
-    object FileOperationsBuilder {
-
-        /**
-         * Builds a new [FileOperation].
-         */
-        fun build(init: FileOperationsContext.() -> Unit): List<FileOperation> =
-            mutableListOf<FileOperation>().also { FileOperationsContext(it).init() }
-
-        /** Context for building instances of [FileOperation]. */
-        class FileOperationsContext(private val fileOperations: MutableList<FileOperation>) {
-
-            /**
-             * Adds a [FileOperation] that edits the given [path] using the given [operations]
-             * in order to satisfy the provided [validator].
-             *
-             * That is, if the [validator] does not throw, [path] is considered already respectively successfully changed.
-             */
-            fun edit(path: DiskPath, validator: (Path) -> Unit, operations: (Path) -> Unit) {
-                fileOperations.add(FileOperation(path, validator, operations))
             }
         }
     }
@@ -387,55 +321,12 @@ class CompositePatch(
             diskOperations = flatMap { it.diskOperations }.toList(),
             virtCustomizations = flatMap { it.virtCustomizations }.toList(),
             guestfishCommands = flatMap { it.guestfishCommands }.toList(),
-            fileOperations = flatMap { it.fileOperations }.toList(),
             osBoot = any { patch -> patch.osBoot },
         )
     }
 
     override fun toString(): String = asString {
         "patches" to patches
-    }
-}
-
-/**
- * An [operation] that is applied to the specified [file]
- * if considered necessary by the given [verify].
- */
-data class FileOperation(
-    /**
-     * The file that needs to be operated on.
-     */
-    val file: DiskPath,
-    /**
-     * Used to check if [file] is in the desired state. If it is not, an
-     * exception describing the problem is expected to be thrown.
-     */
-    val verify: (Path) -> Unit,
-    /**
-     * Used to transition [file] to the desired state.
-     * Only invoked if [verify] throws an exception.
-     */
-    val operation: (Path) -> Unit,
-) {
-
-    /**
-     * Checks if [localFile] is in the desired state using [verify]
-     * and if not, applies [operation] it and verifies again.
-     *
-     * Throws if the final verification fails.
-     */
-    operator fun invoke(localFile: Path) {
-        spanningLine(localFile.fileName.toString()) {
-            log("Action needed?")
-            runCatching { verify(localFile) }.recover {
-                log("Yes".formattedAs.warning)
-
-                operation(localFile)
-
-                log("Verifying")
-                verify(localFile)
-            }
-        }
     }
 }
 
@@ -467,26 +358,6 @@ class PatchContext(
      */
     fun guestfish(guestfishCommandsBuilder: GuestfishCommandsBuilder.GuestfishCommandsContext.() -> Unit) {
         osImage.guestfish(trace, *GuestfishCommandsBuilder(osImage).build(guestfishCommandsBuilder).toTypedArray())
-    }
-
-    fun edit(vararg fileOperations: FileOperation) {
-        spanning("Edit files") {
-            osImage.guestfish(trace) {
-                @Suppress("Destructure")
-                fileOperations.map { fileOperation -> copyOut { fileOperation.file } }
-            }
-
-            @Suppress("Destructure")
-            fileOperations.forEach { fileOperation ->
-                kotlin.runCatching { fileOperation(osImage.hostPath(fileOperation.file)) }.onFailure { exceptions.add(it) }
-            }
-
-            val fileOperationFiles: List<Path> = fileOperations.map { osImage.hostPath(it.file) }
-            osImage.guestfish(trace) {
-                // Tar-in only relevant files to avoid corrupting incorrect attributes (i.e. executable flag)
-                tarIn { it in fileOperationFiles }
-            }
-        }
     }
 
     fun boot() {
