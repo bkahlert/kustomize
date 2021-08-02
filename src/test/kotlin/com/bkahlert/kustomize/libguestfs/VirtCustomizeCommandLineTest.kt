@@ -109,20 +109,6 @@ class VirtCustomizeCommandLineTest {
             'usr/lib/virt-sysprep/scripts/0000---first-boot-order-fix:/usr/lib/virt-sysprep/scripts' \
             '--chmod' \
             '0755:/usr/lib/virt-sysprep/scripts/0000---first-boot-order-fix' \
-            '--mkdir' \
-            '/etc/systemd/system' \
-            '--copy-in' \
-            'etc/systemd/system/firstboot-wait.service:/etc/systemd/system' \
-            '--mkdir' \
-            '/etc/systemd/system/multi-user.target.wants' \
-            '--link' \
-            '/etc/systemd/system/firstboot-wait.service:/etc/systemd/system/multi-user.target.wants/firstboot-wait.service' \
-            '--mkdir' \
-            '/etc/systemd/scripts' \
-            '--copy-in' \
-            'etc/systemd/scripts/firstboot-wait.sh:/etc/systemd/scripts' \
-            '--chmod' \
-            '0755:/etc/systemd/scripts/firstboot-wait.sh' \
             '--firstboot' \
             '${cmdLine.firstbootScript(emptyMap(), osImage.exchangeDirectory).fileName}' \
             '--firstboot-command' \

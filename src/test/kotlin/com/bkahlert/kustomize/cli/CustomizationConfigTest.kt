@@ -10,7 +10,9 @@ import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
 import com.bkahlert.kustomize.os.OperatingSystems.RiscTestOS
+import com.bkahlert.kustomize.patch.AppendToFilesPatch
 import com.bkahlert.kustomize.patch.CompositePatch
+import com.bkahlert.kustomize.patch.CopyFilesPatch
 import com.bkahlert.kustomize.patch.FirstBootPatch
 import com.bkahlert.kustomize.patch.HostnamePatch
 import com.bkahlert.kustomize.patch.PasswordPatch
@@ -361,6 +363,8 @@ class CustomizationConfigTest {
                 {
                     isA<CompositePatch>().get { this.patches.map { it::class } }
                         .contains(
+                            CopyFilesPatch::class,
+                            AppendToFilesPatch::class,
                             SambaPatch::class,
                             WifiAutoReconnectPatch::class,
                             WifiPowerSafeModePatch::class,

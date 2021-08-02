@@ -51,7 +51,7 @@ fun OperatingSystemImage.boot(
         mounts = MountOptions { this@boot.file mountAt "/sdcard/filesystem.img" }
     ),
     executable = CommandLine(""),
-).exec.processing { exec: DockerExec, block: ((IO) -> Unit) -> ExitState ->
+).exec.processing { _: DockerExec, block: ((IO) -> Unit) -> ExitState ->
     var stuck = false
 
     spanning(

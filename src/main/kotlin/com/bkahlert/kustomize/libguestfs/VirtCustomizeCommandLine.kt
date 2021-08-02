@@ -1,6 +1,5 @@
 package com.bkahlert.kustomize.libguestfs
 
-import com.bkahlert.kustomize.libguestfs.FirstBootWait.waitForFirstBootToComplete
 import com.bkahlert.kustomize.libguestfs.LibguestfsOption.Companion.relativize
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.ColorsOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.DiskOption
@@ -253,8 +252,6 @@ class VirtCustomizeCommandLine(
                 chmods { "0755" to FirstBootOrderFix.FIRSTBOOT_FIX }
             }
 
-            private val waitForFirstBoot by callableOnce { waitForFirstBootToComplete() }
-
             /**
              * Change the permissions of FILE to PERMISSIONS.
              *
@@ -346,7 +343,6 @@ class VirtCustomizeCommandLine(
              */
             fun firstBoot(shellScript: ShellScript) {
                 fixFirstBootOrder()
-                waitForFirstBoot()
                 virtCustomizations.add(run {
                     val scriptFile = shellScript.toFile(echoName = true)
                     val diskPath = LinuxRoot / scriptFile.fileName.pathString
@@ -367,7 +363,6 @@ class VirtCustomizeCommandLine(
              */
             fun firstBootCommand(init: (OperatingSystemImage) -> String) {
                 fixFirstBootOrder()
-                waitForFirstBoot()
                 virtCustomizations.add(init(osImage).run { FirstBootCommandOption(this) })
             }
 
@@ -379,7 +374,6 @@ class VirtCustomizeCommandLine(
 
             fun firstBootInstall(init: (OperatingSystemImage) -> List<String>) {
                 fixFirstBootOrder()
-                waitForFirstBoot()
                 virtCustomizations.add(init(osImage).run { FirstBootInstallOption(this) })
             }
 
