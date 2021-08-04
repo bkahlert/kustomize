@@ -41,7 +41,8 @@ docker run --rm -it \
            -v /tmp/koodies:/tmp/koodies \
            -v "$(pwd)":"$(pwd)" \
            -w "$(pwd)" \
-           bkahlert/kustomize --config-file sample.conf 
+           bkahlert/kustomize \
+           --config-file sample.conf 
 ```
 
 `=`
@@ -249,14 +250,18 @@ using `--jaeger-hostname`:
 kustomize --config-file sample.conf --jaeger-hostname localhost
 # OR
 docker run --rm -it \
--v /var/run/docker.sock:/var/run/docker.sock \
--v /tmp/koodies:/tmp/koodies \
--v "$(pwd)":"$(pwd)" \
--w "$(pwd)" \
-bkahlert/kustomize --config-file sample.conf --jaeger-hostname host.docker.internal
+           -v /var/run/docker.sock:/var/run/docker.sock \
+           -v /tmp/koodies:/tmp/koodies \
+           -v "$(pwd)":"$(pwd)" \
+           -w "$(pwd)" \
+           bkahlert/kustomize \
+           --config-file sample.conf \
+           --jaeger-hostname host.docker.internal
 ```
 
 There is no need to start a Jaeger yourself as it's automatically launched for you.
+
+![Jaeger UI with traces of customization process](docs/jaeger-tracing.png)
 
 ## Configuration Options
 
