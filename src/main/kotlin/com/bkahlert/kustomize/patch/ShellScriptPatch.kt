@@ -23,5 +23,7 @@ class ShellScriptPatch(
             virtCustomize {
                 shellScripts.forEach { firstBoot(it) }
             }
+
+            bootOs = true
         }
 }

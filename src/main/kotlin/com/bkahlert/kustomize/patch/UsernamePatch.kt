@@ -24,5 +24,8 @@ class UsernamePatch(
             writeAppendLine(LinuxRoot.etc / "sudoers.d" / "privacy", "Defaults        lecture = never")
             writeAppendLine(LinuxRoot.etc / "sudoers", "$newUsername ALL=(ALL) NOPASSWD:ALL")
         }
+
+        // needs reboot for copy/append to files to have correct home dir
+        bootOs = true
     }
 }

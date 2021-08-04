@@ -98,6 +98,8 @@ class SambaPatch(
                 """
             }
         }
+
+        bootOs = true // TODO reboot needed?
     }
 
     companion object {

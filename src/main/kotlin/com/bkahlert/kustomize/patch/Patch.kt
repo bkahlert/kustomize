@@ -9,12 +9,15 @@ import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommandsB
 import com.bkahlert.kustomize.libguestfs.GuestfishDsl
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootCommandOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizationsBuilder
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeDsl
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.boot
 import koodies.asString
 import koodies.builder.Init
+import koodies.builder.buildList
+import koodies.shell.ShellScript
 import koodies.text.ANSI.Text.Companion.ansi
 import koodies.text.LineSeparators
 import koodies.text.withRandomSuffix
@@ -316,12 +319,16 @@ class CompositePatch(
      * Applies this patch to the given [osImage].
      */
     override fun invoke(osImage: OperatingSystemImage): PhasedPatch = patches.map { it(osImage) }.run {
+        val needsBoot = any { patch -> patch.osBoot }
         SimplePhasedPatch(
             name = Renderable.of(joinToString(LineSeparators.LF) { it.name }) { _, _ -> this },
             diskOperations = flatMap { it.diskOperations }.toList(),
-            virtCustomizations = flatMap { it.virtCustomizations }.toList(),
+            virtCustomizations = buildList {
+                this@run.forEach { addAll(it.virtCustomizations) }
+                if (needsBoot) add(FirstBootCommandOption(ShellScript("Shutdown") { shutdown }.toString()))
+            },
             guestfishCommands = flatMap { it.guestfishCommands }.toList(),
-            osBoot = any { patch -> patch.osBoot },
+            osBoot = needsBoot,
         )
     }
 

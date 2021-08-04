@@ -11,7 +11,6 @@ import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
 import com.bkahlert.kustomize.os.OperatingSystems.RiscTestOS
 import com.bkahlert.kustomize.patch.AppendToFilesPatch
-import com.bkahlert.kustomize.patch.BootAndShutdownPatch
 import com.bkahlert.kustomize.patch.CompositePatch
 import com.bkahlert.kustomize.patch.CopyFilesPatch
 import com.bkahlert.kustomize.patch.FirstBootPatch
@@ -356,10 +355,9 @@ class CustomizationConfigTest {
                             TimeZonePatch::class,
                             HostnamePatch::class,
                             ResizePatch::class,
-                            UsernamePatch::class, // needs reboot for copy/append to files to have correct home dir
+                            UsernamePatch::class,
                             SshEnablementPatch::class,
                             WpaSupplicantPatch::class,
-                            BootAndShutdownPatch::class,
                         )
                 },
                 {
@@ -367,10 +365,9 @@ class CustomizationConfigTest {
                         .contains(
                             CopyFilesPatch::class,
                             AppendToFilesPatch::class,
-                            SambaPatch::class, // needs reboot? TODO works without?
+                            SambaPatch::class,
                             WifiAutoReconnectPatch::class,
                             WifiPowerSafeModePatch::class,
-                            BootAndShutdownPatch::class,
                         )
                 },
                 {
@@ -380,8 +377,7 @@ class CustomizationConfigTest {
                             SshAuthorizationPatch::class,
                             SshPortPatch::class,
                             UsbEthernetGadgetPatch::class,
-                            ShellScriptPatch::class, // needs reboot
-                            BootAndShutdownPatch::class,
+                            ShellScriptPatch::class,
                         )
                 },
                 { isA<FirstBootPatch>() },

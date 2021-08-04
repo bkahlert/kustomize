@@ -18,7 +18,6 @@ import com.bkahlert.kustomize.os.OperatingSystem
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems
 import com.bkahlert.kustomize.patch.AppendToFilesPatch
-import com.bkahlert.kustomize.patch.BootAndShutdownPatch
 import com.bkahlert.kustomize.patch.CompositePatch
 import com.bkahlert.kustomize.patch.CopyFilesPatch
 import com.bkahlert.kustomize.patch.FirstBootPatch
@@ -357,21 +356,18 @@ data class CustomizationConfig(
                 + extract<UsernamePatch>()
                 + extract<SshEnablementPatch>()
                 + extract<WpaSupplicantPatch>()
-                + BootAndShutdownPatch()
             ),
             CompositePatch(extract<CopyFilesPatch>()
                 + extract<AppendToFilesPatch>()
                 + extract<WifiAutoReconnectPatch>()
                 + extract<WifiPowerSafeModePatch>()
                 + extract<SambaPatch>()
-                + BootAndShutdownPatch()
             ),
             CompositePatch(extract<PasswordPatch>()
                 + extract<SshAuthorizationPatch>()
                 + extract<SshPortPatch>()
                 + extract<UsbEthernetGadgetPatch>()
                 + extract<ShellScriptPatch>()
-                + BootAndShutdownPatch()
             ),
             *toTypedArray()
         )
