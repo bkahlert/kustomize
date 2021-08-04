@@ -17,13 +17,31 @@ import koodies.test.withTempDir
 import koodies.text.LineSeparators.LF
 import koodies.text.LineSeparators.withTrailingLineSeparator
 import org.junit.jupiter.api.Test
-import strikt.api.expect
+import strikt.api.expectThat
+import strikt.assertions.any
 import strikt.assertions.endsWith
+import strikt.assertions.isEqualTo
 
-class AppendToFilesPatchTest {
+class AppendToFilesPatchXTest {
+
+    @Test
+    fun `should not exit on error`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
+        val patch = AppendToFilesPatch("test" to LinuxRoot / "test.txt")
+        expectThat(patch(osImage)).guestfishCommands {
+            any { any { isEqualTo("-write-append") } }
+        }
+    }
+
+    @Test
+    fun `should hex encode lines`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
+        val patch = AppendToFilesPatch(TextFixture.text to LinuxRoot / "test.txt")
+        expectThat(patch(osImage)).guestfishCommands {
+            any { any { isEqualTo(""""\x61\xc2\x85\xf0\x9d\x95\x93\x0d\x0a\xe2\x98\xb0\x0a\xf0\x9f\x91\x8b\x0a\x0a"""") } }
+        }
+    }
 
     @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
-    fun `should create create one append line option for each line`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
+    fun `should append lines`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
         withTempDir(uniqueId) {
             val sampleHtmlDiskPath = LinuxRoot.boot / "sample.html"
             val sampleTxtDiskPath = LinuxRoot.etc / "sample.txt"
@@ -36,12 +54,10 @@ class AppendToFilesPatchTest {
 
             osImage.patch(appendToFilesPatch)
 
-            expect {
-                that(osImage).mounted {
-                    path(sampleHtmlDiskPath) { hasContent(HtmlFixture.text.withTrailingLineSeparator()) }
-                    path(sampleTxtDiskPath) { hasContent(koodies.text.LineSeparators.unify(TextFixture.text + LF)) }
-                    path(configTxtDiskPath) { textContent.endsWith("${LF}some text$LF") }
-                }
+            expectThat(osImage).mounted {
+                path(sampleHtmlDiskPath) { hasContent(HtmlFixture.text.withTrailingLineSeparator()) }
+                path(sampleTxtDiskPath) { hasContent(TextFixture.text + LF) }
+                path(configTxtDiskPath) { textContent.endsWith("${LF}some text$LF") }
             }
         }
 }

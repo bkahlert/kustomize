@@ -97,11 +97,7 @@ class SambaPatch(
                 (echo "${'$'}pass"; echo "${'$'}pass") | smbpasswd -s -a "$username"
                 """
             }
-            firstBootShutdownCommand()
         }
-
-        bootOs = true
-
     }
 
     companion object {

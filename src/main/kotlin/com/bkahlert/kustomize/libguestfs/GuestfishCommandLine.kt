@@ -36,12 +36,11 @@ import koodies.io.path.asPath
 import koodies.io.path.pathString
 import koodies.shell.HereDoc
 import koodies.shell.ShellScript
-import koodies.text.LineSeparators
 import koodies.text.LineSeparators.LF
 import koodies.text.LineSeparators.size
+import koodies.text.padStart
 import koodies.text.withPrefix
 import koodies.text.withRandomSuffix
-import koodies.text.wrap
 import java.nio.file.Path
 import kotlin.io.path.div
 import kotlin.io.path.exists
@@ -319,10 +318,10 @@ class GuestfishCommandLine(
          *
          * If [file] does not exist, then a new file is created.
          */
-        class WriteAppendCommand(val file: DiskPath, val content: String) : GuestfishCommand("write-append", file.pathString,
-            LineSeparators.unify(content, "\\n")
-                .replace(Regex("""[\\"]""")) { "\\${it.value}" }
-                .wrap("\""))
+        class WriteAppendCommand(val file: DiskPath, val content: ByteArray) : GuestfishCommand("write-append", file.pathString,
+            content.joinToString(prefix = "\"", postfix = "\"", separator = "") { "\\x${it.toUByte().toString(16).padStart(2, '0')}" }) {
+            constructor(file: DiskPath, content: String) : this(file, content.encodeToByteArray())
+        }
 
         /**
          * This exits guestfish.
@@ -413,7 +412,7 @@ class GuestfishCommandLine(
              * This command copies local files or directories recursively into the disk image.
              */
             fun copyIn(mkDir: Boolean = true, remoteDir: (OperatingSystemImage) -> DiskPath) {
-                guestfishCommands.add(remoteDir(osImage).run { CopyIn(mkDir, parentOrNull ?: this, osImage.hostPath(this)) })
+                guestfishCommands.add(remoteDir(osImage).run { -CopyIn(mkDir, parentOrNull ?: this, osImage.hostPath(this)) })
             }
 
             /**
@@ -485,8 +484,17 @@ class GuestfishCommandLine(
              *
              * If [file] does not exist, then a new file is created.
              */
+            fun writeAppend(file: DiskPath, content: ByteArray) {
+                guestfishCommands.add(-WriteAppendCommand(file, content))
+            }
+
+            /**
+             * This call appends [content] to the end of [file].
+             *
+             * If [file] does not exist, then a new file is created.
+             */
             fun writeAppend(file: DiskPath, content: String) {
-                guestfishCommands.add(WriteAppendCommand(file, content))
+                guestfishCommands.add(-WriteAppendCommand(file, content))
             }
 
             /**

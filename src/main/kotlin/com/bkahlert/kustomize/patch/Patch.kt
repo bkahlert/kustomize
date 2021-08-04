@@ -112,7 +112,7 @@ data class SimplePhasedPatch(
     override val operationCount: Int = diskOperations.size + virtCustomizations.size + guestfishCommands.size + (if (osBoot) 1 else 0)
 
     override fun patch(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
-        spanning(name,
+        spanning(Renderable.of(name) { _, _ -> toString() },
             nameFormatter = PATCH_NAME_FORMATTER,
             decorationFormatter = PATCH_DECORATION_FORMATTER,
             style = Solid

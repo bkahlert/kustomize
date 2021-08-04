@@ -5,7 +5,6 @@ import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OS
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
-import com.bkahlert.kustomize.os.boot
 import com.bkahlert.kustomize.test.E2E
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
@@ -17,10 +16,7 @@ class UsernamePatchTest {
     fun `should log in with updated username`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val newUsername = "john.doe".also { check(it != osImage.defaultCredentials.username) { "$it is already the default username." } }
 
-        osImage.patch(UsernamePatch(osImage.defaultCredentials.username, newUsername))
-
-        osImage.patch { virtCustomize { firstBootShutdownCommand() } }
-        osImage.boot()
+        osImage.patch(UsernamePatch(osImage.defaultCredentials.username, newUsername), BootAndShutdownPatch())
 
         expectThat(osImage).mounted {
             path(LinuxRoot.home / newUsername) { exists() }

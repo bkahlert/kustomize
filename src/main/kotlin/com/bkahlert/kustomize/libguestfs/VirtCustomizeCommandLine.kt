@@ -378,24 +378,6 @@ class VirtCustomizeCommandLine(
             }
 
             /**
-             * Run [OperatingSystemImage] specific [OperatingSystemImage.shutdownCommand]
-             * when the guest first boots up (as root, late in the boot process).
-             *
-             * This command can be used to shutdown a machine after a couple
-             * previously added first boot commands have finished.
-             *
-             * Actually it must be called if no other mechanism shuts down the machine
-             * to avoid the image customization to hang.
-             *
-             * @see firstBoot
-             * @see firstBootCommand
-             * @see firstBootInstall
-             */
-            fun firstBootShutdownCommand() {
-                firstBoot("Shutdown") { ShellScript { shutdown }.toString() }
-            }
-
-            /**
              * Create a directory in the guest.
              *
              * This uses mkdir -p so any intermediate directories are created, and it also works if the directory already exists.

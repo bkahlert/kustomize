@@ -8,7 +8,6 @@ import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OS
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
-import com.bkahlert.kustomize.os.boot
 import com.bkahlert.kustomize.test.E2E
 import koodies.io.path.textContent
 import koodies.junit.UniqueId
@@ -62,11 +61,8 @@ class FirstBootPatchTest {
                     ShellScript("appending 'c'") { "echo 'c' >> ${LinuxRoot.home / "file"}" },
                     ShellScript("appending 'd'") { "echo 'd' >> /home/file" },
                 ),
-                FirstBootPatch(
-                    ShellScript { shutdown },
-                ),
+                BootAndShutdownPatch(),
             )
-            osImage.boot()
 
             expectThat(osImage).mounted {
                 path(LinuxRoot.home / "file") {

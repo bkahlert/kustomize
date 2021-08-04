@@ -23,6 +23,8 @@ import koodies.test.withTempDir
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.api.expectCatching
+import strikt.api.expectThat
+import strikt.assertions.any
 import strikt.assertions.isA
 import strikt.assertions.isEqualTo
 import strikt.assertions.isFailure
@@ -58,6 +60,14 @@ class CopyFilesPatchTest {
         val file = osImage.hostPath(LinuxRoot / "test.txt").also { it.createFile() }
         val patch = CopyFilesPatch({ file } to LinuxRoot / "test.txt")
         expectThrows<IllegalArgumentException> { osImage.patch(patch) }
+    }
+
+    @Test
+    fun `should not exit on error`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
+        val patch = CopyFilesPatch({ tempFile() } to LinuxRoot / "test.txt")
+        expectThat(patch(osImage)).guestfishCommands {
+            any { any { isEqualTo("-copy-in") } }
+        }
     }
 
     @Test

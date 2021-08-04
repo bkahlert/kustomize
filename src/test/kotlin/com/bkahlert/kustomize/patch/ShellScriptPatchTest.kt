@@ -11,6 +11,7 @@ import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
 import com.bkahlert.kustomize.test.E2E
 import koodies.io.path.textContent
 import koodies.junit.UniqueId
+import koodies.shell.ShellScript
 import koodies.test.Smoke
 import koodies.test.withTempDir
 import koodies.text.Banner.banner
@@ -28,12 +29,12 @@ class ShellScriptPatchTest {
 
     private val testFile = LinuxRoot.root / "shell-script-test.txt"
 
-    private val shellScriptPatch = ShellScriptPatch("Test") {
+    private val shellScriptPatch = ShellScriptPatch(ShellScript("Test") {
         """
         touch $testFile
         echo 'Frank was here; went to get beer.' > $testFile
         """
-    }
+    })
 
     @Test
     fun `should copy firstboot script`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
@@ -60,7 +61,29 @@ class ShellScriptPatchTest {
     @E2E @Smoke @Test
     fun `should run shell script`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
 
-        osImage.patch(shellScriptPatch)
+        osImage.patch(shellScriptPatch, BootAndShutdownPatch())
+
+        expectThat(osImage).mounted {
+            path(testFile) {
+                textContent.isEqualTo("Frank was here; went to get beer.$LF")
+            }
+        }
+    }
+
+    @E2E @Smoke @Test
+    fun `should run shell script22`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
+
+        osImage.patch(ShellScriptPatch(
+            ShellScript("script 1", "echo 1"),
+            ShellScript("script 2", "echo 2"),
+            ShellScript("script 3", "echo 3"),
+            ShellScript("script 4", "echo 4"),
+            ShellScript("script 5", "echo 5"),
+            ShellScript("script 6", "echo 6"),
+            ShellScript("script 7", "echo 7"),
+            ShellScript("script 8", "echo 8"),
+            ShellScript("script 9", "echo 9"),
+        ), BootAndShutdownPatch())
 
         expectThat(osImage).mounted {
             path(testFile) {
