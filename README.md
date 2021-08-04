@@ -1,11 +1,11 @@
-# kustomize — Kotlin-based customizer for IoT images like Raspberry Pi OS
+# Kustomize — Kotlin-based customizer for IoT images like Raspberry Pi OS
 
-This tool customizes an IoT image such as a [Raspberry Pi OS](https://www.raspberrypi.org/software/operating-systems) image using
-a [HOCON](https://github.com/lightbend/config/blob/master/HOCON.md) based config file and the tools
-[koodies](https://github.com/bkahlert/koodies),
-[virt-customize](https://libguestfs.org/virt-customize.1.html),
-[guestfish](https://libguestfs.org/guestfish.1.html) and [dockerpi](https://github.com/lukechilds/dockerpi) to be readily usable on the target device such as
-a [Raspberry Pi](https://www.raspberrypi.org/).
+Kustomize applies a [HOCON](https://github.com/lightbend/config/blob/master/HOCON.md) config file to an IoT image such
+as [Raspberry Pi OS](https://www.raspberrypi.org/software/operating-systems).  
+All that needs to be done is flash the image to a memory card and boot your fully-customized image on the target device (
+e.g. [Raspberry Pi](https://www.raspberrypi.org/)).
+
+![Kustomize applying sample.conf to an image](docs/sample.terminalizer.gif)
 
 **In short: sample.conf + kustomize = sample.img**
 
@@ -41,7 +41,7 @@ docker run --rm -it \
            -v /tmp/koodies:/tmp/koodies \
            -v "$(pwd)":"$(pwd)" \
            -w "$(pwd)" \
-           bkahlert/kustomize --config-file sample.conf
+           bkahlert/kustomize --config-file sample.conf 
 ```
 
 `=`
@@ -72,8 +72,8 @@ docker run --rm -it \
 · │   Set Time Zone to Central European Standard Time
 · │   Change Username pi to john.doe
 · │
-· │   ◼ Disk Preparations
-· │   ▶ Disk Customizations (17)
+· │   ◼ disk
+· │   ▶ virt-customize (17)
 · │   · ▶ 17 virt-customize operations 🐳 bkahlert/libguestfs: file:///tmp/koodies/exec/WPG.sh
 · │   · · [   0.0] Examining the guest ...
 · │   · · [  31.8] Setting a random seed
@@ -98,11 +98,9 @@ docker run --rm -it \
 · │   · · [  45.9] Finishing off
 · │   · ✔︎
 · │   ✔︎
-· │   ◼ Disk Operations
+· │   ◼ guestfish
 · │   ◼ File Operations
-· │   ▶ OS Preparations (1) ▶ Updating username of user pi to john.doe (1) ✔︎
-· │   ◼ OS Boot
-· │   ▶ OS Operations (1)
+· │   ▶ boot
 · │   · ▶ Running Raspberry Pi OS Lite ／ 202 … -raspios-buster-armhf-lite.img with
 · │   · · image: /sdcard/filesystem.img
 · ┊   · ·
@@ -188,8 +186,8 @@ docker run --rm -it \
 · ╰──╴✔︎
 · ╭──╴Set Password of john.doe
 · │
-· │   ◼ Disk Preparations
-· │   ▶ Disk Customizations (1)
+· │   ◼ disk
+· │   ▶ virt-customize (1)
 · │   · ▶ 1 virt-customize operation 🐳 bkahlert/libguestfs: file:///tmp/koodies/exec/6z1.sh
 · │   · · [   0.0] Examining the guest ...
 · │   · · [  32.1] Setting a random seed
@@ -197,11 +195,9 @@ docker run --rm -it \
 · │   · · [  43.9] Finishing off
 · │   · ✔︎
 · │   ✔︎
-· │   ◼ Disk Operations
+· │   ◼ guestfish
 · │   ◼ File Operations
-· │   ▶ OS Preparations (1) ▶ Updating password of user john.doe (1) ✔︎
-· │   ◼ OS Boot
-· │   ◼ OS Operations
+· │   ◼ boot
 · │
 · ╰──╴✔︎
 ✔︎
@@ -211,9 +207,43 @@ docker run --rm -it \
 
 The just customized `sample.img` can now be flashed to a memory card and booted on your Raspberry.
 
-### Debugging
+### Architecture and Debugging
 
-The customization process can optionally be traced to a locally started Jaeger instance at http://localhost:16686 using `--jaeger-hostname`:
+Kustomize is based on the Kotlin library [Koodies](https://github.com/bkahlert/koodies), applies offline modifications using
+a [dockerized libguestfs](https://hub.docker.com/repository/docker/bkahlert/libguestfs) (i.e. [virt-customize](https://libguestfs.org/virt-customize.1.html)
+and [guestfish](https://libguestfs.org/guestfish.1.html)), and runs scripts on the guest using the marvelous [dockerpi](https://github.com/lukechilds/dockerpi).
+
+Customization options are modelled as patches that are translated to shell scripts. Throughout the customization process all scripts are logged as file
+locations that can be opened right in your terminal.
+
+![Linked script file](docs/linked-script-file.png)
+
+If your terminal supports it, <kbd>Ctrl ⌃</kbd> respectively <kbd>Cmd ⌘</kbd> click on `/tmp/koodies/exec/ZXv.sh` and check the script's content:
+
+```shell
+#!/bin/sh
+'docker' 'run' \
+'--name' 'virt-customize--wppn' \
+'--workdir' '/shared' \
+'--rm' '--interactive' \
+'--mount' 'type=bind,source=/home/john/sample/sample/2021-08-04T01-07-52--V5wH/shared,target=/shared' \
+'--mount' 'type=bind,source=/home/john/sample/sample/2021-08-04T01-07-52--V5wH/2021-05-07-raspios-buster-armhf-lite.img,target=/images/disk.img' \
+'bkahlert/libguestfs@sha256:de20843ae800c12a8b498c10ec27e2136b55dee4d62d927dff6b3ae360676d00' \
+'virt-customize' \
+'--add' '/images/disk.img' \
+'--colors' \
+'--mkdir' '/usr/lib/virt-sysprep/scripts' \
+'--copy-in' 'usr/lib/virt-sysprep/scripts/0000---first-boot-order-fix:/usr/lib/virt-sysprep/scripts' \
+'--chmod' '0755:/usr/lib/virt-sysprep/scripts/0000---first-boot-order-fix' \
+'--firstboot' 'Greet340--vsv.sh' \
+'--firstboot-command' ''"'"'shutdown'"'"' '"'"'-h'"'"' '"'"'now'"'"'
+'
+```
+
+#### Tracing
+
+For more detailed information on the customization, the whole process can be traced to a locally started Jaeger instance at http://localhost:16686
+using `--jaeger-hostname`:
 
 ```shell
 kustomize --config-file sample.conf --jaeger-hostname localhost
@@ -225,6 +255,7 @@ docker run --rm -it \
 -w "$(pwd)" \
 bkahlert/kustomize --config-file sample.conf --jaeger-hostname host.docker.internal
 ```
+There is no need to start a Jaeger yourself as it's automatically launched for you.
 
 ## Configuration Options
 

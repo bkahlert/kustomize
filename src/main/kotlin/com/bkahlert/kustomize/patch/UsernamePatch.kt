@@ -13,28 +13,19 @@ class UsernamePatch(
 ) : (OperatingSystemImage) -> PhasedPatch {
     override fun invoke(osImage: OperatingSystemImage): PhasedPatch = PhasedPatch.build("Change Username $oldUsername to $newUsername", osImage) {
 
-        @Suppress("SpellCheckingInspection")
-        customizeDisk {
-            appendLine {
-                val privacyFile = LinuxRoot.etc / "sudoers.d" / "privacy"
-                "Defaults        lecture = never" to privacyFile
-            }
-            appendLine {
-                val sudoersFile = LinuxRoot.etc / "sudoers"
-                "$newUsername ALL=(ALL) NOPASSWD:ALL" to sudoersFile
-            }
+        virtCustomize {
             firstBootCommand { "usermod -l $newUsername $oldUsername" }
+            @Suppress("SpellCheckingInspection")
             firstBootCommand { "groupmod -n $newUsername $oldUsername" }
             firstBootCommand { "usermod -d ${LinuxRoot.home / newUsername} -m $newUsername" }
         }
 
-        prepareOs {
-            updateUsername(oldUsername, newUsername)
+        guestfish {
+            writeAppendLine(LinuxRoot.etc / "sudoers.d" / "privacy", "Defaults        lecture = never")
+            writeAppendLine(LinuxRoot.etc / "sudoers", "$newUsername ALL=(ALL) NOPASSWD:ALL")
         }
 
-        // TODO delete?
-        runPrograms {
-            script("finish rename", "ls ${LinuxRoot.home / "pi"}", "id $oldUsername", "id $newUsername")
-        }
+        // needs reboot for copy/append to files to have correct home dir
+        bootOs = true
     }
 }

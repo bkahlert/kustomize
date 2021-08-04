@@ -83,7 +83,7 @@ class SambaPatch(
             }
         }.toString()
 
-        customizeDisk {
+        virtCustomize {
             firstBootInstall { listOf("samba", "cifs-utils") }
             copyIn(SAMBA_CONF) {
                 createParentDirectories().writeLines(config.lines())
@@ -97,11 +97,9 @@ class SambaPatch(
                 (echo "${'$'}pass"; echo "${'$'}pass") | smbpasswd -s -a "$username"
                 """
             }
-            firstBootShutdownCommand()
         }
 
-        bootOs = true
-
+        bootOs = true // TODO reboot needed?
     }
 
     companion object {

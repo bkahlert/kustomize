@@ -355,16 +355,20 @@ data class CustomizationConfig(
                 + extract<TimeZonePatch>()
                 + extract<UsernamePatch>()
                 + extract<SshEnablementPatch>()
-                + extract<WpaSupplicantPatch>()),
+                + extract<WpaSupplicantPatch>()
+            ),
             CompositePatch(extract<CopyFilesPatch>()
                 + extract<AppendToFilesPatch>()
                 + extract<WifiAutoReconnectPatch>()
                 + extract<WifiPowerSafeModePatch>()
-                + extract<SambaPatch>()),
+                + extract<SambaPatch>()
+            ),
             CompositePatch(extract<PasswordPatch>()
                 + extract<SshAuthorizationPatch>()
                 + extract<SshPortPatch>()
-                + extract<UsbEthernetGadgetPatch>()),
+                + extract<UsbEthernetGadgetPatch>()
+                + extract<ShellScriptPatch>()
+            ),
             *toTypedArray()
         )
     }

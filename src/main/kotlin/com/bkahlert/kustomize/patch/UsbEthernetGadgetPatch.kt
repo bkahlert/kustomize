@@ -86,7 +86,7 @@ class UsbEthernetGadgetPatch(
 
         require(deviceAddress in dhcpRange.firstUsableHost..dhcpRange.lastUsableHost) { "$deviceAddress must be in range ${dhcpRange.usable}" }
 
-        customizeDisk {
+        virtCustomize {
 
             firstBootInstall { listOf("dnsmasq") }
 

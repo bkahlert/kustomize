@@ -9,11 +9,10 @@ import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommandsB
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOptions
 import com.bkahlert.kustomize.libguestfs.LibguestfsImage
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder.CustomizationsContext
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizationsBuilder
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizationsBuilder.VirtCustomizationsContext
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Options
-import com.bkahlert.kustomize.os.OperatingSystem.Credentials
 import koodies.Exceptions.IAE
 import koodies.builder.Init
 import koodies.builder.buildList
@@ -47,10 +46,6 @@ import kotlin.io.path.moveTo
  */
 class OperatingSystemImage(
     val operatingSystem: OperatingSystem,
-    /**
-     * The credentials that give access to the [OperatingSystem].
-     */
-    var credentials: Credentials = operatingSystem.defaultCredentials,
     private val path: Path,
 ) : OperatingSystem by operatingSystem {
 
@@ -111,13 +106,13 @@ class OperatingSystemImage(
      */
     fun virtCustomize(
         trace: Boolean = false,
-        vararg customizations: Customization,
-        init: Init<CustomizationsContext> = {},
+        vararg virtCustomizations: VirtCustomization,
+        init: Init<VirtCustomizationsContext> = {},
     ): DockerExec = VirtCustomizeCommandLine(
         Options(file, colors = !isDebugging, trace = trace),
         buildList {
-            addAll(CustomizationsBuilder(this@OperatingSystemImage).build(init))
-            addAll(customizations)
+            addAll(VirtCustomizationsBuilder(this@OperatingSystemImage).build(init))
+            addAll(virtCustomizations)
         }
     ).exec.logging(exchangeDirectory,
         nameFormatter = Formatter.ToCharSequence,

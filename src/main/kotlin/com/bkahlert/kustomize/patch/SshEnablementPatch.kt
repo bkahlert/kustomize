@@ -15,7 +15,7 @@ class SshEnablementPatch : (OperatingSystemImage) -> PhasedPatch {
         "Enable SSH",
         osImage,
     ) {
-        modifyDisk {
+        guestfish {
             touch { LinuxRoot.boot.ssh }
         }
     }

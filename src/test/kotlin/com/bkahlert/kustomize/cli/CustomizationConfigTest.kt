@@ -10,7 +10,9 @@ import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
 import com.bkahlert.kustomize.os.OperatingSystems.RiscTestOS
+import com.bkahlert.kustomize.patch.AppendToFilesPatch
 import com.bkahlert.kustomize.patch.CompositePatch
+import com.bkahlert.kustomize.patch.CopyFilesPatch
 import com.bkahlert.kustomize.patch.FirstBootPatch
 import com.bkahlert.kustomize.patch.HostnamePatch
 import com.bkahlert.kustomize.patch.PasswordPatch
@@ -334,11 +336,10 @@ class CustomizationConfigTest {
             val patch = config.toPatches()
             expectThat(CompositePatch(patch).invoke(osImage)) {
                 get { name }.contains("Increase Disk Space to 4 GiB").contains("Change Username")
-                get { diskPreparations }.isNotEmpty()
-                get { diskCustomizations }.isNotEmpty()
                 get { diskOperations }.isNotEmpty()
-                get { osPreparations }.isNotEmpty()
-                get { osOperations }.isNotEmpty()
+                get { virtCustomizations }.isNotEmpty()
+                get { guestfishCommands }.isNotEmpty()
+                get { osBoot }.isTrue()
             }
         }
 
@@ -362,6 +363,8 @@ class CustomizationConfigTest {
                 {
                     isA<CompositePatch>().get { this.patches.map { it::class } }
                         .contains(
+                            CopyFilesPatch::class,
+                            AppendToFilesPatch::class,
                             SambaPatch::class,
                             WifiAutoReconnectPatch::class,
                             WifiPowerSafeModePatch::class,
@@ -374,9 +377,9 @@ class CustomizationConfigTest {
                             SshAuthorizationPatch::class,
                             SshPortPatch::class,
                             UsbEthernetGadgetPatch::class,
+                            ShellScriptPatch::class,
                         )
                 },
-                { isA<ShellScriptPatch>() },
                 { isA<FirstBootPatch>() },
             )
         }

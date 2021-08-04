@@ -107,7 +107,7 @@ class CustomizeCommandTest {
 
         @Test
         fun `should throw on missing argument`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-            expectThrows<MissingOption> { CustomizeCommand().parse(arrayOf("--reuse-last-working-copy")) }
+            expectThrows<MissingOption> { CustomizeCommand().parse(arrayOf("--jaeger-hostname", "localhost")) }
         }
 
         @Test

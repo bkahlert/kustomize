@@ -20,7 +20,7 @@ class SshAuthorizationPatch(
         "Add ${authorizedKeys.size} SSH Key(s) for $username",
         osImage,
     ) {
-        customizeDisk {
+        virtCustomize {
             authorizedKeys.forEach { password -> sshInject { username to password } }
         }
     }

@@ -9,11 +9,11 @@ import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.R
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.TarOutCommand
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.TouchCommand
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.UmountAllCommand
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.WriteAppendCommand
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.DiskOption
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.MountOption
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.ReadOnlyOption
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.ReadWriteOption
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.TraceOption
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.VerboseOption
 import com.bkahlert.kustomize.libguestfs.LibguestfsOption.Companion.relativize
 import com.bkahlert.kustomize.os.DiskDirectory
@@ -36,8 +36,9 @@ import koodies.io.path.asPath
 import koodies.io.path.pathString
 import koodies.shell.HereDoc
 import koodies.shell.ShellScript
-import koodies.text.LineSeparators
+import koodies.text.LineSeparators.LF
 import koodies.text.LineSeparators.size
+import koodies.text.padStart
 import koodies.text.withPrefix
 import koodies.text.withRandomSuffix
 import java.nio.file.Path
@@ -67,7 +68,7 @@ class GuestfishCommandLine(
         },
         workingDirectory = "/shared".asContainerPath(),
         custom = buildList {
-            if (options.filterIsInstance<TraceOption>().isNotEmpty()) {
+            if (options.filterIsInstance<GuestfishOption.TraceOption>().isNotEmpty()) {
                 add("--env")
                 add("LIBGUESTFS_TRACE=1")
             }
@@ -129,7 +130,7 @@ class GuestfishCommandLine(
         add(MountOption("/dev/sda2".asPath(), LinuxRoot))
         add(MountOption("/dev/sda1".asPath(), LinuxRoot.boot))
         if (verbose) add(VerboseOption)
-        if (trace) add(TraceOption)
+        if (trace) add(GuestfishOption.TraceOption)
     }) {
         constructor(
             vararg disks: Path,
@@ -313,6 +314,16 @@ class GuestfishCommandLine(
         object UmountAllCommand : GuestfishCommand("umount-all")
 
         /**
+         * This call appends [content] to the end of [file].
+         *
+         * If [file] does not exist, then a new file is created.
+         */
+        class WriteAppendCommand(val file: DiskPath, val content: ByteArray) : GuestfishCommand("write-append", file.pathString,
+            content.joinToString(prefix = "\"", postfix = "\"", separator = "") { "\\x${it.toUByte().toString(16).padStart(2, '0')}" }) {
+            constructor(file: DiskPath, content: String) : this(file, content.encodeToByteArray())
+        }
+
+        /**
          * This exits guestfish.
          */
         object ExitCommand : GuestfishCommand("exit")
@@ -322,15 +333,15 @@ class GuestfishCommandLine(
                 guestfishCommands.head.name,
                 buildList {
                     addAll(guestfishCommands.head.arguments)
-                    add(LineSeparators.LF)
+                    add(LF)
                     guestfishCommands.tail.forEach {
                         addAll(it)
-                        add(LineSeparators.LF)
+                        add(LF)
                     }
                 }
             ) {
 
-            override fun toString(): String = guestfishCommands.joinToString(LineSeparators.LF)
+            override fun toString(): String = guestfishCommands.joinToString(LF)
 
             /**
              * Copies [localFiles] or directories recursively into the disk image,
@@ -401,7 +412,7 @@ class GuestfishCommandLine(
              * This command copies local files or directories recursively into the disk image.
              */
             fun copyIn(mkDir: Boolean = true, remoteDir: (OperatingSystemImage) -> DiskPath) {
-                guestfishCommands.add(remoteDir(osImage).run { CopyIn(mkDir, parentOrNull ?: this, osImage.hostPath(this)) })
+                guestfishCommands.add(remoteDir(osImage).run { -CopyIn(mkDir, parentOrNull ?: this, osImage.hostPath(this)) })
             }
 
             /**
@@ -466,6 +477,33 @@ class GuestfishCommandLine(
              */
             fun umountAll() {
                 guestfishCommands.add(UmountAllCommand)
+            }
+
+            /**
+             * This call appends [content] to the end of [file].
+             *
+             * If [file] does not exist, then a new file is created.
+             */
+            fun writeAppend(file: DiskPath, content: ByteArray) {
+                guestfishCommands.add(-WriteAppendCommand(file, content))
+            }
+
+            /**
+             * This call appends [content] to the end of [file].
+             *
+             * If [file] does not exist, then a new file is created.
+             */
+            fun writeAppend(file: DiskPath, content: String) {
+                guestfishCommands.add(-WriteAppendCommand(file, content))
+            }
+
+            /**
+             * This call appends [content] and a new line to the end of [file].
+             *
+             * If [file] does not exist, then a new file is created.
+             */
+            fun writeAppendLine(file: DiskPath, content: String) {
+                writeAppend(file, "$content$LF")
             }
 
             /**

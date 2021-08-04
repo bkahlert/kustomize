@@ -24,11 +24,8 @@ class FirstBootPatch(
         osImage,
     ) {
         if (shellScripts.isNotEmpty()) {
-            customizeDisk {
-                firstBoot("‾͟͟͞(((ꎤ ✧曲✧)̂—̳͟͞͞o First Boot") {
-                    shellScripts.forEach { embed(it, true) }
-                    ""
-                }
+            virtCustomize {
+                shellScripts.forEach { firstBoot(it) }
             }
         }
     }

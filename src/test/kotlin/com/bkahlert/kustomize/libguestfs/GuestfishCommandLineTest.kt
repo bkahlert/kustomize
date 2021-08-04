@@ -4,12 +4,14 @@ import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommandsB
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOptions
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
+import com.bkahlert.kustomize.os.LinuxRoot.etc
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import koodies.collections.head
 import koodies.collections.tail
 import koodies.docker.asContainerPath
 import koodies.io.path.deleteRecursively
 import koodies.text.ANSI.Text.Companion.ansi
+import koodies.text.LineSeparators.CR
 import koodies.text.Semantics.formattedAs
 import koodies.text.toStringMatchesCurlyPattern
 import koodies.tracing.spanning
@@ -63,6 +65,8 @@ class GuestfishCommandLineTest {
             !mkdir -p home/pi/.ssh 
              -copy-out /home/pi/.ssh/known_hosts home/pi/.ssh 
             
+            write-append /etc/sudoers.d/privacy "Defaults        lecture = never\\n"
+            write-append /etc/sudoers.d/privacy "Defaults        lecture = never\\n"
             tar-in archive.tar /
              !rm archive.tar 
             
@@ -86,7 +90,9 @@ internal fun createGuestfishCommand(osImage: OperatingSystemImage): GuestfishCom
         custom("!mkdir", "-p")
 
         copyIn { LinuxRoot.home / "pi" / ".ssh" / "known_hosts" }
-        copyOut { LinuxRoot.home / "pi" / ".ssh" / "known_hosts" }
+        copyOut { LinuxRoot.home / "pi" / ".ssh" / "known_hosts" }//sudoers.d
+        writeAppend(etc.sudoers_d.privacy, "Defaults        lecture = never$CR")
+        writeAppendLine(etc.sudoers_d.privacy, "Defaults        lecture = never")
 
         tarIn()
         tarOut()

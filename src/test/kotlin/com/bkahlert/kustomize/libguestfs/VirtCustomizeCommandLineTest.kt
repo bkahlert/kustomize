@@ -1,17 +1,16 @@
 package com.bkahlert.kustomize.libguestfs
 
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.ChmodOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.CopyInOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootCommandOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootInstallOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.FirstBootOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization.MkdirOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.CustomizationsBuilder
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.ChmodOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.CopyInOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootCommandOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootInstallOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.MkdirOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizationsBuilder
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.LinuxRoot.etc
-import com.bkahlert.kustomize.os.OperatingSystem
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.pathString
 import koodies.docker.DockerExec
@@ -25,6 +24,7 @@ import koodies.io.text
 import koodies.shell.ShellScript
 import koodies.test.toStringIsEqualTo
 import koodies.text.LineSeparators.LF
+import koodies.text.lines
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expectCatching
@@ -34,6 +34,7 @@ import strikt.assertions.contains
 import strikt.assertions.filterIsInstance
 import strikt.assertions.isEqualTo
 import strikt.assertions.isSuccess
+import strikt.assertions.last
 import strikt.assertions.trim
 import java.nio.file.Path
 import kotlin.io.path.exists
@@ -76,8 +77,6 @@ class VirtCustomizeCommandLineTest {
             '--colors' \
             '--verbose' \
             '-x' \
-            '--append-line' \
-            '/etc/sudoers.d/privacy:Defaults        lecture = never' \
             '--chmod' \
             '0664:/chmod-file' \
             '--chmod' \
@@ -110,20 +109,6 @@ class VirtCustomizeCommandLineTest {
             'usr/lib/virt-sysprep/scripts/0000---first-boot-order-fix:/usr/lib/virt-sysprep/scripts' \
             '--chmod' \
             '0755:/usr/lib/virt-sysprep/scripts/0000---first-boot-order-fix' \
-            '--mkdir' \
-            '/etc/systemd/system' \
-            '--copy-in' \
-            'etc/systemd/system/firstboot-wait.service:/etc/systemd/system' \
-            '--mkdir' \
-            '/etc/systemd/system/multi-user.target.wants' \
-            '--link' \
-            '/etc/systemd/system/firstboot-wait.service:/etc/systemd/system/multi-user.target.wants/firstboot-wait.service' \
-            '--mkdir' \
-            '/etc/systemd/scripts' \
-            '--copy-in' \
-            'etc/systemd/scripts/firstboot-wait.sh:/etc/systemd/scripts' \
-            '--chmod' \
-            '0755:/etc/systemd/scripts/firstboot-wait.sh' \
             '--firstboot' \
             '${cmdLine.firstbootScript(emptyMap(), osImage.exchangeDirectory).fileName}' \
             '--firstboot-command' \
@@ -177,9 +162,7 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
         verbose = true,
         trace = true,
     ),
-    CustomizationsBuilder(osImage).build {
-        appendLine { "Defaults        lecture = never" to etc / "sudoers.d" / "privacy" }
-
+    VirtCustomizationsBuilder(osImage).build {
         chmods { "0664" to LinuxRoot / "chmod-file" }
         chmods { "0664" to LinuxRoot / "other" / "file" }
         commandsFromFiles { osImage -> osImage.hostPath(LinuxRoot / "commands" / "from/files-1") }
@@ -206,8 +189,8 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
         link { LinuxRoot / "link" to LinuxRoot / "target" }
         mkdir { LinuxRoot / "new" / "dir" }
         move { LinuxRoot / "new" / "dir" to LinuxRoot / "moved" / "dir" }
-        password(Customization.PasswordOption.byString("super-admin", "super secure"))
-        rootPassword(Customization.RootPasswordOption.disabled())
+        password(VirtCustomization.PasswordOption.byString("super-admin", "super secure"))
+        rootPassword(VirtCustomization.RootPasswordOption.disabled())
         sshInjectFile { "file-user" to Path.of("file/key") }
         sshInject { "string-user" to "string-key" }
         timeZoneId { "Europe/Berlin" }
@@ -217,22 +200,22 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
 )
 
 private fun CommandLine.firstbootScript(): Path =
-    commandLineParts.single { it.contains("script-") }.asPath()
+    commandLineParts.dropWhile { it != "--firstboot" }.drop(1).first().asPath()
 
 private fun Executable<DockerExec>.firstbootScript(
     environment: Map<String, String>,
     workingDirectory: Path?,
 ): Path = toCommandLine(environment, workingDirectory).firstbootScript()
 
-fun Assertion.Builder<List<Customization>>.containsFirstBootScriptFix() {
+fun Assertion.Builder<List<VirtCustomization>>.containsFirstBootScriptFix() {
     filterIsInstance<MkdirOption>().any { dir.pathString.isEqualTo(FirstBootOrderFix.FIRSTBOOT_SCRIPTS.pathString) }
     filterIsInstance<CopyInOption>().any { localPath.textContent.trim().isEqualTo(FirstBootOrderFix.text.trim()) }
     filterIsInstance<ChmodOption>().any { setsPermission("0755", FirstBootOrderFix.FIRSTBOOT_FIX) }
 }
 
-fun Assertion.Builder<List<Customization>>.containsFirstBootShutdownCommand() {
+fun Assertion.Builder<List<VirtCustomization>>.containsFirstBootShutdownCommand() {
     filterIsInstance<FirstBootOption>().any {
-        file.textContent.contains(OperatingSystem.DEFAULT_SHUTDOWN_COMMAND.shellCommand)
+        file.textContent.trim().lines().last().contains("shutdown")
     }
 }
 

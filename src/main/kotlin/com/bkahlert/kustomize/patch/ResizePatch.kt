@@ -16,6 +16,6 @@ class ResizePatch(
         "Increase Disk Space to ${size.toString(BinaryPrefixes)}",
         osImage,
     ) {
-        prepareDisk { resize(size) }
+        disk { resize(size) }
     }
 }

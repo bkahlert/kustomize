@@ -14,7 +14,7 @@ class WpaSupplicantPatch(
         "Inject WPA Supplicant (${fileContent.lines().size} lines)",
         osImage,
     ) {
-        customizeDisk {
+        virtCustomize {
             copyIn(wpa_supplicant_conf, fileContent)
         }
     }

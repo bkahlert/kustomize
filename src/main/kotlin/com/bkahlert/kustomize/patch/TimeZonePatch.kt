@@ -12,6 +12,6 @@ class TimeZonePatch(private val timeZone: TimeZone) : (OperatingSystemImage) -> 
         "Set Time Zone to ${timeZone.displayName}",
         osImage,
     ) {
-        customizeDisk { timeZone { timeZone } }
+        virtCustomize { timeZone { timeZone } }
     }
 }

@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.patch
 
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Customization
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization
 import com.bkahlert.kustomize.libguestfs.containsFirstBootScriptFix
 import com.bkahlert.kustomize.libguestfs.file
 import com.bkahlert.kustomize.libguestfs.mounted
@@ -16,7 +16,6 @@ import koodies.test.Smoke
 import koodies.test.withTempDir
 import koodies.text.Banner.banner
 import org.junit.jupiter.api.Test
-import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.isA
@@ -31,10 +30,10 @@ class FirstBootPatchTest {
             echo("👏 🤓 👋")
             !"startx"
         }
-        expectThat(patch(osImage)).diskCustomizations {
-            last().isA<Customization.FirstBootOption>().file.textContent {
-                contains("""echo '"'"'${banner("Test")}'"'"'""")
-                contains("""'"'"'echo'"'"' '"'"'👏 🤓 👋'"'"'""")
+        expectThat(patch(osImage)).virtCustomizations {
+            last().isA<VirtCustomization.FirstBootOption>().file.textContent {
+                contains("echo '${banner("Test")}'")
+                contains("'echo' '👏 🤓 👋'")
                 contains("startx")
             }
         }
@@ -46,7 +45,7 @@ class FirstBootPatchTest {
             echo("👏 🤓 👋")
             !"startx"
         }
-        expectThat(patch(osImage)).diskCustomizations { containsFirstBootScriptFix() }
+        expectThat(patch(osImage)).virtCustomizations { containsFirstBootScriptFix() }
     }
 
     @E2E @Smoke @Test
@@ -62,23 +61,18 @@ class FirstBootPatchTest {
                     ShellScript("appending 'c'") { "echo 'c' >> ${LinuxRoot.home / "file"}" },
                     ShellScript("appending 'd'") { "echo 'd' >> /home/file" },
                 ),
+                BootAndShutdownPatch(),
             )
 
-            expect {
-                that(osImage).booted {
-                    command("echo /home/file");
-                    { true }
-                }
-                that(osImage).mounted {
-                    path(LinuxRoot.home / "file") {
-                        textContent.isEqualTo("""
-                            a
-                            b
-                            c
-                            d
-                            
-                        """.trimIndent())
-                    }
+            expectThat(osImage).mounted {
+                path(LinuxRoot.home / "file") {
+                    textContent.isEqualTo("""
+                        a
+                        b
+                        c
+                        d
+                        
+                    """.trimIndent())
                 }
             }
         }
