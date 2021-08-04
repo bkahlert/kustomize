@@ -1,9 +1,9 @@
-# Kustomize — Kotlin-based customizer for IoT images like Raspberry Pi OS
+# Kustomize
 
-Kustomize applies a [HOCON](https://github.com/lightbend/config/blob/master/HOCON.md) config file to an IoT image such
-as [Raspberry Pi OS](https://www.raspberrypi.org/software/operating-systems).  
-All that needs to be done is flash the image to a memory card and boot your fully-customized image on the target device (
-e.g. [Raspberry Pi](https://www.raspberrypi.org/)).
+**Kotlin-based customizer for IoT images like [Raspberry Pi OS](https://www.raspberrypi.org/software/operating-systems)**  
+Kustomize applies a [HOCON](https://github.com/lightbend/config/blob/master/HOCON.md) based customization file to a [Raspberry Pi](https://www.raspberrypi.org/)
+compatible image.  
+All that needs to be done is flash the image to a memory card and boot the fully-customized image on the target device.
 
 ![Kustomize applying sample.conf to an image](docs/sample.terminalizer.gif)
 
@@ -255,6 +255,7 @@ docker run --rm -it \
 -w "$(pwd)" \
 bkahlert/kustomize --config-file sample.conf --jaeger-hostname host.docker.internal
 ```
+
 There is no need to start a Jaeger yourself as it's automatically launched for you.
 
 ## Configuration Options

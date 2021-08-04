@@ -65,8 +65,8 @@ class GuestfishCommandLineTest {
             !mkdir -p home/pi/.ssh 
              -copy-out /home/pi/.ssh/known_hosts home/pi/.ssh 
             
-            write-append /etc/sudoers.d/privacy "Defaults        lecture = never\\n"
-            write-append /etc/sudoers.d/privacy "Defaults        lecture = never\\n"
+            -write-append /etc/sudoers.d/privacy "\x44\x65\x66\x61\x75\x6c\x74\x73\x20\x20\x20\x20\x20\x20\x20\x20\x6c\x65\x63\x74\x75\x72\x65\x20\x3d\x20\x6e\x65\x76\x65\x72\x0d"
+            -write-append /etc/sudoers.d/privacy "\x44\x65\x66\x61\x75\x6c\x74\x73\x20\x20\x20\x20\x20\x20\x20\x20\x6c\x65\x63\x74\x75\x72\x65\x20\x3d\x20\x6e\x65\x76\x65\x72\x0a"
             tar-in archive.tar /
              !rm archive.tar 
             

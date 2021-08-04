@@ -15,15 +15,12 @@ import koodies.shell.ShellScript
 import koodies.test.Smoke
 import koodies.test.withTempDir
 import koodies.text.Banner.banner
-import koodies.text.LineSeparators.LF
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.any
 import strikt.assertions.contains
 import strikt.assertions.filterIsInstance
-import strikt.assertions.isA
 import strikt.assertions.isEqualTo
-import strikt.assertions.last
 
 class ShellScriptPatchTest {
 
@@ -46,10 +43,6 @@ class ShellScriptPatchTest {
                     contains("echo 'Frank was here; went to get beer.' > $testFile")
                 }
             }
-            last().isA<VirtCustomization.FirstBootOption>().file.textContent {
-                contains("echo '${banner("shutdown")}'")
-                contains("'shutdown' '-h' 'now'")
-            }
         }
     }
 
@@ -59,36 +52,30 @@ class ShellScriptPatchTest {
     }
 
     @E2E @Smoke @Test
-    fun `should run shell script`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
+    fun `should run shell scripts in correct order`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) =
+        withTempDir(uniqueId) {
 
-        osImage.patch(shellScriptPatch, BootAndShutdownPatch())
+            osImage.patch(CompositePatch(
+                ShellScriptPatch(
+                    ShellScript("writing 'a'") { "echo 'a' > ${LinuxRoot.home / "file"}" },
+                    ShellScript("appending 'b'") { "echo 'b' >> ${LinuxRoot.home / "file"}" },
+                ),
+                ShellScriptPatch(
+                    ShellScript("appending 'c'") { "echo 'c' >> ${LinuxRoot.home / "file"}" },
+                    ShellScript("appending 'd'") { "echo 'd' >> /home/file" },
+                ),
+            ))
 
-        expectThat(osImage).mounted {
-            path(testFile) {
-                textContent.isEqualTo("Frank was here; went to get beer.$LF")
+            expectThat(osImage).mounted {
+                path(LinuxRoot.home / "file") {
+                    textContent.isEqualTo("""
+                        a
+                        b
+                        c
+                        d
+                        
+                    """.trimIndent())
+                }
             }
         }
-    }
-
-    @E2E @Smoke @Test
-    fun `should run shell script22`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
-
-        osImage.patch(ShellScriptPatch(
-            ShellScript("script 1", "echo 1"),
-            ShellScript("script 2", "echo 2"),
-            ShellScript("script 3", "echo 3"),
-            ShellScript("script 4", "echo 4"),
-            ShellScript("script 5", "echo 5"),
-            ShellScript("script 6", "echo 6"),
-            ShellScript("script 7", "echo 7"),
-            ShellScript("script 8", "echo 8"),
-            ShellScript("script 9", "echo 9"),
-        ), BootAndShutdownPatch())
-
-        expectThat(osImage).mounted {
-            path(testFile) {
-                textContent.isEqualTo("Frank was here; went to get beer.$LF")
-            }
-        }
-    }
 }

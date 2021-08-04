@@ -16,7 +16,7 @@ class UsernamePatchTest {
     fun `should log in with updated username`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
         val newUsername = "john.doe".also { check(it != osImage.defaultCredentials.username) { "$it is already the default username." } }
 
-        osImage.patch(UsernamePatch(osImage.defaultCredentials.username, newUsername), BootAndShutdownPatch())
+        osImage.patch(CompositePatch(UsernamePatch(osImage.defaultCredentials.username, newUsername)))
 
         expectThat(osImage).mounted {
             path(LinuxRoot.home / newUsername) { exists() }

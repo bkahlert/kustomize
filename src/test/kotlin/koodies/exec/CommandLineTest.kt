@@ -15,7 +15,7 @@ val <T : CharSequence> Assertion.Builder<T>.continuationsRemoved: DescribeableBu
 val Assertion.Builder<CommandLine>.evaluated: Assertion.Builder<Exec>
     get() = get("evaluated %s") {
         toExec(false, emptyMap(), Locations.Temp, null)
-            .process(ProcessingMode { sync }, Processors.spanningProcessor())
+            .process(ProcessingMode(), Processors.spanningProcessor())
     }
 
 fun Assertion.Builder<CommandLine>.evaluated(block: Assertion.Builder<Exec>.() -> Unit) =

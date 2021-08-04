@@ -4,7 +4,6 @@ import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizat
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootInstallOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootOption
 import com.bkahlert.kustomize.libguestfs.containsFirstBootScriptFix
-import com.bkahlert.kustomize.libguestfs.containsFirstBootShutdownCommand
 import com.bkahlert.kustomize.libguestfs.file
 import com.bkahlert.kustomize.libguestfs.localPath
 import com.bkahlert.kustomize.libguestfs.mounted
@@ -96,11 +95,6 @@ class SambaPatchTest {
     }
 
     @Test
-    fun `should shutdown`(osImage: OperatingSystemImage) {
-        expectThat(sambaPatch(osImage)).virtCustomizations { containsFirstBootShutdownCommand() }
-    }
-
-    @Test
     fun `should copy firstboot script order fix`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
         expectThat(sambaPatch(osImage)).virtCustomizations { containsFirstBootScriptFix() }
     }
@@ -108,7 +102,7 @@ class SambaPatchTest {
     @E2E @Smoke @Test
     fun `should install samba and set password and shutdown`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
 
-        osImage.patch(ResizePatch(2.Gibi.bytes), sambaPatch)
+        osImage.patch(CompositePatch(ResizePatch(2.Gibi.bytes), sambaPatch))
 
         val installedPackages = "/root/installed.txt"
         osImage.patch {

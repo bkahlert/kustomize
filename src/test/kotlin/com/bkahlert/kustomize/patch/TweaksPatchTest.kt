@@ -6,6 +6,7 @@ import com.bkahlert.kustomize.os.OperatingSystemImage
 import koodies.text.LineSeparators.LF
 import org.junit.jupiter.api.Test
 import strikt.api.expect
+import strikt.assertions.any
 import strikt.assertions.containsExactly
 
 class TweaksPatchTest {
@@ -16,7 +17,9 @@ class TweaksPatchTest {
 
         expect {
             that(patch).guestfishCommands {
-                containsExactly(listOf(WriteAppendCommand(LinuxRoot.etc.apt.apt_conf_d.`80_retries`, """APT::Acquire::Retries "9";$LF""")))
+                any {
+                    containsExactly(-WriteAppendCommand(LinuxRoot.etc.apt.apt_conf_d.`80_retries`, """APT::Acquire::Retries "9";$LF"""))
+                }
             }
         }
     }
