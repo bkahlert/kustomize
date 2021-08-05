@@ -1,3 +1,5 @@
+![Kaomoji customizing image](docs/banner.svg)
+
 # Kustomize
 
 **Kotlin-based customizer for IoT images like [Raspberry Pi OS](https://www.raspberrypi.org/software/operating-systems)**  
