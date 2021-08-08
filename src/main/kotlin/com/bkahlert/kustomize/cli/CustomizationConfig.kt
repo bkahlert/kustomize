@@ -44,6 +44,7 @@ import com.typesafe.config.ConfigFactory
 import io.github.config4k.extract
 import koodies.builder.buildList
 import koodies.io.ls
+import koodies.io.path.asPath
 import koodies.net.IPAddress
 import koodies.net.IPSubnet
 import koodies.net.ipSubnetOf
@@ -198,10 +199,8 @@ data class CustomizationConfig(
                         extract<List<IntermediaryFileOperation>?>("files")?.map {
                             FileOperation(
                                 it.append?.trimIndent(),
-                                it.hostPath?.let { path ->
-                                    val ls = com.bkahlert.kustomize.Kustomize.WorkingDirectory.ls(path)
-                                    ls.firstOrNull { it.exists() }
-                                        ?: error("The resolved expression ${it.hostPath} would point to at least one existing file.")
+                                it.hostPath?.asPath()?.also { path ->
+                                    require(path.exists()) { "$path does not exist." }
                                 },
                                 LinuxRoot / it.diskPath,
                             )

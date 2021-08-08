@@ -8,11 +8,13 @@ import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
 import koodies.docker.DockerRequiring
 import koodies.exception.rootCause
+import koodies.io.copyTo
 import koodies.io.copyToTemp
 import koodies.io.path.hasContent
 import koodies.io.path.textContent
 import koodies.io.path.writeText
 import koodies.io.randomPath
+import koodies.io.tempDir
 import koodies.io.tempFile
 import koodies.junit.UniqueId
 import koodies.test.FiveMinutesTimeout
@@ -34,22 +36,26 @@ import kotlin.io.path.createFile
 class CopyFilesPatchTest {
 
     @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
-    fun `should create mkdir and copy-in options`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
-        val sampleHtmlDiskPath = LinuxRoot.boot / "sample.html"
+    fun `should create mkdir and copy-in directory and file`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         val sampleTxtDiskPath = LinuxRoot.etc / "sample.txt"
+        val sampleHtmlDiskPath = LinuxRoot.boot / "sample.html"
         val configTxtDiskPath = LinuxRoot.boot.config_txt
         val copyFilesPatch = CopyFilesPatch(
-            { HtmlFixture.copyToTemp() } to sampleHtmlDiskPath,
             { TextFixture.copyToTemp() } to sampleTxtDiskPath,
-            { tempFile("config", ".txt").writeText("new file") } to configTxtDiskPath
+            {
+                tempDir().also {
+                    HtmlFixture.copyTo(it.resolve(sampleHtmlDiskPath.fileName))
+                    it.resolve(configTxtDiskPath.fileName).writeText("new file")
+                }
+            } to LinuxRoot.boot,
         )
 
         osImage.patch(copyFilesPatch)
 
         expect {
             that(osImage).mounted {
-                path(sampleHtmlDiskPath) { hasContent(HtmlFixture.text) }
                 path(sampleTxtDiskPath) { hasContent(TextFixture.text) }
+                path(sampleHtmlDiskPath) { hasContent(HtmlFixture.text) }
                 path(configTxtDiskPath) { textContent.isEqualTo("new file") }
             }
         }
