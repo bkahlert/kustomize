@@ -23,6 +23,53 @@ class EnvTest {
     }
 
     @Test
+    fun `should read multi-line variable`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+        val path: Path = randomFile("multi-line", ".env").apply {
+            writeText("""
+                FOO="foo"
+                WPA_SUPPLICANT=""${'"'}ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+                update_config=1
+                country=DE
+               
+                network={
+                  ssid="ssid1"
+                  psk="psk1"
+                  id_str="id_str1"
+                }
+               
+                network={
+                  ssid="ssid2"
+                  psk="psk2"
+                  id_str="id_str2"
+                }
+                ""${'"'}
+                BAR=bar
+            """.trimIndent())
+        }
+        expectThat(Env(path))
+            .hasEntry("FOO", "foo")
+            .hasEntry("WPA_SUPPLICANT", """
+                ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+                update_config=1
+                country=DE
+
+                network={
+                  ssid="ssid1"
+                  psk="psk1"
+                  id_str="id_str1"
+                }
+
+                network={
+                  ssid="ssid2"
+                  psk="psk2"
+                  id_str="id_str2"
+                }
+                
+            """.trimIndent())
+            .hasEntry("BAR", "bar")
+    }
+
+    @Test
     fun `should favor environment variables`(uniqueId: UniqueId) = withTempDir(uniqueId) {
         val path: Path = randomFile("personal", ".env").apply { writeText("JAVA_HOME=dummy\n") }
         expectThat(Env(path))["JAVA_HOME"].isNotEqualTo("dummy")
