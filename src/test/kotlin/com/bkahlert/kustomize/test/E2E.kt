@@ -3,8 +3,8 @@ package com.bkahlert.kustomize.test
 import com.bkahlert.kustomize.libguestfs.LibguestfsImage
 import com.bkahlert.kustomize.os.DockerPiImage
 import com.bkahlert.kustomize.test.E2E.Companion.NAME
-import koodies.docker.DockerRequiring
-import koodies.test.ThirtyMinutesTimeout
+import com.bkahlert.kommons.docker.DockerRequiring
+import com.bkahlert.kommons.test.ThirtyMinutesTimeout
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.parallel.ResourceAccessMode.READ_WRITE

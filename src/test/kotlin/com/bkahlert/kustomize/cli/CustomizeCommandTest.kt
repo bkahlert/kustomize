@@ -1,7 +1,17 @@
 package com.bkahlert.kustomize.cli
 
-import com.bkahlert.kustomize.Kustomize.WorkingDirectory
-import com.bkahlert.kustomize.TestKustomize.TestCacheDirectory
+import com.bkahlert.kommons.io.copyToDirectory
+import com.bkahlert.kommons.io.path.deleteOnExit
+import com.bkahlert.kommons.io.path.deleteRecursively
+import com.bkahlert.kommons.io.path.pathString
+import com.bkahlert.kommons.io.path.writeText
+import com.bkahlert.kommons.junit.UniqueId
+import com.bkahlert.kommons.test.Slow
+import com.bkahlert.kommons.test.expectThrows
+import com.bkahlert.kommons.test.withTempDir
+import com.bkahlert.kommons.text.ansiRemoved
+import com.bkahlert.kustomize.Kustomize
+import com.bkahlert.kustomize.TestKustomize.testCacheDirectory
 import com.bkahlert.kustomize.expectRendered
 import com.bkahlert.kustomize.os.OperatingSystems.HypriotOS
 import com.bkahlert.kustomize.test.E2E
@@ -9,16 +19,6 @@ import com.github.ajalt.clikt.core.BadParameterValue
 import com.github.ajalt.clikt.core.MissingOption
 import com.github.ajalt.clikt.core.PrintHelpMessage
 import com.typesafe.config.ConfigException
-import koodies.io.copyToDirectory
-import koodies.io.path.deleteOnExit
-import koodies.io.path.deleteRecursively
-import koodies.io.path.pathString
-import koodies.io.path.writeText
-import koodies.junit.UniqueId
-import koodies.test.Slow
-import koodies.test.expectThrows
-import koodies.test.withTempDir
-import koodies.text.ansiRemoved
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -47,14 +47,14 @@ class CustomizeCommandTest {
         fun `should create cache in workdir by default`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             val configFile = MinimalConfFixture.copyToDirectory(this)
             CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--skip-patches"))
-            expectRendered().contains("Env: ${WorkingDirectory.resolve(".env").toUri()}")
+            expectRendered().contains("Env: ${Kustomize.work.resolve(".env").toUri()}")
         }
 
         @Slow @Test
         fun `should create cache relative to workdir if specified relative path`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             val configFile = MinimalConfFixture.copyToDirectory(this)
             CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--skip-patches", "--env-file", "relative-env-file"))
-            expectRendered().contains("Env: ${WorkingDirectory.resolve("relative-env-file").toUri()}")
+            expectRendered().contains("Env: ${Kustomize.work.resolve("relative-env-file").toUri()}")
         }
 
         @Slow @Test
@@ -66,8 +66,8 @@ class CustomizeCommandTest {
 
         @AfterEach
         fun cleanUp() {
-            WorkingDirectory.resolve("cache").deleteRecursively()
-            WorkingDirectory.resolve("minimal").deleteRecursively()
+            Kustomize.work.resolve("cache").deleteRecursively()
+            Kustomize.work.resolve("minimal").deleteRecursively()
         }
     }
 
@@ -78,14 +78,14 @@ class CustomizeCommandTest {
         fun `should create cache in workdir by default`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             val configFile = MinimalConfFixture.copyToDirectory(this)
             CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--skip-patches"))
-            expectThat(WorkingDirectory / "minimal").containsImage("riscos.img")
+            expectThat(Kustomize.work / "minimal").containsImage("riscos.img")
         }
 
         @Slow @Test
         fun `should create cache relative to workdir if specified relative path`(uniqueId: UniqueId) = withTempDir(uniqueId) {
             val configFile = MinimalConfFixture.copyToDirectory(this)
             CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--skip-patches", "--cache-dir", "cache"))
-            expectThat(WorkingDirectory / "cache" / "minimal").containsImage("riscos.img")
+            expectThat(Kustomize.work / "cache" / "minimal").containsImage("riscos.img")
         }
 
         @Slow @Test
@@ -97,8 +97,8 @@ class CustomizeCommandTest {
 
         @AfterEach
         fun cleanUp() {
-            WorkingDirectory.resolve("cache").deleteRecursively()
-            WorkingDirectory.resolve("minimal").deleteRecursively()
+            Kustomize.work.resolve("cache").deleteRecursively()
+            Kustomize.work.resolve("minimal").deleteRecursively()
         }
     }
 
@@ -132,7 +132,7 @@ class CustomizeCommandTest {
                     os = RISC OS Pico RC5 (test only)
                 """.trimIndent())
                 CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString))
-                expectThat(WorkingDirectory.resolve("file-name").deleteOnExit(true)).isDirectory()
+                expectThat(Kustomize.work.resolve("file-name").deleteOnExit(true)).isDirectory()
             }
 
             @Test
@@ -161,14 +161,14 @@ class CustomizeCommandTest {
                   },
                 ]
             """.trimIndent())
-            CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--cache-dir", TestCacheDirectory.pathString))
+            CustomizeCommand().parse(arrayOf("--config-file", configFile.pathString, "--cache-dir", testCacheDirectory.pathString))
             expectRendered().ansiRemoved {
                 contains("▶ Configuring")
                 contains("Configuration: ${resolve("hello.conf").toUri()}")
                 contains("Name: ${HypriotOS.name}")
                 contains("OS: ${HypriotOS.fullName}")
-                contains("Env: ${WorkingDirectory.resolve(".env").toUri()}")
-                contains("Cache: ${WorkingDirectory.resolve(TestCacheDirectory).toUri()}")
+                contains("Env: ${Kustomize.work.resolve(".env").toUri()}")
+                contains("Cache: ${Kustomize.work.resolve(testCacheDirectory).toUri()}")
 
                 contains("▶ Preparing")
                 contains("· ▶ Retrieving image")

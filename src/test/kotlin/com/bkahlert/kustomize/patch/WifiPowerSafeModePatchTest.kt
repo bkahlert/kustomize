@@ -3,11 +3,11 @@ package com.bkahlert.kustomize.patch
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootOption
 import com.bkahlert.kustomize.libguestfs.file
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.io.path.pathString
-import koodies.io.path.textContent
-import koodies.junit.UniqueId
-import koodies.test.containsAtLeast
-import koodies.test.withTempDir
+import com.bkahlert.kommons.io.path.pathString
+import com.bkahlert.kommons.io.path.textContent
+import com.bkahlert.kommons.junit.UniqueId
+import com.bkahlert.kommons.test.containsAtLeast
+import com.bkahlert.kommons.test.withTempDir
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.contains

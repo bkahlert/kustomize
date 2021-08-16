@@ -2,7 +2,7 @@ package com.bkahlert.kustomize.patch
 
 import com.bkahlert.kustomize.os.OperatingSystem
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.text.withRandomSuffix
+import com.bkahlert.kommons.text.withRandomSuffix
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]

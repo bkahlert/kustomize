@@ -1,13 +1,13 @@
 package com.bkahlert.kustomize.util
 
 import com.bkahlert.kustomize.util.Disk.Companion.flashDiskOf
-import koodies.exec.output
-import koodies.shell.ShellScript
-import koodies.tracing.rendering.spanningLine
-import koodies.unit.bytes
+import com.bkahlert.kommons.exec.output
+import com.bkahlert.kommons.shell.ShellScript
+import com.bkahlert.kommons.tracing.rendering.spanningLine
+import com.bkahlert.kommons.unit.bytes
 
 object DiskUtil {
-    
+
     @Suppress("SpellCheckingInspection")
     const val command: String = "diskutil"
 

@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.test
 
-import koodies.io.ClassPathDirectory
+import com.bkahlert.kommons.runtime.ClassPathDirectory
 
 object ImageFixtures : ClassPathDirectory("img") {
     object Boot : Dir("boot") {

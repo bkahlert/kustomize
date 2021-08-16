@@ -1,9 +1,9 @@
 package com.bkahlert.kustomize.os
 
-import koodies.net.headers
-import koodies.test.testEach
-import koodies.unit.Mega
-import koodies.unit.bytes
+import com.bkahlert.kommons.net.headers
+import com.bkahlert.kommons.test.testEach
+import com.bkahlert.kommons.unit.Mega
+import com.bkahlert.kommons.unit.bytes
 import org.junit.jupiter.api.TestFactory
 import strikt.api.Assertion
 import strikt.assertions.isEqualTo

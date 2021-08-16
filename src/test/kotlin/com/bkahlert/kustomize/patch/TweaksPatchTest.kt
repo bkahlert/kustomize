@@ -3,7 +3,7 @@ package com.bkahlert.kustomize.patch
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.WriteAppendCommand
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.text.LineSeparators.LF
+import com.bkahlert.kommons.text.LineSeparators.LF
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.assertions.any

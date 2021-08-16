@@ -1,25 +1,26 @@
 package com.bkahlert.kustomize.cli
 
+import com.bkahlert.kommons.io.path.FileSizeComparator
+import com.bkahlert.kommons.io.path.cloneTo
+import com.bkahlert.kommons.io.path.delete
+import com.bkahlert.kommons.io.path.deleteRecursively
+import com.bkahlert.kommons.io.path.extensionOrNull
+import com.bkahlert.kommons.io.path.getSize
+import com.bkahlert.kommons.io.path.listDirectoryEntriesRecursively
+import com.bkahlert.kommons.io.path.pathString
+import com.bkahlert.kommons.io.path.requireDirectory
+import com.bkahlert.kommons.io.path.uriString
+import com.bkahlert.kommons.text.ANSI.Colors.cyan
+import com.bkahlert.kommons.text.randomString
+import com.bkahlert.kommons.time.Now
+import com.bkahlert.kommons.time.format
+import com.bkahlert.kommons.time.minutes
+import com.bkahlert.kommons.time.parseInstant
+import com.bkahlert.kommons.tracing.rendering.spanningLine
+import com.bkahlert.kommons.tracing.runSpanning
+import com.bkahlert.kommons.unit.BinaryPrefixes
+import com.bkahlert.kustomize.Kustomize
 import com.bkahlert.kustomize.libguestfs.ImageExtractor.extractImage
-import koodies.io.path.FileSizeComparator
-import koodies.io.path.cloneTo
-import koodies.io.path.delete
-import koodies.io.path.deleteRecursively
-import koodies.io.path.extensionOrNull
-import koodies.io.path.getSize
-import koodies.io.path.listDirectoryEntriesRecursively
-import koodies.io.path.pathString
-import koodies.io.path.requireDirectory
-import koodies.io.path.uriString
-import koodies.text.ANSI.Colors.cyan
-import koodies.text.randomString
-import koodies.time.Now
-import koodies.time.format
-import koodies.time.minutes
-import koodies.time.parseInstant
-import koodies.tracing.rendering.spanningLine
-import koodies.tracing.spanning
-import koodies.unit.BinaryPrefixes
 import java.nio.file.Path
 import java.time.Instant
 import java.time.Instant.now
@@ -33,7 +34,7 @@ import kotlin.io.path.moveTo
 import kotlin.time.Duration
 
 class Cache(dir: Path, private val maxConcurrentWorkingDirectories: Int = 5) : com.bkahlert.kustomize.cli.ManagedDirectory(
-    com.bkahlert.kustomize.Kustomize.WorkingDirectory.resolve(dir).createDirectories().normalize(),
+    Kustomize.work.resolve(dir).createDirectories().normalize(),
 ) {
 
     fun provideCopy(name: String, provider: () -> Path): Path =
@@ -79,7 +80,7 @@ class ProjectDirectory(
             .sortedBy { it.age }
 
     private fun deleteOldWorkDirs(keep: Int) =
-        spanning("Deleting old working directories") {
+        runSpanning("Deleting old working directories") {
             workDirs
                 .filter { it.age > 30.minutes }
                 .drop(keep)
@@ -89,7 +90,7 @@ class ProjectDirectory(
                 }
         }
 
-    fun require(provider: () -> Path): Path = spanning("Retrieving image") {
+    fun require(provider: () -> Path): Path = runSpanning("Retrieving image") {
         val img = rawDir.requireSingle {
             val downloadedFile = downloadDir.requireSingle(provider)
             downloadedFile.extractImage()

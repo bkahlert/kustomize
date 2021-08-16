@@ -7,11 +7,11 @@ import com.bkahlert.kustomize.os.LinuxRoot.boot.config_txt
 import com.bkahlert.kustomize.os.LinuxRoot.etc.dhcpcd_conf
 import com.bkahlert.kustomize.os.LinuxRoot.etc.modules
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.net.IPAddress
-import koodies.net.IPSubnet
-import koodies.net.div
-import koodies.net.ip4Of
-import koodies.toBaseName
+import com.bkahlert.kommons.net.IPAddress
+import com.bkahlert.kommons.net.IPSubnet
+import com.bkahlert.kommons.net.div
+import com.bkahlert.kommons.net.ip4Of
+import com.bkahlert.kommons.toBaseName
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]

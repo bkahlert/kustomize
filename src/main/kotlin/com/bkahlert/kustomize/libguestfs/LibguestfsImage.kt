@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.libguestfs
 
-import koodies.docker.DockerImage
+import com.bkahlert.kommons.docker.DockerImage
 
 /**
  * Docker image used to run [GuestfishCommandLine] and [VirtCustomizeCommandLine].

@@ -2,7 +2,7 @@ package com.bkahlert.kustomize.patch
 
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.text.LineSeparators.lines
+import com.bkahlert.kommons.text.LineSeparators.lines
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]

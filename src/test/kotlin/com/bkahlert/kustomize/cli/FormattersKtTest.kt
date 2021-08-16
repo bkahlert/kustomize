@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.cli
 
-import koodies.text.ANSI.Text.Companion.ansi
+import com.bkahlert.kommons.text.ANSI.Text.Companion.ansi
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo

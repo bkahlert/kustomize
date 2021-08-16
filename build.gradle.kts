@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.bkahlert"
-version = "1.0-SNAPSHOT"
+version = "1.0.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -19,8 +19,8 @@ repositories {
 
 dependencies {
 
-    implementation("com.bkahlert.koodies:koodies:1.9.7")
-//    implementation("com.bkahlert.koodies:koodies:1.10.0-SNAPSHOT")
+    implementation("com.bkahlert.kommons:kommons:1.11.0")
+//    implementation("com.bkahlert.kommons:kommons:1.10.0-SNAPSHOT")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.21") {
         because("filepeek takes 1.3")
@@ -69,6 +69,12 @@ tasks {
                 "-Xopt-in=kotlin.io.path.ExperimentalPathApi",
                 "-Xinline-classes"
             )
+        }
+    }
+
+    withType<ProcessResources> {
+        filesMatching("build.properties") {
+            expand(project.properties)
         }
     }
 

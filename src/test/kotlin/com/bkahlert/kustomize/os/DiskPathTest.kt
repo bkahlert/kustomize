@@ -1,8 +1,8 @@
 package com.bkahlert.kustomize.os
 
-import koodies.test.expecting
-import koodies.test.tests
-import koodies.test.toStringIsEqualTo
+import com.bkahlert.kommons.test.expecting
+import com.bkahlert.kommons.test.tests
+import com.bkahlert.kommons.test.toStringIsEqualTo
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import strikt.api.Assertion

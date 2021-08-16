@@ -40,7 +40,7 @@ kustomize --config-file sample.conf
 # OR
 docker run --rm -it \
            -v /var/run/docker.sock:/var/run/docker.sock \
-           -v /tmp/koodies:/tmp/koodies \
+           -v /tmp/kommons:/tmp/kommons \
            -v "$(pwd)":"$(pwd)" \
            -w "$(pwd)" \
            bkahlert/kustomize \
@@ -77,7 +77,7 @@ docker run --rm -it \
 · │
 · │   ◼ disk
 · │   ▶ virt-customize (17)
-· │   · ▶ 17 virt-customize operations 🐳 bkahlert/libguestfs: file:///tmp/koodies/exec/WPG.sh
+· │   · ▶ 17 virt-customize operations 🐳 bkahlert/libguestfs: file:///tmp/kommons/exec/WPG.sh
 · │   · · [   0.0] Examining the guest ...
 · │   · · [  31.8] Setting a random seed
 · │   · · [  32.2] Setting the machine ID in /etc/machine-id
@@ -191,7 +191,7 @@ docker run --rm -it \
 · │
 · │   ◼ disk
 · │   ▶ virt-customize (1)
-· │   · ▶ 1 virt-customize operation 🐳 bkahlert/libguestfs: file:///tmp/koodies/exec/6z1.sh
+· │   · ▶ 1 virt-customize operation 🐳 bkahlert/libguestfs: file:///tmp/kommons/exec/6z1.sh
 · │   · · [   0.0] Examining the guest ...
 · │   · · [  32.1] Setting a random seed
 · │   · · [  32.6] Setting passwords
@@ -212,7 +212,7 @@ The just customized `sample.img` can now be flashed to a memory card and booted 
 
 ### Architecture and Debugging
 
-Kustomize is based on the Kotlin library [Koodies](https://github.com/bkahlert/koodies), applies offline modifications using
+Kustomize is based on the Kotlin library [Kommons](https://github.com/bkahlert/kommons), applies offline modifications using
 a [dockerized libguestfs](https://hub.docker.com/repository/docker/bkahlert/libguestfs) (i.e. [virt-customize](https://libguestfs.org/virt-customize.1.html)
 and [guestfish](https://libguestfs.org/guestfish.1.html)), and runs scripts on the guest using the marvelous [dockerpi](https://github.com/lukechilds/dockerpi).
 
@@ -221,7 +221,7 @@ locations that can be opened right in your terminal.
 
 ![Linked script file](docs/linked-script-file.png)
 
-If your terminal supports it, <kbd>Ctrl ⌃</kbd> respectively <kbd>Cmd ⌘</kbd> click on `/tmp/koodies/exec/ZXv.sh` and check the script's content:
+If your terminal supports it, <kbd>Ctrl ⌃</kbd> respectively <kbd>Cmd ⌘</kbd> click on `/tmp/kommons/exec/ZXv.sh` and check the script's content:
 
 ```shell
 #!/bin/sh
@@ -253,7 +253,7 @@ kustomize --config-file sample.conf --jaeger-hostname localhost
 # OR
 docker run --rm -it \
            -v /var/run/docker.sock:/var/run/docker.sock \
-           -v /tmp/koodies:/tmp/koodies \
+           -v /tmp/kommons:/tmp/kommons \
            -v "$(pwd)":"$(pwd)" \
            -w "$(pwd)" \
            bkahlert/kustomize \

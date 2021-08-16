@@ -1,8 +1,8 @@
 package com.bkahlert.kustomize.patch
 
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.unit.BinaryPrefixes
-import koodies.unit.Size
+import com.bkahlert.kommons.unit.BinaryPrefixes
+import com.bkahlert.kommons.unit.Size
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]

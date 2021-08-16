@@ -1,7 +1,7 @@
 package com.bkahlert.kustomize.libguestfs
 
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.io.path.pathString
+import com.bkahlert.kommons.io.path.pathString
 import java.nio.file.Path
 
 open class LibguestfsOption(open val name: String, open val arguments: List<String>) :

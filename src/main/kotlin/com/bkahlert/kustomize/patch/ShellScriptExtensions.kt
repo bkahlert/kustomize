@@ -1,9 +1,9 @@
 package com.bkahlert.kustomize.patch
 
-import koodies.builder.buildArray
-import koodies.builder.context.ListBuildingContext
-import koodies.shell.ShellScript.ScriptContext
-import koodies.shell.ShellScript.ScriptContext.Line
+import com.bkahlert.kommons.builder.buildArray
+import com.bkahlert.kommons.builder.context.ListBuildingContext
+import com.bkahlert.kommons.shell.ShellScript.ScriptContext
+import com.bkahlert.kommons.shell.ShellScript.ScriptContext.Line
 
 val ScriptContext.aptGet get() = AptGet(this)
 val ScriptContext.apt get() = Apt(this)

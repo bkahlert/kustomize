@@ -1,5 +1,11 @@
 package com.bkahlert.kustomize
 
+import com.bkahlert.kommons.collections.synchronizedMapOf
+import com.bkahlert.kommons.tracing.Jaeger
+import com.bkahlert.kommons.tracing.KommonsTelemetry
+import com.bkahlert.kommons.tracing.SpanId
+import com.bkahlert.kommons.tracing.TraceId
+import com.bkahlert.kommons.tracing.traceId
 import com.bkahlert.kustomize.TestTelemetry.Companion.InMemoryStoringSpanProcessor
 import io.opentelemetry.api.OpenTelemetry
 import io.opentelemetry.api.common.AttributeKey
@@ -18,12 +24,6 @@ import io.opentelemetry.sdk.trace.SpanLimits
 import io.opentelemetry.sdk.trace.SpanProcessor
 import io.opentelemetry.sdk.trace.data.SpanData
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
-import koodies.collections.synchronizedMapOf
-import koodies.tracing.Jaeger
-import koodies.tracing.KoodiesTelemetry
-import koodies.tracing.SpanId
-import koodies.tracing.TraceId
-import koodies.tracing.traceId
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestPlan
 import strikt.api.Assertion.Builder
@@ -53,7 +53,7 @@ class TestTelemetry : TestExecutionListener {
             val tracerProvider = SdkTracerProvider.builder()
                 .addSpanProcessor(InMemoryStoringSpanProcessor)
                 .addSpanProcessor(batchExporter)
-                .setResource(Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), "kustomize-test")))
+                .setResource(Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), "${Kustomize.name}-test")))
                 .setSpanLimits { SpanLimits.builder().setMaxNumberOfEvents(2500).build() }
                 .build()
 
@@ -61,9 +61,9 @@ class TestTelemetry : TestExecutionListener {
                 .setTracerProvider(tracerProvider)
                 .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .buildAndRegisterGlobal()
-                .let { KoodiesTelemetry.register(it) }
+                .let { KommonsTelemetry.register(it) }
         } else {
-            KoodiesTelemetry.register(OpenTelemetry.noop())
+            KommonsTelemetry.register(OpenTelemetry.noop())
         }
     }
 

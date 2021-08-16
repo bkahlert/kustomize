@@ -1,21 +1,21 @@
 package com.bkahlert.kustomize.libguestfs
 
-import koodies.io.compress.Archiver.listArchive
-import koodies.io.compress.Archiver.unarchive
-import koodies.io.path.extensionOrNull
-import koodies.io.path.getSize
-import koodies.io.path.listDirectoryEntriesRecursively
-import koodies.io.path.moveToDirectory
-import koodies.io.path.uriString
-import koodies.io.selfCleaning
-import koodies.io.tempDir
-import koodies.time.hours
-import koodies.tracing.spanning
+import com.bkahlert.kommons.io.compress.Archiver.listArchive
+import com.bkahlert.kommons.io.compress.Archiver.unarchive
+import com.bkahlert.kommons.io.path.extensionOrNull
+import com.bkahlert.kommons.io.path.getSize
+import com.bkahlert.kommons.io.path.listDirectoryEntriesRecursively
+import com.bkahlert.kommons.io.path.moveToDirectory
+import com.bkahlert.kommons.io.path.selfCleaning
+import com.bkahlert.kommons.io.path.tempDir
+import com.bkahlert.kommons.io.path.uriString
+import com.bkahlert.kommons.time.hours
+import com.bkahlert.kommons.tracing.runSpanning
 import java.nio.file.Path
 
 object ImageExtractor {
 
-    private val temp by com.bkahlert.kustomize.Kustomize.Temp.resolve("image-extract").selfCleaning(1.hours, 5)
+    private val temp by com.bkahlert.kustomize.Kustomize.temp.resolve("image-extract").selfCleaning(1.hours, 5)
 
     val imgFilter: (Path) -> Boolean = { path ->
         path.extensionOrNull.equals("img", ignoreCase = true)
@@ -23,7 +23,7 @@ object ImageExtractor {
             && !path.last().toString().startsWith("._")
     }
 
-    fun Path.extractImage(): Path = spanning("Unarchiving $uriString (${getSize()})") {
+    fun Path.extractImage(): Path = runSpanning("Unarchiving $uriString (${getSize()})") {
         if (imgFilter(this@extractImage)) {
             log("$fileName is already an image.")
             this@extractImage
@@ -37,12 +37,12 @@ object ImageExtractor {
                     moveToDirectory(temp)
                 }
                 1 -> {
-                    spanning("Extracting found image ${filteredArchiveEntries.first().name}") {
+                    runSpanning("Extracting found image ${filteredArchiveEntries.first().name}") {
                         unarchive(temp)
                     }
                 }
                 else -> {
-                    spanning("Multiple image candidates (${filteredArchiveEntries.joinToString { it.name }}) found. Extracting largest candidate") {
+                    runSpanning("Multiple image candidates (${filteredArchiveEntries.joinToString { it.name }}) found. Extracting largest candidate") {
                         unarchive(temp)
                     }
                 }

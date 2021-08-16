@@ -1,9 +1,9 @@
 package com.bkahlert.kustomize.patch
 
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.shell.ScriptInit
-import koodies.shell.ShellScript
-import koodies.text.LineSeparators
+import com.bkahlert.kommons.shell.ScriptInit
+import com.bkahlert.kommons.shell.ShellScript
+import com.bkahlert.kommons.text.LineSeparators
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]

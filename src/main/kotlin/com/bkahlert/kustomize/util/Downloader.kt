@@ -1,13 +1,13 @@
 package com.bkahlert.kustomize.util
 
+import com.bkahlert.kommons.docker.download
+import com.bkahlert.kommons.io.path.copyToDirectory
+import com.bkahlert.kommons.io.useRequiredClassPath
 import com.bkahlert.kustomize.Kustomize
-import koodies.docker.download
-import koodies.io.path.copyToDirectory
-import koodies.io.useRequiredClassPath
 import java.net.URI
 import java.nio.file.Path
 
-class Downloader(private val downloadDirectory: Path = Kustomize.Download) {
+class Downloader(private val downloadDirectory: Path = Kustomize.download) {
 
     private fun String.schemeOrThrow(): String = try {
         URI.create(this).scheme

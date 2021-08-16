@@ -1,5 +1,17 @@
 package com.bkahlert.kustomize.cli
 
+import com.bkahlert.kommons.docker.Docker
+import com.bkahlert.kommons.exception.toCompactString
+import com.bkahlert.kommons.io.path.asPath
+import com.bkahlert.kommons.io.path.getSize
+import com.bkahlert.kommons.kaomoji.Kaomoji
+import com.bkahlert.kommons.text.ANSI.Text.Companion.ansi
+import com.bkahlert.kommons.text.Banner
+import com.bkahlert.kommons.text.Semantics.formattedAs
+import com.bkahlert.kommons.tracing.rendering.ReturnValues
+import com.bkahlert.kommons.tracing.rendering.Styles
+import com.bkahlert.kommons.tracing.runSpanning
+import com.bkahlert.kommons.unit.BinaryPrefixes
 import com.bkahlert.kustomize.Telemetry
 import com.bkahlert.kustomize.libguestfs.LibguestfsImage
 import com.bkahlert.kustomize.os.DockerPiImage
@@ -14,18 +26,6 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.path
-import koodies.docker.Docker
-import koodies.exception.toCompactString
-import koodies.io.path.asPath
-import koodies.io.path.getSize
-import koodies.kaomoji.Kaomoji
-import koodies.text.ANSI.Text.Companion.ansi
-import koodies.text.Banner
-import koodies.text.Semantics.formattedAs
-import koodies.tracing.rendering.ReturnValues
-import koodies.tracing.rendering.Styles
-import koodies.tracing.spanning
-import koodies.unit.BinaryPrefixes
 import java.nio.file.Path
 import kotlin.io.path.isReadable
 
@@ -68,7 +68,7 @@ class CustomizeCommand : NoOpCliktCommand(
         echo(Banner.banner("Kustomize"))
         echo()
 
-        val config: CustomizationConfig = spanning(
+        val config: CustomizationConfig = runSpanning(
             "Configuring",
             nameFormatter = PATCH_NAME_FORMATTER,
             decorationFormatter = PATCH_DECORATION_FORMATTER,
@@ -86,7 +86,7 @@ class CustomizeCommand : NoOpCliktCommand(
             }
         }
 
-        val osImage: OperatingSystemImage = spanning(
+        val osImage: OperatingSystemImage = runSpanning(
             "Preparing",
             nameFormatter = PATCH_NAME_FORMATTER,
             decorationFormatter = PATCH_DECORATION_FORMATTER,

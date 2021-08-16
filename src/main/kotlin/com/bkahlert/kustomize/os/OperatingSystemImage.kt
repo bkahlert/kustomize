@@ -1,5 +1,28 @@
 package com.bkahlert.kustomize.os
 
+import com.bkahlert.kommons.Exceptions.IAE
+import com.bkahlert.kommons.builder.Init
+import com.bkahlert.kommons.builder.buildList
+import com.bkahlert.kommons.docker.ContainerPath
+import com.bkahlert.kommons.docker.DockerContainer
+import com.bkahlert.kommons.docker.DockerExec
+import com.bkahlert.kommons.docker.DockerRunCommandLine
+import com.bkahlert.kommons.docker.MountOptions
+import com.bkahlert.kommons.docker.dockerized
+import com.bkahlert.kommons.docker.ubuntu
+import com.bkahlert.kommons.exec.CommandLine
+import com.bkahlert.kommons.exec.RendererProviders.compact
+import com.bkahlert.kommons.io.path.asPath
+import com.bkahlert.kommons.io.path.duplicate
+import com.bkahlert.kommons.io.path.getSize
+import com.bkahlert.kommons.io.path.pathString
+import com.bkahlert.kommons.runtime.isDebugging
+import com.bkahlert.kommons.text.ANSI.Formatter
+import com.bkahlert.kommons.text.Semantics.formattedAs
+import com.bkahlert.kommons.text.withRandomSuffix
+import com.bkahlert.kommons.tracing.runSpanning
+import com.bkahlert.kommons.unit.BinaryPrefixes
+import com.bkahlert.kommons.unit.Size
 import com.bkahlert.kustomize.cli.Layouts
 import com.bkahlert.kustomize.cli.PATCH_INNER_DECORATION_FORMATTER
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine
@@ -9,33 +32,10 @@ import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommandsB
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOptions
 import com.bkahlert.kustomize.libguestfs.LibguestfsImage
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Options
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizationsBuilder
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizationsBuilder.VirtCustomizationsContext
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Options
-import koodies.Exceptions.IAE
-import koodies.builder.Init
-import koodies.builder.buildList
-import koodies.docker.ContainerPath
-import koodies.docker.DockerContainer
-import koodies.docker.DockerExec
-import koodies.docker.DockerRunCommandLine
-import koodies.docker.MountOptions
-import koodies.docker.dockerized
-import koodies.docker.ubuntu
-import koodies.exec.CommandLine
-import koodies.exec.RendererProviders.compact
-import koodies.io.path.asPath
-import koodies.io.path.duplicate
-import koodies.io.path.getSize
-import koodies.io.path.pathString
-import koodies.runtime.isDebugging
-import koodies.text.ANSI.Formatter
-import koodies.text.Semantics.formattedAs
-import koodies.text.withRandomSuffix
-import koodies.tracing.spanning
-import koodies.unit.BinaryPrefixes
-import koodies.unit.Size
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.isReadable
@@ -75,7 +75,7 @@ class OperatingSystemImage(
     fun hostPath(diskPath: DiskPath): Path = diskPath.hostPath(exchangeDirectory)
 
     fun copyOut(path: String, vararg paths: String, trace: Boolean = false): Path =
-        spanning("Copying out ${path.formattedAs.input}" + if (paths.isNotEmpty()) " and ${paths.size} other files" else "") {
+        runSpanning("Copying out ${path.formattedAs.input}" + if (paths.isNotEmpty()) " and ${paths.size} other files" else "") {
             guestfish(trace) {
                 copyOut { LinuxRoot / path }
                 paths.forEach { copyOut { _ -> LinuxRoot / it } }
@@ -119,7 +119,7 @@ class OperatingSystemImage(
         decorationFormatter = PATCH_INNER_DECORATION_FORMATTER,
         layout = Layouts.DESCRIPTION)
 
-    fun resize(size: Size): Size = spanning("Change disk space") {
+    fun resize(size: Size): Size = runSpanning("Change disk space") {
         val missing = size - path.getSize()
 
         require(missing >= Size.ZERO) {

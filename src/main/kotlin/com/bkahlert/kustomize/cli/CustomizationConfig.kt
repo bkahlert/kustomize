@@ -1,5 +1,20 @@
 package com.bkahlert.kustomize.cli
 
+import com.bkahlert.kommons.builder.buildList
+import com.bkahlert.kommons.io.path.asPath
+import com.bkahlert.kommons.io.path.ls
+import com.bkahlert.kommons.net.IPAddress
+import com.bkahlert.kommons.net.IPSubnet
+import com.bkahlert.kommons.net.ipSubnetOf
+import com.bkahlert.kommons.net.toIP
+import com.bkahlert.kommons.shell.ShellScript
+import com.bkahlert.kommons.text.LineSeparators.LF
+import com.bkahlert.kommons.text.levenshteinDistance
+import com.bkahlert.kommons.text.minus
+import com.bkahlert.kommons.text.takeUnlessBlank
+import com.bkahlert.kommons.unit.Size
+import com.bkahlert.kommons.unit.toSize
+import com.bkahlert.kustomize.Kustomize
 import com.bkahlert.kustomize.cli.CustomizationConfig.DefaultUser
 import com.bkahlert.kustomize.cli.CustomizationConfig.FileOperation
 import com.bkahlert.kustomize.cli.CustomizationConfig.Hostname
@@ -42,20 +57,6 @@ import com.bkahlert.kustomize.patch.WpaSupplicantPatch
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import io.github.config4k.extract
-import koodies.builder.buildList
-import koodies.io.ls
-import koodies.io.path.asPath
-import koodies.net.IPAddress
-import koodies.net.IPSubnet
-import koodies.net.ipSubnetOf
-import koodies.net.toIP
-import koodies.shell.ShellScript
-import koodies.text.LineSeparators.LF
-import koodies.text.levenshteinDistance
-import koodies.text.minus
-import koodies.text.takeUnlessBlank
-import koodies.unit.Size
-import koodies.unit.toSize
 import java.net.URI
 import java.nio.file.Path
 import java.util.TimeZone
@@ -172,7 +173,7 @@ data class CustomizationConfig(
                         extract<String?>("size")?.takeUnless { it.isBlank() }?.toSize(),
                         extract<IntermediarySsh?>("ssh")?.run {
                             val fileBasedKeys = (authorizedKeys?.files ?: emptyList()).flatMap { glob ->
-                                com.bkahlert.kustomize.Kustomize.HomeDirectory.ls(glob).map { file -> file.readText() }
+                                Kustomize.home.ls(glob).map { file -> file.readText() }
                                     .filter { content -> content.startsWith("ssh-") }
                             }
                             val stringBasedKeys = (authorizedKeys?.keys ?: emptyList()).map { it.trim() }
@@ -199,7 +200,7 @@ data class CustomizationConfig(
                         extract<List<IntermediaryFileOperation>?>("files")?.map {
                             FileOperation(
                                 it.append?.trimIndent(),
-                                it.hostPath?.asPath()?.also { path ->
+                                it.hostPath?.asPath()?.toAbsolutePath()?.also { path ->
                                     require(path.exists()) { "$path does not exist." }
                                 },
                                 LinuxRoot / it.diskPath,

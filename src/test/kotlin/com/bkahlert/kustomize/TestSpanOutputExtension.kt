@@ -1,22 +1,22 @@
 package com.bkahlert.kustomize
 
+import com.bkahlert.kommons.collections.synchronizedMapOf
+import com.bkahlert.kommons.junit.TestName.Companion.testName
+import com.bkahlert.kommons.junit.Verbosity.Companion.isVerbose
+import com.bkahlert.kommons.text.Banner
+import com.bkahlert.kommons.text.LineSeparators.LF
+import com.bkahlert.kommons.tracing.SpanId
+import com.bkahlert.kommons.tracing.TraceId
+import com.bkahlert.kommons.tracing.rendering.CompactRenderer
+import com.bkahlert.kommons.tracing.rendering.InMemoryPrinter
+import com.bkahlert.kommons.tracing.rendering.Printer
+import com.bkahlert.kommons.tracing.rendering.RenderableAttributes
+import com.bkahlert.kommons.tracing.rendering.Renderer
+import com.bkahlert.kommons.tracing.rendering.RendererProvider
+import com.bkahlert.kommons.tracing.rendering.Settings
+import com.bkahlert.kommons.tracing.rendering.Styles
+import com.bkahlert.kommons.tracing.runSpanning
 import com.bkahlert.kustomize.cli.Layouts
-import koodies.collections.synchronizedMapOf
-import koodies.junit.TestName.Companion.testName
-import koodies.junit.Verbosity.Companion.isVerbose
-import koodies.text.Banner
-import koodies.text.LineSeparators.LF
-import koodies.tracing.SpanId
-import koodies.tracing.TraceId
-import koodies.tracing.rendering.CompactRenderer
-import koodies.tracing.rendering.InMemoryPrinter
-import koodies.tracing.rendering.Printer
-import koodies.tracing.rendering.RenderableAttributes
-import koodies.tracing.rendering.Renderer
-import koodies.tracing.rendering.RendererProvider
-import koodies.tracing.rendering.Settings
-import koodies.tracing.rendering.Styles
-import koodies.tracing.spanning
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.InvocationInterceptor
 import org.junit.jupiter.api.extension.InvocationInterceptor.Invocation
@@ -39,7 +39,7 @@ class TestSpanOutputExtension : InvocationInterceptor {
     ) {
         var linkedToTrace: TraceId? = null
         val capture = InMemoryPrinter()
-        spanning(
+        runSpanning(
             extensionContext.testName,
             style = Styles.Dotted,
             layout = Layouts.DESCRIPTION,

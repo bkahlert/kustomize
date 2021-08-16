@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.patch
 
-import koodies.shell.ShellScript
+import com.bkahlert.kommons.shell.ShellScript
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat

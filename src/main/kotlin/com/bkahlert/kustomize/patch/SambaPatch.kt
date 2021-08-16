@@ -1,9 +1,9 @@
 package com.bkahlert.kustomize.patch
 
+import com.bkahlert.kommons.io.path.createParentDirectories
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.io.createParentDirectories
 import kotlin.io.path.writeLines
 
 enum class RootShare { none, `read-only`, `read-write` }

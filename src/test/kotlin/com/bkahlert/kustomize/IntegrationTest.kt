@@ -1,6 +1,13 @@
 package com.bkahlert.kustomize
 
-import com.bkahlert.kustomize.Kustomize.WorkingDirectory
+import com.bkahlert.kommons.io.path.age
+import com.bkahlert.kommons.io.path.extensionOrNull
+import com.bkahlert.kommons.io.path.listDirectoryEntriesRecursively
+import com.bkahlert.kommons.io.path.textContent
+import com.bkahlert.kommons.test.Smoke
+import com.bkahlert.kommons.test.SystemProperties
+import com.bkahlert.kommons.test.SystemProperty
+import com.bkahlert.kommons.text.matchesCurlyPattern
 import com.bkahlert.kustomize.cli.CustomizeCommand
 import com.bkahlert.kustomize.libguestfs.mounted
 import com.bkahlert.kustomize.os.LinuxRoot
@@ -8,14 +15,6 @@ import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystemImage.Companion.based
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
 import com.bkahlert.kustomize.test.E2E
-import koodies.io.path.age
-import koodies.io.path.extensionOrNull
-import koodies.io.path.listDirectoryEntriesRecursively
-import koodies.io.path.textContent
-import koodies.test.Smoke
-import koodies.test.SystemProperties
-import koodies.test.SystemProperty
-import koodies.text.matchesCurlyPattern
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import strikt.api.expectThat
@@ -54,7 +53,7 @@ class IntegrationTest {
     }
 
     private fun findImage(projectName: String): OperatingSystemImage {
-        val projectDirectory = WorkingDirectory / ".cache" / projectName
+        val projectDirectory = Kustomize.work / ".cache" / projectName
         val workDirectory = projectDirectory.listDirectoryEntries().filter { it.isDirectory() }.minByOrNull { it.age } ?: fail("Work directory not found")
         val image = workDirectory.listDirectoryEntries().singleOrNull { it.extensionOrNull.equals("img", ignoreCase = true) } ?: fail("Image not found")
         val osImage = RaspberryPiLite based image

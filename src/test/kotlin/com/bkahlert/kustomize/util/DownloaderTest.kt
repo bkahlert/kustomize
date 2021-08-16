@@ -1,13 +1,13 @@
 package com.bkahlert.kustomize.util
 
 import com.bkahlert.kustomize.os.OperatingSystemMock
-import koodies.junit.UniqueId
-import koodies.test.Slow
-import koodies.test.expectThrows
-import koodies.test.toStringIsEqualTo
-import koodies.test.withTempDir
-import koodies.unit.bytes
-import koodies.unit.hasSize
+import com.bkahlert.kommons.junit.UniqueId
+import com.bkahlert.kommons.test.Slow
+import com.bkahlert.kommons.test.expectThrows
+import com.bkahlert.kommons.test.toStringIsEqualTo
+import com.bkahlert.kommons.test.withTempDir
+import com.bkahlert.kommons.unit.bytes
+import com.bkahlert.kommons.unit.hasSize
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import java.nio.file.Path

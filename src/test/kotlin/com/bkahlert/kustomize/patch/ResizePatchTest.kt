@@ -4,8 +4,8 @@ import com.bkahlert.kustomize.os.OS
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
 import com.bkahlert.kustomize.test.E2E
-import koodies.unit.Mebi
-import koodies.unit.bytes
+import com.bkahlert.kommons.unit.Mebi
+import com.bkahlert.kommons.unit.bytes
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.isGreaterThanOrEqualTo

@@ -1,12 +1,12 @@
 package com.bkahlert.kustomize.cli
 
-import koodies.text.ANSI.Formatter
-import koodies.text.ANSI.Text.Companion.ansi
-import koodies.text.Semantics.formattedAs
-import koodies.text.convertCamelCaseToKebabCase
-import koodies.tracing.rendering.ColumnsLayout
-import koodies.tracing.rendering.ColumnsLayout.Companion.columns
-import koodies.tracing.rendering.RenderingAttributes
+import com.bkahlert.kommons.text.ANSI.Formatter
+import com.bkahlert.kommons.text.ANSI.Text.Companion.ansi
+import com.bkahlert.kommons.text.Semantics.formattedAs
+import com.bkahlert.kommons.text.convertCamelCaseToKebabCase
+import com.bkahlert.kommons.tracing.rendering.ColumnsLayout
+import com.bkahlert.kommons.tracing.rendering.ColumnsLayout.Companion.columns
+import com.bkahlert.kommons.tracing.rendering.RenderingAttributes
 import kotlin.reflect.KProperty
 
 fun CharSequence.asParam(): String = formattedAs.input

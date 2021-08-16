@@ -1,5 +1,8 @@
 package com.bkahlert.kustomize.cli
 
+import com.bkahlert.kommons.text.Banner
+import com.bkahlert.kommons.text.Semantics.formattedAs
+import com.bkahlert.kommons.tracing.runSpanning
 import com.bkahlert.kustomize.util.Disk
 import com.bkahlert.kustomize.util.flash
 import com.github.ajalt.clikt.core.NoOpCliktCommand
@@ -7,9 +10,6 @@ import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.path
-import koodies.text.Banner
-import koodies.text.Semantics.formattedAs
-import koodies.tracing.spanning
 import java.nio.file.Path
 
 // TODO test; actually completely untested since moved to separate command
@@ -35,7 +35,7 @@ class FlashCommand : NoOpCliktCommand(
 
     override fun run() {
 
-        spanning("Flashing $image", nameFormatter = { Banner.banner(it, prefix = "") }) {
+        runSpanning("Flashing $image", nameFormatter = { Banner.banner(it, prefix = "") }) {
             val flashed: Disk? = flash(image, disk)
             if (flashed != null) {
                 log("Successfully flashed ${image.toUri().formattedAs.input} to ${flashed.formattedAs.input}.")

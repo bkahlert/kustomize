@@ -1,15 +1,16 @@
 package com.bkahlert.kustomize.cli
 
-import koodies.io.ClassPathFile
-import koodies.io.isInside
-import koodies.io.path.asPath
-import koodies.io.path.deleteRecursively
-import koodies.io.path.hasContent
-import koodies.io.path.listDirectoryEntriesRecursively
-import koodies.io.randomDirectory
-import koodies.junit.UniqueId
-import koodies.test.single
-import koodies.test.withTempDir
+import com.bkahlert.kommons.io.path.asPath
+import com.bkahlert.kommons.io.path.deleteRecursively
+import com.bkahlert.kommons.io.path.hasContent
+import com.bkahlert.kommons.io.path.isInside
+import com.bkahlert.kommons.io.path.listDirectoryEntriesRecursively
+import com.bkahlert.kommons.io.path.randomDirectory
+import com.bkahlert.kommons.junit.UniqueId
+import com.bkahlert.kommons.runtime.ClassPathFile
+import com.bkahlert.kommons.test.single
+import com.bkahlert.kommons.test.withTempDir
+import com.bkahlert.kustomize.Kustomize
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -39,12 +40,12 @@ class CacheTest {
         @Test
         fun `should instantiate relative to working directory`() {
             val cache = Cache(relativePath)
-            expectThat(cache.dir).isEqualTo(com.bkahlert.kustomize.Kustomize.WorkingDirectory.resolve(relativePath))
+            expectThat(cache.dir).isEqualTo(Kustomize.work.resolve(relativePath))
         }
 
         @AfterEach
         fun cleanup() {
-            com.bkahlert.kustomize.Kustomize.WorkingDirectory.resolve(relativePath).deleteRecursively()
+            Kustomize.work.resolve(relativePath).deleteRecursively()
         }
     }
 

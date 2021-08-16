@@ -1,29 +1,29 @@
 package com.bkahlert.kustomize.os
 
+import com.bkahlert.kommons.docker.DockerRequiring
+import com.bkahlert.kommons.io.path.createParentDirectories
+import com.bkahlert.kommons.io.path.hasContent
+import com.bkahlert.kommons.io.path.isDuplicateOf
+import com.bkahlert.kommons.io.path.randomDirectory
+import com.bkahlert.kommons.io.path.randomFile
+import com.bkahlert.kommons.io.path.textContent
+import com.bkahlert.kommons.io.path.touch
+import com.bkahlert.kommons.io.path.writeLine
+import com.bkahlert.kommons.io.path.writeText
+import com.bkahlert.kommons.junit.UniqueId
+import com.bkahlert.kommons.test.FifteenMinutesTimeout
+import com.bkahlert.kommons.test.FiveMinutesTimeout
+import com.bkahlert.kommons.test.Smoke
+import com.bkahlert.kommons.test.toStringContainsAll
+import com.bkahlert.kommons.test.withTempDir
+import com.bkahlert.kommons.unit.Gibi
+import com.bkahlert.kommons.unit.bytes
 import com.bkahlert.kustomize.Kustomize
 import com.bkahlert.kustomize.expectRendered
 import com.bkahlert.kustomize.libguestfs.LibguestfsImage
 import com.bkahlert.kustomize.libguestfs.mounted
 import com.bkahlert.kustomize.os.OperatingSystemImage.Companion.based
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
-import koodies.docker.DockerRequiring
-import koodies.io.createParentDirectories
-import koodies.io.path.hasContent
-import koodies.io.path.isDuplicateOf
-import koodies.io.path.textContent
-import koodies.io.path.touch
-import koodies.io.path.writeLine
-import koodies.io.path.writeText
-import koodies.io.randomDirectory
-import koodies.io.randomFile
-import koodies.junit.UniqueId
-import koodies.test.FifteenMinutesTimeout
-import koodies.test.FiveMinutesTimeout
-import koodies.test.Smoke
-import koodies.test.toStringContainsAll
-import koodies.test.withTempDir
-import koodies.unit.Gibi
-import koodies.unit.bytes
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
@@ -53,7 +53,7 @@ class OperatingSystemImageTest {
     fun `should have full name`() {
         @Suppress("SpellCheckingInspection")
         expectThat((OperatingSystemMock("full-name-test") based Path.of("foo/bar")).fullName)
-            .isEqualTo("RISC OS Pico RC5 (test only) ／ file://${Kustomize.WorkingDirectory}/foo/bar")
+            .isEqualTo("RISC OS Pico RC5 (test only) ／ file://${Kustomize.work}/foo/bar")
     }
 
     @Test

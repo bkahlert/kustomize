@@ -2,10 +2,10 @@ package com.bkahlert.kustomize.os
 
 import com.bkahlert.kustomize.expectRendered
 import com.bkahlert.kustomize.test.E2E
-import koodies.exec.Process.State.Exited.Failed
-import koodies.exec.containsDump
-import koodies.test.Smoke
-import koodies.text.ansiRemoved
+import com.bkahlert.kommons.exec.Process.State.Exited.Failed
+import com.bkahlert.kommons.exec.containsDump
+import com.bkahlert.kommons.test.Smoke
+import com.bkahlert.kommons.text.ansiRemoved
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.contains

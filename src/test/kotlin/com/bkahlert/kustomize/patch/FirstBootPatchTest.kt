@@ -4,10 +4,10 @@ import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizat
 import com.bkahlert.kustomize.libguestfs.containsFirstBootScriptFix
 import com.bkahlert.kustomize.libguestfs.file
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.io.path.textContent
-import koodies.junit.UniqueId
-import koodies.test.withTempDir
-import koodies.text.Banner.banner
+import com.bkahlert.kommons.io.path.textContent
+import com.bkahlert.kommons.junit.UniqueId
+import com.bkahlert.kommons.test.withTempDir
+import com.bkahlert.kommons.text.Banner.banner
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.contains

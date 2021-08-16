@@ -1,24 +1,24 @@
 package com.bkahlert.kustomize.util
 
+import com.bkahlert.kommons.exec.Process.State.Exited.Succeeded
+import com.bkahlert.kommons.io.path.getSize
+import com.bkahlert.kommons.io.path.pathString
+import com.bkahlert.kommons.shell.ShellScript
+import com.bkahlert.kommons.text.ANSI.Text.Companion.ansi
+import com.bkahlert.kommons.text.quoted
+import com.bkahlert.kommons.tracing.rendering.spanningLine
+import com.bkahlert.kommons.tracing.runSpanning
+import com.bkahlert.kommons.unit.BinaryPrefixes
+import com.bkahlert.kommons.unit.DecimalPrefixes
+import com.bkahlert.kommons.unit.Mega
+import com.bkahlert.kommons.unit.Size
+import com.bkahlert.kommons.unit.bytes
 import com.bkahlert.kustomize.util.DiskUtil.disks
 import com.bkahlert.kustomize.util.DiskUtil.listDisks
-import koodies.exec.Process.State.Exited.Succeeded
-import koodies.io.path.getSize
-import koodies.io.path.pathString
-import koodies.shell.ShellScript
-import koodies.text.ANSI.Text.Companion.ansi
-import koodies.text.quoted
-import koodies.tracing.rendering.spanningLine
-import koodies.tracing.spanning
-import koodies.unit.BinaryPrefixes
-import koodies.unit.DecimalPrefixes
-import koodies.unit.Mega
-import koodies.unit.Size
-import koodies.unit.bytes
 import java.nio.file.Path
 
 class Disk private constructor(val id: DiskIdentifier, val capacity: Size) {
-    
+
     val roundedCapacity get() = capacity.toString(DecimalPrefixes, decimals = 0)
 
     fun mountDisk(): Disk = spanningLine("Mounting ${this@Disk}") {
@@ -37,7 +37,7 @@ class Disk private constructor(val id: DiskIdentifier, val capacity: Size) {
     }
 
     fun flash(file: Path, megaBytesPerTime: Int = 32): Disk =
-        spanning("Flashing to ${this@Disk} with ${megaBytesPerTime.Mega.bytes}/t") {
+        runSpanning("Flashing to ${this@Disk} with ${megaBytesPerTime.Mega.bytes}/t") {
             unmountDisk()
 
             val command = "sudo dd if=${file.pathString.quoted} of=${id.device.quoted} bs=${megaBytesPerTime}m"
@@ -86,7 +86,7 @@ class Disk private constructor(val id: DiskIdentifier, val capacity: Size) {
  * Otherwise any available physical removable disk is used iff there is exactly one candidate.
  */
 fun flash(file: Path, disk: String?): Disk? =
-    spanning("Flashing ${file.fileName} (${file.getSize()})") {
+    runSpanning("Flashing ${file.fileName} (${file.getSize()})") {
 
         val disks = listDisks()
 

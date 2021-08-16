@@ -1,5 +1,21 @@
 package com.bkahlert.kustomize.libguestfs
 
+import com.bkahlert.kommons.docker.DockerContainer
+import com.bkahlert.kommons.docker.DockerExec
+import com.bkahlert.kommons.docker.DockerRunCommandLine
+import com.bkahlert.kommons.docker.DockerRunCommandLine.Options
+import com.bkahlert.kommons.docker.MountOptions
+import com.bkahlert.kommons.docker.asContainerPath
+import com.bkahlert.kommons.exec.CommandLine
+import com.bkahlert.kommons.exec.Executable
+import com.bkahlert.kommons.io.path.asPath
+import com.bkahlert.kommons.io.path.createParentDirectories
+import com.bkahlert.kommons.io.path.pathString
+import com.bkahlert.kommons.runtime.text
+import com.bkahlert.kommons.shell.ShellScript
+import com.bkahlert.kommons.shell.ShellScript.ScriptContext
+import com.bkahlert.kommons.text.LineSeparators.lines
+import com.bkahlert.kommons.text.withRandomSuffix
 import com.bkahlert.kustomize.libguestfs.LibguestfsOption.Companion.relativize
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.ColorsOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.DiskOption
@@ -29,23 +45,6 @@ import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystemImage.Companion.mountRootForDisk
-import koodies.callableOnce
-import koodies.docker.DockerContainer
-import koodies.docker.DockerExec
-import koodies.docker.DockerRunCommandLine
-import koodies.docker.DockerRunCommandLine.Options
-import koodies.docker.MountOptions
-import koodies.docker.asContainerPath
-import koodies.exec.CommandLine
-import koodies.exec.Executable
-import koodies.io.createParentDirectories
-import koodies.io.path.asPath
-import koodies.io.path.pathString
-import koodies.io.text
-import koodies.shell.ShellScript
-import koodies.shell.ShellScript.ScriptContext
-import koodies.text.LineSeparators.lines
-import koodies.text.withRandomSuffix
 import java.nio.file.Path
 import java.util.Collections
 import java.util.TimeZone
@@ -127,7 +126,7 @@ class VirtCustomizeCommandLine(
         val verbose: Boolean,
         val trace: Boolean,
         val disks: List<Path>,
-    ) : List<Option> by (koodies.builder.buildList {
+    ) : List<Option> by (com.bkahlert.kommons.builder.buildList {
         if (colors) add(ColorsOption)
         if (quiet) add(QuietOption)
         if (verbose) add(VerboseOption)
@@ -247,7 +246,11 @@ class VirtCustomizeCommandLine(
         @VirtCustomizeDsl
         inner class VirtCustomizationsContext(private val virtCustomizations: MutableList<VirtCustomization>) {
 
-            private val fixFirstBootOrder by callableOnce {
+            private var fixFirstBootOrderAdded = false
+
+            private fun fixFirstBootOrder() {
+                if (fixFirstBootOrderAdded) return
+                fixFirstBootOrderAdded = true
                 copyIn(FirstBootOrderFix.FIRSTBOOT_FIX, FirstBootOrderFix.text)
                 chmods { "0755" to FirstBootOrderFix.FIRSTBOOT_FIX }
             }

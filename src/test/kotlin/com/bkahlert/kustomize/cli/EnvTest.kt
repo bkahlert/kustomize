@@ -1,9 +1,9 @@
 package com.bkahlert.kustomize.cli
 
-import koodies.io.path.writeText
-import koodies.io.randomFile
-import koodies.junit.UniqueId
-import koodies.test.withTempDir
+import com.bkahlert.kommons.io.path.randomFile
+import com.bkahlert.kommons.io.path.writeText
+import com.bkahlert.kommons.junit.UniqueId
+import com.bkahlert.kommons.test.withTempDir
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.get

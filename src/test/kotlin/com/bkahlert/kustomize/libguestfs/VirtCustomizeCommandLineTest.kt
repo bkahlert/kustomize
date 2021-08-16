@@ -1,5 +1,17 @@
 package com.bkahlert.kustomize.libguestfs
 
+import com.bkahlert.kommons.docker.DockerExec
+import com.bkahlert.kommons.docker.asContainerPath
+import com.bkahlert.kommons.exec.CommandLine
+import com.bkahlert.kommons.exec.Executable
+import com.bkahlert.kommons.io.path.asPath
+import com.bkahlert.kommons.io.path.hasContent
+import com.bkahlert.kommons.io.path.textContent
+import com.bkahlert.kommons.runtime.text
+import com.bkahlert.kommons.shell.ShellScript
+import com.bkahlert.kommons.test.toStringIsEqualTo
+import com.bkahlert.kommons.text.LineSeparators.LF
+import com.bkahlert.kommons.text.lines
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.ChmodOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.CopyInOption
@@ -13,18 +25,6 @@ import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.LinuxRoot.etc
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.pathString
-import koodies.docker.DockerExec
-import koodies.docker.asContainerPath
-import koodies.exec.CommandLine
-import koodies.exec.Executable
-import koodies.io.path.asPath
-import koodies.io.path.hasContent
-import koodies.io.path.textContent
-import koodies.io.text
-import koodies.shell.ShellScript
-import koodies.test.toStringIsEqualTo
-import koodies.text.LineSeparators.LF
-import koodies.text.lines
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expectCatching

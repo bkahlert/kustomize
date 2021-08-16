@@ -1,5 +1,5 @@
 com.bkahlert.kustomize.os.OperatingSystemImageProviderExtension
 com.bkahlert.kustomize.TestSpanOutputExtension
-koodies.junit.TestNameResolver
-koodies.junit.UniqueIdResolver
-koodies.test.IllegalUsageCheck
+com.bkahlert.kommons.junit.TestNameResolver
+com.bkahlert.kommons.junit.UniqueIdResolver
+com.bkahlert.kommons.test.IllegalUsageCheck

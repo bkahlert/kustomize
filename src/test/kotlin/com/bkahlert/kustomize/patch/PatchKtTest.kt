@@ -4,9 +4,9 @@ import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.C
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.HostnameOption
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.test.hasElements
-import koodies.unit.Gibi
-import koodies.unit.bytes
+import com.bkahlert.kommons.test.hasElements
+import com.bkahlert.kommons.unit.Gibi
+import com.bkahlert.kommons.unit.bytes
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.hasSize

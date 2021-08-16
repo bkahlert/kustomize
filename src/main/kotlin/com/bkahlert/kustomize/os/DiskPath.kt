@@ -1,8 +1,8 @@
 package com.bkahlert.kustomize.os
 
-import koodies.io.file.resolveBetweenFileSystems
-import koodies.io.path.asPath
-import koodies.io.path.pathString
+import com.bkahlert.kommons.io.path.asPath
+import com.bkahlert.kommons.io.path.pathString
+import com.bkahlert.kommons.io.path.resolveBetweenFileSystems
 import java.nio.file.Path
 import kotlin.io.path.relativeTo
 

@@ -4,10 +4,10 @@ import com.bkahlert.kustomize.os.OperatingSystem.Credentials
 import com.bkahlert.kustomize.os.OperatingSystem.Credentials.Companion.empty
 import com.bkahlert.kustomize.os.OperatingSystem.Credentials.Companion.withPassword
 import com.bkahlert.kustomize.util.GitHub
-import koodies.unit.Giga
-import koodies.unit.Mega
-import koodies.unit.Size
-import koodies.unit.bytes
+import com.bkahlert.kommons.unit.Giga
+import com.bkahlert.kommons.unit.Mega
+import com.bkahlert.kommons.unit.Size
+import com.bkahlert.kommons.unit.bytes
 
 /**
  * Technically supported, yet not necessarily fully compatible operating systems

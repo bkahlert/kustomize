@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.os
 
-import koodies.unit.Size
+import com.bkahlert.kommons.unit.Size
 import kotlin.text.RegexOption.IGNORE_CASE
 
 /**

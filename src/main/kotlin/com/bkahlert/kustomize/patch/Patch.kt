@@ -1,5 +1,20 @@
 package com.bkahlert.kustomize.patch
 
+import com.bkahlert.kommons.asString
+import com.bkahlert.kommons.builder.Init
+import com.bkahlert.kommons.builder.buildList
+import com.bkahlert.kommons.shell.ShellScript
+import com.bkahlert.kommons.text.ANSI.Text.Companion.ansi
+import com.bkahlert.kommons.text.LineSeparators
+import com.bkahlert.kommons.text.withRandomSuffix
+import com.bkahlert.kommons.tracing.SpanScope
+import com.bkahlert.kommons.tracing.rendering.Renderable
+import com.bkahlert.kommons.tracing.rendering.ReturnValues
+import com.bkahlert.kommons.tracing.rendering.Styles.Dotted
+import com.bkahlert.kommons.tracing.rendering.Styles.Solid
+import com.bkahlert.kommons.tracing.runSpanning
+import com.bkahlert.kommons.tracing.spanScope
+import com.bkahlert.kommons.unit.Size
 import com.bkahlert.kustomize.cli.Layouts
 import com.bkahlert.kustomize.cli.PATCH_DECORATION_FORMATTER
 import com.bkahlert.kustomize.cli.PATCH_NAME_FORMATTER
@@ -14,21 +29,6 @@ import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizat
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeDsl
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.boot
-import koodies.asString
-import koodies.builder.Init
-import koodies.builder.buildList
-import koodies.shell.ShellScript
-import koodies.text.ANSI.Text.Companion.ansi
-import koodies.text.LineSeparators
-import koodies.text.withRandomSuffix
-import koodies.tracing.CurrentSpan
-import koodies.tracing.rendering.Renderable
-import koodies.tracing.rendering.ReturnValues
-import koodies.tracing.rendering.Styles.Dotted
-import koodies.tracing.rendering.Styles.Solid
-import koodies.tracing.spanning
-import koodies.tracing.tracing
-import koodies.unit.Size
 
 /**
  * A patch to customize an [OperatingSystemImage]
@@ -115,7 +115,7 @@ data class SimplePhasedPatch(
     override val operationCount: Int = diskOperations.size + virtCustomizations.size + guestfishCommands.size + (if (osBoot) 1 else 0)
 
     override fun patch(osImage: OperatingSystemImage, trace: Boolean): ReturnValues<Throwable> =
-        spanning(Renderable.of(name) { _, _ -> toString() },
+        runSpanning(Renderable.of(name) { _, _ -> toString() },
             nameFormatter = PATCH_NAME_FORMATTER,
             decorationFormatter = PATCH_DECORATION_FORMATTER,
             style = Solid
@@ -129,13 +129,13 @@ data class SimplePhasedPatch(
     private fun collectingExceptions(
         name: CharSequence,
         operationCount: Int,
-        transform: CurrentSpan.((Throwable) -> Unit) -> Unit,
+        transform: SpanScope.((Throwable) -> Unit) -> Unit,
     ): ReturnValues<Throwable> =
         if (operationCount == 0) {
-            tracing { log("◼ $name".ansi.gray) }
+            spanScope { log("◼ $name".ansi.gray) }
             ReturnValues()
         } else {
-            spanning("$name",
+            runSpanning("$name",
                 nameFormatter = {
                     "${it.ansi.brightCyan} ${PATCH_DECORATION_FORMATTER("(")}${operationCount.toString().ansi.brightCyan}${PATCH_DECORATION_FORMATTER(")")}"
                 },
@@ -149,7 +149,7 @@ data class SimplePhasedPatch(
 
     private fun <T> Collection<T>.collectingExceptions(
         name: CharSequence,
-        transform: CurrentSpan.(index: Int, operation: T) -> Unit,
+        transform: SpanScope.(index: Int, operation: T) -> Unit,
     ): ReturnValues<Throwable> =
         collectingExceptions(name, size) { exceptionCallback ->
             mapIndexedNotNull { index, operation: T ->
@@ -289,7 +289,7 @@ fun OperatingSystemImage.patch(vararg patches: (OperatingSystemImage) -> PhasedP
         .filter { it.isNotEmpty }
         .takeIf { it.isNotEmpty() }
         ?.let {
-            spanning(
+            runSpanning(
                 "Applying ${it.size} patches to $shortName",
                 nameFormatter = PATCH_NAME_FORMATTER,
                 decorationFormatter = PATCH_DECORATION_FORMATTER,

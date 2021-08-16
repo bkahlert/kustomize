@@ -1,5 +1,21 @@
 package com.bkahlert.kustomize.cli
 
+import com.bkahlert.kommons.io.path.asPath
+import com.bkahlert.kommons.io.path.writeText
+import com.bkahlert.kommons.junit.UniqueId
+import com.bkahlert.kommons.net.div
+import com.bkahlert.kommons.net.ip4Of
+import com.bkahlert.kommons.shell.ShellScript
+import com.bkahlert.kommons.test.SystemProperties
+import com.bkahlert.kommons.test.SystemProperty
+import com.bkahlert.kommons.test.containsAtLeast
+import com.bkahlert.kommons.test.hasElements
+import com.bkahlert.kommons.test.test
+import com.bkahlert.kommons.test.withTempDir
+import com.bkahlert.kommons.text.ansiRemoved
+import com.bkahlert.kommons.unit.Gibi
+import com.bkahlert.kommons.unit.bytes
+import com.bkahlert.kustomize.Kustomize
 import com.bkahlert.kustomize.cli.CustomizationConfig.DefaultUser
 import com.bkahlert.kustomize.cli.CustomizationConfig.FileOperation
 import com.bkahlert.kustomize.cli.CustomizationConfig.Hostname
@@ -30,21 +46,6 @@ import com.bkahlert.kustomize.patch.UsernamePatch
 import com.bkahlert.kustomize.patch.WifiAutoReconnectPatch
 import com.bkahlert.kustomize.patch.WifiPowerSafeModePatch
 import com.bkahlert.kustomize.patch.WpaSupplicantPatch
-import koodies.io.path.asPath
-import koodies.io.path.writeText
-import koodies.junit.UniqueId
-import koodies.net.div
-import koodies.net.ip4Of
-import koodies.shell.ShellScript
-import koodies.test.SystemProperties
-import koodies.test.SystemProperty
-import koodies.test.containsAtLeast
-import koodies.test.hasElements
-import koodies.test.test
-import koodies.test.withTempDir
-import koodies.text.ansiRemoved
-import koodies.unit.Gibi
-import koodies.unit.bytes
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
@@ -307,7 +308,7 @@ class CustomizationConfigTest {
                 isEqualTo(listOf(
                     FileOperation("line 1\nline 2", null, LinuxRoot.boot / "file-of-lines.txt"),
                     FileOperation(null,
-                        com.bkahlert.kustomize.Kustomize.WorkingDirectory / "src" / "test" / "resources" / "sample.png",
+                        Kustomize.work / "src" / "test" / "resources" / "sample.png",
                         LinuxRoot.home / "john.doe" / "image.png"),
                 )).any { get { append } isEqualTo ("line 1\nline 2") }
             }

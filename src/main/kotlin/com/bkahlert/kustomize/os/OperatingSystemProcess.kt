@@ -1,32 +1,32 @@
 package com.bkahlert.kustomize.os
 
+import com.bkahlert.kommons.docker.DockerContainer
+import com.bkahlert.kommons.docker.DockerExec
+import com.bkahlert.kommons.docker.DockerImage
+import com.bkahlert.kommons.docker.DockerRunCommandLine
+import com.bkahlert.kommons.docker.DockerRunCommandLine.Options
+import com.bkahlert.kommons.docker.MountOptions
+import com.bkahlert.kommons.exec.CommandLine
+import com.bkahlert.kommons.exec.IO
+import com.bkahlert.kommons.exec.IO.Error
+import com.bkahlert.kommons.exec.IO.Input
+import com.bkahlert.kommons.exec.IO.Meta
+import com.bkahlert.kommons.exec.IO.Output
+import com.bkahlert.kommons.exec.Process.ExitState
+import com.bkahlert.kommons.exec.Process.State
+import com.bkahlert.kommons.kaomoji.Kaomoji
+import com.bkahlert.kommons.text.ANSI.Formatter
+import com.bkahlert.kommons.text.LineSeparators.LF
+import com.bkahlert.kommons.text.Semantics.formattedAs
+import com.bkahlert.kommons.text.Unicode.ESC
+import com.bkahlert.kommons.tracing.Event
+import com.bkahlert.kommons.tracing.SpanScope
+import com.bkahlert.kommons.tracing.rendering.ColumnsLayout
+import com.bkahlert.kommons.tracing.rendering.Style
+import com.bkahlert.kommons.tracing.rendering.Styles
+import com.bkahlert.kommons.tracing.runSpanning
 import com.bkahlert.kustomize.cli.Layouts
 import com.bkahlert.kustomize.cli.PATCH_INNER_DECORATION_FORMATTER
-import koodies.docker.DockerContainer
-import koodies.docker.DockerExec
-import koodies.docker.DockerImage
-import koodies.docker.DockerRunCommandLine
-import koodies.docker.DockerRunCommandLine.Options
-import koodies.docker.MountOptions
-import koodies.exec.CommandLine
-import koodies.exec.IO
-import koodies.exec.IO.Error
-import koodies.exec.IO.Input
-import koodies.exec.IO.Meta
-import koodies.exec.IO.Output
-import koodies.exec.Process.ExitState
-import koodies.exec.Process.State
-import koodies.kaomoji.Kaomoji
-import koodies.text.ANSI.Formatter
-import koodies.text.LineSeparators.LF
-import koodies.text.Semantics.formattedAs
-import koodies.text.Unicode.ESC
-import koodies.tracing.CurrentSpan
-import koodies.tracing.Event
-import koodies.tracing.rendering.ColumnsLayout
-import koodies.tracing.rendering.Style
-import koodies.tracing.rendering.Styles
-import koodies.tracing.spanning
 
 /**
  * A virtualized Raspberry Pi inside a Docker image.
@@ -54,7 +54,7 @@ fun OperatingSystemImage.boot(
 ).exec.processing { _: DockerExec, block: ((IO) -> Unit) -> ExitState ->
     var stuck = false
 
-    spanning(
+    runSpanning(
         "Booting ${shortName.formattedAs.input}",
         nameFormatter = nameFormatter,
         decorationFormatter = decorationFormatter,
@@ -86,7 +86,7 @@ fun OperatingSystemImage.boot(
  * Prints [message] on the output without actually forwarding it
  * to the OS running process.
  */
-private fun CurrentSpan.feedback(
+private fun SpanScope.feedback(
     message: String,
     kaomoji: Kaomoji = Kaomoji.random(Kaomoji.Happy, Kaomoji.PeaceSign, Kaomoji.Smiling, Kaomoji.ThumbsUp, Kaomoji.Proud),
 ) {
@@ -97,7 +97,7 @@ private fun CurrentSpan.feedback(
  * Prints [message] on the output without actually forwarding it
  * to the OS running process.
  */
-private fun CurrentSpan.negativeFeedback(
+private fun SpanScope.negativeFeedback(
     message: String,
     kaomoji: Kaomoji = Kaomoji.random(Kaomoji.Crying, Kaomoji.Depressed, Kaomoji.Disappointed, Kaomoji.Sad, Kaomoji.Screaming).random(),
 ) {

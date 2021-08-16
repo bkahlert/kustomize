@@ -1,6 +1,6 @@
 package com.bkahlert.kustomize.os
 
-import koodies.test.testEach
+import com.bkahlert.kommons.test.testEach
 import org.junit.jupiter.api.TestFactory
 import strikt.assertions.matches
 

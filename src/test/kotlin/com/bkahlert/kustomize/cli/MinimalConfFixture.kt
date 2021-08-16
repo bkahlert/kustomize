@@ -1,7 +1,7 @@
 package com.bkahlert.kustomize.cli
 
-import koodies.io.InMemoryTextFile
-import koodies.test.Fixture
+import com.bkahlert.kommons.io.InMemoryTextFile
+import com.bkahlert.kommons.test.Fixture
 
 /**
  * A `.conf` file with the minimal settings.

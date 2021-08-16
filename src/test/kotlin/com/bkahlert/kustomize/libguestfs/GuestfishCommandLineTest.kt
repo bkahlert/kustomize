@@ -1,20 +1,20 @@
 package com.bkahlert.kustomize.libguestfs
 
+import com.bkahlert.kommons.collections.head
+import com.bkahlert.kommons.collections.tail
+import com.bkahlert.kommons.docker.asContainerPath
+import com.bkahlert.kommons.io.path.deleteRecursively
+import com.bkahlert.kommons.text.ANSI.Text.Companion.ansi
+import com.bkahlert.kommons.text.LineSeparators.CR
+import com.bkahlert.kommons.text.Semantics.formattedAs
+import com.bkahlert.kommons.text.toStringMatchesCurlyPattern
+import com.bkahlert.kommons.tracing.runSpanning
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOptions
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.LinuxRoot.etc
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.collections.head
-import koodies.collections.tail
-import koodies.docker.asContainerPath
-import koodies.io.path.deleteRecursively
-import koodies.text.ANSI.Text.Companion.ansi
-import koodies.text.LineSeparators.CR
-import koodies.text.Semantics.formattedAs
-import koodies.text.toStringMatchesCurlyPattern
-import koodies.tracing.spanning
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expectCatching
@@ -130,7 +130,7 @@ fun Assertion.Builder<OperatingSystemImage>.mounted(init: GuestAssertions.() -> 
         val paths = assertions.map { it.first }
 
         // Copying out of VM
-        spanning(
+        runSpanning(
             "copying ${paths.size} files out of $fileName for assertions".formattedAs.debug,
             decorationFormatter = { it.ansi.formattedAs.debug },
         ) {

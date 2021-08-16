@@ -1,5 +1,6 @@
 package com.bkahlert.kustomize
 
+import com.bkahlert.kommons.tracing.Jaeger
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator
@@ -10,7 +11,6 @@ import io.opentelemetry.sdk.resources.Resource
 import io.opentelemetry.sdk.trace.SdkTracerProvider
 import io.opentelemetry.sdk.trace.SpanLimits
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor
-import koodies.tracing.Jaeger
 import java.net.URI
 
 /**
@@ -33,7 +33,10 @@ object Telemetry {
                             .build()).build())
                     }
                 }
-                .setResource(Resource.create(Attributes.of(AttributeKey.stringKey("service.name"), "kustomize")))
+                .setResource(Resource.create(Attributes.of(
+                    AttributeKey.stringKey("service.name"), Kustomize.name,
+                    AttributeKey.stringKey("service.version"), Kustomize.version.toString(),
+                )))
                 .setSpanLimits { SpanLimits.builder().setMaxNumberOfEvents(2500).build() }
                 .build())
             .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))

@@ -5,7 +5,7 @@ import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizat
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.LinuxRoot.etc.wpa_supplicant.wpa_supplicant_conf
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.io.path.hasContent
+import com.bkahlert.kommons.io.path.hasContent
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.assertions.containsExactly

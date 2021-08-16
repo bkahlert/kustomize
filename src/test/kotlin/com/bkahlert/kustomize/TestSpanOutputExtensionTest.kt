@@ -1,7 +1,7 @@
 package com.bkahlert.kustomize
 
-import koodies.text.matchesCurlyPattern
-import koodies.tracing.spanning
+import com.bkahlert.kommons.text.matchesCurlyPattern
+import com.bkahlert.kommons.tracing.runSpanning
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.isEqualTo
@@ -10,7 +10,7 @@ class TestSpanOutputExtensionTest {
 
     @Test
     fun `should provide access to rendered output`() {
-        val result = spanning("span name") {
+        val result = runSpanning("span name") {
             event("not rendered")
             log("rendered")
             42
@@ -27,8 +27,8 @@ class TestSpanOutputExtensionTest {
 
     @Test
     fun `should provide access to nested rendered output`() {
-        val result = spanning("span name") {
-            spanning("child span name") {
+        val result = runSpanning("span name") {
+            runSpanning("child span name") {
                 event("not rendered")
                 log("rendered")
                 42
@@ -50,11 +50,11 @@ class TestSpanOutputExtensionTest {
 
     @Test
     fun `should provide access to consecutive rendered output`() {
-        val result = spanning("span name") {
+        val result = runSpanning("span name") {
             event("not rendered")
             log("rendered")
             42
-        } + spanning("span 2 name") {
+        } + runSpanning("span 2 name") {
             event("not rendered 2")
             log("rendered 2")
             37.5

@@ -2,7 +2,7 @@ package com.bkahlert.kustomize.patch
 
 import com.bkahlert.kustomize.os.LinuxRoot.etc.wpa_supplicant.wpa_supplicant_conf
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.text.LineSeparators.lines
+import com.bkahlert.kommons.text.LineSeparators.lines
 
 /**
  * Sets the `wpa_supplicant.conf` to the specified [fileContent].

@@ -1,10 +1,10 @@
 package com.bkahlert.kustomize.patch
 
+import com.bkahlert.kommons.io.path.copyTo
+import com.bkahlert.kommons.io.path.isInside
+import com.bkahlert.kommons.io.path.requireExists
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import koodies.io.isInside
-import koodies.io.path.copyTo
-import koodies.io.path.requireExists
 import java.nio.file.Path
 
 /**

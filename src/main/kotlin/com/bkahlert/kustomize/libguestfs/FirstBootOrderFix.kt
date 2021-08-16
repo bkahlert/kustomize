@@ -1,7 +1,7 @@
 package com.bkahlert.kustomize.libguestfs
 
+import com.bkahlert.kommons.runtime.ClassPathFile
 import com.bkahlert.kustomize.os.LinuxRoot
-import koodies.io.ClassPathFile
 
 /**
  * Script (stored at [ClassPathFileFixture.path]) which fixes the execution

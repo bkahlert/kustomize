@@ -1,13 +1,14 @@
 package com.bkahlert.kustomize.os
 
+import com.bkahlert.kommons.runtime.thread
+import com.bkahlert.kommons.text.ANSI.Text.Companion.ansi
+import com.bkahlert.kommons.time.Now
+import com.bkahlert.kommons.tracing.SpanScope
 import com.bkahlert.kustomize.os.Watchdog.Command.RESET
 import com.bkahlert.kustomize.os.Watchdog.Command.STOP
-import koodies.jvm.thread
-import koodies.text.ANSI.Text.Companion.ansi
-import koodies.time.Now
-import koodies.tracing.CurrentSpan
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
+import kotlin.time.Duration
 
 /**
  * Watchdog implementation that works like a dead man's switch.
@@ -19,7 +20,7 @@ open class Watchdog(
     /**
      * Duration that needs to pass until [timeout] is called.
      */
-    private val timeout: kotlin.time.Duration,
+    private val timeout: Duration,
     /**
      * If set to `true` this watchdog does not stop working after having been triggered.
      * Instead the watch period starts again after [timedOut] finished.
@@ -28,11 +29,11 @@ open class Watchdog(
     /**
      * Logger that can be accessed in [timedOut].
      */
-    private val span: CurrentSpan? = null,
+    private val span: SpanScope? = null,
     /**
      * Gets called after more time has passed between the start of this watchdog and/or two consecutive [reset] calls.
      */
-    val timedOut: CurrentSpan.() -> Any,
+    val timedOut: SpanScope.() -> Any,
 ) {
     private var timeoutStart: Long = -1L
     private val blockingQueue = LinkedBlockingQueue<Command>()
@@ -72,7 +73,7 @@ open class Watchdog(
         }
     }
 
-    val remaining: kotlin.time.Duration get() = timeout - Now.passedSince(timeoutStart)
+    val remaining: Duration get() = timeout - Now.passedSince(timeoutStart)
 
     /**
      * A call to [reset] resets the timer that ticks against [timeout].
