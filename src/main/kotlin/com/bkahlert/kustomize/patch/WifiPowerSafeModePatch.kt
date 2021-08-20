@@ -15,9 +15,9 @@ class WifiPowerSafeModePatch : (OperatingSystemImage) -> PhasedPatch {
         virtCustomize {
             firstBoot("Disable Wifi Power-Safe Mode") {
                 file(LinuxRoot.etc.rc_local.pathString) {
-                    removeLine("echo 0")
+                    removeLine("exit 0")
                     appendLine("/sbin/iw dev wlan0 set power_save off")
-                    appendLine("echo 0")
+                    appendLine("exit 0")
                 }
             }
         }
