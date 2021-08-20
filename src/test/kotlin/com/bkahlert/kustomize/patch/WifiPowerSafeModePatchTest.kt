@@ -23,7 +23,7 @@ class WifiPowerSafeModePatchTest {
         expectThat(patch).virtCustomizations {
             last().isA<FirstBootOption>().file.textContent {
                 not { contains(osImage.directory.pathString) }
-                contains("/sbin/iw dev wlan0 set power_save off")
+                contains("/sbin/iw dev wlan0 set power_save off || true")
                 containsAtLeast("exit 0", 2)
             }
         }
