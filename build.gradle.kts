@@ -30,7 +30,7 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk:1.3.0")
     implementation("io.opentelemetry:opentelemetry-exporter-jaeger:1.3.0")
     implementation("io.opentelemetry:opentelemetry-exporter-logging:1.3.0")
-    implementation("io.grpc:grpc-okhttp:1.38.0")
+    implementation("io.grpc:grpc-okhttp:1.40.0")
 
     implementation("com.github.ajalt.clikt:clikt:3.1.0")
     implementation("io.github.config4k:config4k:0.4.2")
