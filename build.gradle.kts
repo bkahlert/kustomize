@@ -28,7 +28,7 @@ dependencies {
 
     implementation("io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.3.0-alpha")
     implementation("io.opentelemetry:opentelemetry-sdk:1.3.0")
-    implementation("io.opentelemetry:opentelemetry-exporter-jaeger:1.3.0")
+    implementation("io.opentelemetry:opentelemetry-exporter-jaeger:1.5.0")
     implementation("io.opentelemetry:opentelemetry-exporter-logging:1.3.0")
     implementation("io.grpc:grpc-okhttp:1.38.0")
 
