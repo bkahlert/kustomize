@@ -20,6 +20,26 @@ hostname {
   random-suffix: true
 }
 
+# ethernet over USB with device IP 10.10.10.1
+usb.gadget.dhcp-range: 10.10.10.0/29
+
+# Bluetooth Private Area Network with device IP 10.10.11.1
+bluetooth.pan.dhcp-range: 10.10.11.0/29
+
+# automatic WiFi connection
+wifi.wpa-supplicant:
+  """
+  ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+  update_config=1
+  country=DE
+  
+  network={
+  ssid="My WiFi name"
+  psk="My WiFi password"
+  }
+  """
+
+# run scripts
 setup = [
   {
     name: setup things
@@ -37,7 +57,9 @@ setup = [
 
 ```shell
 kustomize --config-file sample.conf
+
 # OR
+
 docker run --rm -it \
            -v /var/run/docker.sock:/var/run/docker.sock \
            -v /tmp/kommons:/tmp/kommons \

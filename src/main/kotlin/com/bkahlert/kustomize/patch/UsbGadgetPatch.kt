@@ -113,6 +113,7 @@ class UsbGadgetPatch(
                 #dhcp-option=option:dns-server,192.168.168.192
                 ${if (hostAsDefaultGateway) "dhcp-script=$DHCP_SCRIPT" else ""}
                 ${if (hostAsDefaultGateway) "leasefile-ro" else ""}
+                
             """.trimIndent())
 
             if (hostAsDefaultGateway) {
@@ -159,6 +160,7 @@ class UsbGadgetPatch(
                 allow-hotplug usb0
                 iface usb0 inet static
                   address $deviceAddress/${dhcpRange.prefixLength}
+                
             """.trimIndent())
 
             val dirName = product.toBaseName()
@@ -209,6 +211,7 @@ class UsbGadgetPatch(
                 ls /sys/class/udc > UDC
                 
                 ifup usb0
+                
             """.trimIndent())
             chmods { "0755" to USB_GADGET }
 
@@ -227,6 +230,7 @@ class UsbGadgetPatch(
                  
                 [Install]
                 WantedBy=sysinit.target
+                
             """.trimIndent())
             firstBoot("enable ${USBGADGET_SERVICE.fileName}") { "systemctl enable ${USBGADGET_SERVICE.fileName}" }
 

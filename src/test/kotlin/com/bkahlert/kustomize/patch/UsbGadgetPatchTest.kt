@@ -124,6 +124,7 @@ class UsbGadgetPatchTest {
                     iface usb0 inet static
                       address 10.10.1.10/27
                     
+                    
                 """.trimIndent())
             }
         }
@@ -188,6 +189,7 @@ class UsbGadgetPatchTest {
                 
                     ifup usb0
                     
+                    
                 """.trimIndent())
             }
         }
@@ -220,6 +222,7 @@ class UsbGadgetPatchTest {
                      
                     [Install]
                     WantedBy=sysinit.target
+                    
                     
                 """.trimIndent())
             }

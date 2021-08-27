@@ -47,20 +47,14 @@ class BluetoothPersonalAreaNetworkPatch(
             copyIn(DISABLE_SAP_CONF, """
                 [Service]
                 ExecStart=
-                ExecStart=/usr/lib/bluetooth/bluetoothd --noplugin=sap                
+                ExecStart=/usr/lib/bluetooth/bluetoothd --noplugin=sap
+                
             """.trimIndent())
             chmods { "644" to DISABLE_SAP_CONF }
 
-
-            firstBoot {
-                """
-                apt-get -qq install bridge-utils bluez python-dbus python-gobject
-                
-                sed -i '/DiscoverableTimeout/s/^.*$/DiscoverableTimeout = 0/' /etc/bluetooth/main.conf  # unlimited discoverability
-                sed -i '/PairableTimeout/s/^.*$/PairableTimeout = 0/' /etc/bluetooth/main.conf          # unlimited pairing timeout
-                """.trimIndent()
-            }
-
+            firstBootInstall { listOf("bridge-utils", "bluez", "python-dbus", "python-gobject") }
+            firstBoot("configure unlimited discoverability") { "sed -i '/DiscoverableTimeout/s/^.*$/DiscoverableTimeout = 0/' /etc/bluetooth/main.conf" }
+            firstBoot("unlimited pairing timeout") { "sed -i '/PairableTimeout/s/^.*$/PairableTimeout = 0/' /etc/bluetooth/main.conf" }
 
             copyIn(BT_NAT_SCRIPT, """
                 #!/bin/sh
@@ -75,52 +69,52 @@ class BluetoothPersonalAreaNetworkPatch(
                 ip link set pan0 up
                 #ip route add default via aaa.bbb.ccc.ddd dev pan0
                 
-                /usr/local/sbin/bt-pan.py --debug server pan0          
+                exec bt-pan --debug server pan0
+                
             """.trimIndent())
             chmods { "755" to BT_NAT_SCRIPT }
 
 
             copyIn(BT_NAP_SERVICE, """
-                #!/bin/sh
                 [Unit]
-                Description=Bluetooth Group ad-hoc Network (GN) / Network Access Point (NAP)
                 After=bluetooth.service
                 PartOf=bluetooth.service
-                
+
                 [Service]
-                ExecStart=/usr/local/sbin/bt-nap.service.sh
-                
+                ExecStart=$BT_NAT_SCRIPT
+
                 [Install]
-                WantedBy=multi-user.target
+                WantedBy=bluetooth.target
+                
             """.trimIndent())
             chmods { "644" to BT_NAP_SERVICE }
             firstBoot {
                 """
-                wget -O /usr/local/sbin/bt-pan.py https://github.com/mk-fg/fgtk/raw/master/bt-pan
-                chmod 755 /usr/local/sbin/bt-pan.py
+                wget -O /usr/local/sbin/bt-pan https://github.com/mk-fg/fgtk/raw/master/bt-pan.py
+                chmod 755 /usr/local/sbin/bt-pan
                 systemctl enable bt-nap
             """.trimIndent()
             }
 
 
             copyIn(BT_AGENT, """
-                #!/bin/sh
                 [Unit]
                 Description=Bluetooth Agent
                 After=bt-nap.service
                 Requires=bt-nap.service
         
                 [Service]
-                ExecStart=/usr/local/bin/blueagent5.py 
+                ExecStart=/usr/local/bin/blueagent5 
         
                 [Install]
                 WantedBy=multi-user.target
+                
             """.trimIndent())
             chmods { "644" to BT_AGENT }
             firstBoot {
                 """
-                wget -O /usr/local/bin/blueagent5.py https://github.com/opustecnica/public/raw/master/raspberrypi/PAN/blueagent5.py
-                chmod 755 /usr/local/bin/blueagent5.py
+                wget -O /usr/local/bin/blueagent5 https://github.com/opustecnica/public/raw/master/raspberrypi/PAN/blueagent5.py
+                chmod 755 /usr/local/bin/blueagent5
                 systemctl enable bt-agent
             """.trimIndent()
             }
@@ -137,12 +131,9 @@ class BluetoothPersonalAreaNetworkPatch(
                 dhcp-option=3
                 #dhcp-option=option:dns-server,aaa.bbb.ccc.ddd
                 #leasefile-ro
+                
             """.trimIndent())
-            firstBoot {
-                """
-                systemctl restart dnsmasq
-            """.trimIndent()
-            }
+            firstBoot { "systemctl restart dnsmasq" }
         }
     }
 }
