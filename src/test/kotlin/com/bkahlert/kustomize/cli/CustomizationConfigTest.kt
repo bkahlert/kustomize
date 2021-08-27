@@ -16,11 +16,12 @@ import com.bkahlert.kommons.text.ansiRemoved
 import com.bkahlert.kommons.unit.Gibi
 import com.bkahlert.kommons.unit.bytes
 import com.bkahlert.kustomize.Kustomize
+import com.bkahlert.kustomize.cli.CustomizationConfig.BluetoothProfile.PersonalAreaNetwork
 import com.bkahlert.kustomize.cli.CustomizationConfig.DefaultUser
 import com.bkahlert.kustomize.cli.CustomizationConfig.FileOperation
 import com.bkahlert.kustomize.cli.CustomizationConfig.Hostname
 import com.bkahlert.kustomize.cli.CustomizationConfig.Samba
-import com.bkahlert.kustomize.cli.CustomizationConfig.UsbGadget.Ethernet
+import com.bkahlert.kustomize.cli.CustomizationConfig.UsbDevice.Gadget
 import com.bkahlert.kustomize.cli.CustomizationConfig.Wifi
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
@@ -41,7 +42,7 @@ import com.bkahlert.kustomize.patch.SshEnablementPatch
 import com.bkahlert.kustomize.patch.SshPortPatch
 import com.bkahlert.kustomize.patch.TimeZonePatch
 import com.bkahlert.kustomize.patch.TweaksPatch
-import com.bkahlert.kustomize.patch.UsbEthernetGadgetPatch
+import com.bkahlert.kustomize.patch.UsbGadgetPatch
 import com.bkahlert.kustomize.patch.UsernamePatch
 import com.bkahlert.kustomize.patch.WifiAutoReconnectPatch
 import com.bkahlert.kustomize.patch.WifiPowerSafeModePatch
@@ -331,12 +332,18 @@ class CustomizationConfigTest {
             }
             expecting { defaultUser } that { isEqualTo(DefaultUser(null, "john.doe", "Password1234")) }
             expecting { samba } that { isEqualTo(Samba(true, `read-write`)) }
-            expecting { usbGadgets } that {
-                containsExactly(Ethernet(
-                    dhcpRange = ip4Of("192.168.168.160") / 28,
-                    deviceAddress = ip4Of("192.168.168.168"),
+            expecting { usbDevices } that {
+                containsExactly(Gadget(
+                    dhcpRange = ip4Of("10.10.1.0") / 27,
+                    deviceAddress = ip4Of("10.10.1.10"),
                     hostAsDefaultGateway = true,
                     enableSerialConsole = true,
+                ))
+            }
+            expecting { bluetoothProfiles } that {
+                containsExactly(PersonalAreaNetwork(
+                    dhcpRange = ip4Of("10.10.2.0") / 27,
+                    deviceAddress = ip4Of("10.10.2.10"),
                 ))
             }
             expecting { tweaks?.aptRetries } that { isEqualTo(10) }
@@ -413,7 +420,7 @@ class CustomizationConfigTest {
                             PasswordPatch::class,
                             SshAuthorizationPatch::class,
                             SshPortPatch::class,
-                            UsbEthernetGadgetPatch::class,
+                            UsbGadgetPatch::class,
                             ShellScriptPatch::class,
                         )
                 },

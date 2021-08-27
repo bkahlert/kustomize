@@ -1,5 +1,11 @@
 package com.bkahlert.kustomize.patch
 
+import com.bkahlert.kommons.io.path.textContent
+import com.bkahlert.kommons.junit.UniqueId
+import com.bkahlert.kommons.net.ip4Of
+import com.bkahlert.kommons.net.ipOf
+import com.bkahlert.kommons.test.withTempDir
+import com.bkahlert.kommons.text.matchesCurlyPattern
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.ChmodOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.CopyInOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootInstallOption
@@ -11,17 +17,11 @@ import com.bkahlert.kustomize.os.LinuxRoot.boot.config_txt
 import com.bkahlert.kustomize.os.LinuxRoot.etc.dhcpcd_conf
 import com.bkahlert.kustomize.os.LinuxRoot.etc.modules
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import com.bkahlert.kustomize.patch.UsbEthernetGadgetPatch.Companion.DHCP_SCRIPT
-import com.bkahlert.kustomize.patch.UsbEthernetGadgetPatch.Companion.USB0_DNSMASQD
-import com.bkahlert.kustomize.patch.UsbEthernetGadgetPatch.Companion.USB0_NETWORK
-import com.bkahlert.kustomize.patch.UsbEthernetGadgetPatch.Companion.USBGADGET_SERVICE
-import com.bkahlert.kustomize.patch.UsbEthernetGadgetPatch.Companion.USB_GADGET
-import com.bkahlert.kommons.io.path.textContent
-import com.bkahlert.kommons.junit.UniqueId
-import com.bkahlert.kommons.net.ip4Of
-import com.bkahlert.kommons.net.ipOf
-import com.bkahlert.kommons.test.withTempDir
-import com.bkahlert.kommons.text.matchesCurlyPattern
+import com.bkahlert.kustomize.patch.UsbGadgetPatch.Companion.DHCP_SCRIPT
+import com.bkahlert.kustomize.patch.UsbGadgetPatch.Companion.USB0_DNSMASQD
+import com.bkahlert.kustomize.patch.UsbGadgetPatch.Companion.USB0_NETWORK
+import com.bkahlert.kustomize.patch.UsbGadgetPatch.Companion.USBGADGET_SERVICE
+import com.bkahlert.kustomize.patch.UsbGadgetPatch.Companion.USB_GADGET
 import org.junit.jupiter.api.Test
 import strikt.api.expect
 import strikt.api.expectThat
@@ -30,11 +30,11 @@ import strikt.assertions.contains
 import strikt.assertions.filterIsInstance
 import strikt.assertions.isEqualTo
 
-class UsbEthernetGadgetPatchTest {
+class UsbGadgetPatchTest {
 
-    private val patch = UsbEthernetGadgetPatch(
-        dhcpRange = (ip4Of("192.168.168.161")..ip4Of("192.168.168.174")).smallestCommonSubnet,
-        deviceAddress = ipOf("192.168.168.168"),
+    private val patch = UsbGadgetPatch(
+        dhcpRange = (ip4Of("10.10.1.1")..ip4Of("10.10.1.20")).smallestCommonSubnet,
+        deviceAddress = ipOf("10.10.1.10"),
         hostAsDefaultGateway = true,
         enableSerialConsole = true,
         manufacturer = "John Doe",
@@ -43,7 +43,7 @@ class UsbEthernetGadgetPatchTest {
 
     @Test
     fun `should have name`(uniqueId: UniqueId, osImage: OperatingSystemImage) = withTempDir(uniqueId) {
-        expectThat(patch(osImage).name).isEqualTo("Configure USB Gadget with DHCP Address Range 192.168.168.160/28")
+        expectThat(patch(osImage).name).isEqualTo("Configure USB Gadget with DHCP Address Range 10.10.1.0/27")
     }
 
     @Test
@@ -63,7 +63,7 @@ class UsbEthernetGadgetPatchTest {
                     dhcp-rapid-commit
                     no-ping
                     interface=usb0 
-                    dhcp-range=192.168.168.161,192.168.168.174,1h
+                    dhcp-range=10.10.1.1,10.10.1.30,1h
                     # no gateway / routing
                     dhcp-option=3
                     #dhcp-option=option:dns-server,192.168.168.192
@@ -122,7 +122,7 @@ class UsbEthernetGadgetPatchTest {
                     auto usb0
                     allow-hotplug usb0
                     iface usb0 inet static
-                      address 192.168.168.168/28
+                      address 10.10.1.10/27
                     
                 """.trimIndent())
             }

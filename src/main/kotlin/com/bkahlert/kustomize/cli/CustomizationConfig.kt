@@ -15,6 +15,8 @@ import com.bkahlert.kommons.text.takeUnlessBlank
 import com.bkahlert.kommons.unit.Size
 import com.bkahlert.kommons.unit.toSize
 import com.bkahlert.kustomize.Kustomize
+import com.bkahlert.kustomize.cli.CustomizationConfig.BluetoothProfile
+import com.bkahlert.kustomize.cli.CustomizationConfig.BluetoothProfile.PersonalAreaNetwork
 import com.bkahlert.kustomize.cli.CustomizationConfig.DefaultUser
 import com.bkahlert.kustomize.cli.CustomizationConfig.FileOperation
 import com.bkahlert.kustomize.cli.CustomizationConfig.Hostname
@@ -22,8 +24,8 @@ import com.bkahlert.kustomize.cli.CustomizationConfig.Samba
 import com.bkahlert.kustomize.cli.CustomizationConfig.SetupScript
 import com.bkahlert.kustomize.cli.CustomizationConfig.Ssh
 import com.bkahlert.kustomize.cli.CustomizationConfig.Tweaks
-import com.bkahlert.kustomize.cli.CustomizationConfig.UsbGadget
-import com.bkahlert.kustomize.cli.CustomizationConfig.UsbGadget.Ethernet
+import com.bkahlert.kustomize.cli.CustomizationConfig.UsbDevice
+import com.bkahlert.kustomize.cli.CustomizationConfig.UsbDevice.Gadget
 import com.bkahlert.kustomize.cli.CustomizationConfig.Wifi
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine
@@ -33,6 +35,7 @@ import com.bkahlert.kustomize.os.OperatingSystem
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems
 import com.bkahlert.kustomize.patch.AppendToFilesPatch
+import com.bkahlert.kustomize.patch.BluetoothPersonalAreaNetworkPatch
 import com.bkahlert.kustomize.patch.CompositePatch
 import com.bkahlert.kustomize.patch.CopyFilesPatch
 import com.bkahlert.kustomize.patch.FirstBootPatch
@@ -49,7 +52,7 @@ import com.bkahlert.kustomize.patch.SshEnablementPatch
 import com.bkahlert.kustomize.patch.SshPortPatch
 import com.bkahlert.kustomize.patch.TimeZonePatch
 import com.bkahlert.kustomize.patch.TweaksPatch
-import com.bkahlert.kustomize.patch.UsbEthernetGadgetPatch
+import com.bkahlert.kustomize.patch.UsbGadgetPatch
 import com.bkahlert.kustomize.patch.UsernamePatch
 import com.bkahlert.kustomize.patch.WifiAutoReconnectPatch
 import com.bkahlert.kustomize.patch.WifiPowerSafeModePatch
@@ -109,9 +112,13 @@ data class CustomizationConfig(
      */
     val samba: Samba?,
     /**
-     * The [UsbGadget] settings to be applied to the image.
+     * The [UsbDevice] settings to be applied to the image.
      */
-    val usbGadgets: List<UsbGadget>,
+    val usbDevices: List<UsbDevice>,
+    /**
+     * The [BluetoothProfile] settings to be applied to the image.
+     */
+    val bluetoothProfiles: List<BluetoothProfile>,
     /**
      * The [Tweaks] to be applied to the image.
      */
@@ -191,11 +198,18 @@ data class CustomizationConfig(
                                 } ?: newPassword)
                         },
                         extract<IntermediarySamba?>("samba")?.run { Samba(homeShare ?: false, rootShare ?: none) },
-                        extract<IntermediaryUsbGadgets?>("usbGadgets")?.run {
-                            listOfNotNull(ethernet?.run {
+                        extract<IntermediaryUsbDevice?>("usb")?.run {
+                            listOfNotNull(gadget?.run {
                                 val subnet: IPSubnet<out IPAddress> = ipSubnetOf(dhcpRange)
                                 val ip: IPAddress? = deviceAddress?.toIP()
-                                Ethernet(subnet, ip, hostAsDefaultGateway, enableSerialConsole, manufacturer, product)
+                                Gadget(subnet, ip, hostAsDefaultGateway, enableSerialConsole, manufacturer, product)
+                            })
+                        } ?: emptyList(),
+                        extract<IntermediaryBluetoothProfile?>("bluetooth")?.run {
+                            listOfNotNull(pan?.run {
+                                val subnet: IPSubnet<out IPAddress> = ipSubnetOf(dhcpRange)
+                                val ip: IPAddress? = deviceAddress?.toIP()
+                                PersonalAreaNetwork(subnet, ip)
                             })
                         } ?: emptyList(),
                         extract("tweaks"),
@@ -219,7 +233,7 @@ data class CustomizationConfig(
                     )
                 }
 
-        data class IntermediaryHostname(val name: String, val randomSuffix: Boolean?, val prettyName: String?, val iconName: String?, val chassis: String?, )
+        data class IntermediaryHostname(val name: String, val randomSuffix: Boolean?, val prettyName: String?, val iconName: String?, val chassis: String?)
 
         data class IntermediarySsh(val enabled: Boolean?, val port: Int?, val authorizedKeys: AuthorizedKeys?) {
             data class AuthorizedKeys(val files: List<String>?, val keys: List<String>?)
@@ -228,8 +242,8 @@ data class CustomizationConfig(
         data class IntermediaryDefaultUser(val username: String?, val newUsername: String?, val newPassword: String?)
         data class IntermediarySamba(val homeShare: Boolean?, val rootShare: RootShare?)
 
-        data class IntermediaryUsbGadgets(val ethernet: IntermediaryEthernet?) {
-            data class IntermediaryEthernet(
+        data class IntermediaryUsbDevice(val gadget: IntermediaryGadget?) {
+            data class IntermediaryGadget(
                 val dhcpRange: String,
                 val deviceAddress: String?,
                 val hostAsDefaultGateway: Boolean?,
@@ -239,27 +253,41 @@ data class CustomizationConfig(
             )
         }
 
+        data class IntermediaryBluetoothProfile(val pan: IntermediaryPAN?) {
+            data class IntermediaryPAN(
+                val dhcpRange: String,
+                val deviceAddress: String?,
+            )
+        }
+
         data class IntermediaryFileOperation(val append: String?, val hostPath: String?, val diskPath: String)
         data class IntermediarySetupScript(val name: String, val sources: List<URI>?, val scripts: List<IntermediaryShellScript>?)
         data class IntermediaryShellScript(val name: String?, val content: String?)
     }
 
-    data class Hostname(val name: String, val randomSuffix: Boolean, val prettyName: String?, val iconName: String?, val chassis: String?, )
+    data class Hostname(val name: String, val randomSuffix: Boolean, val prettyName: String?, val iconName: String?, val chassis: String?)
 
     data class Wifi(val wpaSupplicant: String?, val autoReconnect: Boolean?, val powerSafeMode: Boolean?)
     data class Ssh(val enabled: Boolean?, val port: Int?, val authorizedKeys: List<String>)
     data class DefaultUser(val username: String?, val newUsername: String?, val newPassword: String?)
     data class Samba(val homeShare: Boolean, val rootShare: RootShare)
 
-    sealed class UsbGadget {
-        data class Ethernet(
+    sealed class UsbDevice {
+        data class Gadget(
             val dhcpRange: IPSubnet<out IPAddress>,
             val deviceAddress: IPAddress?,
             val hostAsDefaultGateway: Boolean? = null,
             val enableSerialConsole: Boolean? = null,
             val manufacturer: String? = null,
             val product: String? = null,
-        ) : UsbGadget()
+        ) : UsbDevice()
+    }
+
+    sealed class BluetoothProfile {
+        data class PersonalAreaNetwork(
+            val dhcpRange: IPSubnet<out IPAddress>,
+            val deviceAddress: IPAddress?,
+        ) : BluetoothProfile()
     }
 
     data class Tweaks(val aptRetries: Int?)
@@ -323,16 +351,27 @@ data class CustomizationConfig(
             add(SambaPatch(sambaUsername, sambaPassword, homeShare, rootShare))
         }
 
-        usbGadgets.forEach {
+        usbDevices.forEach {
             when (it) {
-                is Ethernet -> add(
-                    UsbEthernetGadgetPatch(
+                is Gadget -> add(
+                    UsbGadgetPatch(
                         dhcpRange = it.dhcpRange,
                         deviceAddress = it.deviceAddress ?: it.dhcpRange.firstUsableHost,
                         hostAsDefaultGateway = it.hostAsDefaultGateway ?: false,
                         enableSerialConsole = it.enableSerialConsole ?: false,
                         manufacturer = it.manufacturer ?: "Björn Kahlert",
                         product = it.product ?: "USB Gadget")
+                )
+            }
+        }
+
+        bluetoothProfiles.forEach {
+            when (it) {
+                is PersonalAreaNetwork -> add(
+                    BluetoothPersonalAreaNetworkPatch(
+                        dhcpRange = it.dhcpRange,
+                        deviceAddress = it.deviceAddress ?: it.dhcpRange.firstUsableHost,
+                    )
                 )
             }
         }
@@ -370,7 +409,8 @@ data class CustomizationConfig(
             CompositePatch(extract<PasswordPatch>()
                 + extract<SshAuthorizationPatch>()
                 + extract<SshPortPatch>()
-                + extract<UsbEthernetGadgetPatch>()
+                + extract<UsbGadgetPatch>()
+                + extract<BluetoothPersonalAreaNetworkPatch>()
                 + extract<ShellScriptPatch>()
             ),
             *toTypedArray()

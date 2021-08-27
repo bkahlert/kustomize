@@ -114,7 +114,9 @@ object LinuxRoot : DiskDirectory("/") {
 
         object systemd : Directory("systemd") {
             object scripts : Directory("scripts")
-            object system : Directory("system")
+            object system : Directory("system") {
+                object bluetooth_service_d : Directory("bluetooth.service.d")
+            }
         }
 
         object wpa_supplicant : Directory("wpa_supplicant") {

@@ -1,5 +1,10 @@
 package com.bkahlert.kustomize.patch
 
+import com.bkahlert.kommons.net.IPAddress
+import com.bkahlert.kommons.net.IPSubnet
+import com.bkahlert.kommons.net.div
+import com.bkahlert.kommons.net.ip4Of
+import com.bkahlert.kommons.toBaseName
 import com.bkahlert.kustomize.os.DiskDirectory.File
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.LinuxRoot.boot.cmdline_txt
@@ -7,11 +12,6 @@ import com.bkahlert.kustomize.os.LinuxRoot.boot.config_txt
 import com.bkahlert.kustomize.os.LinuxRoot.etc.dhcpcd_conf
 import com.bkahlert.kustomize.os.LinuxRoot.etc.modules
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import com.bkahlert.kommons.net.IPAddress
-import com.bkahlert.kommons.net.IPSubnet
-import com.bkahlert.kommons.net.div
-import com.bkahlert.kommons.net.ip4Of
-import com.bkahlert.kommons.toBaseName
 
 /**
  * Applied to an [OperatingSystemImage] this [Patch]
@@ -47,18 +47,18 @@ import com.bkahlert.kommons.toBaseName
  * ```
  *
  * @see <a href="https://www.hardill.me.uk/wordpress/2019/11/02/pi4-usb-c-gadget/">Pi4 USB-C Gadget</a>
- * @see <a href="httpshttps://github.com/hardillb/rpi-gadget-image-creator">Raspberry Pi USB Gadget Image Builder</a>
+ * @see <a href="https://github.com/hardillb/rpi-gadget-image-creator">Raspberry Pi USB Gadget Image Builder</a>
  */
-class UsbEthernetGadgetPatch(
+class UsbGadgetPatch(
     /**
      * The DHCP range to use to auto-configure devices making a connection
      * to the embedded machine.
      */
-    val dhcpRange: IPSubnet<out IPAddress> = DEFAULT_DHCP_RANGE,
+    val dhcpRange: IPSubnet<out IPAddress> = ip4Of("10.10.10.8") / 29, // usable: 10.10.10.9..10.10.10.14
     /**
      * The address of the embedded device.
      */
-    val deviceAddress: IPAddress = dhcpRange.firstUsableHost,
+    val deviceAddress: IPAddress = ip4Of("10.10.10.10"),
     /**
      * Whether to configure the attached host as the embedded machines
      * default gateway (e.g. to provide Internet access).
@@ -103,16 +103,16 @@ class UsbEthernetGadgetPatch(
              */
             @Suppress("SpellCheckingInspection")
             copyIn(USB0_DNSMASQD, """
-                dhcp-authoritative 
+                dhcp-authoritative
                 dhcp-rapid-commit
                 no-ping
-                interface=usb0 
+                interface=usb0
                 dhcp-range=${dhcpRange.firstUsableHost},${dhcpRange.lastUsableHost},1h
                 # no gateway / routing
                 dhcp-option=3
                 #dhcp-option=option:dns-server,192.168.168.192
                 ${if (hostAsDefaultGateway) "dhcp-script=$DHCP_SCRIPT" else ""}
-                leasefile-ro
+                ${if (hostAsDefaultGateway) "leasefile-ro" else ""}
             """.trimIndent())
 
             if (hostAsDefaultGateway) {
@@ -257,8 +257,5 @@ class UsbEthernetGadgetPatch(
 
         /** USB gadget unit file. */
         val USBGADGET_SERVICE: File = LinuxRoot.etc.systemd.system / "usbgadget.service"
-
-        /** [IPSubnet] to use by default. */
-        val DEFAULT_DHCP_RANGE: IPSubnet<*> = ip4Of("10.55.0.1") / 29
     }
 }
