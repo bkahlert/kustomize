@@ -32,9 +32,14 @@ class BluetoothPersonalAreaNetworkPatch(
 
     companion object {
         val DISABLE_SAP_CONF = LinuxRoot.etc.systemd.system.bluetooth_service_d / "01-disable-sap-plugin.conf"
-        val BT_NAT_SCRIPT = LinuxRoot.usr.local.sbin / "bt-nap.service.sh"
-        val BT_NAP_SERVICE = LinuxRoot.etc.systemd.system / "bt-nap.service"
-        val BT_AGENT = LinuxRoot.etc.systemd.system / "bt-agent.service"
+
+        val BT_PAN = LinuxRoot.usr.local.sbin / "bt-pan"
+        val BT_PAN_SCRIPT = LinuxRoot.usr.local.sbin / "bt-pan.service.sh"
+        val BT_PAN_SERVICE = LinuxRoot.etc.systemd.system / "bt-pan.service"
+
+        val BT_AGENT = LinuxRoot.usr.local.sbin / "blueagent5"
+        val BT_AGENT_SERVICE = LinuxRoot.etc.systemd.system / "bt-agent.service"
+
         val DNSMASQ_PAN0 = LinuxRoot.etc.dnsmasq_d / "pan0"
     }
 
@@ -53,10 +58,10 @@ class BluetoothPersonalAreaNetworkPatch(
             chmods { "644" to DISABLE_SAP_CONF }
 
             firstBootInstall { listOf("bridge-utils", "bluez", "python-dbus", "python-gobject") }
-            firstBoot("configure unlimited discoverability") { "sed -i '/DiscoverableTimeout/s/^.*$/DiscoverableTimeout = 0/' /etc/bluetooth/main.conf" }
-            firstBoot("unlimited pairing timeout") { "sed -i '/PairableTimeout/s/^.*$/PairableTimeout = 0/' /etc/bluetooth/main.conf" }
+            firstBoot("configure to stay discoverable forever") { "sed -i '/DiscoverableTimeout/s/^.*$/DiscoverableTimeout = 0/' ${LinuxRoot.etc.bluetooth.main_conf}" }
+            firstBoot("configure to stay pairable forever") { "sed -i '/PairableTimeout/s/^.*$/PairableTimeout = 0/' ${LinuxRoot.etc.bluetooth.main_conf}" }
 
-            copyIn(BT_NAT_SCRIPT, """
+            copyIn(BT_PAN_SCRIPT, """
                 #!/bin/sh
                 modprobe bnep                           # load bnep module (Bluetooth Network Encapsulation Protocol)
                 hciconfig hci0 lm master,accept         # act as Bluetooth master
@@ -69,52 +74,52 @@ class BluetoothPersonalAreaNetworkPatch(
                 ip link set pan0 up
                 #ip route add default via aaa.bbb.ccc.ddd dev pan0
                 
-                exec bt-pan --debug server pan0
+                exec $BT_PAN --debug server pan0
                 
             """.trimIndent())
-            chmods { "755" to BT_NAT_SCRIPT }
+            chmods { "755" to BT_PAN_SCRIPT }
 
 
-            copyIn(BT_NAP_SERVICE, """
+            copyIn(BT_PAN_SERVICE, """
                 [Unit]
                 After=bluetooth.service
                 PartOf=bluetooth.service
 
                 [Service]
-                ExecStart=$BT_NAT_SCRIPT
+                ExecStart=$BT_PAN_SCRIPT
 
                 [Install]
                 WantedBy=bluetooth.target
                 
             """.trimIndent())
-            chmods { "644" to BT_NAP_SERVICE }
+            chmods { "644" to BT_PAN_SERVICE }
             firstBoot {
                 """
-                wget -O /usr/local/sbin/bt-pan https://github.com/mk-fg/fgtk/raw/master/bt-pan.py
-                chmod 755 /usr/local/sbin/bt-pan
-                systemctl enable bt-nap
+                wget -O $BT_PAN https://github.com/mk-fg/fgtk/raw/master/bt-pan
+                chmod 755 $BT_PAN
+                systemctl enable bt-pan
             """.trimIndent()
             }
 
 
-            copyIn(BT_AGENT, """
+            copyIn(BT_AGENT_SERVICE, """
                 [Unit]
                 Description=Bluetooth Agent
-                After=bt-nap.service
-                Requires=bt-nap.service
+                After=bt-pan.service
+                Requires=bt-pan.service
         
                 [Service]
-                ExecStart=/usr/local/bin/blueagent5 
+                ExecStart=$BT_AGENT
         
                 [Install]
-                WantedBy=multi-user.target
+                WantedBy=bluetooth.target
                 
             """.trimIndent())
-            chmods { "644" to BT_AGENT }
+            chmods { "644" to BT_AGENT_SERVICE }
             firstBoot {
                 """
-                wget -O /usr/local/bin/blueagent5 https://github.com/opustecnica/public/raw/master/raspberrypi/PAN/blueagent5.py
-                chmod 755 /usr/local/bin/blueagent5
+                wget -O $BT_AGENT https://github.com/opustecnica/public/raw/master/raspberrypi/PAN/blueagent5.py
+                chmod 755 $BT_AGENT
                 systemctl enable bt-agent
             """.trimIndent()
             }

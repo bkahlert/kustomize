@@ -81,6 +81,10 @@ object LinuxRoot : DiskDirectory("/") {
             }
         }
 
+        object bluetooth : Directory("bluetooth") {
+            object main_conf : File("main.conf")
+        }
+
         object crontab : File("crontab")
 
         object dnsmasq_d : Directory("dnsmasq.d")
