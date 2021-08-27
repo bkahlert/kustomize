@@ -155,14 +155,14 @@ class CustomizationConfigTest {
                         name: "test"
                     }
                 """.trimIndent())) {
-                    get { hostname }.isEqualTo(Hostname("test", true))
+                    get { hostname?.name }.isEqualTo("test")
                 }
             }
 
             @Test
             fun `should deserialize no name`(uniqueId: UniqueId) = withTempDir(uniqueId) {
                 expectThat(loadMinimalConfig("")) {
-                    get { hostname }.isEqualTo(null)
+                    get { hostname?.name }.isEqualTo(null)
                 }
             }
 
@@ -174,7 +174,7 @@ class CustomizationConfigTest {
                         random-suffix: true
                     }
                 """.trimIndent())) {
-                    get { hostname }.isEqualTo(Hostname("test", true))
+                    get { hostname?.randomSuffix }.isEqualTo(true)
                 }
             }
 
@@ -186,7 +186,43 @@ class CustomizationConfigTest {
                         random-suffix: false
                     }
                 """.trimIndent())) {
-                    get { hostname }.isEqualTo(Hostname("test", false))
+                    get { hostname?.randomSuffix }.isEqualTo(false)
+                }
+            }
+
+            @Test
+            fun `should deserialize pretty name`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+                expectThat(loadMinimalConfig("""
+                    hostname {
+                        name: "test"
+                        pretty-name: "pretty name"
+                    }
+                """.trimIndent())) {
+                    get { hostname?.prettyName }.isEqualTo("pretty name")
+                }
+            }
+
+            @Test
+            fun `should deserialize icon name`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+                expectThat(loadMinimalConfig("""
+                    hostname {
+                        name: "test"
+                        icon-name: "computer-vm"
+                    }
+                """.trimIndent())) {
+                    get { hostname?.iconName }.isEqualTo("computer-vm")
+                }
+            }
+
+            @Test
+            fun `should deserialize chassis`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+                expectThat(loadMinimalConfig("""
+                    hostname {
+                        name: "test"
+                        chassis: "vm"
+                    }
+                """.trimIndent())) {
+                    get { hostname?.chassis }.isEqualTo("vm")
                 }
             }
         }
@@ -279,7 +315,7 @@ class CustomizationConfigTest {
             expecting { name } that { isEqualTo("sample-full") }
             expecting { os } that { isEqualTo(RaspberryPiLite) }
             expecting { timeZone } that { isEqualTo(TimeZone.getTimeZone("Europe/Berlin")) }
-            expecting { hostname } that { isEqualTo(Hostname("sample-full", true)) }
+            expecting { hostname } that { isEqualTo(Hostname("sample-full", true, "Pretty Name", "computer-vm", "vm")) }
             expecting { wifi } that { isEqualTo(Wifi("entry1\nentry2", autoReconnect = true, powerSafeMode = false)) }
             expecting { size } that { isEqualTo(4.Gibi.bytes) }
             with { ssh!! }.then {

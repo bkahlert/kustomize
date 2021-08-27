@@ -151,7 +151,9 @@ data class CustomizationConfig(
                         extract("trace") ?: false,
                         extract("name") ?: configFile.fileName.nameWithoutExtension,
                         (extract("timeZone") ?: extract<String?>("timezone"))?.let { TimeZone.getTimeZone(it) },
-                        extract<IntermediaryHostname?>("hostname")?.run { Hostname(name, randomSuffix ?: true) },
+                        extract<IntermediaryHostname?>("hostname")?.run {
+                            Hostname(name, randomSuffix ?: true, prettyName, iconName ?: "computer", chassis ?: "embedded")
+                        },
                         extract("wifi"),
                         kotlin.runCatching { extract<String?>("os") }.getOrNull().run {
                             val os = this?.takeUnlessBlank() ?: throw IllegalArgumentException("Missing configuration: ${"os".asParam()}")
@@ -217,7 +219,8 @@ data class CustomizationConfig(
                     )
                 }
 
-        data class IntermediaryHostname(val name: String, val randomSuffix: Boolean?)
+        data class IntermediaryHostname(val name: String, val randomSuffix: Boolean?, val prettyName: String?, val iconName: String?, val chassis: String?, )
+
         data class IntermediarySsh(val enabled: Boolean?, val port: Int?, val authorizedKeys: AuthorizedKeys?) {
             data class AuthorizedKeys(val files: List<String>?, val keys: List<String>?)
         }
@@ -241,7 +244,8 @@ data class CustomizationConfig(
         data class IntermediaryShellScript(val name: String?, val content: String?)
     }
 
-    data class Hostname(val name: String, val randomSuffix: Boolean)
+    data class Hostname(val name: String, val randomSuffix: Boolean, val prettyName: String?, val iconName: String?, val chassis: String?, )
+
     data class Wifi(val wpaSupplicant: String?, val autoReconnect: Boolean?, val powerSafeMode: Boolean?)
     data class Ssh(val enabled: Boolean?, val port: Int?, val authorizedKeys: List<String>)
     data class DefaultUser(val username: String?, val newUsername: String?, val newPassword: String?)
@@ -284,7 +288,7 @@ data class CustomizationConfig(
     fun toPatches(): List<(OperatingSystemImage) -> PhasedPatch> = buildList {
         size?.apply { add(ResizePatch(this)) }
 
-        hostname?.apply { add(HostnamePatch(name, randomSuffix)) }
+        hostname?.apply { add(HostnamePatch(name, randomSuffix, prettyName, iconName, chassis)) }
 
         timeZone?.apply { add(TimeZonePatch(this)) }
 
