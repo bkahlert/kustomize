@@ -18,6 +18,7 @@ import com.bkahlert.kustomize.os.OperatingSystemImage
  * @see <a href="https://github.com/mk-fg/fgtk/blob/master/bt-pan">bt-pan</a>
  * @see <a href="http://bluez.sourceforge.net/contrib/HOWTO-PAN">HowTo set up common PAN scenarios with BlueZ's integrated PAN support</a>
  */
+// TODO consider switching to https://github.com/emmercm/panr
 class BluetoothPersonalAreaNetworkPatch(
     /**
      * The DHCP range to use to auto-configure devices making a connection

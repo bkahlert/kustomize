@@ -1,6 +1,6 @@
 ![Kaomoji customizing image](docs/banner.svg)
 
-# Kustomize
+# Kustomize [![Build Status](https://img.shields.io/github/workflow/status/bkahlert/kustomize/build%20and%20test?label=Build&logo=github&logoColor=fff)](https://github.com/bkahlert/kustomize/actions/workflows/build.yml) [![Repository Size](https://img.shields.io/github/repo-size/bkahlert/kustomize?color=01818F&label=Repo%20Size&logo=Git&logoColor=fff)](https://github.com/bkahlert/kustomize) [![Repository Size](https://img.shields.io/github/license/bkahlert/kustomize?color=29ABE2&label=License&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1OTAgNTkwIiAgeG1sbnM6dj0iaHR0cHM6Ly92ZWN0YS5pby9uYW5vIj48cGF0aCBkPSJNMzI4LjcgMzk1LjhjNDAuMy0xNSA2MS40LTQzLjggNjEuNC05My40UzM0OC4zIDIwOSAyOTYgMjA4LjljLTU1LjEtLjEtOTYuOCA0My42LTk2LjEgOTMuNXMyNC40IDgzIDYyLjQgOTQuOUwxOTUgNTYzQzEwNC44IDUzOS43IDEzLjIgNDMzLjMgMTMuMiAzMDIuNCAxMy4yIDE0Ny4zIDEzNy44IDIxLjUgMjk0IDIxLjVzMjgyLjggMTI1LjcgMjgyLjggMjgwLjhjMCAxMzMtOTAuOCAyMzcuOS0xODIuOSAyNjEuMWwtNjUuMi0xNjcuNnoiIGZpbGw9IiNmZmYiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxOS4yMTIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4%3D)](https://github.com/bkahlert/kustomize/blob/master/LICENSE)
 
 **Kotlin-based customizer for IoT images like [Raspberry Pi OS](https://www.raspberrypi.org/software/operating-systems)**  
 Kustomize applies a [HOCON](https://github.com/lightbend/config/blob/master/HOCON.md) based customization file to a [Raspberry Pi](https://www.raspberrypi.org/)
