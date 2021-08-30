@@ -11,7 +11,7 @@ import com.bkahlert.kommons.text.Semantics.formattedAs
 import com.bkahlert.kommons.text.quoted
 import com.bkahlert.kommons.tracing.rendering.BackgroundPrinter
 import com.bkahlert.kommons.tracing.rendering.Styles.None
-import com.bkahlert.kommons.tracing.rendering.spanningLine
+import com.bkahlert.kommons.tracing.rendering.runSpanningLine
 import com.bkahlert.kommons.tracing.runSpanning
 import com.bkahlert.kommons.tracing.spanScope
 import org.junit.jupiter.api.Timeout
@@ -107,7 +107,7 @@ class TestContainerCheck : BeforeEachCallback, AfterEachCallback, TypeBasedParam
     private fun ExtensionContext.uniqueContainer() = DockerContainer(simplifiedId)
 
     private fun ExtensionContext.pullRequiredImages() =
-        spanningLine("Pulling required images") {
+        runSpanningLine("Pulling required images") {
             val missing = requiredDockerImages() subtract DockerImage.list()
             missing.forEach { it.pull() }
         }

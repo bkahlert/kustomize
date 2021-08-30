@@ -1,10 +1,10 @@
 package com.bkahlert.kustomize.util
 
-import com.bkahlert.kustomize.util.Disk.Companion.flashDiskOf
 import com.bkahlert.kommons.exec.output
 import com.bkahlert.kommons.shell.ShellScript
-import com.bkahlert.kommons.tracing.rendering.spanningLine
+import com.bkahlert.kommons.tracing.rendering.runSpanningLine
 import com.bkahlert.kommons.unit.bytes
+import com.bkahlert.kustomize.util.Disk.Companion.flashDiskOf
 
 object DiskUtil {
 
@@ -15,7 +15,7 @@ object DiskUtil {
         ShellScript { command(command, "list", "-plist", "external", "physical") }.exec.logging().io.output.ansiRemoved
 
     fun listDisks(): Set<Disk> =
-        spanningLine("Listing physical external disks") { disks }
+        runSpanningLine("Listing physical external disks") { disks }
 
     val disks: Set<Disk>
         get() = XML.from(listOutput()).findNodes("//dict/key[text()='DeviceIdentifier']").mapNotNull { node ->

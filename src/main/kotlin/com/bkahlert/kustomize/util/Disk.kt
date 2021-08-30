@@ -6,7 +6,7 @@ import com.bkahlert.kommons.io.path.pathString
 import com.bkahlert.kommons.shell.ShellScript
 import com.bkahlert.kommons.text.ANSI.Text.Companion.ansi
 import com.bkahlert.kommons.text.quoted
-import com.bkahlert.kommons.tracing.rendering.spanningLine
+import com.bkahlert.kommons.tracing.rendering.runSpanningLine
 import com.bkahlert.kommons.tracing.runSpanning
 import com.bkahlert.kommons.unit.BinaryPrefixes
 import com.bkahlert.kommons.unit.DecimalPrefixes
@@ -21,17 +21,17 @@ class Disk private constructor(val id: DiskIdentifier, val capacity: Size) {
 
     val roundedCapacity get() = capacity.toString(DecimalPrefixes, decimals = 0)
 
-    fun mountDisk(): Disk = spanningLine("Mounting ${this@Disk}") {
+    fun mountDisk(): Disk = runSpanningLine("Mounting ${this@Disk}") {
         ShellScript { command(DiskUtil.command, "mountDisk", id.name) }
         this@Disk
     }
 
-    fun unmountDisk(): Disk = spanningLine("Un-mounting ${this@Disk}") {
+    fun unmountDisk(): Disk = runSpanningLine("Un-mounting ${this@Disk}") {
         ShellScript { command(DiskUtil.command, "unmountDisk", id.name) }
         this@Disk
     }
 
-    fun eject(): Disk = spanningLine("Ejecting ${this@Disk}") {
+    fun eject(): Disk = runSpanningLine("Ejecting ${this@Disk}") {
         ShellScript { command(DiskUtil.command, "eject", id.name) }
         this@Disk
     }

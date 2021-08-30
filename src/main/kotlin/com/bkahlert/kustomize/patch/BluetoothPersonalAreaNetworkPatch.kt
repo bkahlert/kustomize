@@ -18,7 +18,6 @@ import com.bkahlert.kustomize.os.OperatingSystemImage
  * @see <a href="https://github.com/mk-fg/fgtk/blob/master/bt-pan">bt-pan</a>
  * @see <a href="http://bluez.sourceforge.net/contrib/HOWTO-PAN">HowTo set up common PAN scenarios with BlueZ's integrated PAN support</a>
  */
-// TODO consider switching to https://github.com/emmercm/panr
 class BluetoothPersonalAreaNetworkPatch(
     /**
      * The DHCP range to use to auto-configure devices making a connection
@@ -31,6 +30,12 @@ class BluetoothPersonalAreaNetworkPatch(
     val deviceAddress: IPAddress = ip4Of("10.10.10.20"),
 ) : (OperatingSystemImage) -> PhasedPatch {
 
+    /**
+     * usr/local/bin
+     * wget https://raw.githubusercontent.com/emmercm/panr/master/panr && chmod +x panr
+     * wget https://raw.githubusercontent.com/emmercm/panr/master/panr-acceptr && chmod +x panr-acceptr
+     *
+     */
     companion object {
         val DISABLE_SAP_CONF = LinuxRoot.etc.systemd.system.bluetooth_service_d / "01-disable-sap-plugin.conf"
 

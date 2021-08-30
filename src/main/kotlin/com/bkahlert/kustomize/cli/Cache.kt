@@ -16,7 +16,7 @@ import com.bkahlert.kommons.time.Now
 import com.bkahlert.kommons.time.format
 import com.bkahlert.kommons.time.minutes
 import com.bkahlert.kommons.time.parseInstant
-import com.bkahlert.kommons.tracing.rendering.spanningLine
+import com.bkahlert.kommons.tracing.rendering.runSpanningLine
 import com.bkahlert.kommons.tracing.runSpanning
 import com.bkahlert.kommons.unit.BinaryPrefixes
 import com.bkahlert.kustomize.Kustomize
@@ -129,7 +129,7 @@ private open class SingleFileDirectory(dir: Path) : com.bkahlert.kustomize.cli.M
                 providedFile.delete()
                 destFile
             } else {
-                spanningLine("Moving download to ${destFile.uriString}") {
+                runSpanningLine("Moving download to ${destFile.uriString}") {
                     providedFile.moveTo(destFile)
                 }
             }
