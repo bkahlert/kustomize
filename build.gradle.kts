@@ -1,5 +1,9 @@
 @file:Suppress("SpellCheckingInspection")
 
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+import org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED
+import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_ERROR
+import org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_OUT
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -30,7 +34,7 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-sdk:1.5.0")
     implementation("io.opentelemetry:opentelemetry-exporter-jaeger:1.5.0")
     implementation("io.opentelemetry:opentelemetry-exporter-logging:1.5.0")
-    implementation("io.grpc:grpc-okhttp:1.40.1")
+    implementation("io.grpc:grpc-okhttp:1.39.0")
 
     implementation("com.github.ajalt.clikt:clikt:3.1.0")
     implementation("io.github.config4k:config4k:0.4.2")
@@ -79,6 +83,14 @@ tasks {
     }
 
     test {
+        useJUnitPlatform()
+        testLogging {
+            events = setOf(FAILED, STANDARD_OUT, STANDARD_ERROR)
+            exceptionFormat = FULL
+            showExceptions = true
+            showCauses = true
+            showStackTraces = true
+        }
         minHeapSize = "128m"
         maxHeapSize = "512m"
         failFast = false
