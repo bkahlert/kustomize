@@ -53,7 +53,7 @@ dependencies {
         because("needed to launch the JUnit Platform Console program")
     }
 
-    implementation("io.strikt:strikt-core:0.30.1")
+    implementation("io.strikt:strikt-core:0.32.0")
     implementation("io.strikt:strikt-jvm:0.30.1")
     implementation(kotlin("stdlib-jdk8"))
 }
