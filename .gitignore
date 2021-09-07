@@ -1,7 +1,6 @@
-.cache
-.gradle
-.idea
-build
-sample
-
-dump--*
+/.idea
+/.cache
+/.gradle
+/build
+/sample
+/dump--*

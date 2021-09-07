@@ -1,6 +1,6 @@
 ![Kaomoji customizing image](docs/banner.svg)
 
-# Kustomize [![Build Status](https://img.shields.io/github/workflow/status/bkahlert/kustomize/build%20and%20test?label=Build&logo=github&logoColor=fff)](https://github.com/bkahlert/kustomize/actions/workflows/build.yml) [![Repository Size](https://img.shields.io/github/repo-size/bkahlert/kustomize?color=01818F&label=Repo%20Size&logo=Git&logoColor=fff)](https://github.com/bkahlert/kustomize) [![Repository Size](https://img.shields.io/github/license/bkahlert/kustomize?color=29ABE2&label=License&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1OTAgNTkwIiAgeG1sbnM6dj0iaHR0cHM6Ly92ZWN0YS5pby9uYW5vIj48cGF0aCBkPSJNMzI4LjcgMzk1LjhjNDAuMy0xNSA2MS40LTQzLjggNjEuNC05My40UzM0OC4zIDIwOSAyOTYgMjA4LjljLTU1LjEtLjEtOTYuOCA0My42LTk2LjEgOTMuNXMyNC40IDgzIDYyLjQgOTQuOUwxOTUgNTYzQzEwNC44IDUzOS43IDEzLjIgNDMzLjMgMTMuMiAzMDIuNCAxMy4yIDE0Ny4zIDEzNy44IDIxLjUgMjk0IDIxLjVzMjgyLjggMTI1LjcgMjgyLjggMjgwLjhjMCAxMzMtOTAuOCAyMzcuOS0xODIuOSAyNjEuMWwtNjUuMi0xNjcuNnoiIGZpbGw9IiNmZmYiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxOS4yMTIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4%3D)](https://github.com/bkahlert/kustomize/blob/master/LICENSE)
+# Kustomize [![Build Status](https://img.shields.io/github/workflow/status/bkahlert/kustomize/build?label=Build&logo=github&logoColor=fff)](https://github.com/bkahlert/kustomize/actions/workflows/build.yml) [![Repository Size](https://img.shields.io/github/repo-size/bkahlert/kustomize?color=01818F&label=Repo%20Size&logo=Git&logoColor=fff)](https://github.com/bkahlert/kustomize) [![Repository Size](https://img.shields.io/github/license/bkahlert/kustomize?color=29ABE2&label=License&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1OTAgNTkwIiAgeG1sbnM6dj0iaHR0cHM6Ly92ZWN0YS5pby9uYW5vIj48cGF0aCBkPSJNMzI4LjcgMzk1LjhjNDAuMy0xNSA2MS40LTQzLjggNjEuNC05My40UzM0OC4zIDIwOSAyOTYgMjA4LjljLTU1LjEtLjEtOTYuOCA0My42LTk2LjEgOTMuNXMyNC40IDgzIDYyLjQgOTQuOUwxOTUgNTYzQzEwNC44IDUzOS43IDEzLjIgNDMzLjMgMTMuMiAzMDIuNCAxMy4yIDE0Ny4zIDEzNy44IDIxLjUgMjk0IDIxLjVzMjgyLjggMTI1LjcgMjgyLjggMjgwLjhjMCAxMzMtOTAuOCAyMzcuOS0xODIuOSAyNjEuMWwtNjUuMi0xNjcuNnoiIGZpbGw9IiNmZmYiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIxOS4yMTIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4%3D)](https://github.com/bkahlert/kustomize/blob/master/LICENSE)
 
 **Kotlin-based customizer for IoT images like [Raspberry Pi OS](https://www.raspberrypi.org/software/operating-systems)**  
 Kustomize applies a [HOCON](https://github.com/lightbend/config/blob/master/HOCON.md) based customization file to a [Raspberry Pi](https://www.raspberrypi.org/)
@@ -302,7 +302,14 @@ See [sample-full.conf](sample-full.conf) for all existing configuration options.
 ### Docker
 
 ```shell
-docker build -t bkahlert/kustomize:latest .
+git clone https://github.com/bkahlert/kustomize.git
+cd libguestfs
+
+# Build image and output to docker (default)
+docker buildx bake
+
+# Build multi-platform image
+docker buildx bake image-all
 ```
 
 ## TODO
@@ -314,3 +321,14 @@ docker build -t bkahlert/kustomize:latest .
     - https://github.com/garthvh/ansible-raspi-playbooks/blob/master/tasks/tzdata.yml
     - https://github.com/garthvh/ansible-raspi-playbooks/blob/master/tasks/internationalization.yml
     - https://github.com/garthvh/ansible-raspi-playbooks/blob/master/playbooks/new-default.yml
+
+## Contributing
+
+Want to contribute? Awesome! The most basic way to show your support is to star the project, or to raise issues. You can also support this project by making
+a [Paypal donation](https://www.paypal.me/bkahlert) to ensure this journey continues indefinitely!
+
+Thanks again for your support, it is much appreciated! :pray:
+
+## License
+
+MIT. See [LICENSE](LICENSE) for more details.
