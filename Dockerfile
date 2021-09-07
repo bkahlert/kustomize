@@ -15,20 +15,29 @@ RUN ./gradlew installDist
 # new image
 FROM openjdk:18-slim
 
+ARG TARGETPLATFORM
+RUN wget -q https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static-${TINI_ARCH} -O /tini \
+ && chmod +x /tini
+
 # install Docker CLI & AWT dependencies
 RUN apt-get update \
- && apt-get -y install \
+ && DEBIAN_FRONTEND=noninteractive apt-get -qq install \
       apt-transport-https \
       ca-certificates \
       curl \
       gnupg \
       lsb-release \
  && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
- && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
-          https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
+ && case ${TARGETPLATFORM} in \
+         "linux/amd64")     DOCKER_ARCH=amd64  ;; \
+         "linux/arm64/v8")  DOCKER_ARCH=arm64  ;; \
+    esac \
+ && echo "deb [arch=$DOCKER_ARCH signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
  && apt-get update \
- && apt-get -y install docker-ce-cli \
- && apt-get -y install fontconfig libfreetype6
+ && apt-get -qq install \
+                docker-ce-cli \
+                fontconfig \
+                libfreetype6
 
 # copy binaries
 COPY --from=0 /kustomize/build/install .
