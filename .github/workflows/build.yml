@@ -49,9 +49,9 @@ jobs:
         run: ./gradlew build -x test
 
       - name: Test kommons
-        run: ./gradlew test --tests "com.bkahlert.kommons"
+        run: ./gradlew test --tests "com.bkahlert.kommons.*"
       - name: Test cli
-        run: ./gradlew test --tests "com.bkahlert.kustomize.cli"
+        run: ./gradlew test --tests "com.bkahlert.kustomize.cli.*"
 
       - uses: actions/upload-artifact@v2
         with:
