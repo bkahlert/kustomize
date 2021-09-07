@@ -8,7 +8,6 @@ import com.bkahlert.kommons.net.ip4Of
 import com.bkahlert.kommons.shell.ShellScript
 import com.bkahlert.kommons.test.SystemProperties
 import com.bkahlert.kommons.test.SystemProperty
-import com.bkahlert.kommons.test.containsAtLeast
 import com.bkahlert.kommons.test.hasElements
 import com.bkahlert.kommons.test.test
 import com.bkahlert.kommons.test.withTempDir
@@ -55,6 +54,7 @@ import strikt.api.expectThrows
 import strikt.assertions.any
 import strikt.assertions.contains
 import strikt.assertions.containsExactly
+import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.hasSize
 import strikt.assertions.isA
 import strikt.assertions.isEmpty
@@ -63,7 +63,6 @@ import strikt.assertions.isNotEmpty
 import strikt.assertions.isNotNull
 import strikt.assertions.isTrue
 import strikt.assertions.message
-import strikt.assertions.none
 import java.nio.file.Path
 import java.util.TimeZone
 import kotlin.io.path.div
@@ -324,10 +323,10 @@ class CustomizationConfigTest {
                 expecting { port } that { isEqualTo(1234) }
                 @Suppress("SpellCheckingInspection")
                 expecting { authorizedKeys } that {
-                    contains(
-                        listOf("""ssh-rsa MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAKbic/EEoiSu09lYR1y5001NA1K63M/Jd+IV1b2YpoXJxWDrkzQ/3v/SE84/cSayWAy4LVEXUodrt1WkPZ/NjE8CAwEAAQ== "John Doe 2020-12-10 btw, Corona sucks"""")
+                    containsExactlyInAnyOrder(
+                        "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBHs0pX2VqQlctO4TXDlkklFFdLKJ1R5c1rMpq84UxyIzNgdkiSjgckn9WvIwmynsybFuM4jjfOtJQnSnsr8k1Ug= \"John Doe\"",
+                        "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQCGmJI38wiF3NGE3hfTdgxkrfb6WbiWw3hpUudhhrlIWApmvk08zTfeQbAxkF/hUgPd2zS3UsX+c1YOIH2Pja3JGzxRWdJIMB2S1uV3xMfqmUcfRQlQqPsJB8W9UpSbnkYgCsU//BX73G0fAIQArNcVTyAlsFFKQN87A9E8MhdKRQ== \"John Doe\"",
                     )
-                    none { containsAtLeast("ssh-", 2) }
                 }
             }
             expecting { defaultUser } that { isEqualTo(DefaultUser(null, "john.doe", "Password1234")) }

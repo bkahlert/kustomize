@@ -164,11 +164,6 @@ class CurlyPatternKtTest {
     }
 
     @Test
-    fun `should allow to deactivate removal of ANSI escape sequences`() {
-        expectThat("ab".ansi.red.toString() + "c").not { matchesCurlyPattern("abc", removeAnsi = false) }
-    }
-
-    @Test
     fun `should unify whitespace`() {
         expectThat("A B C").toStringMatchesCurlyPattern("A {} C")
     }

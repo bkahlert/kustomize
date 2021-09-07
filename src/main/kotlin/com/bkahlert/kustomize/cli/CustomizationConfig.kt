@@ -2,7 +2,6 @@ package com.bkahlert.kustomize.cli
 
 import com.bkahlert.kommons.builder.buildList
 import com.bkahlert.kommons.io.path.asPath
-import com.bkahlert.kommons.io.path.ls
 import com.bkahlert.kommons.net.IPAddress
 import com.bkahlert.kommons.net.IPSubnet
 import com.bkahlert.kommons.net.ipSubnetOf
@@ -14,7 +13,6 @@ import com.bkahlert.kommons.text.minus
 import com.bkahlert.kommons.text.takeUnlessBlank
 import com.bkahlert.kommons.unit.Size
 import com.bkahlert.kommons.unit.toSize
-import com.bkahlert.kustomize.Kustomize
 import com.bkahlert.kustomize.cli.CustomizationConfig.BluetoothProfile
 import com.bkahlert.kustomize.cli.CustomizationConfig.BluetoothProfile.PersonalAreaNetwork
 import com.bkahlert.kustomize.cli.CustomizationConfig.DefaultUser
@@ -64,6 +62,7 @@ import java.net.URI
 import java.nio.file.Path
 import java.util.TimeZone
 import kotlin.io.path.exists
+import kotlin.io.path.isReadable
 import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.readText
 
@@ -181,10 +180,13 @@ data class CustomizationConfig(
                         },
                         extract<String?>("size")?.takeUnless { it.isBlank() }?.toSize(),
                         extract<IntermediarySsh?>("ssh")?.run {
-                            val fileBasedKeys = (authorizedKeys?.files ?: emptyList()).flatMap { glob ->
-                                Kustomize.home.ls(glob).map { file -> file.readText() }
-                                    .filter { content -> content.startsWith("ssh-") }
-                            }
+                            val fileBasedKeys = (authorizedKeys?.files ?: emptyList()).map { keyFile ->
+                                keyFile.asPath()
+                                    .also { require(it.exists()) { "SSH key file $it does not exist" } }
+                                    .also { require(it.isReadable()) { "SSH key file $it cannot be read" } }
+                                    .readText()
+                                    .trim()
+                            }.filter { content -> content.startsWith("ssh-") }
                             val stringBasedKeys = (authorizedKeys?.keys ?: emptyList()).map { it.trim() }
                             Ssh(enabled, port, fileBasedKeys + stringBasedKeys)
                         },
