@@ -46,7 +46,12 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew build -i
+        run: ./gradlew build -x test
+
+      - name: Test kommons
+        run: ./gradlew test --tests "com.bkahlert.kommons"
+      - name: Test cli
+        run: ./gradlew test --tests "com.bkahlert.kustomize.cli"
 
       - uses: actions/upload-artifact@v2
         with:
