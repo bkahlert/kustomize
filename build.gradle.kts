@@ -21,8 +21,8 @@ repositories {
 
 dependencies {
 
-//    implementation("com.bkahlert.kommons:kommons:1.11.1")
-    implementation("com.bkahlert.kommons:kommons:1.12.0-SNAPSHOT")
+    implementation("com.bkahlert.kommons:kommons:1.11.2")
+//    implementation("com.bkahlert.kommons:kommons:1.12.0-SNAPSHOT")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.21") {
         because("filepeek takes 1.3")
