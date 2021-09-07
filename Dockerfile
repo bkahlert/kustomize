@@ -16,8 +16,6 @@ RUN ./gradlew installDist
 FROM openjdk:18-slim
 
 ARG TARGETPLATFORM
-RUN wget -q https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-static-${TINI_ARCH} -O /tini \
- && chmod +x /tini
 
 # install Docker CLI & AWT dependencies
 RUN apt-get update \
