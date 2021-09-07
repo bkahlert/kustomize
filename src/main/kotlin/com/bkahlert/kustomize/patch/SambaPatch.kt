@@ -84,7 +84,13 @@ class SambaPatch(
         }.toString()
 
         virtCustomize {
-            firstBootInstall { listOf("samba", "cifs-utils") }
+            firstBoot {
+                aptGet.update(allowReleaseInfoChange = true)
+                command("apt", "update")
+                command("apt-get", "-qq", "--fix-missing", "install", "samba", "cifs-utils")
+                aptGet.install("samba", "cifs-utils", ignoreMissing = true)
+            }
+//            firstBootInstall { listOf("samba", "cifs-utils") }
             copyIn(SAMBA_CONF) {
                 createParentDirectories().writeLines(config.lines())
             }
@@ -98,8 +104,6 @@ class SambaPatch(
                 """
             }
         }
-
-        bootOs = true // TODO reboot needed?
     }
 
     companion object {

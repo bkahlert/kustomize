@@ -1,6 +1,7 @@
 package com.bkahlert.kustomize.patch
 
 import com.bkahlert.kommons.builder.buildArray
+import com.bkahlert.kommons.builder.buildList
 import com.bkahlert.kommons.builder.context.ListBuildingContext
 import com.bkahlert.kommons.shell.ShellScript.ScriptContext
 import com.bkahlert.kommons.shell.ShellScript.ScriptContext.Line
@@ -15,6 +16,16 @@ val ScriptContext.apt get() = Apt(this)
  * Several "front-end" interfaces exist, such as synaptic and aptitude.
  */
 class AptGet(private val script: ScriptContext) {
+
+    /**
+     * Used to re-synchronize the package index files from their sources.
+     */
+    fun update(
+        allowReleaseInfoChange: Boolean = false,
+    ): Line = buildList {
+        add("update")
+        if (allowReleaseInfoChange) add("--allow-releaseinfo-change")
+    }.let { script.command("apt-get", it) }
 
     /**
      * This option is followed by one or more packages desired for installation.

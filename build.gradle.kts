@@ -8,8 +8,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.5.21"
-    id("com.github.ben-manes.versions") version "0.39.0"
-    id("se.patrikerdes.use-latest-versions") version "0.2.17"
     application
 }
 
@@ -23,8 +21,8 @@ repositories {
 
 dependencies {
 
-    implementation("com.bkahlert.kommons:kommons:1.11.1")
-//    implementation("com.bkahlert.kommons:kommons:1.10.0-SNAPSHOT")
+//    implementation("com.bkahlert.kommons:kommons:1.11.1")
+    implementation("com.bkahlert.kommons:kommons:1.12.0-SNAPSHOT")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.21") {
         because("filepeek takes 1.3")
@@ -43,7 +41,7 @@ dependencies {
         because("needed to extract downloaded archives containing the image")
     }
 
-    testImplementation(platform("org.junit:junit-bom:5.8.0-M1"))
+    testImplementation(platform("org.junit:junit-bom:5.8.0-RC1"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
     testImplementation("org.junit.jupiter:junit-jupiter-params")
@@ -99,5 +97,5 @@ tasks {
 }
 
 application {
-    mainClassName = "MainKt"
+    mainClass.set("MainKt")
 }

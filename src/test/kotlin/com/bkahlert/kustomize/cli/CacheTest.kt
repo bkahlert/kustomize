@@ -1,15 +1,19 @@
 package com.bkahlert.kustomize.cli
 
+import com.bkahlert.kommons.io.path.age
 import com.bkahlert.kommons.io.path.asPath
 import com.bkahlert.kommons.io.path.deleteRecursively
+import com.bkahlert.kommons.io.path.forEachDirectoryEntryRecursively
 import com.bkahlert.kommons.io.path.hasContent
 import com.bkahlert.kommons.io.path.isInside
 import com.bkahlert.kommons.io.path.listDirectoryEntriesRecursively
 import com.bkahlert.kommons.io.path.randomDirectory
 import com.bkahlert.kommons.junit.UniqueId
 import com.bkahlert.kommons.runtime.ClassPathFile
+import com.bkahlert.kommons.test.expectCatching
 import com.bkahlert.kommons.test.single
 import com.bkahlert.kommons.test.withTempDir
+import com.bkahlert.kommons.time.days
 import com.bkahlert.kustomize.Kustomize
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Nested
@@ -18,6 +22,7 @@ import strikt.api.Assertion.Builder
 import strikt.api.expectThat
 import strikt.assertions.hasSize
 import strikt.assertions.isEqualTo
+import strikt.assertions.isSuccess
 import strikt.assertions.isTrue
 import strikt.java.exists
 import strikt.java.fileName
@@ -53,7 +58,7 @@ class CacheTest {
     fun `should provide a retrieved copy`(uniqueId: UniqueId) = withTempDir(uniqueId) {
         val cache = Cache(randomDirectory())
 
-        val copy = cache.provideCopy("my-copy") {
+        val copy = cache.provideCopy("project") {
             ClassPathFile("riscos.img.zip").copyToTemp()
         }
 
@@ -63,26 +68,34 @@ class CacheTest {
     }
 
     @Test
-    fun `should only retrieve a copy once`(uniqueId: UniqueId) = withTempDir(uniqueId) {
-        val cache = Cache(randomDirectory())
-        var providerCalls = 0
-        val provider = {
-            providerCalls++
-            ClassPathFile("riscos.img.zip").copyToDirectory(this)
+    fun `should re-use existing copy`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+        val cache = Cache(randomDirectory()).apply {
+            provideCopy("project") { ClassPathFile("riscos.img.zip").copyToTemp() }
         }
 
-        val copies = (0..2).map {
-            with(cache) {
-                provideCopy("my-copy", provider)
+        expectCatching {
+            cache.provideCopy("project") { throw IllegalStateException("existing copy ignored") }
+        } that {
+            isSuccess()
+        }
+    }
+
+    @Test
+    fun `should re-retrieve copy if too old`(uniqueId: UniqueId) = withTempDir(uniqueId) {
+        val cacheDir = randomDirectory()
+        val cache = Cache(cacheDir).apply {
+            provideCopy("project") {
+                ClassPathFile("riscos.img.zip").copyToTemp()
             }
         }
+        cacheDir.forEachDirectoryEntryRecursively { it.age = 31.days }
 
-        expectThat(providerCalls).isEqualTo(1)
-        copies.forEach { copy ->
-            expectThat(copy)
-                .hasContent(ClassPathFile("riscos.img").data)
-                .get { isInside(cache.dir) }.isTrue()
+        var retrieved = false
+        cache.provideCopy("project") {
+            ClassPathFile("riscos.img.zip").copyToTemp().also { retrieved = true }
         }
+
+        expectThat(retrieved).isTrue()
     }
 }
 

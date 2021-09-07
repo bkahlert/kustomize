@@ -1,6 +1,7 @@
 package com.bkahlert.kustomize.cli
 
 import com.bkahlert.kommons.io.path.FileSizeComparator
+import com.bkahlert.kommons.io.path.age
 import com.bkahlert.kommons.io.path.cloneTo
 import com.bkahlert.kommons.io.path.delete
 import com.bkahlert.kommons.io.path.deleteRecursively
@@ -13,11 +14,13 @@ import com.bkahlert.kommons.io.path.uriString
 import com.bkahlert.kommons.text.ANSI.Colors.cyan
 import com.bkahlert.kommons.text.randomString
 import com.bkahlert.kommons.time.Now
+import com.bkahlert.kommons.time.days
 import com.bkahlert.kommons.time.format
 import com.bkahlert.kommons.time.minutes
 import com.bkahlert.kommons.time.parseInstant
 import com.bkahlert.kommons.tracing.rendering.runSpanningLine
 import com.bkahlert.kommons.tracing.runSpanning
+import com.bkahlert.kommons.tracing.spanScope
 import com.bkahlert.kommons.unit.BinaryPrefixes
 import com.bkahlert.kustomize.Kustomize
 import com.bkahlert.kustomize.libguestfs.ImageExtractor.extractImage
@@ -33,12 +36,16 @@ import kotlin.io.path.isWritable
 import kotlin.io.path.moveTo
 import kotlin.time.Duration
 
-class Cache(dir: Path, private val maxConcurrentWorkingDirectories: Int = 5) : com.bkahlert.kustomize.cli.ManagedDirectory(
+class Cache(
+    dir: Path,
+    private val maxConcurrentWorkingDirectories: Int = 5,
+    private val maxAge: Duration = 10.days,
+) : ManagedDirectory(
     Kustomize.work.resolve(dir).createDirectories().normalize(),
 ) {
 
     fun provideCopy(name: String, provider: () -> Path): Path =
-        ProjectDirectory(dir, name, maxConcurrentWorkingDirectories).require(provider)
+        ProjectDirectory(dir, name, maxConcurrentWorkingDirectories, maxAge).require(provider)
 }
 
 open class ManagedDirectory(val dir: Path) {
@@ -62,16 +69,15 @@ class ProjectDirectory(
     parentDir: Path,
     dirName: String,
     maxConcurrentWorkingDirectories: Int,
-) : com.bkahlert.kustomize.cli.ManagedDirectory(parentDir, dirName) {
-
-    constructor(dir: Path) : this(dir.parent, dir.fileName.pathString, Int.MAX_VALUE)
+    maxAge: Duration,
+) : ManagedDirectory(parentDir, dirName) {
 
     init {
         deleteOldWorkDirs(maxConcurrentWorkingDirectories)
     }
 
-    private val downloadDir = SingleFileDirectory(dir, "download")
-    private val rawDir = SingleFileDirectory(dir, "raw")
+    private val downloadDir = SingleFileDirectory(dir, "download", maxAge)
+    private val rawDir = SingleFileDirectory(dir, "raw", maxAge)
 
     val workDirs: List<WorkDirectory>
         get() = dir.listDirectoryEntriesRecursively()
@@ -91,8 +97,8 @@ class ProjectDirectory(
         }
 
     fun require(provider: () -> Path): Path = runSpanning("Retrieving image") {
-        val img = rawDir.requireSingle {
-            val downloadedFile = downloadDir.requireSingle(provider)
+        val img = rawDir.single {
+            val downloadedFile = downloadDir.single(provider)
             downloadedFile.extractImage()
         }
 
@@ -100,27 +106,32 @@ class ProjectDirectory(
     }
 }
 
-private open class SingleFileDirectory(dir: Path) : com.bkahlert.kustomize.cli.ManagedDirectory(dir) {
-    constructor(parentDir: Path, dirName: String) : this(parentDir.resolve(dirName))
+private open class SingleFileDirectory(dir: Path, val maxAge: Duration) : ManagedDirectory(dir) {
+    constructor(parentDir: Path, dirName: String, maxAge: Duration) : this(parentDir.resolve(dirName), maxAge)
 
-    private fun fileCount(): Int = dir
-        .listDirectoryEntriesRecursively()
-        .filterNot(Path::isHidden)
-        .filter { it != dir }
-        .size
+    private val files: Sequence<Path>
+        get() = spanScope {
+            if (!dir.exists() || !dir.isDirectory()) emptySequence()
+            else dir.listDirectoryEntriesRecursively()
+                .asSequence()
+                .filterNot(Path::isHidden)
+                .filter { it != dir }
+                .mapNotNull { file ->
+                    if (file.age > maxAge) {
+                        log("${file.fileName} is outdated. Deleting...")
+                        file.delete()
+                        null
+                    } else file
+                }
+                .sortedWith(FileSizeComparator)
+        }
 
-    fun fileExists(): Boolean = dir.exists() && dir.isDirectory() && fileCount() > 0
+    val fileExists: Boolean get() = files.count() > 0
 
-    fun getSingle(): Path? =
-        if (fileExists()) dir
-            .listDirectoryEntriesRecursively()
-            .filterNot(Path::isHidden)
-            .filter { it != dir }
-            .sortedWith(FileSizeComparator)[0]
-        else null
+    fun singleOrNull(): Path? = files.singleOrNull()
 
-    fun requireSingle(provide: () -> Path): Path {
-        val file = getSingle()
+    fun single(provide: () -> Path): Path {
+        val file = singleOrNull()
         if (file != null) return file
         super.dir.createDirectories()
         return provide().let { providedFile ->
@@ -137,12 +148,12 @@ private open class SingleFileDirectory(dir: Path) : com.bkahlert.kustomize.cli.M
     }
 
     override fun toString(): String {
-        val count = fileCount().let { if (it == 1) "1 file" else "$it files" }
+        val count = files.count().let { if (it == 1) "1 file" else "$it files" }
         return "SingleFileDirectory($count in $dir)"
     }
 }
 
-class WorkDirectory(dir: Path) : com.bkahlert.kustomize.cli.ManagedDirectory(dir.parent,
+class WorkDirectory(dir: Path) : ManagedDirectory(dir.parent,
     requireValidName(dir)) {
 
     val age: Duration get() = Now.passedSince(createdAt(dir).toEpochMilli())

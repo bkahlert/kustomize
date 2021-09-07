@@ -40,6 +40,7 @@ import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomizat
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.SshInjectOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.TimeZoneOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.TouchOption
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.UpdateOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.WriteOption
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
@@ -235,6 +236,7 @@ class VirtCustomizeCommandLine(
         }
 
         class TouchOption(file: DiskPath) : VirtCustomization("--touch", file.pathString)
+        object UpdateOption : VirtCustomization("--update", emptyList())
         class WriteOption(val file: DiskPath, val content: String) : VirtCustomization("--write", "$file:$content")
     }
 
@@ -464,6 +466,13 @@ class VirtCustomizeCommandLine(
              */
             fun touch(init: (OperatingSystemImage) -> DiskPath) {
                 virtCustomizations.add(init(osImage).run { TouchOption(this) })
+            }
+
+            /**
+             * Do the equivalent of yum update, apt-get upgrade, or whatever command is required to update the packages already installed in the template to their latest versions.
+             */
+            fun update() {
+                virtCustomizations.add(UpdateOption)
             }
 
             /**
