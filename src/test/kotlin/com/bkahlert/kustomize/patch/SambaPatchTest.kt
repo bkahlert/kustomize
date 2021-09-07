@@ -1,5 +1,12 @@
 package com.bkahlert.kustomize.patch
 
+import com.bkahlert.kommons.io.path.asPath
+import com.bkahlert.kommons.io.path.textContent
+import com.bkahlert.kommons.junit.UniqueId
+import com.bkahlert.kommons.test.Smoke
+import com.bkahlert.kommons.test.withTempDir
+import com.bkahlert.kommons.unit.Gibi
+import com.bkahlert.kommons.unit.bytes
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.CopyInOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootInstallOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootOption
@@ -14,13 +21,6 @@ import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
 import com.bkahlert.kustomize.patch.RootShare.`read-write`
 import com.bkahlert.kustomize.test.E2E
-import com.bkahlert.kommons.io.path.asPath
-import com.bkahlert.kommons.io.path.textContent
-import com.bkahlert.kommons.junit.UniqueId
-import com.bkahlert.kommons.test.Smoke
-import com.bkahlert.kommons.test.withTempDir
-import com.bkahlert.kommons.unit.Gibi
-import com.bkahlert.kommons.unit.bytes
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.any

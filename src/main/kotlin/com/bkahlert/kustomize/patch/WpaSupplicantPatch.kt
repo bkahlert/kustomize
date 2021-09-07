@@ -1,8 +1,8 @@
 package com.bkahlert.kustomize.patch
 
-import com.bkahlert.kustomize.os.LinuxRoot.etc.wpa_supplicant.wpa_supplicant_conf
-import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kommons.text.LineSeparators.lines
+import com.bkahlert.kustomize.os.LinuxRoot
+import com.bkahlert.kustomize.os.OperatingSystemImage
 
 /**
  * Sets the `wpa_supplicant.conf` to the specified [fileContent].
@@ -15,7 +15,7 @@ class WpaSupplicantPatch(
         osImage,
     ) {
         virtCustomize {
-            copyIn(wpa_supplicant_conf, fileContent)
+            copyIn(LinuxRoot.etc.wpa_supplicant.wpa_supplicant_conf, fileContent)
         }
     }
 }
