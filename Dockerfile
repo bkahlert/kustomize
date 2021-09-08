@@ -8,7 +8,6 @@ RUN gradle installDist
 
 WORKDIR /tmp
 ARG DOCKER_VERSION=20.10.8
-#RUN apt-get -qq update && apt-get -qq install wget
 ARG TARGETARCH
 RUN case ${TARGETARCH} in \
          arm|arm/v6|arm/v7) DOCKER_ARCH="armhf" ;; \
@@ -26,14 +25,11 @@ RUN apt-get update \
                 fontconfig \
                 libfreetype6
 
-# Copy Docker CLI
+COPY --from=app /home/gradle/kustomize/build/install/kustomize /usr/local
 COPY --from=app /tmp/docker/docker /usr/bin/docker
-
-# Copy binaries
-COPY --from=app /home/gradle/kustomize/build/install .
 #RUN groupadd --gid ${GID} app
 #RUN useradd --home-dir /work --create-home --no-log-init --uid ${UID} --gid ${GID} app
 #USER app
 WORKDIR /work
-ENTRYPOINT ["/kustomize/bin/kustomize"]
+ENTRYPOINT ["/usr/local/bin/kustomize"]
 CMD ["-h"]

@@ -123,7 +123,6 @@ jobs:
             ./docker-bake.hcl
             ${{ steps.meta.outputs.bake-file }}
           targets: image-all
-          no-cache: true
           push: ${{ github.event_name != 'pull_request' }}
 
       - name: Check manifest
