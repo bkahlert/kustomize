@@ -1,7 +1,14 @@
-FROM --platform=$BUILDPLATFORM ubuntu:bionic as docker-cli-getter
-ARG DOCKER_VERSION=20.10.8
+FROM gradle:jre11 as app
+
+WORKDIR /home/gradle/kustomize
+COPY settings.gradle.kts .
+COPY build.gradle.kts .
+COPY src ./src
+RUN gradle installDist
+
 WORKDIR /tmp
-RUN apt-get -qq update && apt-get -qq install wget
+ARG DOCKER_VERSION=20.10.8
+#RUN apt-get -qq update && apt-get -qq install wget
 ARG TARGETARCH
 RUN case ${TARGETARCH} in \
          arm|arm/v6|arm/v7) DOCKER_ARCH="armhf" ;; \
@@ -12,34 +19,18 @@ RUN case ${TARGETARCH} in \
  && tar xzvf docker-$DOCKER_VERSION.tgz
 
 
-FROM openjdk:18-slim as app
-WORKDIR /kustomize
-
-# copy gradle
-COPY gradlew .
-COPY gradle ./gradle
-
-# copy sources
-COPY settings.gradle.kts .
-COPY build.gradle.kts .
-COPY src ./src
-
-# compile
-RUN ./gradlew installDist -v
-
-
 FROM openjdk:18-slim
-# install AWT dependencies
+# Install AWT dependencies
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get -qq install \
                 fontconfig \
                 libfreetype6
 
-# Docker
-COPY --from=docker-cli-getter '/tmp/docker/docker' '/usr/bin/docker'
+# Copy Docker CLI
+COPY --from=app /tmp/docker/docker /usr/bin/docker
 
-# copy binaries
-COPY --from=app /kustomize/build/install .
+# Copy binaries
+COPY --from=app /home/gradle/kustomize/build/install .
 #RUN groupadd --gid ${GID} app
 #RUN useradd --home-dir /work --create-home --no-log-init --uid ${UID} --gid ${GID} app
 #USER app
