@@ -1,4 +1,18 @@
-FROM openjdk:18-slim
+FROM --platform=$BUILDPLATFORM ubuntu:bionic as docker-cli-getter
+ARG DOCKER_VERSION=20.10.8
+WORKDIR /tmp
+RUN apt-get -qq update && apt-get -qq install wget
+ARG TARGETARCH
+RUN case ${TARGETARCH} in \
+         arm|arm/v6|arm/v7) DOCKER_ARCH="armhf" ;; \
+         arm64|arm/v8) DOCKER_ARCH="aarch64" ;;  \
+         amd64) DOCKER_ARCH="x86_64" ;; \
+    esac \
+ && wget -q https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/docker-${DOCKER_VERSION}.tgz \
+ && tar xzvf docker-$DOCKER_VERSION.tgz
+
+
+FROM openjdk:18-slim as app
 WORKDIR /kustomize
 
 # copy gradle
@@ -10,35 +24,21 @@ COPY build.gradle.kts .
 COPY src ./src
 
 # compile
-RUN ./gradlew installDist
+RUN ./gradlew installDist -v
 
-# new image
+
 FROM openjdk:18-slim
-
-ARG TARGETPLATFORM
-
-# install Docker CLI & AWT dependencies
+# install AWT dependencies
 RUN apt-get update \
- && DEBIAN_FRONTEND=noninteractive apt-get -qq install \
-      apt-transport-https \
-      ca-certificates \
-      curl \
-      gnupg \
-      lsb-release \
- && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
- && case ${TARGETPLATFORM} in \
-         "linux/amd64")     DOCKER_ARCH=amd64  ;; \
-         "linux/arm64/v8")  DOCKER_ARCH=arm64  ;; \
-    esac \
- && echo "deb [arch=$DOCKER_ARCH signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
- && apt-get update \
  && apt-get -qq install \
-                docker-ce-cli \
                 fontconfig \
                 libfreetype6
 
+# Docker
+COPY --from=docker-cli-getter '/tmp/docker/docker' '/usr/bin/docker'
+
 # copy binaries
-COPY --from=0 /kustomize/build/install .
+COPY --from=app /kustomize/build/install .
 #RUN groupadd --gid ${GID} app
 #RUN useradd --home-dir /work --create-home --no-log-init --uid ${UID} --gid ${GID} app
 #USER app

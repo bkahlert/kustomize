@@ -52,6 +52,8 @@ jobs:
         run: ./gradlew test --tests "com.bkahlert.kommons.*"
       - name: Test cli
         run: ./gradlew test --tests "com.bkahlert.kustomize.cli.*"
+      - name: Test cli
+        run: ./gradlew test --tests "com.bkahlert.kustomize.libguestfs.*"
 
       - uses: actions/upload-artifact@v2
         with:
