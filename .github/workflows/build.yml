@@ -50,10 +50,22 @@ jobs:
 
       - name: Test kommons
         run: ./gradlew test --tests "com.bkahlert.kommons.*"
+      - name: Test test
+        run: ./gradlew test --tests "com.bkahlert.kustomize.test.*"
+      - name: Test util
+        run: ./gradlew test --tests "com.bkahlert.kustomize.util.*"
+      - name: Test intergration
+        run: ./gradlew test --tests "com.bkahlert.kustomize.intergration*"
+      - name: Test testspan
+        run: ./gradlew test --tests "com.bkahlert.kustomize.TestSpan*"
       - name: Test cli
         run: ./gradlew test --tests "com.bkahlert.kustomize.cli.*"
-      - name: Test cli
+      - name: Test libguestfs
         run: ./gradlew test --tests "com.bkahlert.kustomize.libguestfs.*"
+      - name: Test os
+        run: ./gradlew test --tests "com.bkahlert.kustomize.os.*"
+      - name: Test patch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.*"
 
       - uses: actions/upload-artifact@v2
         with:
@@ -138,3 +150,4 @@ jobs:
           docker image inspect ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           docker image inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+# TODO verify with a configuration like sample.conf if the image is functional

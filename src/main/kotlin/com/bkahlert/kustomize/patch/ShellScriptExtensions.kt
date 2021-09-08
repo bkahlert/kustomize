@@ -84,6 +84,7 @@ class AptGet(private val script: ScriptContext) {
             if (yes && quiet < 2) add("-y")
             if (quiet == 1) add("-q")
             if (quiet == 2) add("-qq")
+            custom()
         }
 }
 
