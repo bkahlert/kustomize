@@ -20,6 +20,7 @@ COPY gradlew .
 COPY gradle ./gradle
 
 # copy sources
+COPY settings.gradle.kts .
 COPY build.gradle.kts .
 COPY src ./src
 
@@ -30,7 +31,7 @@ RUN ./gradlew installDist -v
 FROM openjdk:18-slim
 # install AWT dependencies
 RUN apt-get update \
- && apt-get -qq install \
+ && DEBIAN_FRONTEND=noninteractive apt-get -qq install \
                 fontconfig \
                 libfreetype6
 
