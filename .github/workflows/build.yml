@@ -62,8 +62,6 @@ jobs:
         run: ./gradlew test --tests "com.bkahlert.kustomize.os.*"
       - name: Test patch AppendToFilesPatchTest
         run: ./gradlew test --tests "com.bkahlert.kustomize.patch.AppendToFilesPatch*"
-      - name: Test patch BluetoothPersonalAreaNetworkPatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.BluetoothPersonalAreaNetworkPatch*"
       - name: Test patch CopyFilesPatch
         run: ./gradlew test --tests "com.bkahlert.kustomize.patch.CopyFilesPatch*"
       - name: Test patch FirstBootPatch
