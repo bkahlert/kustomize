@@ -60,8 +60,50 @@ jobs:
         run: ./gradlew test --tests "com.bkahlert.kustomize.libguestfs.*"
       - name: Test os
         run: ./gradlew test --tests "com.bkahlert.kustomize.os.*"
-      - name: Test patch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.*"
+      - name: Test patch AppendToFilesPatchTest
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.AppendToFilesPatch*"
+      - name: Test patch BluetoothPersonalAreaNetworkPatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.BluetoothPersonalAreaNetworkPatch*"
+      - name: Test patch CopyFilesPatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.CopyFilesPatch*"
+      - name: Test patch FirstBootPatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.FirstBootPatch*"
+      - name: Test patch HostnamePatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.HostnamePatch*"
+      - name: Test patch PasswordPatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.PasswordPatch*"
+      - name: Test patch PatchKt
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.PatchKt*"
+      - name: Test patch ResizePatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.ResizePatch*"
+      - name: Test patch SambaPatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SambaPatch*"
+      - name: Test patch ShellScriptExtensionsKt
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.ShellScriptExtensionsKt*"
+      - name: Test patch ShellScriptPatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.ShellScriptPatch*"
+      - name: Test patch SimplePhasedPatchTes
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SimplePhasedPatchTes*"
+      - name: Test patch SshAuthorizationPatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SshAuthorizationPatch*"
+      - name: Test patch SshEnablementPatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SshEnablementPatch*"
+      - name: Test patch SshPortPatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SshPortPatch*"
+      - name: Test patch TimeZonePatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.TimeZonePatch*"
+      - name: Test patch TweaksPatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.TweaksPatch*"
+      - name: Test patch UsbGadgetPatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.UsbGadgetPatch*"
+      - name: Test patch UsernamePatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.UsernamePatch*"
+      - name: Test patch WifiAutoReconnectPatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.WifiAutoReconnectPatch*"
+      - name: Test patch WifiPowerSafeModePatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.WifiPowerSafeModePatch*"
+      - name: Test patch WpaSupplicantPatch
+        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.WpaSupplicantPatch*"
 
       - uses: actions/upload-artifact@v2
         with:
