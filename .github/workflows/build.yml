@@ -50,8 +50,6 @@ jobs:
 
       - name: Test kommons
         run: ./gradlew test --tests "com.bkahlert.kommons.*"
-      - name: Test test
-        run: ./gradlew test --tests "com.bkahlert.kustomize.test.*"
       - name: Test util
         run: ./gradlew test --tests "com.bkahlert.kustomize.util.*"
       - name: Test intergration
