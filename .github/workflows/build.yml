@@ -50,7 +50,7 @@ jobs:
 
       - name: Test kommons
         run: |
-          ./gradlew test --tests "com.bkahlert.kommons.*,com.bkahlert.kustomize.util.*,com.bkahlert.kustomize.TestSpan*,com.bkahlert.kustomize.cli.*",com.bkahlert.kustomize.libguestfs.*",com.bkahlert.kustomize.os.*",com.bkahlert.kustomize.patch.AppendToFilesPatch*",com.bkahlert.kustomize.patch.CopyFilesPatch*",com.bkahlert.kustomize.patch.FirstBootPatch*",com.bkahlert.kustomize.patch.HostnamePatch*",com.bkahlert.kustomize.patch.PasswordPatch*",com.bkahlert.kustomize.patch.PatchKt*",com.bkahlert.kustomize.patch.ResizePatch*"
+          ./gradlew test --tests "com.bkahlert.kommons.*,com.bkahlert.kustomize.util.*,com.bkahlert.kustomize.TestSpan*,com.bkahlert.kustomize.cli.*,com.bkahlert.kustomize.libguestfs.*,com.bkahlert.kustomize.os.*,com.bkahlert.kustomize.patch.AppendToFilesPatch*,com.bkahlert.kustomize.patch.CopyFilesPatch*,com.bkahlert.kustomize.patch.FirstBootPatch*,com.bkahlert.kustomize.patch.HostnamePatch*,com.bkahlert.kustomize.patch.PasswordPatch*,com.bkahlert.kustomize.patch.PatchKt*,com.bkahlert.kustomize.patch.ResizePatch*"
       - name: Test patch SambaPatch
         run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SambaPatch*"
       - name: Test patch ShellScriptExtensionsKt
