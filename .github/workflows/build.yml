@@ -49,31 +49,8 @@ jobs:
         run: ./gradlew build -x test
 
       - name: Test kommons
-        run: ./gradlew test --tests "com.bkahlert.kommons.*"
-      - name: Test util
-        run: ./gradlew test --tests "com.bkahlert.kustomize.util.*"
-      - name: Test testspan
-        run: ./gradlew test --tests "com.bkahlert.kustomize.TestSpan*"
-      - name: Test cli
-        run: ./gradlew test --tests "com.bkahlert.kustomize.cli.*"
-      - name: Test libguestfs
-        run: ./gradlew test --tests "com.bkahlert.kustomize.libguestfs.*"
-      - name: Test os
-        run: ./gradlew test --tests "com.bkahlert.kustomize.os.*"
-      - name: Test patch AppendToFilesPatchTest
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.AppendToFilesPatch*"
-      - name: Test patch CopyFilesPatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.CopyFilesPatch*"
-      - name: Test patch FirstBootPatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.FirstBootPatch*"
-      - name: Test patch HostnamePatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.HostnamePatch*"
-      - name: Test patch PasswordPatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.PasswordPatch*"
-      - name: Test patch PatchKt
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.PatchKt*"
-      - name: Test patch ResizePatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.ResizePatch*"
+        run: |
+          ./gradlew test --tests "com.bkahlert.kommons.*,com.bkahlert.kustomize.util.*,com.bkahlert.kustomize.TestSpan*,com.bkahlert.kustomize.cli.*",com.bkahlert.kustomize.libguestfs.*",com.bkahlert.kustomize.os.*",com.bkahlert.kustomize.patch.AppendToFilesPatch*",com.bkahlert.kustomize.patch.CopyFilesPatch*",com.bkahlert.kustomize.patch.FirstBootPatch*",com.bkahlert.kustomize.patch.HostnamePatch*",com.bkahlert.kustomize.patch.PasswordPatch*",com.bkahlert.kustomize.patch.PatchKt*",com.bkahlert.kustomize.patch.ResizePatch*"
       - name: Test patch SambaPatch
         run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SambaPatch*"
       - name: Test patch ShellScriptExtensionsKt
