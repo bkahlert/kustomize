@@ -44,7 +44,7 @@ class TestSpanOutputExtension : InvocationInterceptor {
             style = Styles.Dotted,
             layout = Layouts.DESCRIPTION,
             renderer = {
-                val print: Printer = if (isVerbose) printer else run { {} }
+                val print: Printer = if (extensionContext.isVerbose()) printer else run { {} }
                 object : Renderer {
                     override fun start(traceId: TraceId, spanId: SpanId, name: CharSequence): Unit = print(LF + Banner.banner(name) + LF)
                     override fun event(name: CharSequence, attributes: RenderableAttributes): Unit = Unit

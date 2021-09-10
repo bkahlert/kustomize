@@ -65,7 +65,7 @@ jobs:
           --tests "com.bkahlert.kustomize.patch.PatchKt*" \
           --tests "com.bkahlert.kustomize.patch.ResizePatch*"
       - name: Test patch SambaPatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SambaPatch*"
+        run: ./gradlew test --debug --tests "com.bkahlert.kustomize.patch.SambaPatch*"
       - name: Test patch ShellScriptExtensionsKt
         run: ./gradlew test --tests "com.bkahlert.kustomize.patch.ShellScriptExtensionsKt*"
       - name: Test patch ShellScriptPatch
