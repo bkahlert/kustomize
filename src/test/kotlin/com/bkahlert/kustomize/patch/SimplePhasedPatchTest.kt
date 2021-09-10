@@ -96,7 +96,9 @@ class SimplePhasedPatchTest {
         patch.patch(osImage)
 
         expectThat(osImage) {
-            hostPath(LinuxRoot.etc.hostname).hasContent("test-machine$LF")
+            hostPath(LinuxRoot.etc.hostname)
+                .exists()
+                .hasContent("test-machine$LF")
             size.isGreaterThanOrEqualTo(2.Gibi.bytes)
         }
     }

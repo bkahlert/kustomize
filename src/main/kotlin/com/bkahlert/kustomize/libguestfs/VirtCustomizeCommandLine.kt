@@ -17,6 +17,7 @@ import com.bkahlert.kommons.shell.ShellScript.ScriptContext
 import com.bkahlert.kommons.text.LineSeparators.lines
 import com.bkahlert.kommons.text.withRandomSuffix
 import com.bkahlert.kustomize.libguestfs.LibguestfsOption.Companion.relativize
+import com.bkahlert.kustomize.libguestfs.LibguestfsOption.DiskOption.Companion.resolveDisk
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.ColorsOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.DiskOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.QuietOption
@@ -49,9 +50,6 @@ import com.bkahlert.kustomize.os.OperatingSystemImage.Companion.mountRootForDisk
 import java.nio.file.Path
 import java.util.Collections
 import java.util.TimeZone
-import kotlin.io.path.exists
-import kotlin.io.path.isReadable
-import kotlin.io.path.isWritable
 import kotlin.io.path.moveTo
 import kotlin.io.path.writeLines
 import com.bkahlert.kustomize.libguestfs.LibguestfsOption as LibguestfsCommandLineOption
@@ -142,13 +140,7 @@ class VirtCustomizeCommandLine(
             trace: Boolean = true,
         ) : this(colors, quiet, verbose, trace, disks.toList())
 
-        val disk: Path = filterIsInstance<DiskOption>().map { it.disk }
-            .also { disks -> check(disks.size == 1) { "The $COMMAND command must add exactly one disk. ${disks.size} found: ${disks.joinToString(", ")}." } }
-            .single().apply {
-                check(exists()) { "Disk $this does no exist." }
-                check(isReadable()) { "Disk $this is not readable." }
-                check(isWritable()) { "Disk $this is not writable." }
-            }
+        val disk: Path by resolveDisk(filterIsInstance<DiskOption>())
     }
 
     open class Option(name: String, arguments: List<String>) : LibguestfsCommandLineOption(name, arguments) {

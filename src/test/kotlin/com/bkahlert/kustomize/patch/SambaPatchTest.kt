@@ -8,13 +8,11 @@ import com.bkahlert.kommons.test.withTempDir
 import com.bkahlert.kommons.unit.Gibi
 import com.bkahlert.kommons.unit.bytes
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.CopyInOption
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootInstallOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootOption
 import com.bkahlert.kustomize.libguestfs.containsFirstBootScriptFix
 import com.bkahlert.kustomize.libguestfs.file
 import com.bkahlert.kustomize.libguestfs.localPath
 import com.bkahlert.kustomize.libguestfs.mounted
-import com.bkahlert.kustomize.libguestfs.packages
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OS
 import com.bkahlert.kustomize.os.OperatingSystemImage
@@ -25,9 +23,7 @@ import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.any
 import strikt.assertions.contains
-import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.filterIsInstance
-import strikt.assertions.first
 import strikt.assertions.isEqualTo
 
 class SambaPatchTest {
@@ -37,7 +33,19 @@ class SambaPatchTest {
     @Test
     fun `should install samba`(osImage: OperatingSystemImage) {
         expectThat(sambaPatch(osImage)).virtCustomizations {
-            filterIsInstance<FirstBootInstallOption>().first().packages.containsExactlyInAnyOrder("samba", "cifs-utils")
+//            filterIsInstance<FirstBootInstallOption>().first().packages.containsExactlyInAnyOrder("samba", "cifs-utils")
+            filterIsInstance<FirstBootOption>().any {
+                file.textContent {
+                    contains("'install'")
+                    contains("'samba'")
+                }
+            }
+            filterIsInstance<FirstBootOption>().any {
+                file.textContent {
+                    contains("'install'")
+                    contains("'cifs-utils'")
+                }
+            }
         }
     }
 

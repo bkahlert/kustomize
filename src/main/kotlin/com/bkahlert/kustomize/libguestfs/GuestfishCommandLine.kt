@@ -1,26 +1,5 @@
 package com.bkahlert.kustomize.libguestfs
 
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.Composite.CopyIn
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.Composite.CopyOut
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.Composite.TarIn
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.ExitCommand
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.RmCommand
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.RmDirCommand
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.TarOutCommand
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.TouchCommand
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.UmountAllCommand
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.WriteAppendCommand
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.DiskOption
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.MountOption
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.ReadOnlyOption
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.ReadWriteOption
-import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.VerboseOption
-import com.bkahlert.kustomize.libguestfs.LibguestfsOption.Companion.relativize
-import com.bkahlert.kustomize.os.DiskDirectory
-import com.bkahlert.kustomize.os.DiskPath
-import com.bkahlert.kustomize.os.LinuxRoot
-import com.bkahlert.kustomize.os.OperatingSystemImage
-import com.bkahlert.kustomize.os.OperatingSystemImage.Companion.mountRootForDisk
 import com.bkahlert.kommons.builder.buildList
 import com.bkahlert.kommons.collections.head
 import com.bkahlert.kommons.collections.tail
@@ -41,11 +20,30 @@ import com.bkahlert.kommons.text.LineSeparators.size
 import com.bkahlert.kommons.text.padStart
 import com.bkahlert.kommons.text.withPrefix
 import com.bkahlert.kommons.text.withRandomSuffix
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.Composite.CopyIn
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.Composite.CopyOut
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.Composite.TarIn
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.ExitCommand
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.RmCommand
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.RmDirCommand
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.TarOutCommand
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.TouchCommand
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.UmountAllCommand
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.WriteAppendCommand
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.DiskOption
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.MountOption
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.ReadOnlyOption
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.ReadWriteOption
+import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOption.VerboseOption
+import com.bkahlert.kustomize.libguestfs.LibguestfsOption.Companion.relativize
+import com.bkahlert.kustomize.libguestfs.LibguestfsOption.DiskOption.Companion.resolveDisk
+import com.bkahlert.kustomize.os.DiskDirectory
+import com.bkahlert.kustomize.os.DiskPath
+import com.bkahlert.kustomize.os.LinuxRoot
+import com.bkahlert.kustomize.os.OperatingSystemImage
+import com.bkahlert.kustomize.os.OperatingSystemImage.Companion.mountRootForDisk
 import java.nio.file.Path
 import kotlin.io.path.div
-import kotlin.io.path.exists
-import kotlin.io.path.isReadable
-import kotlin.io.path.isWritable
 import kotlin.io.path.moveTo
 
 @DslMarker
@@ -140,13 +138,7 @@ class GuestfishCommandLine(
             trace: Boolean = false,
         ) : this(readOnly, readWrite, verbose, trace, disks.toList())
 
-        val disk: Path = filterIsInstance<DiskOption>().map { it.disk }
-            .also { disks -> check(disks.size == 1) { "The $COMMAND command must add exactly one disk. ${disks.size} found: ${disks.joinToString(", ")}." } }
-            .single().apply {
-                check(exists()) { "Disk $this does no exist." }
-                check(isReadable()) { "Disk $this is not readable." }
-                check(isWritable()) { "Disk $this is not writable." }
-            }
+        val disk: Path by resolveDisk(filterIsInstance<DiskOption>())
     }
 
 

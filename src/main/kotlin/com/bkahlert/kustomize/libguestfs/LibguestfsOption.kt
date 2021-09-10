@@ -1,8 +1,13 @@
 package com.bkahlert.kustomize.libguestfs
 
-import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kommons.io.path.pathString
+import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.DiskOption
+import com.bkahlert.kustomize.os.OperatingSystemImage
+import com.bkahlert.kustomize.util.DiskUtil.disks
 import java.nio.file.Path
+import kotlin.io.path.exists
+import kotlin.io.path.isReadable
+import kotlin.properties.ReadOnlyProperty
 
 open class LibguestfsOption(open val name: String, open val arguments: List<String>) :
     List<String> by listOf(name) + arguments {
@@ -38,6 +43,22 @@ open class LibguestfsOption(open val name: String, open val arguments: List<Stri
      */
     interface DiskOption {
         val disk: Path
+
+        companion object {
+            fun resolveDisk(diskOptions: List<DiskOption>): ReadOnlyProperty<Any?, Path> =
+                ReadOnlyProperty { _, _ ->
+                    diskOptions
+                        .map { it.disk }
+                        .singleOrNull()
+                        ?.apply {
+                            check(exists()) { "Disk $this does no exist." }
+                            check(isReadable()) { "Disk $this is not readable." }
+//                            TODO test for GitHub workflows
+//                            check(isWritable()) { "Disk $this is not writable." }
+                        }
+                        ?: error("Only one disk is supported but ${disks.size} where given: ${disks.joinToString(", ")}.")
+                }
+        }
     }
 
     companion object {
