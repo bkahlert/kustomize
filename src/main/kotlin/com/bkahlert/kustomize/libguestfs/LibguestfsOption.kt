@@ -1,12 +1,21 @@
 package com.bkahlert.kustomize.libguestfs
 
 import com.bkahlert.kommons.io.path.pathString
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.Option.DiskOption
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.util.DiskUtil.disks
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermission
+import java.nio.file.attribute.PosixFilePermission.GROUP_READ
+import java.nio.file.attribute.PosixFilePermission.GROUP_WRITE
+import java.nio.file.attribute.PosixFilePermission.OTHERS_READ
+import java.nio.file.attribute.PosixFilePermission.OTHERS_WRITE
+import java.nio.file.attribute.PosixFilePermission.OWNER_READ
+import java.nio.file.attribute.PosixFilePermission.OWNER_WRITE
 import kotlin.io.path.exists
+import kotlin.io.path.getPosixFilePermissions
 import kotlin.io.path.isReadable
+import kotlin.io.path.isWritable
+import kotlin.io.path.setPosixFilePermissions
 import kotlin.properties.ReadOnlyProperty
 
 open class LibguestfsOption(open val name: String, open val arguments: List<String>) :
@@ -45,16 +54,21 @@ open class LibguestfsOption(open val name: String, open val arguments: List<Stri
         val disk: Path
 
         companion object {
+
             fun resolveDisk(diskOptions: List<DiskOption>): ReadOnlyProperty<Any?, Path> =
                 ReadOnlyProperty { _, _ ->
+                    @Suppress("SuspiciousCollectionReassignment")
                     diskOptions
                         .map { it.disk }
                         .singleOrNull()
                         ?.apply {
                             check(exists()) { "Disk $this does no exist." }
+
+                            if (!isReadable()) posixFilePermissions += setOf(OWNER_READ, GROUP_READ, OTHERS_READ)
                             check(isReadable()) { "Disk $this is not readable." }
-//                            TODO test for GitHub workflows
-//                            check(isWritable()) { "Disk $this is not writable." }
+
+                            if (!isWritable()) posixFilePermissions += setOf(OWNER_WRITE, GROUP_WRITE, OTHERS_WRITE)
+                            check(isWritable()) { "Disk $this is not writable." }
                         }
                         ?: error("Only one disk is supported but ${disks.size} where given: ${disks.joinToString(", ")}.")
                 }
@@ -76,3 +90,7 @@ open class LibguestfsOption(open val name: String, open val arguments: List<Stri
         }
     }
 }
+
+var Path.posixFilePermissions: Set<PosixFilePermission>
+    get() = getPosixFilePermissions()
+    set(value) = Unit.also { setPosixFilePermissions(value) }
