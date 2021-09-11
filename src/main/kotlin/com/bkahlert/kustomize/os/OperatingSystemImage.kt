@@ -16,6 +16,7 @@ import com.bkahlert.kommons.io.path.asPath
 import com.bkahlert.kommons.io.path.duplicate
 import com.bkahlert.kommons.io.path.getSize
 import com.bkahlert.kommons.io.path.pathString
+import com.bkahlert.kommons.io.path.touch
 import com.bkahlert.kommons.runtime.isDebugging
 import com.bkahlert.kommons.text.ANSI.Formatter
 import com.bkahlert.kommons.text.Semantics.formattedAs
@@ -129,7 +130,10 @@ class OperatingSystemImage(
             )
         }
 
-        val intermediaryImage = "resized.img"
+        val intermediaryImage = "resized.img".also {
+            // make sure we create the image ourselves to not end up with a root owned Docker file
+            directory.resolve(it).touch()
+        }
 
         directory.ubuntu("Creating intermediary image", renderer = compact {
             copy(

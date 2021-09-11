@@ -33,6 +33,8 @@ import strikt.assertions.isEqualTo
 import strikt.java.exists
 import java.nio.file.Path
 import kotlin.io.path.div
+import kotlin.io.path.getOwner
+import kotlin.io.path.getPosixFilePermissions
 import kotlin.io.path.isWritable
 import kotlin.io.path.pathString
 import kotlin.io.path.readLines
@@ -144,9 +146,17 @@ class OperatingSystemImageTest {
     inner class Resize {
 
         @FifteenMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
-        fun `should resize`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+        fun `should resize and preserve owner and permissions`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+            val owner = osImage.file.getOwner()
+            val permissions = osImage.file.getPosixFilePermissions()
             val targetSize = 4.Gibi.bytes.also { check(osImage.size < it) { "$osImage is already larger than $it. Please update test." } }
-            expectThat(osImage.resize(targetSize)).isEqualTo(targetSize)
+
+            val newSize = osImage.resize(targetSize)
+
+            expectThat(newSize).isEqualTo(targetSize)
+            expectThat(osImage.size).isEqualTo(targetSize)
+            expectThat(osImage.file.getOwner()).isEqualTo(owner)
+            expectThat(osImage.file.getPosixFilePermissions()).isEqualTo(permissions)
         }
     }
 
