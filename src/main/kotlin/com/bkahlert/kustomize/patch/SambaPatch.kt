@@ -87,7 +87,6 @@ class SambaPatch(
             firstBoot {
                 aptGet.update()
                 command("apt", "update")
-                command("apt", "-y", "install", "samba-common-bin")
                 command("apt", "-y", "install", "samba", "cifs-utils")
 //                aptGet.install("samba", "cifs-utils", ignoreMissing = true)
             }

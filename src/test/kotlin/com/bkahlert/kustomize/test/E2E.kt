@@ -1,10 +1,10 @@
 package com.bkahlert.kustomize.test
 
+import com.bkahlert.kommons.docker.DockerRequiring
+import com.bkahlert.kommons.test.ThirtyMinutesTimeout
 import com.bkahlert.kustomize.libguestfs.LibguestfsImage
 import com.bkahlert.kustomize.os.DockerPiImage
 import com.bkahlert.kustomize.test.E2E.Companion.NAME
-import com.bkahlert.kommons.docker.DockerRequiring
-import com.bkahlert.kommons.test.ThirtyMinutesTimeout
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.parallel.ResourceAccessMode.READ_WRITE
@@ -13,7 +13,7 @@ import org.junit.jupiter.api.parallel.ResourceLock
 /**
  * JUnit 5 annotation to explicitly denote [end-to-end tests](https://wiki.c2.com/?EndToEndPrinciple).
  *
- * Meta-annotated with @[DockerRequiring] and @[ResourceLock] and a @[Timeout] of 15 minutes.
+ * Meta-annotated with @[DockerRequiring] and @[ResourceLock] and a @[Timeout] of 30 minutes.
  */
 @ThirtyMinutesTimeout
 @DockerRequiring([LibguestfsImage::class, DockerPiImage::class])
