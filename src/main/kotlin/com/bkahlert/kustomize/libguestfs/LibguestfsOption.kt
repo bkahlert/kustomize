@@ -64,10 +64,10 @@ open class LibguestfsOption(open val name: String, open val arguments: List<Stri
                         ?.apply {
                             check(exists()) { "Disk $this does no exist." }
 
-                            if (!isReadable()) posixFilePermissions += setOf(OWNER_READ, GROUP_READ, OTHERS_READ)
+                            if (!isReadable()) posixFilePermissions += setOf(OWNER_READ)
                             check(isReadable()) { "Disk $this is not readable." }
 
-                            if (!isWritable()) posixFilePermissions += setOf(OWNER_WRITE, GROUP_WRITE, OTHERS_WRITE)
+                            if (!isWritable()) posixFilePermissions += setOf(OWNER_WRITE)
                             check(isWritable()) { "Disk $this is not writable." }
                         }
                         ?: error("Only one disk is supported but ${disks.size} where given: ${disks.joinToString(", ")}.")
