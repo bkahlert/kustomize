@@ -5,10 +5,6 @@ import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.util.DiskUtil.disks
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
-import java.nio.file.attribute.PosixFilePermission.GROUP_READ
-import java.nio.file.attribute.PosixFilePermission.GROUP_WRITE
-import java.nio.file.attribute.PosixFilePermission.OTHERS_READ
-import java.nio.file.attribute.PosixFilePermission.OTHERS_WRITE
 import java.nio.file.attribute.PosixFilePermission.OWNER_READ
 import java.nio.file.attribute.PosixFilePermission.OWNER_WRITE
 import kotlin.io.path.exists
@@ -55,6 +51,10 @@ open class LibguestfsOption(open val name: String, open val arguments: List<Stri
 
         companion object {
 
+            /**
+             * Returns a [ReadOnlyProperty] that searches the given [diskOptions]
+             * for a suitable disk image.
+             */
             fun resolveDisk(diskOptions: List<DiskOption>): ReadOnlyProperty<Any?, Path> =
                 ReadOnlyProperty { _, _ ->
                     @Suppress("SuspiciousCollectionReassignment")

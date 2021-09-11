@@ -30,7 +30,6 @@ import strikt.assertions.contains
 import strikt.assertions.filterIsInstance
 import strikt.assertions.isEqualTo
 import kotlin.io.path.absolute
-import kotlin.io.path.absolutePathString
 
 class SambaPatchTest {
 
@@ -118,9 +117,9 @@ class SambaPatchTest {
         ShellScript("""
             echo "---BEFORE---"
             echo "/home/runner"
-            ls /home/runner -alR
+            ls /home/runner -alR | grep -w root
             echo "/tmp"
-            ls /tmp -alR
+            ls /tmp -alR | grep -w root
         """.trimIndent()).exec.logging()
     }
 
@@ -129,9 +128,9 @@ class SambaPatchTest {
         ShellScript("""
             echo "---AFTER---"
             echo "/home/runner"
-            ls /home/runner -alR
+            ls /home/runner -alR | grep -w root
             echo "/tmp"
-            ls /tmp -alR
+            ls /tmp -alR | grep -w root
         """.trimIndent()).exec.logging()
     }
 
@@ -139,10 +138,10 @@ class SambaPatchTest {
     fun `should install samba and set password and shutdown`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         val x = osImage.file.absolute().parent
 
-            ShellScript("""
+        ShellScript("""
             echo "---OSIMAGE: ${osImage}---"
             echo "/home/runner"
-            ls "$x" -alR
+            ls "$x" -alR | grep -w root
         """.trimIndent()).exec.logging()
 
         osImage.patch(CompositePatch(ResizePatch(2.Gibi.bytes), sambaPatch))
