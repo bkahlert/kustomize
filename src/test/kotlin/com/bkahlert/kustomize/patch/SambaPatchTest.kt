@@ -4,6 +4,7 @@ import com.bkahlert.kommons.io.path.asPath
 import com.bkahlert.kommons.io.path.textContent
 import com.bkahlert.kommons.junit.UniqueId
 import com.bkahlert.kommons.junit.Verbose
+import com.bkahlert.kommons.shell.ShellScript
 import com.bkahlert.kommons.test.Smoke
 import com.bkahlert.kommons.test.withTempDir
 import com.bkahlert.kommons.unit.Gibi
@@ -20,12 +21,16 @@ import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
 import com.bkahlert.kustomize.patch.RootShare.`read-write`
 import com.bkahlert.kustomize.test.E2E
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.any
 import strikt.assertions.contains
 import strikt.assertions.filterIsInstance
 import strikt.assertions.isEqualTo
+import kotlin.io.path.absolute
+import kotlin.io.path.absolutePathString
 
 class SambaPatchTest {
 
@@ -108,8 +113,37 @@ class SambaPatchTest {
         expectThat(sambaPatch(osImage)).virtCustomizations { containsFirstBootScriptFix() }
     }
 
+    @BeforeEach @Verbose
+    fun xxx() {
+        ShellScript("""
+            echo "---BEFORE---"
+            echo "/home/runner"
+            ls /home/runner -alR
+            echo "/tmp"
+            ls /tmp -alR
+        """.trimIndent()).exec.logging()
+    }
+
+    @AfterEach @Verbose
+    fun yyy() {
+        ShellScript("""
+            echo "---AFTER---"
+            echo "/home/runner"
+            ls /home/runner -alR
+            echo "/tmp"
+            ls /tmp -alR
+        """.trimIndent()).exec.logging()
+    }
+
     @E2E @Smoke @Test @Verbose
     fun `should install samba and set password and shutdown`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
+        val x = osImage.file.absolute().parent
+
+            ShellScript("""
+            echo "---OSIMAGE: ${osImage}---"
+            echo "/home/runner"
+            ls "$x" -alR
+        """.trimIndent()).exec.logging()
 
         osImage.patch(CompositePatch(ResizePatch(2.Gibi.bytes), sambaPatch))
 
