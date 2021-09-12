@@ -28,11 +28,11 @@ jobs:
     
     - name: Print Quota A
       run: |
-        find /tmp -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
+        sudo find /tmp -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
 
-    - name: Print Quota A
+    - name: Print Quota B
       run: |
-        find . -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
+        sudo find . -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
     
     # Runs a single command using the runners shell
     - name: Send greeting
@@ -49,10 +49,10 @@ jobs:
         remove-android: true
         remove-haskell: true
     
-    - name: Print Quota A 2
+    - name: Print Quota A 1
       run: |
-        find /tmp -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
+        sudo find /tmp -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
 
     - name: Print Quota A 2
       run: |
-        find . -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
+        sudo find . -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
