@@ -28,16 +28,12 @@ jobs:
     
     - name: Print Quota A
       run: |
-        sudo du -h / 2> >(grep -v 'Permission denied') | sort -rh | head -5
-    
-    - name: Print Quota B
+        find /tmp -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
+
+    - name: Print Quota A
       run: |
-        df -x squashfs --total -h
+        find . -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
     
-    - name: Print Quota C
-      run: |
-        du -h -s
-        
     # Runs a single command using the runners shell
     - name: Send greeting
       run: echo "Hello ${{ github.event.inputs.name }}"
@@ -55,8 +51,8 @@ jobs:
     
     - name: Print Quota A 2
       run: |
-        sudo du -h / 2> >(grep -v 'Permission denied') | sort -rh | head -5
-    
-    - name: Print Quota B 2
+        find /tmp -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
+
+    - name: Print Quota A 2
       run: |
-        df -x squashfs --total -h
+        find . -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
