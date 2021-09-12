@@ -162,7 +162,7 @@ class OperatingSystemImageTest {
         fun `should resize and preserve owner and permissions`(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
             val owner = osImage.file.getOwner()
             val permissions = osImage.file.getPosixFilePermissions()
-            val targetSize = 4.Gibi.bytes.also { check(osImage.size < it) { "$osImage is already larger than $it. Please update test." } }
+            val targetSize = 2.Gibi.bytes.also { check(osImage.size < it) { "$osImage is already larger than $it. Please update test." } }
 
             val newSize = osImage.resize(targetSize)
 

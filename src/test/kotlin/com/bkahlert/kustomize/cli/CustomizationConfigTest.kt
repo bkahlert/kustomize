@@ -317,7 +317,7 @@ class CustomizationConfigTest {
             expecting { timeZone } that { isEqualTo(TimeZone.getTimeZone("Europe/Berlin")) }
             expecting { hostname } that { isEqualTo(Hostname("sample-full", true, "Pretty Name", "computer-vm", "vm")) }
             expecting { wifi } that { isEqualTo(Wifi("entry1\nentry2", autoReconnect = true, powerSafeMode = false)) }
-            expecting { size } that { isEqualTo(4.Gibi.bytes) }
+            expecting { size } that { isEqualTo(2.Gibi.bytes) }
             with { ssh!! }.then {
                 expecting { enabled } that { isTrue() }
                 expecting { port } that { isEqualTo(1234) }
@@ -378,7 +378,7 @@ class CustomizationConfigTest {
             val config = loadFullConfig()
             val patch = config.toPatches()
             expectThat(CompositePatch(patch).invoke(osImage)) {
-                get { name }.contains("Increase Disk Space to 4 GiB").contains("Change Username")
+                get { name }.contains("Increase Disk Space to 2 GiB").contains("Change Username")
                 get { diskOperations }.isNotEmpty()
                 get { virtCustomizations }.isNotEmpty()
                 get { guestfishCommands }.isNotEmpty()

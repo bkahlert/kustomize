@@ -3,6 +3,7 @@ package com.bkahlert.kustomize.os
 import com.bkahlert.kommons.collections.addElement
 import com.bkahlert.kommons.io.path.deleteRecursively
 import com.bkahlert.kommons.io.path.pathString
+import com.bkahlert.kommons.shell.ShellScript
 import com.bkahlert.kommons.test.executionResult
 import com.bkahlert.kommons.test.get
 import com.bkahlert.kommons.test.put
@@ -54,7 +55,7 @@ open class OperatingSystemImageProviderExtension : TypeBasedParameterResolver<Op
     }
 
     override fun afterEach(context: ExtensionContext) {
-        context.store().get<Path>()?.also {
+        context.store().get<Path>()?.also { dir ->
             runSpanningLine(
                 "Cleaning up",
                 style = Dotted,
@@ -62,11 +63,16 @@ open class OperatingSystemImageProviderExtension : TypeBasedParameterResolver<Op
             ) {
                 if (context.executionResult.isSuccess) {
                     log("Test succeeded".formattedAs.success)
-                    log("Deleting ${it.pathString.ansi.strikethrough}")
-                    it.deleteRecursively()
+                    log("Deleting ${dir.pathString.ansi.strikethrough}")
+                    kotlin.runCatching { dir.deleteRecursively() }
+                        .onFailure {
+                            log("Error cleaning up")
+                            ShellScript("ls -lisaR .").exec.logging(dir)
+                            exception(it)
+                        }
                 } else {
                     log("Test failed".formattedAs.error)
-                    log("Keeping ${it.pathString.ansi.bold}")
+                    log("Keeping ${dir.pathString.ansi.bold}")
                 }
             }
         }

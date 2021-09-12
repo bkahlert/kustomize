@@ -371,7 +371,7 @@ class GuestfishCommandLine(
                             remoteFiles.pathString,
                             directory.pathString
                         ),
-                        // set the owner of the copied path to the current owner of the destination directory
+                        // set the owner of the copied path to the current user
                         !GuestfishCommand("chown", "-R", Kustomize.user, directory.pathString),
                     ))
 
