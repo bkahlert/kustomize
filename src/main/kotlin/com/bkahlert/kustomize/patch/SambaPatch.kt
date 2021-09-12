@@ -86,7 +86,15 @@ class SambaPatch(
         virtCustomize {
             firstBoot {
                 command("apt", "-y", "update")
+                command("/bin/bash", "-c", """
+                    apt-get clean
+                    apt-get install -f
+                    dpkg --configure -a
+                    DEBIAN_FRONTEND=noninteractive apt -y -oDpkg::Options::=--force-confnew -oDebug::pkgAcquire::Worker=1 install samba cifs-utils
+                """.trimIndent())
                 command("apt", "-y", "-oDebug::pkgAcquire::Worker=1", "install", "samba", "cifs-utils")
+//                command("apt-get", "-y", "install", "samba")
+//                aptGet.install("samba", "cifs-utils", ignoreMissing = true)
             }
 //            firstBootInstall { listOf("samba", "cifs-utils") }
             copyIn(SAMBA_CONF) {
