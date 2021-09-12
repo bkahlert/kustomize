@@ -28,6 +28,7 @@ jobs:
     
     - name: Print Quota
       run: |
+        bash -c "du -cBM --max-depth=1 2> >(grep -v 'Permission denied') | sort -n"
         df -x squashfs --total -h
         du -h -s
         
