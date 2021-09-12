@@ -2,7 +2,6 @@ package com.bkahlert.kommons.test.junit
 
 import com.bkahlert.kommons.docker.Docker
 import com.bkahlert.kommons.docker.DockerRequiring
-import com.bkahlert.kommons.shell.ShellScript
 import com.bkahlert.kommons.test.allContainerJavaClasses
 import com.bkahlert.kommons.test.allTestJavaMethods
 import com.bkahlert.kommons.test.withAnnotation
@@ -31,24 +30,12 @@ class TestExecutionReporter : TestExecutionListener, TestWatcher {
     private var startTimestamp by Delegates.notNull<Long>()
     private var failedTestsCount: Int = 0
 
-    val logging = ShellScript("""
-            #!/bin/bash
-            set -e
-            echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            sudo find /tmp -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
-            echo "----------------------------------------------------------------------------"
-            sudo find . -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
-            echo YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
-        """.trimIndent())
-
     override fun testPlanExecutionStarted(testPlan: TestPlan) {
         startTimestamp = System.currentTimeMillis()
-        logging.exec.logging()
     }
 
     override fun executionFinished(testIdentifier: TestIdentifier, testExecutionResult: TestExecutionResult) {
         if (testExecutionResult.status == TestExecutionResult.Status.FAILED) failedTestsCount++
-        logging.exec.logging()
     }
 
     override fun testPlanExecutionFinished(testPlan: TestPlan) {

@@ -3,7 +3,6 @@ package com.bkahlert.kustomize.patch
 import com.bkahlert.kommons.io.path.asPath
 import com.bkahlert.kommons.io.path.textContent
 import com.bkahlert.kommons.junit.UniqueId
-import com.bkahlert.kommons.junit.Verbose
 import com.bkahlert.kommons.test.Smoke
 import com.bkahlert.kommons.test.withTempDir
 import com.bkahlert.kommons.unit.Gibi
@@ -91,7 +90,7 @@ class SambaPatchTest {
         expectThat(sambaPatch(osImage)).virtCustomizations { containsFirstBootScriptFix() }
     }
 
-    @E2E @Smoke @Test @Verbose
+    @E2E @Smoke @Test
     fun `should install samba and set password and shutdown`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
         osImage.patch(CompositePatch(ResizePatch(2.Gibi.bytes), sambaPatch))
 
