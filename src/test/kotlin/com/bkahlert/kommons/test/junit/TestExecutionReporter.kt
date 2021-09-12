@@ -33,15 +33,12 @@ class TestExecutionReporter : TestExecutionListener, TestWatcher {
 
     val logging = ShellScript("""
             #!/bin/bash
-            set -ex
-            echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+            set -e
             echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
             sudo find /tmp -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
+            echo "----------------------------------------------------------------------------"
             sudo find . -xdev -type f -size +100M -print | xargs ls -lh | sort -k5,5 -h -r | head
-            echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+            echo YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
         """.trimIndent())
 
     override fun testPlanExecutionStarted(testPlan: TestPlan) {
