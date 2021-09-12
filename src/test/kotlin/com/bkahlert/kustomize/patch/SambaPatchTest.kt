@@ -4,7 +4,6 @@ import com.bkahlert.kommons.io.path.asPath
 import com.bkahlert.kommons.io.path.textContent
 import com.bkahlert.kommons.junit.UniqueId
 import com.bkahlert.kommons.junit.Verbose
-import com.bkahlert.kommons.shell.ShellScript
 import com.bkahlert.kommons.test.Smoke
 import com.bkahlert.kommons.test.withTempDir
 import com.bkahlert.kommons.unit.Gibi
@@ -21,8 +20,6 @@ import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystems.RaspberryPiLite
 import com.bkahlert.kustomize.patch.RootShare.`read-write`
 import com.bkahlert.kustomize.test.E2E
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import strikt.api.expectThat
@@ -30,7 +27,6 @@ import strikt.assertions.any
 import strikt.assertions.contains
 import strikt.assertions.filterIsInstance
 import strikt.assertions.isEqualTo
-import kotlin.io.path.absolute
 
 class SambaPatchTest {
 
@@ -111,28 +107,6 @@ class SambaPatchTest {
     @Test
     fun `should copy firstboot script order fix`(osImage: OperatingSystemImage, uniqueId: UniqueId) = withTempDir(uniqueId) {
         expectThat(sambaPatch(osImage)).virtCustomizations { containsFirstBootScriptFix() }
-    }
-
-    @BeforeEach @Verbose
-    fun xxx() {
-        ShellScript("""
-            echo "---BEFORE---"
-            echo "/home/runner"
-            ls /home/runner -alR | grep -w root
-            echo "/tmp"
-            ls /tmp -alR | grep -w root
-        """.trimIndent()).exec.logging()
-    }
-
-    @AfterEach @Verbose
-    fun yyy() {
-        ShellScript("""
-            echo "---AFTER---"
-            echo "/home/runner"
-            ls /home/runner -alR | grep -w root
-            echo "/tmp"
-            ls /tmp -alR | grep -w root
-        """.trimIndent()).exec.logging()
     }
 
     @E2E @Smoke @Test @Verbose @Disabled("Stops for an unknown reason here: " +
@@ -231,14 +205,6 @@ class SambaPatchTest {
         "    · firstboot.sh[383]: Setting up libtdb1:armhf (1.3.16-2+b1) ...\n" +
         "    · firstboot.sh[383]: Setting up samba-common (2:4.9.5+dfsg-5+deb10u1+rpi1) ...")
     fun `should install samba and set password and shutdown`(uniqueId: UniqueId, @OS(RaspberryPiLite) osImage: OperatingSystemImage) = withTempDir(uniqueId) {
-        val x = osImage.file.absolute().parent
-
-        ShellScript("""
-            echo "---OSIMAGE: ${osImage}---"
-            echo "/home/runner"
-            ls "$x" -alR | grep -w root
-        """.trimIndent()).exec.logging()
-
         osImage.patch(CompositePatch(ResizePatch(2.Gibi.bytes), sambaPatch))
 
         val installedPackages = "/root/installed.txt"

@@ -85,10 +85,8 @@ class SambaPatch(
 
         virtCustomize {
             firstBoot {
-                aptGet.update()
-                command("apt", "update")
-                command("apt", "-y", "install", "samba", "cifs-utils")
-//                aptGet.install("samba", "cifs-utils", ignoreMissing = true)
+                command("apt", "-y", "update")
+                command("apt", "-y", "-oDebug::pkgAcquire::Worker=1", "install", "samba", "cifs-utils")
             }
 //            firstBootInstall { listOf("samba", "cifs-utils") }
             copyIn(SAMBA_CONF) {
