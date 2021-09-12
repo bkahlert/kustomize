@@ -28,7 +28,7 @@ jobs:
     
     - name: Print Quota A
       run: |
-        du -cBM --max-depth=1 / 2> >(grep -v 'Permission denied') | sort -n
+        sudo du -h / 2> >(grep -v 'Permission denied') | sort -rh | head -5
     
     - name: Print Quota B
       run: |
@@ -55,7 +55,7 @@ jobs:
     
     - name: Print Quota A 2
       run: |
-        du -cBM --max-depth=1 / 2> >(grep -v 'Permission denied') | sort -n
+        sudo du -h / 2> >(grep -v 'Permission denied') | sort -rh | head -5
     
     - name: Print Quota B 2
       run: |
