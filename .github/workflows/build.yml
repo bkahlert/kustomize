@@ -52,54 +52,54 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew build -x test
+        run: ./gradlew build
 
-      - name: Test patch IntegrationTest
-        run: ./gradlew test --info --tests "com.bkahlert.kustomize.Integration*"
-      - name: Test kommons
-        run: |
-          ./gradlew test \
-          --tests "com.bkahlert.kommons.*" \
-          --tests "com.bkahlert.kustomize.util.*" \
-          --tests "com.bkahlert.kustomize.TestSpan*" \
-          --tests "com.bkahlert.kustomize.cli.*" \
-          --tests "com.bkahlert.kustomize.libguestfs.*" \
-          --tests "com.bkahlert.kustomize.os.*" \
-          --tests "com.bkahlert.kustomize.patch.AppendToFilesPatch*" \
-          --tests "com.bkahlert.kustomize.patch.CopyFilesPatch*" \
-          --tests "com.bkahlert.kustomize.patch.FirstBootPatch*" \
-          --tests "com.bkahlert.kustomize.patch.HostnamePatch*" \
-          --tests "com.bkahlert.kustomize.patch.PasswordPatch*" \
-          --tests "com.bkahlert.kustomize.patch.PatchKt*" \
-          --tests "com.bkahlert.kustomize.patch.ResizePatch*"
-      - name: Test patch SambaPatch
-        run: ./gradlew test --info --tests "com.bkahlert.kustomize.patch.SambaPatch*"
-      - name: Test patch ShellScriptExtensionsKt
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.ShellScriptExtensionsKt*"
-      - name: Test patch ShellScriptPatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.ShellScriptPatch*"
-      - name: Test patch SimplePhasedPatchTes
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SimplePhasedPatchTes*"
-      - name: Test patch SshAuthorizationPatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SshAuthorizationPatch*"
-      - name: Test patch SshEnablementPatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SshEnablementPatch*"
-      - name: Test patch SshPortPatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SshPortPatch*"
-      - name: Test patch TimeZonePatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.TimeZonePatch*"
-      - name: Test patch TweaksPatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.TweaksPatch*"
-      - name: Test patch UsbGadgetPatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.UsbGadgetPatch*"
-      - name: Test patch UsernamePatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.UsernamePatch*"
-      - name: Test patch WifiAutoReconnectPatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.WifiAutoReconnectPatch*"
-      - name: Test patch WifiPowerSafeModePatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.WifiPowerSafeModePatch*"
-      - name: Test patch WpaSupplicantPatch
-        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.WpaSupplicantPatch*"
+      #      - name: Test patch IntegrationTest
+      #        run: ./gradlew test --info --tests "com.bkahlert.kustomize.Integration*"
+      #      - name: Test kommons
+      #        run: |
+      #          ./gradlew test \
+      #          --tests "com.bkahlert.kommons.*" \
+      #          --tests "com.bkahlert.kustomize.util.*" \
+      #          --tests "com.bkahlert.kustomize.TestSpan*" \
+      #          --tests "com.bkahlert.kustomize.cli.*" \
+      #          --tests "com.bkahlert.kustomize.libguestfs.*" \
+      #          --tests "com.bkahlert.kustomize.os.*" \
+      #          --tests "com.bkahlert.kustomize.patch.AppendToFilesPatch*" \
+      #          --tests "com.bkahlert.kustomize.patch.CopyFilesPatch*" \
+      #          --tests "com.bkahlert.kustomize.patch.FirstBootPatch*" \
+      #          --tests "com.bkahlert.kustomize.patch.HostnamePatch*" \
+      #          --tests "com.bkahlert.kustomize.patch.PasswordPatch*" \
+      #          --tests "com.bkahlert.kustomize.patch.PatchKt*" \
+      #          --tests "com.bkahlert.kustomize.patch.ResizePatch*"
+      #      - name: Test patch SambaPatch
+      #        run: ./gradlew test --info --tests "com.bkahlert.kustomize.patch.SambaPatch*"
+      #      - name: Test patch ShellScriptExtensionsKt
+      #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.ShellScriptExtensionsKt*"
+      #      - name: Test patch ShellScriptPatch
+      #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.ShellScriptPatch*"
+      #      - name: Test patch SimplePhasedPatchTes
+      #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SimplePhasedPatchTes*"
+      #      - name: Test patch SshAuthorizationPatch
+      #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SshAuthorizationPatch*"
+      #      - name: Test patch SshEnablementPatch
+      #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SshEnablementPatch*"
+      #      - name: Test patch SshPortPatch
+      #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.SshPortPatch*"
+      #      - name: Test patch TimeZonePatch
+      #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.TimeZonePatch*"
+      #      - name: Test patch TweaksPatch
+      #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.TweaksPatch*"
+      #      - name: Test patch UsbGadgetPatch
+      #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.UsbGadgetPatch*"
+      #      - name: Test patch UsernamePatch
+      #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.UsernamePatch*"
+      #      - name: Test patch WifiAutoReconnectPatch
+      #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.WifiAutoReconnectPatch*"
+      #      - name: Test patch WifiPowerSafeModePatch
+      #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.WifiPowerSafeModePatch*"
+      #      - name: Test patch WpaSupplicantPatch
+      #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.WpaSupplicantPatch*"
 
       - uses: actions/upload-artifact@v2
         with:

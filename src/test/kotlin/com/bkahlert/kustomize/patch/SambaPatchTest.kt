@@ -8,11 +8,9 @@ import com.bkahlert.kommons.test.Smoke
 import com.bkahlert.kommons.test.withTempDir
 import com.bkahlert.kommons.unit.Gibi
 import com.bkahlert.kommons.unit.bytes
-import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.CopyInOption
 import com.bkahlert.kustomize.libguestfs.VirtCustomizeCommandLine.VirtCustomization.FirstBootOption
 import com.bkahlert.kustomize.libguestfs.containsFirstBootScriptFix
 import com.bkahlert.kustomize.libguestfs.file
-import com.bkahlert.kustomize.libguestfs.localPath
 import com.bkahlert.kustomize.libguestfs.mounted
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OS
@@ -34,17 +32,8 @@ class SambaPatchTest {
     @Test
     fun `should install samba`(osImage: OperatingSystemImage) {
         expectThat(sambaPatch(osImage)).virtCustomizations {
-//            filterIsInstance<FirstBootInstallOption>().first().packages.containsExactlyInAnyOrder("samba")
             filterIsInstance<FirstBootOption>().any {
-                file.textContent {
-                    contains("'install'")
-                    contains("'samba'")
-                }
-            }
-            filterIsInstance<FirstBootOption>().any {
-                file.textContent {
-                    contains("'install'")
-                }
+                file.textContent.contains("DEBIAN_FRONTEND=noninteractive apt -y -oDpkg::Options::=--force-confnew install samba")
             }
         }
     }
@@ -52,8 +41,8 @@ class SambaPatchTest {
     @Test
     fun `should build samba conf`(osImage: OperatingSystemImage) {
         expectThat(sambaPatch(osImage)).virtCustomizations {
-            filterIsInstance<CopyInOption>().any {
-                localPath.textContent.isEqualTo(
+            filterIsInstance<FirstBootOption>().any {
+                file.textContent.contains(
                     """
                     [global]
                     workgroup = smb
@@ -80,8 +69,7 @@ class SambaPatchTest {
                     public=no
                     guest ok=no
                     
-                    
-                    """.trimIndent())
+                    """.trimIndent().let { base64(it) })
             }
         }
     }
@@ -92,11 +80,7 @@ class SambaPatchTest {
             filterIsInstance<FirstBootOption>().any {
                 file.textContent.contains(
                     """
-                        echo "…"
-                        echo "…"
-                        echo "…"
-                        pass="the-password"
-                        (echo "${'$'}pass"; echo "${'$'}pass") | smbpasswd -s -a "pi"
+                    (echo "the-password"; echo "the-password") | smbpasswd -s -a "pi"
                     """.trimIndent())
             }
         }
@@ -154,7 +138,6 @@ class SambaPatchTest {
                     directory mask=0740
                     public=no
                     guest ok=no
-
 
                     """.trimIndent())
             }

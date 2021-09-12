@@ -9,12 +9,14 @@ import com.bkahlert.kommons.text.LineSeparators.CR
 import com.bkahlert.kommons.text.Semantics.formattedAs
 import com.bkahlert.kommons.text.toStringMatchesCurlyPattern
 import com.bkahlert.kommons.tracing.runSpanning
+import com.bkahlert.kustomize.Kustomize
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommandsBuilder
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishOptions
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.LinuxRoot.etc
 import com.bkahlert.kustomize.os.OperatingSystemImage
+import com.bkahlert.kustomize.patch.user
 import org.junit.jupiter.api.Test
 import strikt.api.Assertion
 import strikt.api.expectCatching
@@ -63,7 +65,8 @@ class GuestfishCommandLineTest {
              -copy-in home/pi/.ssh/known_hosts /home/pi/.ssh 
             
             !mkdir -p home/pi/.ssh 
-             -copy-out /home/pi/.ssh/known_hosts home/pi/.ssh 
+             -copy-out /home/pi/.ssh/known_hosts home/pi/.ssh
+             !chown -R ${Kustomize.user} home/pi/.ssh
             
             -write-append /etc/sudoers.d/privacy "\x44\x65\x66\x61\x75\x6c\x74\x73\x20\x20\x20\x20\x20\x20\x20\x20\x6c\x65\x63\x74\x75\x72\x65\x20\x3d\x20\x6e\x65\x76\x65\x72\x0d"
             -write-append /etc/sudoers.d/privacy "\x44\x65\x66\x61\x75\x6c\x74\x73\x20\x20\x20\x20\x20\x20\x20\x20\x6c\x65\x63\x74\x75\x72\x65\x20\x3d\x20\x6e\x65\x76\x65\x72\x0a"

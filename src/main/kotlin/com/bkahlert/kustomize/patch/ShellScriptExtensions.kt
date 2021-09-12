@@ -122,6 +122,9 @@ fun chown(it: Path, recursive: Boolean = true) {
     it.parent.ubuntu { _ -> command("chown", listOfNotNull("-R".takeIf { recursive }, Kustomize.user, it.fileNameString)) }
 }
 
+fun base64(text: String): String =
+    base64(text.encodeToByteArray())
+
 fun base64(bytes: ByteArray): String =
     tempFile().writeBytes(bytes).let {
         CommandLine("base64", it.pathString).exec().output
