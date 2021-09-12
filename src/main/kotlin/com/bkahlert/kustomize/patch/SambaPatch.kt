@@ -85,7 +85,6 @@ class SambaPatch(
             firstBoot {
                 command("apt", "-y", "update")
                 !"DEBIAN_FRONTEND=noninteractive apt -y -oDpkg::Options::=--force-confnew install samba"
-                !"DEBIAN_FRONTEND=noninteractive apt -y -oDpkg::Options::=--force-confnew install uudecode"
                 createFile(SAMBA_CONF, config, mode = "0644")
                 !"""(echo "$password"; echo "$password") | smbpasswd -s -a "$username""""
             }

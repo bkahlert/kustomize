@@ -109,16 +109,7 @@ class Apt(private val script: ScriptContext) {
 }
 
 
-fun ScriptContext.createFile(path: DiskPath, text: String, mode: String? = null) =
-    createFile(path, text.encodeToByteArray(), mode)
-
-fun ScriptContext.createFile(path: DiskPath, bytes: ByteArray, mode: String? = null): Line {
-    path.parentOrNull.also { !"mkdir -p '$it' &>/dev/null" }
-    !"echo '${uuencode(bytes)}' | uudecode > '$path'"
-    return mode?.let { command("chmod", it, path.pathString) } ?: command(":")
-}
-
-// TODO kommons
+// TODO move to kommons and test
 @Suppress("unused")
 val Kustomize.user: String
     get() = System.getProperty("user.name")
@@ -131,7 +122,16 @@ fun chown(it: Path, recursive: Boolean = true) {
     it.parent.ubuntu { _ -> command("chown", listOfNotNull("-R".takeIf { recursive }, Kustomize.user, it.fileNameString)) }
 }
 
-fun uuencode(bytes: ByteArray): String =
+fun base64(bytes: ByteArray): String =
     tempFile().writeBytes(bytes).let {
-        CommandLine("uuencode", "-m", it.pathString, "/dev/stdout").exec().output
+        CommandLine("base64", it.pathString).exec().output
     }
+
+fun ScriptContext.createFile(path: DiskPath, text: String, mode: String? = null) =
+    createFile(path, text.encodeToByteArray(), mode)
+
+fun ScriptContext.createFile(path: DiskPath, bytes: ByteArray, mode: String? = null): Line {
+    path.parentOrNull.also { !"mkdir -p '$it' &>/dev/null" }
+    !"echo '${base64(bytes)}' | base64 --decode > '$path'"
+    return mode?.let { command("chmod", it, path.pathString) } ?: command(":")
+}
