@@ -28,7 +28,7 @@ jobs:
     
     - name: Print Quota A
       run: |
-        du -cBM --max-depth=1 2> >(grep -v 'Permission denied') | sort -n
+        du -cBM --max-depth=1 / 2> >(grep -v 'Permission denied') | sort -n
     
     - name: Print Quota B
       run: |
@@ -52,8 +52,11 @@ jobs:
         remove-dotnet: true
         remove-android: true
         remove-haskell: true
-
-    - name: Print Quota II
+    
+    - name: Print Quota A 2
       run: |
-        df -x squashfs --total
-        du -h -s *
+        du -cBM --max-depth=1 / 2> >(grep -v 'Permission denied') | sort -n
+    
+    - name: Print Quota B 2
+      run: |
+        df -x squashfs --total -h
