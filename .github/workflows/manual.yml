@@ -26,10 +26,16 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     
-    - name: Print Quota
+    - name: Print Quota A
       run: |
-        bash -c "du -cBM --max-depth=1 2> >(grep -v 'Permission denied') | sort -n"
+        du -cBM --max-depth=1 2> >(grep -v 'Permission denied') | sort -n
+    
+    - name: Print Quota B
+      run: |
         df -x squashfs --total -h
+    
+    - name: Print Quota C
+      run: |
         du -h -s
         
     # Runs a single command using the runners shell
