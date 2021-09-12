@@ -4,6 +4,7 @@ import com.bkahlert.kommons.io.path.age
 import com.bkahlert.kommons.io.path.extensionOrNull
 import com.bkahlert.kommons.io.path.listDirectoryEntriesRecursively
 import com.bkahlert.kommons.io.path.textContent
+import com.bkahlert.kommons.junit.Verbose
 import com.bkahlert.kommons.test.Smoke
 import com.bkahlert.kommons.test.SystemProperties
 import com.bkahlert.kommons.test.SystemProperty
@@ -25,7 +26,7 @@ import kotlin.io.path.listDirectoryEntries
 
 class IntegrationTest {
 
-    @E2E @Smoke @Test
+    @E2E @Smoke @Test @Verbose
     fun `should customize with sample configuration`() {
 
         CustomizeCommand().parse(arrayOf("--config-file", "sample.conf", "--cache-dir", ".cache"))
@@ -42,7 +43,7 @@ class IntegrationTest {
         SystemProperty("SAMPLE_FULL_PASSWORD", "Password1234"),
         SystemProperty("SAMPLE_FULL_WPA_SUPPLICANT", "entry1\nentry2"),
     )
-    @E2E @Test
+    @E2E @Test @Verbose
     fun `should customize with full sample configuration`() {
         CustomizeCommand().parse(arrayOf("--config-file", "sample-full.conf", "--cache-dir", ".cache"))
         val osImage = findImage("sample-full")
