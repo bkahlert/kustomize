@@ -54,6 +54,8 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build -x test
 
+      - name: Test patch IntegrationTest
+        run: ./gradlew test --info --tests "com.bkahlert.kustomize.Integration*"
       - name: Test kommons
         run: |
           ./gradlew test \
