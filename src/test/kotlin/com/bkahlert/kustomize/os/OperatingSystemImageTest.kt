@@ -30,6 +30,7 @@ import strikt.api.Assertion
 import strikt.api.expectThat
 import strikt.assertions.contains
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNotNull
 import strikt.java.exists
 import java.nio.file.Path
 import kotlin.io.path.div
@@ -139,6 +140,18 @@ class OperatingSystemImageTest {
             }
 
             expectThat(dir.resolve("boot/cmdline.txt")).hasContent("overwrite me")
+        }
+
+        @FiveMinutesTimeout @DockerRequiring([LibguestfsImage::class]) @Test
+        fun `should change owner `(@OS(RaspberryPiLite) osImage: OperatingSystemImage) {
+            osImage.guestfish {
+                copyOut { LinuxRoot / "boot" / "cmdline.txt" }
+            }
+            expectThat(osImage.hostPath(LinuxRoot.boot.cmdline_txt))
+                .get { getOwner() }
+                .isNotNull()
+                .get { name }
+                .isEqualTo(System.getProperty("user.name"))
         }
     }
 

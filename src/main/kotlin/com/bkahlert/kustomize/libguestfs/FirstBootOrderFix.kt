@@ -18,6 +18,5 @@ object FirstBootOrderFix : ClassPathFile("/usr/lib/virt-sysprep/scripts/0000---f
      */
     val VIRT_SYSPREP = LinuxRoot.usr.lib / "virt-sysprep"
     val FIRSTBOOT_SCRIPTS = VIRT_SYSPREP / "scripts"
-    val FIRSTBOOT_SCRIPTS_DONE = VIRT_SYSPREP / "scripts-done"
     val FIRSTBOOT_FIX = FIRSTBOOT_SCRIPTS / "0000---first-boot-order-fix"
 }

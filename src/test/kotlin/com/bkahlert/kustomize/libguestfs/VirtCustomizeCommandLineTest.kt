@@ -163,8 +163,8 @@ internal fun createVirtCustomizeCommandLine(osImage: OperatingSystemImage): Virt
         trace = true,
     ),
     VirtCustomizationsBuilder(osImage).build {
-        chmods { "0664" to LinuxRoot / "chmod-file" }
-        chmods { "0664" to LinuxRoot / "other" / "file" }
+        chmod { "0664" to LinuxRoot / "chmod-file" }
+        chmod { "0664" to LinuxRoot / "other" / "file" }
         commandsFromFiles { osImage -> osImage.hostPath(LinuxRoot / "commands" / "from/files-1") }
         commandsFromFiles { osImage -> osImage.hostPath(LinuxRoot / "commands" / "from/files-2") }
         copy { LinuxRoot / "source" to LinuxRoot / "copy" }

@@ -152,7 +152,7 @@ find "${SCRIPTS_DIR}" -type f -printf "%AY%Am%Ad%AH%AM%AS %p\n" | sort -n | whil
       _item "${SCRIPTS_DIR}/${_FILE}"
       printf "    ⮕ %s\n" "${_COPY}"
 
-      cp -p "${SCRIPTS_DIR}/${_FILE}" "${_COPY}"
+      cp -ap "${SCRIPTS_DIR}/${_FILE}" "${_COPY}"
     fi
   fi
 done
@@ -170,7 +170,7 @@ for _FILE in "${SCRIPTS_DIR}"/*; do # same for loop as in first boot script
 
     mv -f "${_COPY}" "${SCRIPTS_DIR}/${_FILE}"
     touch "${SCRIPTS_DIR}/${_FILE}"
-    sleep 1
+    sleep 2
   fi
 done
 _end "$_ok"

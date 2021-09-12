@@ -3,8 +3,20 @@ package com.bkahlert.kustomize.patch
 import com.bkahlert.kommons.builder.buildArray
 import com.bkahlert.kommons.builder.buildList
 import com.bkahlert.kommons.builder.context.ListBuildingContext
+import com.bkahlert.kommons.docker.ubuntu
+import com.bkahlert.kommons.exec.CommandLine
+import com.bkahlert.kommons.exec.output
+import com.bkahlert.kommons.exec.successful
+import com.bkahlert.kommons.io.path.fileNameString
+import com.bkahlert.kommons.io.path.pathString
+import com.bkahlert.kommons.io.path.tempFile
+import com.bkahlert.kommons.io.path.writeBytes
+import com.bkahlert.kommons.shell.ShellScript
 import com.bkahlert.kommons.shell.ShellScript.ScriptContext
 import com.bkahlert.kommons.shell.ShellScript.ScriptContext.Line
+import com.bkahlert.kustomize.Kustomize
+import com.bkahlert.kustomize.os.DiskPath
+import java.nio.file.Path
 
 val ScriptContext.aptGet get() = AptGet(this)
 val ScriptContext.apt get() = Apt(this)
@@ -95,3 +107,31 @@ class Apt(private val script: ScriptContext) {
     infix fun list(option: String): Line =
         command("list", listOf(option))
 }
+
+
+fun ScriptContext.createFile(path: DiskPath, text: String, mode: String? = null) =
+    createFile(path, text.encodeToByteArray(), mode)
+
+fun ScriptContext.createFile(path: DiskPath, bytes: ByteArray, mode: String? = null): Line {
+    path.parentOrNull.also { !"mkdir -p '$it' &>/dev/null" }
+    !"echo '${uuencode(bytes)}' | uudecode > '$path'"
+    return mode?.let { command("chmod", it, path.pathString) } ?: command(":")
+}
+
+// TODO kommons
+@Suppress("unused")
+val Kustomize.user: String
+    get() = System.getProperty("user.name")
+        ?.let { ShellScript("echo $(id -u -r $it):$(id -g -r $it)").exec() }
+        ?.takeIf { exec -> exec.successful }?.output
+        ?: error("Could not determine user")
+
+
+fun chown(it: Path, recursive: Boolean = true) {
+    it.parent.ubuntu { _ -> command("chown", listOfNotNull("-R".takeIf { recursive }, Kustomize.user, it.fileNameString)) }
+}
+
+fun uuencode(bytes: ByteArray): String =
+    tempFile().writeBytes(bytes).let {
+        CommandLine("uuencode", "-m", it.pathString, "/dev/stdout").exec().output
+    }

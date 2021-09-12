@@ -61,7 +61,7 @@ class BluetoothPersonalAreaNetworkPatch(
                 ExecStart=/usr/lib/bluetooth/bluetoothd --noplugin=sap
                 
             """.trimIndent())
-            chmods { "644" to DISABLE_SAP_CONF }
+            chmod { "0644" to DISABLE_SAP_CONF }
 
             firstBootInstall { listOf("bridge-utils", "bluez", "python-dbus", "python-gobject") }
             firstBoot("configure to stay discoverable forever") { "sed -i '/DiscoverableTimeout/s/^.*$/DiscoverableTimeout = 0/' ${LinuxRoot.etc.bluetooth.main_conf}" }
@@ -83,7 +83,7 @@ class BluetoothPersonalAreaNetworkPatch(
                 exec $BT_PAN --debug server pan0
                 
             """.trimIndent())
-            chmods { "755" to BT_PAN_SCRIPT }
+            chmod { "0755" to BT_PAN_SCRIPT }
 
 
             copyIn(BT_PAN_SERVICE, """
@@ -98,7 +98,7 @@ class BluetoothPersonalAreaNetworkPatch(
                 WantedBy=bluetooth.target
                 
             """.trimIndent())
-            chmods { "644" to BT_PAN_SERVICE }
+            chmod { "0644" to BT_PAN_SERVICE }
             firstBoot {
                 """
                 wget -O $BT_PAN https://github.com/mk-fg/fgtk/raw/master/bt-pan
@@ -121,7 +121,7 @@ class BluetoothPersonalAreaNetworkPatch(
                 WantedBy=bluetooth.target
                 
             """.trimIndent())
-            chmods { "644" to BT_AGENT_SERVICE }
+            chmod { "0644" to BT_AGENT_SERVICE }
             firstBoot {
                 """
                 wget -O $BT_AGENT https://github.com/opustecnica/public/raw/master/raspberrypi/PAN/blueagent5.py
@@ -144,6 +144,7 @@ class BluetoothPersonalAreaNetworkPatch(
                 #leasefile-ro
                 
             """.trimIndent())
+            chmod { "0644" to DNSMASQ_PAN0 }
             firstBoot { "systemctl restart dnsmasq" }
         }
     }

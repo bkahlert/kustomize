@@ -115,6 +115,7 @@ class UsbGadgetPatch(
                 ${if (hostAsDefaultGateway) "leasefile-ro" else ""}
                 
             """.trimIndent())
+            chmod { "0644" to USB0_DNSMASQD }
 
             if (hostAsDefaultGateway) {
                 copyIn(DHCP_SCRIPT, """
@@ -133,7 +134,7 @@ class UsbGadgetPatch(
                     fi
                     
                 """.trimIndent())
-                chmods { "0755" to DHCP_SCRIPT }
+                chmod { "0755" to DHCP_SCRIPT }
             }
 
             /**
@@ -162,6 +163,7 @@ class UsbGadgetPatch(
                   address $deviceAddress/${dhcpRange.prefixLength}
                 
             """.trimIndent())
+            chmod { "0644" to USB0_NETWORK }
 
             val dirName = product.toBaseName()
             @Suppress("SpellCheckingInspection")
@@ -213,7 +215,7 @@ class UsbGadgetPatch(
                 ifup usb0
                 
             """.trimIndent())
-            chmods { "0755" to USB_GADGET }
+            chmod { "0755" to USB_GADGET }
 
             @Suppress("SpellCheckingInspection")
             copyIn(USBGADGET_SERVICE, """
@@ -232,6 +234,7 @@ class UsbGadgetPatch(
                 WantedBy=sysinit.target
                 
             """.trimIndent())
+            chmod { "0644" to USBGADGET_SERVICE }
             firstBoot("enable ${USBGADGET_SERVICE.fileName}") { "systemctl enable ${USBGADGET_SERVICE.fileName}" }
 
             firstBoot("update ${config_txt.fileName}") { "echo 'dtoverlay=dwc2' >> $config_txt" }

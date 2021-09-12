@@ -1,10 +1,8 @@
 package com.bkahlert.kustomize.patch
 
-import com.bkahlert.kommons.io.path.createParentDirectories
 import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
-import kotlin.io.path.writeLines
 
 enum class RootShare { none, `read-only`, `read-write` }
 
@@ -86,28 +84,10 @@ class SambaPatch(
         virtCustomize {
             firstBoot {
                 command("apt", "-y", "update")
-                command("/bin/bash", "-c", """
-                    apt-get clean
-                    apt-get install -f
-                    dpkg --configure -a
-                    DEBIAN_FRONTEND=noninteractive apt -y -oDpkg::Options::=--force-confnew -oDebug::pkgAcquire::Worker=1 install samba cifs-utils
-                """.trimIndent())
-                command("apt", "-y", "-oDebug::pkgAcquire::Worker=1", "install", "samba", "cifs-utils")
-//                command("apt-get", "-y", "install", "samba")
-//                aptGet.install("samba", "cifs-utils", ignoreMissing = true)
-            }
-//            firstBootInstall { listOf("samba", "cifs-utils") }
-            copyIn(SAMBA_CONF) {
-                createParentDirectories().writeLines(config.lines())
-            }
-            firstBoot("Change SMB Password for $username") {
-                """
-                echo "…"
-                echo "…"
-                echo "…"
-                pass="$password"
-                (echo "${'$'}pass"; echo "${'$'}pass") | smbpasswd -s -a "$username"
-                """
+                !"DEBIAN_FRONTEND=noninteractive apt -y -oDpkg::Options::=--force-confnew install samba"
+                !"DEBIAN_FRONTEND=noninteractive apt -y -oDpkg::Options::=--force-confnew install uudecode"
+                createFile(SAMBA_CONF, config, mode = "0644")
+                !"""(echo "$password"; echo "$password") | smbpasswd -s -a "$username""""
             }
         }
     }

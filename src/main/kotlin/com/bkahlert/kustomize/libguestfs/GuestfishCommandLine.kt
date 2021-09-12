@@ -20,6 +20,7 @@ import com.bkahlert.kommons.text.LineSeparators.size
 import com.bkahlert.kommons.text.padStart
 import com.bkahlert.kommons.text.withPrefix
 import com.bkahlert.kommons.text.withRandomSuffix
+import com.bkahlert.kustomize.Kustomize
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.Composite.CopyIn
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.Composite.CopyOut
 import com.bkahlert.kustomize.libguestfs.GuestfishCommandLine.GuestfishCommand.Composite.TarIn
@@ -42,6 +43,7 @@ import com.bkahlert.kustomize.os.DiskPath
 import com.bkahlert.kustomize.os.LinuxRoot
 import com.bkahlert.kustomize.os.OperatingSystemImage
 import com.bkahlert.kustomize.os.OperatingSystemImage.Companion.mountRootForDisk
+import com.bkahlert.kustomize.patch.user
 import java.nio.file.Path
 import kotlin.io.path.div
 import kotlin.io.path.moveTo
@@ -362,13 +364,16 @@ class GuestfishCommandLine(
              * Multiple remote files and directories can be specified.
              */
             class CopyOut(val mkDir: Boolean, val directory: Path, val remoteFiles: DiskPath) :
-                Composite(listOfNotNull(
-                    if (mkDir) !GuestfishCommand("mkdir", "-p", directory.pathString) else null,
-                    -GuestfishCommand("copy-out",
-                        remoteFiles.pathString,
-                        directory.pathString
-                    ),
-                ))
+                Composite(
+                    listOfNotNull(
+                        if (mkDir) !GuestfishCommand("mkdir", "-p", directory.pathString) else null,
+                        -GuestfishCommand("copy-out",
+                            remoteFiles.pathString,
+                            directory.pathString
+                        ),
+                        // set the owner of the copied path to the current owner of the destination directory
+                        !GuestfishCommand("chown", "-R", Kustomize.user, directory.pathString),
+                    ))
 
             /**
              * This command uploads the [archive] (must be accessible from the guest) and unpacks it into [directory].

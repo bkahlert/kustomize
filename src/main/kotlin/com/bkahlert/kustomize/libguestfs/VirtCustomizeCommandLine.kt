@@ -246,7 +246,7 @@ class VirtCustomizeCommandLine(
                 if (fixFirstBootOrderAdded) return
                 fixFirstBootOrderAdded = true
                 copyIn(FirstBootOrderFix.FIRSTBOOT_FIX, FirstBootOrderFix.text)
-                chmods { "0755" to FirstBootOrderFix.FIRSTBOOT_FIX }
+                chmod { "0755" to FirstBootOrderFix.FIRSTBOOT_FIX }
             }
 
             /**
@@ -254,7 +254,7 @@ class VirtCustomizeCommandLine(
              *
              * *Note:* PERMISSIONS by default would be decimal, unless you prefix it with 0 to get octal, ie. use 0700 not 700.
              */
-            fun chmods(init: (OperatingSystemImage) -> Pair<String, DiskPath>) {
+            fun chmod(init: (OperatingSystemImage) -> Pair<String, DiskPath>) {
                 virtCustomizations.add(init(osImage).run { ChmodOption(first, second) })
             }
 

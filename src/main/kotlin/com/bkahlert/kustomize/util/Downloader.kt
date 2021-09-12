@@ -3,7 +3,9 @@ package com.bkahlert.kustomize.util
 import com.bkahlert.kommons.docker.download
 import com.bkahlert.kommons.io.path.copyToDirectory
 import com.bkahlert.kommons.io.useRequiredClassPath
+import com.bkahlert.kommons.shell.ShellScript
 import com.bkahlert.kustomize.Kustomize
+import com.bkahlert.kustomize.patch.chown
 import java.net.URI
 import java.nio.file.Path
 
@@ -27,7 +29,8 @@ class Downloader(private val downloadDirectory: Path = Kustomize.download) {
                 it.copyToDirectory(downloadDirectory)
             }
         } else {
-            downloadDirectory.download(url, filename)
+            ShellScript("ls -lisa .").exec.logging(downloadDirectory)
+            downloadDirectory.download(url, filename).also { chown(it) }
         }
     }
 }
