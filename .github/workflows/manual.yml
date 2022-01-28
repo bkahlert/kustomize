@@ -40,7 +40,7 @@ jobs:
     
       
     - name: Maximize build disk space
-      uses: easimon/maximize-build-space@v4
+      uses: easimon/maximize-build-space@v5
       with:
         root-reserve-mb: 40240
         temp-reserve-mb: 100
