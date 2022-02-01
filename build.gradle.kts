@@ -52,7 +52,7 @@ dependencies {
     }
 
     implementation("io.strikt:strikt-core:0.30.1")
-    implementation("io.strikt:strikt-jvm:0.30.1")
+    implementation("io.strikt:strikt-jvm:0.34.0")
     implementation(kotlin("stdlib-jdk8"))
 }
 
