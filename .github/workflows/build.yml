@@ -101,7 +101,7 @@ jobs:
       #      - name: Test patch WpaSupplicantPatch
       #        run: ./gradlew test --tests "com.bkahlert.kustomize.patch.WpaSupplicantPatch*"
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: package
           path: |
